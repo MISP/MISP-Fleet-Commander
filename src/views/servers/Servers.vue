@@ -53,6 +53,18 @@
                     <strong class="ml-2">Loading...</strong>
                 </div>
             </template>
+
+            <template v-slot:cell(actions)="row">
+                <b-button size="sm" @click="row.toggleDetails">
+                    {{ row.detailsShowing ? 'Hide' : 'Show' }} Details
+                </b-button>
+            </template>
+
+            <template v-slot:row-details="{ item }">
+                <b-card>
+                    <pre>{{ item }}</pre>
+                </b-card>
+            </template>
         </b-table>
 
         <b-modal 
@@ -200,8 +212,24 @@ export default {
                         sortable: false
                     },
                     {
+                        key: "online",
+                        label: "Online",
+                        sortable: true
+                    },
+                    {
+                        key: "version",
+                        sortable: true
+                    },
+                    {
                         key: "authkey",
-                        sortable: false
+                        sortable: false,
+                        formatter: value => {
+                            return value.slice(0, 4) + " … " + value.slice(36, 40)
+                        }
+                    },
+                    {
+                        key: "actions",
+                        label: ""
                     }
                 ],
             },
@@ -213,11 +241,6 @@ export default {
                 authkey: "",
                 recursive_add: true
             },
-            serverFormState: {
-                name: null,
-                url: null,
-                authkey: null,
-            }
         }
     },
     computed: {

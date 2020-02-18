@@ -81,12 +81,12 @@
 @media (min-width: 1200px) {
     .modal-xl,
     .modal-xxl {
-      max-width: 1140px;
+        max-width: 1140px;
     }
-  }
+}
   
-  @media (min-width: 1700px) {
+@media (min-width: 1700px) {
     .modal-xxl {
-      max-width: 85vw;
+        max-width: 85vw;
     }
-  }
+}
