@@ -1,0 +1,92 @@
+:root {
+    --var-color-yankeesblue : #212d40;
+    --var-color-charcoal : #364156;
+    --var-color-lapislazuli : #2978a0;
+    --var-color-deepgreencyan : #136f63;
+    --var-color-giantorgane : #f2621a;
+    --var-width-sidebar: 160px;
+}
+
+.main {
+    display: flex;
+    flex-direction: column;
+    font-size: 14px;
+}
+
+.application-navbar {
+    background-color: var(--var-color-lapislazuli) !important;
+}
+
+.sidebar {
+    height: 100%; /* Full-height: remove this if you want "auto" height */
+    flex-shrink: 0;
+    z-index: 100; /* Stay on top */
+    position: fixed;
+    top: 3.5rem; /* Stay at the top */
+    bottom: 0;
+    left: 0;
+    overflow: hidden; /* Disable horizontal scroll */
+    -webkit-transition: width .2s;
+    transition: width .2s;
+    transition-timing-function: cubic-bezier(.23,1,.32,1);
+}
+
+.app {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+}
+
+.app-header{
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0px 0px 20px 0px rgba(82, 63, 105, 0.4);
+
+}
+
+.app-body {
+    width: 100%;
+    margin-top: 5.0em;
+    margin-left: 15em;
+    -webkit-transition: margin-left .2s;
+    transition: margin-left .2s;
+    transition-timing-function: cubic-bezier(.23,1,.32,1);
+}
+
+.app-body.strech {
+    margin-top: 4.0em;
+    height: calc(100vh - 4.0em);
+}
+
+.app-body.strech > div {
+    height: 100%;
+}
+
+.body-sidebar-collapse {
+    margin-left: 5em;
+}
+
+@media screen and (max-height: 450px) {
+    .sidebar {padding-top: 15px;}
+    .sidebar a {font-size: 18px;}
+}
+
+.useCursorPointer {
+    cursor: pointer;
+}
+
+@media (min-width: 1200px) {
+    .modal-xl,
+    .modal-xxl {
+      max-width: 1140px;
+    }
+  }
+  
+  @media (min-width: 1700px) {
+    .modal-xxl {
+      max-width: 85vw;
+    }
+  }
