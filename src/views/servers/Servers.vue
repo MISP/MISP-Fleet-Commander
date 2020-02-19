@@ -56,7 +56,18 @@
 
             <template v-slot:cell(actions)="row">
                 <b-button size="sm" @click="row.toggleDetails">
-                    {{ row.detailsShowing ? 'Hide' : 'Show' }} Details
+                     <b-icon :icon="row.detailsShowing ? 'arrows-collapse' : 'arrows-expand'"></b-icon>
+                </b-button>
+                <b-button class="ml-1" size="sm" variant="primary" @click="refreshDetail(row.item)" :disabled="postInProgress">
+                    <b-spinner 
+                        small
+                        v-if="postInProgress"
+                    ></b-spinner>
+                    <span class="sr-only">Refreshing...</span>
+                    <span v-if="!postInProgress"><b-icon icon="arrow-clockwise"></b-icon></span>
+                </b-button>
+                <b-button class="ml-1" size="sm" variant="danger" @click="openDeletionModal(row.item)">
+                    <b-icon icon="trash-fill"></b-icon>
                 </b-button>
             </template>
 
@@ -66,6 +77,33 @@
                 </b-card>
             </template>
         </b-table>
+
+        <b-modal
+            id="modal-delete"
+            title="Confirm Server Deletion"
+            @ok.prevent="deleteServer"
+        >
+            <b-table-lite
+                :items="[serverToDelete]"
+                :fields="tableSummary.fields"
+                stacked small responsive
+            >
+            </b-table-lite>
+
+             <template v-slot:modal-footer="{ ok, cancel }">
+                <b-button variant="danger" @click="ok()" :disabled="postInProgress">
+                    <b-spinner 
+                        small
+                        v-if="postInProgress"
+                    ></b-spinner>
+                    <span class="sr-only">Saving...</span>
+                    <span v-if="!postInProgress">
+                        <b-icon icon="trash-fill"></b-icon> Delete
+                    </span>
+                </b-button>
+                 <b-button variant="secondary" @click="cancel()">Cancel</b-button>
+             </template>
+        </b-modal>
 
         <b-modal 
             id="modal-add"
@@ -191,6 +229,16 @@ export default {
         return {
             postInProgress: false,
             refreshInProgress: false,
+            serverToDelete: {},
+            tableSummary: {
+                fields: ["id", "name", "url", "skip_ssl",
+                    {
+                        key: "authkey", formatter: value => {
+                            return (value === undefined || value === null) ? "" : value.slice(0, 4) + " … " + value.slice(36, 40)
+                        }
+                    }
+                ]
+            },
             table: {
                 isBusy: false,
                 filtered: "",
@@ -228,8 +276,14 @@ export default {
                         }
                     },
                     {
-                        key: "actions",
-                        label: ""
+                        key: "last_updated",
+                        sortable: true,
+                        formatter: timestamp => {
+                            return timestamp
+                        }
+                    },
+                    {
+                        key: "actions"
                     }
                 ],
             },
@@ -263,6 +317,9 @@ export default {
             this.serverForm.authkey = ""
             this.serverForm.recursive_add = true
         },
+        refreshDetail(server) {
+            console.log(server)
+        },
         handleSubmission(evt) {
             evt.preventDefault()
             this.$refs.observer.validate().then(success => {
@@ -272,8 +329,40 @@ export default {
                 this.submitForm()
             })
         },
+        openDeletionModal(server) {
+            this.$bvModal.show("modal-delete")
+            this.serverToDelete = server
+        },
+        deleteServer() {
+            const url = "http://127.0.0.1:5000/servers/delete"
+            this.postInProgress = true
+            let that = this
+            axios.post(url, this.serverToDelete)
+                .then((response) => {
+                    this.$nextTick(() => {
+                        this.$bvModal.hide("modal-delete")
+                    })
+                    const toastText = response.data.name + " [" + response.data.url + "]"
+                    that.$bvToast.toast(toastText, {
+                        title: "Server successfully delete",
+                        variant: "success",
+                    })
+                })
+                .catch(error => {
+                    that.$bvToast.toast(error.toJSON(), {
+                        title: "Could not delete Server",
+                        variant: "danger",
+                    })
+                })
+                .finally(() => {
+                    this.serverToDelete = {}
+                    this.postInProgress = false
+                    this.$refs.serverTable.refresh()
+                })
+        },
         submitForm() {
             const url = "http://127.0.0.1:5000/servers/add"
+            this.postInProgress = true
             let that = this
             axios.post(url, this.serverForm)
                 .then((response) => {
@@ -283,16 +372,21 @@ export default {
                     this.$nextTick(() => {
                         this.$bvModal.hide("modal-add")
                     })
-                    that.$bvToast.toast(response, {
+                    const toastText = response.data.name + " [" + response.data.url + "]"
+                    that.$bvToast.toast(toastText, {
                         title: "Server successfully added",
                         variant: "success",
                     })
                 })
                 .catch(error => {
-                    that.$bvToast.toast(error, {
+                    that.$bvToast.toast(error.toJSON(), {
                         title: "Could not save Server",
                         variant: "danger",
                     })
+                })
+                .finally(() => {
+                    this.postInProgress = false
+                    this.$refs.serverTable.refresh()
                 })
         },
         getIndex(ctx) {
