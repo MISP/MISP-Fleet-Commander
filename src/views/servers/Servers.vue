@@ -5,7 +5,7 @@
             <iconForScope scope="servers"></iconForScope>
             MISP Servers
         </h3>
-
+        
         <div class="mb-3">
             <b-button
                 size="sm"
@@ -15,24 +15,35 @@
                 <b-icon icon="plus"></b-icon>Add Server
             </b-button>
         </div>
-        
-        <div class="d-flex flex-row-reverse align-items-center">
-            <b-button variant="link" size="sm" @click="$refs.serverTable.refresh()">
-                <b-icon icon="arrow-clockwise" :class="{'fa-spin': refreshInProgress}" title="Refresh Servers"></b-icon>
-            </b-button>
-            <b-input-group size="sm" class="w-25">
-                <b-form-input
-                    v-model="table.filter"
-                    type="search"
-                    id="filterInput"
-                    placeholder="Type to Search"
-                    class="border-bottom-0 rounded-top align-self-end"
-                    style="border-radius: 0"
-                ></b-form-input>
-            </b-input-group>
+        <div class="d-flex justify-content-between">
+            <div>
+                <b-pagination
+                    v-model="table.currentPage"
+                    v-if="table.totalRows > table.perPage"
+                    :per-page="table.perPage"
+                    :total-rows="table.totalRows"
+                    aria-controls="server-table"
+                ></b-pagination>
+            </div>
+            <div class="align-items-center d-flex w-25">
+                <b-input-group size="sm">
+                    <b-form-input
+                        v-model="table.filter"
+                        type="search"
+                        id="filterInput"
+                        placeholder="Type to Search"
+                        class="border-bottom-0 rounded-top align-self-end"
+                        style="border-radius: 0"
+                    ></b-form-input>
+                </b-input-group>
+                <b-button class="ml-2" variant="primary" size="sm" @click="$refs.serverTable.refresh()">
+                    <b-icon icon="arrow-clockwise" :class="{'fa-spin': refreshInProgress}" title="Refresh Servers"></b-icon>
+                </b-button>
+           </div>
         </div>
         <b-table 
             striped hover show-empty small
+            id="server-table"
             ref="serverTable"
             :per-page="table.perPage"
             :current-page="table.currentPage"
