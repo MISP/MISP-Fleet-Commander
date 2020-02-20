@@ -65,17 +65,35 @@
                 </div>
             </template>
 
+            <template v-slot:cell(url)="row">
+                <b-link :href="row.value" target="_blank">{{ row.value }}</b-link>
+            </template>
+
+            <template v-slot:cell(status)="row">
+                <span
+                    v-if="row.value !== '?'"
+                    :class="row.value.error ? 'text-danger' : 'text-success'"
+                >
+                    <b-icon icon="circle-fill"></b-icon>
+                    {{ row.value.message }}
+                </span>
+                <span v-else>Unkown</span>
+            </template>
+
             <template v-slot:cell(actions)="row">
                 <b-button size="sm" @click="row.toggleDetails">
                      <b-icon :icon="row.detailsShowing ? 'arrows-collapse' : 'arrows-expand'"></b-icon>
                 </b-button>
-                <b-button class="ml-1" size="sm" variant="primary" @click="refreshDetail(row.item)" :disabled="postInProgress">
+                <b-button class="ml-1" size="sm" variant="primary" @click="refreshDetail(row.item, row.index)" :disabled="postInProgress">
                     <b-spinner 
                         small
                         v-if="postInProgress"
                     ></b-spinner>
                     <span class="sr-only">Refreshing...</span>
                     <span v-if="!postInProgress"><b-icon icon="arrow-clockwise"></b-icon></span>
+                </b-button>
+                <b-button class="ml-1" size="sm" variant="primary" @click="openEditModal(row.item)">
+                    <i class="fas fa-edit"></i>
                 </b-button>
                 <b-button class="ml-1" size="sm" variant="danger" @click="openDeletionModal(row.item)">
                     <b-icon icon="trash-fill"></b-icon>
@@ -118,7 +136,7 @@
 
         <b-modal 
             id="modal-add"
-            title="Add Server"
+            :title="`${modalAddAction} Server`"
             size="lg"
             scrollable
             @hidden="resetModal"
@@ -199,7 +217,7 @@
                         v-if="postInProgress"
                     ></b-spinner>
                     <span class="sr-only">Saving...</span>
-                    <span v-if="!postInProgress">Save</span>
+                    <span v-if="!postInProgress">{{ modalAddAction == "Add" ? "Save" : modalAddAction}}</span>
                 </b-button>
                 <b-button variant="secondary" @click="cancel()">Cancel</b-button>
             </template>
@@ -220,8 +238,9 @@ extend("min", min)
 extend("length", length)
 extend("url", {
     validate: value => {
-        const pattern =  /^(?:(?:https?|ftp):\/\/)?(?:(?!(?:10|127)(?:\.\d{1,3}){3})(?!(?:169\.254|192\.168)(?:\.\d{1,3}){2})(?!172\.(?:1[6-9]|2\d|3[0-1])(?:\.\d{1,3}){2})(?:[1-9]\d?|1\d\d|2[01]\d|22[0-3])(?:\.(?:1?\d{1,2}|2[0-4]\d|25[0-5])){2}(?:\.(?:[1-9]\d?|1\d\d|2[0-4]\d|25[0-4]))|(?:(?:[a-z\u00a1-\uffff0-9]-*)*[a-z\u00a1-\uffff0-9]+)(?:\.(?:[a-z\u00a1-\uffff0-9]-*)*[a-z\u00a1-\uffff0-9]+)*(?:\.(?:[a-z\u00a1-\uffff]{2,})))(?::\d{2,5})?(?:\/\S*)?$/
-        return pattern.test(value)
+        // const pattern =  /^(?:(?:https?|ftp):\/\/)?(?:(?!(?:10|127)(?:\.\d{1,3}){3})(?!(?:169\.254|192\.168)(?:\.\d{1,3}){2})(?!172\.(?:1[6-9]|2\d|3[0-1])(?:\.\d{1,3}){2})(?:[1-9]\d?|1\d\d|2[01]\d|22[0-3])(?:\.(?:1?\d{1,2}|2[0-4]\d|25[0-5])){2}(?:\.(?:[1-9]\d?|1\d\d|2[0-4]\d|25[0-4]))|(?:(?:[a-z\u00a1-\uffff0-9]-*)*[a-z\u00a1-\uffff0-9]+)(?:\.(?:[a-z\u00a1-\uffff0-9]-*)*[a-z\u00a1-\uffff0-9]+)*(?:\.(?:[a-z\u00a1-\uffff]{2,})))(?::\d{2,5})?(?:\/\S*)?$/
+        const pattern2 = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/
+        return pattern2.test(value)
     },
     message: "This field must be a valid URL"
 })
@@ -240,6 +259,7 @@ export default {
         return {
             postInProgress: false,
             refreshInProgress: false,
+            modalAddAction: "Add",
             serverToDelete: {},
             tableSummary: {
                 fields: ["id", "name", "url", "skip_ssl",
@@ -256,12 +276,9 @@ export default {
                 totalRows: 0,
                 currentPage: 1,
                 perPage: 30,
+                serverStatus: {},
                 filterFields: ["name", "url"],
                 fields: [
-                    {
-                        key: "id",
-                        sortable: true
-                    },
                     {
                         key: "name",
                         sortable: true
@@ -271,12 +288,8 @@ export default {
                         sortable: false
                     },
                     {
-                        key: "online",
-                        label: "Online",
-                        sortable: true
-                    },
-                    {
-                        key: "version",
+                        key: "status",
+                        label: "Status",
                         sortable: true
                     },
                     {
@@ -286,13 +299,13 @@ export default {
                             return value.slice(0, 4) + " … " + value.slice(36, 40)
                         }
                     },
-                    {
-                        key: "last_updated",
-                        sortable: true,
-                        formatter: timestamp => {
-                            return timestamp
-                        }
-                    },
+                    // {
+                    //     key: "last_updated",
+                    //     sortable: true,
+                    //     formatter: timestamp => {
+                    //         return timestamp
+                    //     }
+                    // },
                     {
                         key: "actions"
                     }
@@ -322,14 +335,34 @@ export default {
             return dirty || validated ? valid : null
         },
         resetModal() {
+            delete(this.serverForm.id)
             this.serverForm.name = ""
             this.serverForm.url = ""
             this.serverForm.skip_ssl = false
             this.serverForm.authkey = ""
             this.serverForm.recursive_add = true
+            this.modalAddAction = "Add"
         },
-        refreshDetail(server) {
-            console.log(server)
+        refreshDetail(server, row_id) {
+            this.postInProgress = true
+            const url = `http://127.0.0.1:5000/servers/testConnection/${server.id }`
+            axios.get(url)
+                .then((response) => {
+                    if (response.data.version !== undefined) {
+                        this.items[row_id].status = { message: response.data.version, error: false }
+                    } else {
+                        this.items[row_id].status = { message: response.data.error, error: true }
+                    }
+                })
+                .catch(error => {
+                    this.$bvToast.toast(error.toJSON(), {
+                        title: "Could not reach Server",
+                        variant: "danger",
+                    })
+                })
+                .finally(() => {
+                    this.postInProgress = false
+                })
         },
         handleSubmission(evt) {
             evt.preventDefault()
@@ -339,6 +372,16 @@ export default {
                 }
                 this.submitForm()
             })
+        },
+        openEditModal(server) {
+            this.serverForm.id = server.id
+            this.serverForm.name = server.name
+            this.serverForm.url = server.url
+            this.serverForm.skip_ssl = server.skip_ssl
+            this.serverForm.authkey = server.authkey
+            this.serverForm.recursive_add = false
+            this.modalAddAction = "Edit"
+            this.$bvModal.show("modal-add")
         },
         openDeletionModal(server) {
             this.$bvModal.show("modal-delete")
@@ -372,7 +415,12 @@ export default {
                 })
         },
         submitForm() {
-            const url = "http://127.0.0.1:5000/servers/add"
+            let url = "http://127.0.0.1:5000/servers/"
+            if (this.modalAddAction == "Add") {
+                url += "add"
+            } else {
+                url += "edit"
+            }
             this.postInProgress = true
             let that = this
             axios.post(url, this.serverForm)
@@ -409,6 +457,10 @@ export default {
                 .then((response) => {
                     this.totalRows = response.data.length
                     this.items = response.data
+                    response.data.forEach((item, index) => {
+                        this.items[index].status = "?"
+                        this.refreshDetail(item, index)
+                    })
                     return response.data
                 }).catch(error => {
                     this.$bvToast.toast(error, {
