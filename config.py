@@ -29,5 +29,5 @@ class DevelopmentConfig(Config):
     SECRET_KEY = 'secret'
 
     # Database
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///database.db'
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///database3.db'
     SQLALCHEMY_TRACK_MODIFICATIONS = True

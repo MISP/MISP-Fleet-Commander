@@ -4,7 +4,6 @@ from datetime import datetime
 import json
 
 
-
 class Serializer(object):
 
     def serialize(self):
@@ -48,11 +47,39 @@ class Server(db.Model, Serializer):
     url = db.Column(db.String(256),
                     nullable=False,
                     index=True)
+    skip_ssl = db.Column(db.Boolean,
+                         nullable=False,
+                         default=False)
     authkey = db.Column(db.String(40),
                         nullable=False)
     user_id = db.Column(db.Integer,
+                        db.ForeignKey('users.id'),
                         nullable=False,
-                        index=True) 
+                        index=True)
+
+    user = db.relationship('User',
+        backref=db.backref('servers', lazy=True))
+    
+    server_query = db.relationship('ServerQuery',
+        backref=db.backref('server', lazy=False))
+
 
     def __repr__(self):
-       return f"<Server(name='{self.name}', url='{self.url}', user_id='{self.user_id}')>"
+       return f"<Server(name='{self.name}', url='{self.url}'[{self.skip_ssl}], user_id='{self.user_id}')>"
+
+
+class ServerQuery(db.Model, Serializer):
+    __tablename__ = 'server_queries'
+    id = db.Column(db.Integer,
+                   primary_key=True)
+    server_id = db.Column(db.Integer,
+                     db.ForeignKey('servers.id'),
+                     nullable=False,
+                     index=True)
+    timestamp = db.Column(db.Integer,
+                    nullable=False,
+                    index=True)
+    query_result = db.Column(db.JSON, nullable=False)
+
+    def __repr__(self):
+       return f"<ServerQuery(server_id='{self.server_id}', timestamp='{self.timestamp}', result='{self.result}')>"
