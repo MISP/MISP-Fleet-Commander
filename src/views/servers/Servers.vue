@@ -42,7 +42,7 @@
            </div>
         </div>
         <b-table 
-            striped hover show-empty small
+            striped outlined hover show-empty small
             id="server-table"
             ref="serverTable"
             :per-page="table.perPage"
@@ -81,16 +81,8 @@
             </template>
 
             <template v-slot:cell(actions)="row">
-                <b-button size="sm" @click="row.toggleDetails">
+                <b-button size="sm" @click="toggleDiagnostic(row.item, row.index, row.toggleDetails)">
                      <b-icon :icon="row.detailsShowing ? 'arrows-collapse' : 'arrows-expand'"></b-icon>
-                </b-button>
-                <b-button class="ml-1" size="sm" variant="primary" @click="refreshDetail(row.item, row.index)" :disabled="postInProgress">
-                    <b-spinner 
-                        small
-                        v-if="postInProgress"
-                    ></b-spinner>
-                    <span class="sr-only">Refreshing...</span>
-                    <span v-if="!postInProgress"><b-icon icon="arrow-clockwise"></b-icon></span>
                 </b-button>
                 <b-button class="ml-1" size="sm" variant="primary" @click="openEditModal(row.item)">
                     <i class="fas fa-edit"></i>
@@ -101,9 +93,7 @@
             </template>
 
             <template v-slot:row-details="{ item }">
-                <b-card>
-                    <pre>{{ item }}</pre>
-                </b-card>
+                <RowDetails :details="item.diagnostic"></RowDetails>
             </template>
         </b-table>
 
@@ -120,13 +110,13 @@
             </b-table-lite>
 
              <template v-slot:modal-footer="{ ok, cancel }">
-                <b-button variant="danger" @click="ok()" :disabled="postInProgress">
+                <b-button variant="danger" @click="ok()" :disabled="postInProgress.modal">
                     <b-spinner 
                         small
-                        v-if="postInProgress"
+                        v-if="postInProgress.modal"
                     ></b-spinner>
                     <span class="sr-only">Saving...</span>
-                    <span v-if="!postInProgress">
+                    <span v-if="!postInProgress.modal">
                         <b-icon icon="trash-fill"></b-icon> Delete
                     </span>
                 </b-button>
@@ -211,13 +201,13 @@
             </ValidationObserver>
 
             <template v-slot:modal-footer="{ ok, cancel }">
-                <b-button variant="primary" @click="ok()" :disabled="postInProgress">
+                <b-button variant="primary" @click="ok()" :disabled="postInProgress.modal">
                     <b-spinner 
                         small
-                        v-if="postInProgress"
+                        v-if="postInProgress.modal"
                     ></b-spinner>
                     <span class="sr-only">Saving...</span>
-                    <span v-if="!postInProgress">{{ modalAddAction == "Add" ? "Save" : modalAddAction}}</span>
+                    <span v-if="!postInProgress.modal">{{ modalAddAction == "Add" ? "Save" : modalAddAction}}</span>
                 </b-button>
                 <b-button variant="secondary" @click="cancel()">Cancel</b-button>
             </template>
@@ -232,13 +222,13 @@ import { required, min, length } from "vee-validate/dist/rules"
 import axios from "axios"
 import Layout from "@/components/layout/Layout.vue"
 import iconForScope from "@/components/ui/elements/iconForScope.vue"
+import RowDetails from "@/views/servers/RowDetails.vue"
 
 extend("required", required)
 extend("min", min)
 extend("length", length)
 extend("url", {
     validate: value => {
-        // const pattern =  /^(?:(?:https?|ftp):\/\/)?(?:(?!(?:10|127)(?:\.\d{1,3}){3})(?!(?:169\.254|192\.168)(?:\.\d{1,3}){2})(?!172\.(?:1[6-9]|2\d|3[0-1])(?:\.\d{1,3}){2})(?:[1-9]\d?|1\d\d|2[01]\d|22[0-3])(?:\.(?:1?\d{1,2}|2[0-4]\d|25[0-5])){2}(?:\.(?:[1-9]\d?|1\d\d|2[0-4]\d|25[0-4]))|(?:(?:[a-z\u00a1-\uffff0-9]-*)*[a-z\u00a1-\uffff0-9]+)(?:\.(?:[a-z\u00a1-\uffff0-9]-*)*[a-z\u00a1-\uffff0-9]+)*(?:\.(?:[a-z\u00a1-\uffff]{2,})))(?::\d{2,5})?(?:\/\S*)?$/
         const pattern2 = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/
         return pattern2.test(value)
     },
@@ -253,11 +243,14 @@ export default {
         ValidationProvider,
         ValidationObserver,
         Layout,
-        iconForScope
+        iconForScope,
+        RowDetails
     },
-    data: function () {
+    data: function() {
         return {
-            postInProgress: false,
+            postInProgress: {
+                modal: false,
+            },
             refreshInProgress: false,
             modalAddAction: "Add",
             serverToDelete: {},
@@ -299,13 +292,6 @@ export default {
                             return value.slice(0, 4) + " … " + value.slice(36, 40)
                         }
                     },
-                    // {
-                    //     key: "last_updated",
-                    //     sortable: true,
-                    //     formatter: timestamp => {
-                    //         return timestamp
-                    //     }
-                    // },
                     {
                         key: "actions"
                     }
@@ -343,8 +329,11 @@ export default {
             this.serverForm.recursive_add = true
             this.modalAddAction = "Add"
         },
-        refreshDetail(server, row_id) {
-            this.postInProgress = true
+        toggleDiagnostic(server, row_id, toggleDetails) {
+            toggleDetails()
+            this.queryDiagnostic(server, row_id)
+        },
+        testConnection(server, row_id) {
             const url = `http://127.0.0.1:5000/servers/testConnection/${server.id }`
             axios.get(url)
                 .then((response) => {
@@ -361,7 +350,25 @@ export default {
                     })
                 })
                 .finally(() => {
-                    this.postInProgress = false
+                })
+        },
+        queryDiagnostic(server, row_id) {
+            const url = `http://127.0.0.1:5000/servers/queryDiagnostic/${server.id }`
+            axios.get(url)
+                .then((response) => {
+                    if (response.data.error === undefined) {
+                        this.items[row_id].diagnostic = { message: response.data, error: false }
+                    } else {
+                        this.items[row_id].diagnostic = { message: response.data.error, error: true }
+                    }
+                })
+                .catch(error => {
+                    this.$bvToast.toast(error.toJSON(), {
+                        title: "Could not reach Server",
+                        variant: "danger",
+                    })
+                })
+                .finally(() => {
                 })
         },
         handleSubmission(evt) {
@@ -389,7 +396,7 @@ export default {
         },
         deleteServer() {
             const url = "http://127.0.0.1:5000/servers/delete"
-            this.postInProgress = true
+            this.postInProgress.modal = true
             let that = this
             axios.post(url, this.serverToDelete)
                 .then((response) => {
@@ -410,7 +417,7 @@ export default {
                 })
                 .finally(() => {
                     this.serverToDelete = {}
-                    this.postInProgress = false
+                    this.postInProgress.modal = false
                     this.$refs.serverTable.refresh()
                 })
         },
@@ -421,7 +428,7 @@ export default {
             } else {
                 url += "edit"
             }
-            this.postInProgress = true
+            this.postInProgress.modal = true
             let that = this
             axios.post(url, this.serverForm)
                 .then((response) => {
@@ -444,7 +451,7 @@ export default {
                     })
                 })
                 .finally(() => {
-                    this.postInProgress = false
+                    this.postInProgress.modal = false
                     this.$refs.serverTable.refresh()
                 })
         },
@@ -459,7 +466,8 @@ export default {
                     this.items = response.data
                     response.data.forEach((item, index) => {
                         this.items[index].status = "?"
-                        this.refreshDetail(item, index)
+                        this.items[index].diagnostic = {}
+                        this.testConnection(item, index)
                     })
                     return response.data
                 }).catch(error => {
