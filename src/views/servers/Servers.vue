@@ -71,7 +71,7 @@
 
             <template v-slot:cell(status)="row">
                 <span
-                    v-if="row.value !== '?'"
+                    v-if="row.value !== null"
                     :class="row.value.error ? 'text-danger' : 'text-success'"
                 >
                     <b-icon icon="circle-fill"></b-icon>
@@ -97,154 +97,37 @@
             </template>
         </b-table>
 
-        <b-modal
-            id="modal-delete"
-            title="Confirm Server Deletion"
-            @ok.prevent="deleteServer"
-        >
-            <b-table-lite
-                :items="[serverToDelete]"
-                :fields="tableSummary.fields"
-                stacked small responsive
-            >
-            </b-table-lite>
+        <DeleteModal
+            :serverToDelete="serverToDelete"
+            @actionDelete="handleDelete"
+        ></DeleteModal>
 
-             <template v-slot:modal-footer="{ ok, cancel }">
-                <b-button variant="danger" @click="ok()" :disabled="postInProgress.modal">
-                    <b-spinner 
-                        small
-                        v-if="postInProgress.modal"
-                    ></b-spinner>
-                    <span class="sr-only">Saving...</span>
-                    <span v-if="!postInProgress.modal">
-                        <b-icon icon="trash-fill"></b-icon> Delete
-                    </span>
-                </b-button>
-                 <b-button variant="secondary" @click="cancel()">Cancel</b-button>
-             </template>
-        </b-modal>
+        <AddModal
+            :modalAction="modalAddAction"
+            @actionAdd="handleAdd"
+        ></AddModal>
 
-        <b-modal 
-            id="modal-add"
-            :title="`${modalAddAction} Server`"
-            size="lg"
-            scrollable
-            @hidden="resetModal"
-            @ok="handleSubmission"
-        >
-            <ValidationObserver ref="observer">
-                <b-form ref="modalForm" @submit.prevent="submitForm">
-
-                    <b-form-group
-                        label="Server Name:"
-                        label-for="input-name"
-                        description="Local name of the server"
-                    >
-                        <ValidationProvider v-slot="validationContext" rules="required|min:4" name="Server Name">
-                            <b-form-input
-                                v-model="serverForm.name"
-                                :state="getValidationState(validationContext)"
-                                placeholder="Production MISP"
-                            ></b-form-input>
-                            <b-form-invalid-feedback v-for="(error, index) in validationContext.errors" v-bind:key="index">{{ error }}</b-form-invalid-feedback>
-                        </ValidationProvider>
-                    </b-form-group>
-
-                    <b-form-group
-                        label="Server URL:"
-                        label-for="input-url"
-                        description="The URL to access the server"
-                    >
-                        <ValidationProvider v-slot="validationContext" rules="required|url" name="Server URL">
-                            <div class="input-group">
-                                <b-form-input
-                                    v-model="serverForm.url"
-                                    :state="getValidationState(validationContext)"
-                                    placeholder="https://misp.test"
-                                ></b-form-input>
-                                <div class="input-group-append">
-                                    <div class="input-group-text">
-                                        <ValidationProvider v-slot="">
-                                            <b-form-checkbox v-model="serverForm.skip_ssl" switch>
-                                                <small>Skip SSL validation</small>
-                                            </b-form-checkbox>
-                                        </ValidationProvider>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <b-form-invalid-feedback v-for="(error, index) in validationContext.errors" v-bind:key="index">{{ error }}</b-form-invalid-feedback>
-                        </ValidationProvider>
-                    </b-form-group>
-
-                    <b-form-group
-                        label="User Authorization Key:"
-                        label-for="input-authkey"
-                        description="The AUTHKey or API Key of the user"
-                    >
-                        <ValidationProvider v-slot="validationContext" rules="required|length:40" name="User AUTHKey">
-                            <b-form-input
-                                v-model="serverForm.authkey"
-                                :state="getValidationState(validationContext)"
-                                placeholder="3vl1KgDgQ1m0W3rwKMgB5z6MqfYkUZobGwIj3Urw"
-                            ></b-form-input>
-                            <b-form-invalid-feedback v-for="(error, index) in validationContext.errors" v-bind:key="index">{{ error }}</b-form-invalid-feedback>
-                        </ValidationProvider>
-                    </b-form-group>
-
-                    <b-form-group
-                        description="By checking this box, it will try to add other MISP Servers connected to this one using known remote Servers"
-                    >
-                        <b-form-checkbox v-model="serverForm.recursive_add">Recursively Add Servers</b-form-checkbox>
-                    </b-form-group>
-                </b-form>
-            </ValidationObserver>
-
-            <template v-slot:modal-footer="{ ok, cancel }">
-                <b-button variant="primary" @click="ok()" :disabled="postInProgress.modal">
-                    <b-spinner 
-                        small
-                        v-if="postInProgress.modal"
-                    ></b-spinner>
-                    <span class="sr-only">Saving...</span>
-                    <span v-if="!postInProgress.modal">{{ modalAddAction == "Add" ? "Save" : modalAddAction}}</span>
-                </b-button>
-                <b-button variant="secondary" @click="cancel()">Cancel</b-button>
-            </template>
-        </b-modal>
     </div>
 </Layout>
 </template>
 
 <script>
-import { ValidationProvider, ValidationObserver, extend } from "vee-validate"
-import { required, min, length } from "vee-validate/dist/rules"
 import axios from "axios"
 import Layout from "@/components/layout/Layout.vue"
 import iconForScope from "@/components/ui/elements/iconForScope.vue"
 import RowDetails from "@/views/servers/RowDetails.vue"
-
-extend("required", required)
-extend("min", min)
-extend("length", length)
-extend("url", {
-    validate: value => {
-        const pattern2 = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/
-        return pattern2.test(value)
-    },
-    message: "This field must be a valid URL"
-})
-
+import DeleteModal from "@/views/servers/DeleteModal.vue"
+import AddModal from "@/views/servers/AddModal.vue"
 
 
 export default {
     name: "TheServers",
     components: {
-        ValidationProvider,
-        ValidationObserver,
         Layout,
         iconForScope,
-        RowDetails
+        RowDetails,
+        DeleteModal,
+        AddModal
     },
     data: function() {
         return {
@@ -254,15 +137,6 @@ export default {
             refreshInProgress: false,
             modalAddAction: "Add",
             serverToDelete: {},
-            tableSummary: {
-                fields: ["id", "name", "url", "skip_ssl",
-                    {
-                        key: "authkey", formatter: value => {
-                            return (value === undefined || value === null) ? "" : value.slice(0, 4) + " … " + value.slice(36, 40)
-                        }
-                    }
-                ]
-            },
             table: {
                 isBusy: false,
                 filtered: "",
@@ -298,13 +172,6 @@ export default {
                 ],
             },
             tableItems: [],
-            serverForm: {
-                name: "",
-                url: "",
-                skip_ssl: false,
-                authkey: "",
-                recursive_add: true
-            },
         }
     },
     computed: {
@@ -317,21 +184,16 @@ export default {
         onSorted() {
             this.table.currentPage = 1
         },
-        getValidationState({ dirty, validated, valid = null }) {
-            return dirty || validated ? valid : null
-        },
-        resetModal() {
-            delete(this.serverForm.id)
-            this.serverForm.name = ""
-            this.serverForm.url = ""
-            this.serverForm.skip_ssl = false
-            this.serverForm.authkey = ""
-            this.serverForm.recursive_add = true
-            this.modalAddAction = "Add"
-        },
         toggleDiagnostic(server, row_id, toggleDetails) {
             toggleDetails()
             this.queryDiagnostic(server, row_id)
+        },
+        handleDelete() {
+            this.serverToDelete = {}
+            this.$refs.serverTable.refresh()
+        },
+        handleAdd() {
+            this.$refs.serverTable.refresh()
         },
         testConnection(server, row_id) {
             const url = `http://127.0.0.1:5000/servers/testConnection/${server.id }`
@@ -371,15 +233,6 @@ export default {
                 .finally(() => {
                 })
         },
-        handleSubmission(evt) {
-            evt.preventDefault()
-            this.$refs.observer.validate().then(success => {
-                if (!success) {
-                    return
-                }
-                this.submitForm()
-            })
-        },
         openEditModal(server) {
             this.serverForm.id = server.id
             this.serverForm.name = server.name
@@ -394,67 +247,6 @@ export default {
             this.$bvModal.show("modal-delete")
             this.serverToDelete = server
         },
-        deleteServer() {
-            const url = "http://127.0.0.1:5000/servers/delete"
-            this.postInProgress.modal = true
-            let that = this
-            axios.post(url, this.serverToDelete)
-                .then((response) => {
-                    this.$nextTick(() => {
-                        this.$bvModal.hide("modal-delete")
-                    })
-                    const toastText = response.data.name + " [" + response.data.url + "]"
-                    that.$bvToast.toast(toastText, {
-                        title: "Server successfully delete",
-                        variant: "success",
-                    })
-                })
-                .catch(error => {
-                    that.$bvToast.toast(error.toJSON(), {
-                        title: "Could not delete Server",
-                        variant: "danger",
-                    })
-                })
-                .finally(() => {
-                    this.serverToDelete = {}
-                    this.postInProgress.modal = false
-                    this.$refs.serverTable.refresh()
-                })
-        },
-        submitForm() {
-            let url = "http://127.0.0.1:5000/servers/"
-            if (this.modalAddAction == "Add") {
-                url += "add"
-            } else {
-                url += "edit"
-            }
-            this.postInProgress.modal = true
-            let that = this
-            axios.post(url, this.serverForm)
-                .then((response) => {
-                    this.$nextTick(() => {
-                        this.$refs.observer.reset()
-                    })
-                    this.$nextTick(() => {
-                        this.$bvModal.hide("modal-add")
-                    })
-                    const toastText = response.data.name + " [" + response.data.url + "]"
-                    that.$bvToast.toast(toastText, {
-                        title: "Server successfully added",
-                        variant: "success",
-                    })
-                })
-                .catch(error => {
-                    that.$bvToast.toast(error.toJSON(), {
-                        title: "Could not save Server",
-                        variant: "danger",
-                    })
-                })
-                .finally(() => {
-                    this.postInProgress.modal = false
-                    this.$refs.serverTable.refresh()
-                })
-        },
         getIndex(ctx) {
             const url = "http://127.0.0.1:5000/servers/index?page=" + ctx.currentPage + "&size=" + ctx.perPage
             // let that = this
@@ -465,7 +257,7 @@ export default {
                     this.totalRows = response.data.length
                     this.items = response.data
                     response.data.forEach((item, index) => {
-                        this.items[index].status = "?"
+                        this.items[index].status = null
                         this.items[index].diagnostic = {}
                         this.testConnection(item, index)
                     })
@@ -477,38 +269,6 @@ export default {
                     })
                     return []
                 })
-
-            // axios.get(url)
-            //     .then(response => {
-            //         callback(response.data)
-            //         // callback(response.items)
-            //     })
-            //     .catch(error => {
-            //         that.$bvToast.toast(error, {
-            //             title: "Could not fetch server index",
-            //             variant: "danger",
-            //         })
-            //         callback([])
-            //     })
-            // return null // Must return null or undefined to signal b-table that callback is being used
-
-
-            // const promise = axios.get(url)
-            // Must return a promise that resolves to an array of items
-            // return promise
-            //     .then(data => {
-            //         // Pluck the array of items off our axios response
-            //         const items = data.items
-            //         // Must return an array of items or an empty array if an error occurred
-            //         return items || []
-            //     })
-            //     .catch(error => {
-            //         that.$bvToast.toast(error, {
-            //             title: "Could not fetch server index",
-            //             variant: "danger",
-            //         })
-            //         return []
-            //     })
         }
     },
     
