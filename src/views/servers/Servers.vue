@@ -66,12 +66,12 @@
             </template>
 
             <template v-slot:cell(url)="row">
-                <b-link :href="row.value" target="_blank">{{ row.value }}</b-link>
+                <b-link :href="row.value" target="_blank">{{ row.value }} <sup class="fa fa-external-link-alt"></sup></b-link>
             </template>
 
             <template v-slot:cell(status)="row">
                 <span
-                    v-if="row.value !== null"
+                    v-if="Object.keys(row.value).length != 0"
                     :class="row.value.error ? 'text-danger' : 'text-success'"
                 >
                     <b-icon icon="circle-fill"></b-icon>
@@ -81,14 +81,17 @@
             </template>
 
             <template v-slot:cell(actions)="row">
-                <b-button size="sm" @click="toggleDiagnostic(row.item, row.index, row.toggleDetails)">
-                     <b-icon :icon="row.detailsShowing ? 'arrows-collapse' : 'arrows-expand'"></b-icon>
+                <b-button
+                    size="xs" variant ="link"
+                    @click="toggleDiagnostic(row.item, row.index, row.toggleDetails, row)"
+                >
+                     <b-icon class="text-secondary" :icon="row.detailsShowing ? 'arrows-collapse' : 'arrows-expand'"></b-icon>
                 </b-button>
-                <b-button class="ml-1" size="sm" variant="primary" @click="openEditModal(row.item)">
+                <b-button class="ml-1" size="xs" variant="link" @click="openEditModal(row.item)">
                     <i class="fas fa-edit"></i>
                 </b-button>
-                <b-button class="ml-1" size="sm" variant="danger" @click="openDeletionModal(row.item)">
-                    <b-icon icon="trash-fill"></b-icon>
+                <b-button class="ml-1" size="xs" variant="link" @click="openDeletionModal(row.item)">
+                    <b-icon icon="trash-fill" class="text-danger"></b-icon>
                 </b-button>
             </template>
 
@@ -104,6 +107,7 @@
 
         <AddModal
             :modalAction="modalAddAction"
+            :serverForm="serverToEdit.formData"
             @actionAdd="handleAdd"
         ></AddModal>
 
@@ -137,6 +141,7 @@ export default {
             refreshInProgress: false,
             modalAddAction: "Add",
             serverToDelete: {},
+            serverToEdit: { formData: {}}, // nested cheat to keep it reactive
             table: {
                 isBusy: false,
                 filtered: "",
@@ -151,6 +156,10 @@ export default {
                         sortable: true
                     },
                     {
+                        key: "comment",
+                        sortable: true
+                    },
+                    {
                         key: "url",
                         sortable: false
                     },
@@ -160,11 +169,38 @@ export default {
                         sortable: true
                     },
                     {
+                        key: "user",
+                        label: "User",
+                        sortable: true
+                    },
+                    {
+                        key: "submoduleStatus",
+                        label: "Sub-modules",
+                        sortable: true
+                    },
+                    {
+                        key: "proxy",
+                        sortable: true
+                    },
+                    {
+                        key: "zeromq",
+                        label: "ZeroMQ",
+                        sortable: true
+                    },
+                    {
+                        key: "workers",
+                        sortable: true
+                    },
+                    {
                         key: "authkey",
                         sortable: false,
                         formatter: value => {
                             return value.slice(0, 4) + " … " + value.slice(36, 40)
                         }
+                    },
+                    {
+                        key: "lastRefresh",
+                        sortable: true
                     },
                     {
                         key: "actions"
@@ -184,7 +220,8 @@ export default {
         onSorted() {
             this.table.currentPage = 1
         },
-        toggleDiagnostic(server, row_id, toggleDetails) {
+        toggleDiagnostic(server, row_id, toggleDetails, row) {
+            row.item._rowVariant = !row.detailsShowing ? "primary" : ""
             toggleDetails()
             this.queryDiagnostic(server, row_id)
         },
@@ -215,6 +252,7 @@ export default {
                 })
         },
         queryDiagnostic(server, row_id) {
+            this.items[row_id].diagnostic.loading = true
             const url = `http://127.0.0.1:5000/servers/queryDiagnostic/${server.id }`
             axios.get(url)
                 .then((response) => {
@@ -231,15 +269,11 @@ export default {
                     })
                 })
                 .finally(() => {
+                    this.items[row_id].diagnostic.loading = false
                 })
         },
         openEditModal(server) {
-            this.serverForm.id = server.id
-            this.serverForm.name = server.name
-            this.serverForm.url = server.url
-            this.serverForm.skip_ssl = server.skip_ssl
-            this.serverForm.authkey = server.authkey
-            this.serverForm.recursive_add = false
+            this.serverToEdit.formData = JSON.parse(JSON.stringify(server)) // deep clone
             this.modalAddAction = "Edit"
             this.$bvModal.show("modal-add")
         },
@@ -249,15 +283,13 @@ export default {
         },
         getIndex(ctx) {
             const url = "http://127.0.0.1:5000/servers/index?page=" + ctx.currentPage + "&size=" + ctx.perPage
-            // let that = this
-
             let promise  = axios.get(url)
             return promise
                 .then((response) => {
                     this.totalRows = response.data.length
                     this.items = response.data
                     response.data.forEach((item, index) => {
-                        this.items[index].status = null
+                        this.items[index].status = {}
                         this.items[index].diagnostic = {}
                         this.testConnection(item, index)
                     })

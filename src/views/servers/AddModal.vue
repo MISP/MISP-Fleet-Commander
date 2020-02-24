@@ -119,18 +119,23 @@ export default {
         modalAction: {
             type: String,
             default: "Add"
+        },
+        serverForm: {
+            type: Object,
+            default: () => {
+                return {
+                    name: "",
+                    url: "",
+                    skip_ssl: false,
+                    authkey: "",
+                    recursive_add: true
+                }
+            }
         }
     },
     data: function() {
         return {
             postInProgress: false,
-            serverForm: {
-                name: "",
-                url: "",
-                skip_ssl: false,
-                authkey: "",
-                recursive_add: true
-            },
         }
     },
     methods: {
