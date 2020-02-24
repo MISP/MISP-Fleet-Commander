@@ -13,13 +13,8 @@ export default {
     index(cb, errorCb) {
         // const url = `${url.index}?page=${ctx.currentPage}&size=${ctx.perPage}`
         const url = `${urls.index}`
-        let promise  = axios.get(url)
-        return promise
+        return axios.get(url)
             .then((response) => {
-                response.data.forEach((item, index) => {
-                    response.data[index].status = {}
-                    response.data[index].diagnostic = {}
-                })
                 cb(response.data)
             }).catch(error => {
                 errorCb(error)
@@ -27,8 +22,14 @@ export default {
     },
 
     testConnection(server, cb, errorCb) {
-        cb()
-        errorCb()
+        const url = `${urls.testConnection}/${server.id}`
+        return axios.get(url)
+            .then((response) => {
+                cb(response.data)
+            }).catch(error => {
+                console.log(error)
+                errorCb(error)
+            })
     },
 
     queryDiagnostic(server, cb, errorCb) {

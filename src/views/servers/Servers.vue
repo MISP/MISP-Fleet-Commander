@@ -36,7 +36,7 @@
                         style="border-radius: 0"
                     ></b-form-input>
                 </b-input-group>
-                <b-button class="ml-2" variant="primary" size="sm" @click="refreshServerIndex()">
+                <b-button class="ml-2" variant="primary" size="sm" @click="fullRefresh()">
                     <b-icon icon="arrow-clockwise" :class="{'fa-spin': refreshInProgress}" title="Refresh Servers"></b-icon>
                 </b-button>
            </div>
@@ -77,7 +77,7 @@
                     <b-icon icon="circle-fill"></b-icon>
                     {{ row.value.message }}
                 </span>
-                <span v-else>Unkown</span>
+                <cellLoading v-else :width="'70px'"></cellLoading>
             </template>
 
             <template v-slot:cell(actions)="row">
@@ -122,6 +122,7 @@ import { mapState, mapGetters } from "vuex"
 import axios from "axios"
 import Layout from "@/components/layout/Layout.vue"
 import iconForScope from "@/components/ui/elements/iconForScope.vue"
+import cellLoading from "@/components/ui/elements/cellLoading.vue"
 import RowDetails from "@/views/servers/RowDetails.vue"
 import DeleteModal from "@/views/servers/DeleteModal.vue"
 import AddModal from "@/views/servers/AddModal.vue"
@@ -132,6 +133,7 @@ export default {
     components: {
         Layout,
         iconForScope,
+        cellLoading,
         RowDetails,
         DeleteModal,
         AddModal
@@ -169,7 +171,8 @@ export default {
                     {
                         key: "status",
                         label: "Status",
-                        sortable: true
+                        sortable: true,
+                        tdClass: "align-middle"
                     },
                     {
                         key: "user",
@@ -241,25 +244,6 @@ export default {
         handleAdd() {
             this.$refs.serverTable.refresh()
         },
-        testConnection(server, row_id) {
-            const url = `http://127.0.0.1:5000/servers/testConnection/${server.id }`
-            axios.get(url)
-                .then((response) => {
-                    if (response.data.version !== undefined) {
-                        this.items[row_id].status = { message: response.data.version, error: false }
-                    } else {
-                        this.items[row_id].status = { message: response.data.error, error: true }
-                    }
-                })
-                .catch(error => {
-                    this.$bvToast.toast(error.toJSON(), {
-                        title: "Could not reach Server",
-                        variant: "danger",
-                    })
-                })
-                .finally(() => {
-                })
-        },
         queryDiagnostic(server, row_id) {
             this.items[row_id].diagnostic.loading = true
             const url = `http://127.0.0.1:5000/servers/queryDiagnostic/${server.id }`
@@ -290,11 +274,12 @@ export default {
             this.$bvModal.show("modal-delete")
             this.serverToDelete = server
         },
-        refreshServerIndex() {
+        refreshServerIndex(callback) {
             this.refreshInProgress = true
             this.$store.dispatch("servers/getAllServers")
                 .then(() => {
                     this.table.totalRows = this.serverCount
+                    callback()
                 })
                 .catch(error => {
                     this.$bvToast.toast(error, {
@@ -305,10 +290,24 @@ export default {
                 .finally(() => {
                     this.refreshInProgress = false
                 })
+        },
+        refreshAllServerOnlineStatus() {
+            this.$store.dispatch("servers/refreshAllConnectionState")
+                .catch(error => {
+                    this.$bvToast.toast(error.toJSON(), {
+                        title: "Could not reach Server",
+                        variant: "danger",
+                    })
+                })
+        },
+        fullRefresh() {
+            this.refreshServerIndex(
+                this.refreshAllServerOnlineStatus
+            )
         }
     },
     created () {
-        this.refreshServerIndex()
+        this.fullRefresh()
     }
 }
 </script>
