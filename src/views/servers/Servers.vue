@@ -43,6 +43,7 @@
         </div>
         <b-table 
             striped outlined hover show-empty small
+            responsive="md"
             id="server-table"
             ref="serverTable"
             :per-page="table.perPage"
@@ -72,7 +73,7 @@
             <template v-slot:cell(status)="row">
                 <span
                     v-if="Object.keys(row.value).length != 0"
-                    :class="row.value.error ? 'text-danger' : 'text-success'"
+                    :class="['text-nowrap', row.value.error ? 'text-danger' : 'text-success']"
                 >
                     <b-icon icon="circle-fill"></b-icon>
                     {{ row.value.message }}
@@ -81,18 +82,20 @@
             </template>
 
             <template v-slot:cell(actions)="row">
-                <b-button
-                    size="xs" variant ="link"
-                    @click="toggleDiagnostic(row.item, row.index, row.toggleDetails, row)"
-                >
-                     <b-icon class="text-secondary" :icon="row.detailsShowing ? 'arrows-collapse' : 'arrows-expand'"></b-icon>
-                </b-button>
-                <b-button class="ml-1" size="xs" variant="link" @click="openEditModal(row.item)">
-                    <i class="fas fa-edit"></i>
-                </b-button>
-                <b-button class="ml-1" size="xs" variant="link" @click="openDeletionModal(row.item)">
-                    <b-icon icon="trash-fill" class="text-danger"></b-icon>
-                </b-button>
+                <div class="btn-group">
+                    <b-button
+                        size="xs" variant ="link"
+                        @click="toggleDiagnostic(row.item, row.index, row)"
+                    >
+                        <b-icon class="text-secondary" :icon="row.detailsShowing ? 'arrows-collapse' : 'arrows-expand'"></b-icon>
+                    </b-button>
+                    <b-button class="ml-1" size="xs" variant="link" @click="openEditModal(row.item)">
+                        <i class="fas fa-edit"></i>
+                    </b-button>
+                    <b-button class="ml-1" size="xs" variant="link" @click="openDeletionModal(row.item)">
+                        <b-icon icon="trash-fill" class="text-danger"></b-icon>
+                    </b-button>
+                </div>
             </template>
 
             <template v-slot:row-details="{ item }">
@@ -162,7 +165,8 @@ export default {
                     },
                     {
                         key: "comment",
-                        sortable: true
+                        sortable: true,
+                        class: "d-none d-xxl-table-cell",
                     },
                     {
                         key: "url",
@@ -177,39 +181,46 @@ export default {
                     {
                         key: "user",
                         label: "User",
-                        sortable: true
+                        sortable: true,
+                        class: "d-none d-xl-table-cell",
                     },
                     {
                         key: "submoduleStatus",
                         label: "Sub-modules",
-                        sortable: true
+                        sortable: true,
+                        class: "d-none d-xl-table-cell",
                     },
                     {
                         key: "proxy",
-                        sortable: true
+                        sortable: true,
+                        class: "d-none d-xxl-table-cell",
                     },
                     {
                         key: "zeromq",
                         label: "ZeroMQ",
-                        sortable: true
+                        sortable: true,
+                        class: "d-none d-xxl-table-cell",
                     },
                     {
                         key: "workers",
-                        sortable: true
+                        sortable: true,
+                        class: "d-none d-md-table-cell",
                     },
                     {
                         key: "authkey",
                         sortable: false,
+                        class: "d-none d-xl-table-cell",
                         formatter: value => {
                             return value.slice(0, 4) + " … " + value.slice(36, 40)
                         }
                     },
                     {
                         key: "lastRefresh",
-                        sortable: true
+                        sortable: true,
                     },
                     {
-                        key: "actions"
+                        key: "actions",
+                        class: "d-none d-md-table-cell",
                     }
                 ],
             },

@@ -97,3 +97,9 @@
         max-width: 85vw;
     }
 }
+
+@media (min-width: 1500px) {
+    .d-xxl-table-cell {
+        display: table-cell !important;
+    }
+}

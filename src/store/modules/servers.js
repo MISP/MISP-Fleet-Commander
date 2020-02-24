@@ -69,6 +69,7 @@ const actions = {
 const mutations = {
     toggleShowDetails (state, index) {
         state.all[index]._showDetails = !state.all[index]._showDetails
+        state.all[index].diagnostic.loading = !state.all[index].diagnostic.loading
     },
     setServers (state, servers) {
         state.all = servers
