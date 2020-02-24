@@ -32,6 +32,7 @@
 </template>
 
 <script>
+import { mapState } from "vuex"
 import iconForScope from "@/components/ui/elements/iconForScope.vue"
 
 export default {
@@ -64,13 +65,13 @@ export default {
         // selected_item: String,
     },
     computed: {
-        sidebarCollapsed() {
-            return this.$store.state.sidebarCollapsed
-        }
+        ...mapState({
+            sidebarCollapsed: state => state.ui.sidebarCollapsed
+        }),
     },
     methods: {
         toggleSidebar() {
-            this.$store.commit("toggleSidebar")
+            this.$store.commit("ui/toggleSidebar")
         }
     }
 }

@@ -16,6 +16,7 @@
 
 <script>
 // @ is an alias to /src
+import { mapState } from "vuex"
 import TheSideBar from "@/components/layout/TheSideBar.vue"
 import TheNavBar from "@/components/layout/TheNavBar.vue"
 
@@ -31,9 +32,9 @@ export default {
         }
     },
     computed: {
-        sidebarCollapsed () {
-            return this.$store.state.sidebarCollapsed
-        }
+        ...mapState({
+            sidebarCollapsed: state => state.ui.sidebarCollapsed
+        }),
     }
 }
 </script>

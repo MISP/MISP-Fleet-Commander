@@ -36,7 +36,7 @@
                         style="border-radius: 0"
                     ></b-form-input>
                 </b-input-group>
-                <b-button class="ml-2" variant="primary" size="sm" @click="$refs.serverTable.refresh()">
+                <b-button class="ml-2" variant="primary" size="sm" @click="refreshServerIndex()">
                     <b-icon icon="arrow-clockwise" :class="{'fa-spin': refreshInProgress}" title="Refresh Servers"></b-icon>
                 </b-button>
            </div>
@@ -98,6 +98,8 @@
             <template v-slot:row-details="{ item }">
                 <RowDetails :details="item.diagnostic"></RowDetails>
             </template>
+
+            <template v-slot:table-caption>Showing {{ table.totalRows }} out of {{ serverCount }} Servers</template>
         </b-table>
 
         <DeleteModal
@@ -116,6 +118,7 @@
 </template>
 
 <script>
+import { mapState, mapGetters } from "vuex"
 import axios from "axios"
 import Layout from "@/components/layout/Layout.vue"
 import iconForScope from "@/components/ui/elements/iconForScope.vue"
@@ -211,6 +214,12 @@ export default {
         }
     },
     computed: {
+        ...mapState({
+            getIndex: state => state.servers.all
+        }),
+        ...mapGetters({
+            serverCount: "servers/serverCount"
+        }),
     },
     methods: {
         onFiltered(filteredItems) {
@@ -281,29 +290,26 @@ export default {
             this.$bvModal.show("modal-delete")
             this.serverToDelete = server
         },
-        getIndex(ctx) {
-            const url = "http://127.0.0.1:5000/servers/index?page=" + ctx.currentPage + "&size=" + ctx.perPage
-            let promise  = axios.get(url)
-            return promise
-                .then((response) => {
-                    this.totalRows = response.data.length
-                    this.items = response.data
-                    response.data.forEach((item, index) => {
-                        this.items[index].status = {}
-                        this.items[index].diagnostic = {}
-                        this.testConnection(item, index)
-                    })
-                    return response.data
-                }).catch(error => {
+        refreshServerIndex() {
+            this.refreshInProgress = true
+            this.$store.dispatch("servers/getAllServers")
+                .then(() => {
+                    this.table.totalRows = this.serverCount
+                })
+                .catch(error => {
                     this.$bvToast.toast(error, {
                         title: "Could not fetch server index",
                         variant: "danger",
                     })
-                    return []
+                })
+                .finally(() => {
+                    this.refreshInProgress = false
                 })
         }
     },
-    
+    created () {
+        this.refreshServerIndex()
+    }
 }
 </script>
 
