@@ -9,6 +9,9 @@ import "bootstrap-vue/dist/bootstrap-vue.css"
 
 import "@fortawesome/fontawesome-free/css/all.min.css"
 
+import VueMoment from "vue-moment"
+Vue.use(VueMoment)
+
 // import './plugins/bootstrap-vue'
 import App from "./App.vue"
 import router from "./router"

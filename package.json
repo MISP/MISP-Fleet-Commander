@@ -16,6 +16,7 @@
     "lodash": "^4.17.15",
     "vee-validate": "^3.2.5",
     "vue": "^2.6.10",
+    "vue-moment": "^4.1.0",
     "vue-multiselect": "^2.1.6",
     "vue-router": "^3.0.3",
     "vuedraggable": "^2.23.2",

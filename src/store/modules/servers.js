@@ -53,6 +53,7 @@ const actions = {
     },
     getDiagnostic({ commit }, server) {
         return new Promise((resolve, reject) => {
+            commit("updateDiagnostic", { server_id: server.id, diagnostic: { loading: true }})
             api.queryDiagnostic(
                 server,
                 diagnostic => {
@@ -79,9 +80,9 @@ const mutations = {
             if (server.id == payload.server_id) {
                 const connection = payload.connectionState
                 if (connection.version !== undefined) {
-                    server.status = { message: connection.version, error: false }
+                    server.status = { data: connection.version, error: false }
                 } else {
-                    server.status = { message: connection.error, error: true }
+                    server.status = { data: connection.error, error: true }
                 }
             }
         })
@@ -91,9 +92,9 @@ const mutations = {
             if (server.id == payload.server_id) {
                 const diagnostic = payload.diagnostic
                 if (diagnostic.error === undefined) {
-                    server.diagnostic = { message: diagnostic, error: false }
+                    server.diagnostic = { data: diagnostic, error: false }
                 } else {
-                    server.diagnostic = { message: diagnostic.error, error: true }
+                    server.diagnostic = { data: diagnostic.error, error: true }
                 }
             }
         })

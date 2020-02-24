@@ -76,7 +76,7 @@
                     :class="['text-nowrap', row.value.error ? 'text-danger' : 'text-success']"
                 >
                     <b-icon icon="circle-fill"></b-icon>
-                    {{ row.value.message }}
+                    {{ row.value.data }}
                 </span>
                 <cellLoading v-else :width="'70px'"></cellLoading>
             </template>
@@ -99,7 +99,11 @@
             </template>
 
             <template v-slot:row-details="{ item }">
-                <RowDetails :details="item.diagnostic"></RowDetails>
+                <RowDetails 
+                    :details="item.diagnostic"
+                    :server="item"
+                    @actionRefresh="refreshDiagnostic(item)"
+                ></RowDetails>
             </template>
 
             <template v-slot:table-caption>Showing {{ table.totalRows }} out of {{ serverCount }} Servers</template>
@@ -301,6 +305,9 @@ export default {
             this.refreshServerIndex(
                 this.refreshAllServerOnlineStatus
             )
+        },
+        refreshDiagnostic(server) {
+            this.$store.dispatch("servers/getDiagnostic", server)
         }
     },
     created () {
