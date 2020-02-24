@@ -232,10 +232,14 @@ export default {
         onSorted() {
             this.table.currentPage = 1
         },
-        toggleDiagnostic(server, row_id, toggleDetails, row) {
-            row.item._rowVariant = !row.detailsShowing ? "primary" : ""
-            toggleDetails()
-            this.queryDiagnostic(server, row_id)
+        toggleDiagnostic(server, row_id, row) {
+            this.$store.commit("servers/toggleShowDetails", row_id)
+            if (server._showDetails) {
+                row.item._rowVariant = "primary"
+                this.queryDiagnostic(server, row_id)
+            } else {
+                row.item._rowVariant = ""
+            }
         },
         handleDelete() {
             this.serverToDelete = {}
@@ -244,26 +248,8 @@ export default {
         handleAdd() {
             this.$refs.serverTable.refresh()
         },
-        queryDiagnostic(server, row_id) {
-            this.items[row_id].diagnostic.loading = true
-            const url = `http://127.0.0.1:5000/servers/queryDiagnostic/${server.id }`
-            axios.get(url)
-                .then((response) => {
-                    if (response.data.error === undefined) {
-                        this.items[row_id].diagnostic = { message: response.data, error: false }
-                    } else {
-                        this.items[row_id].diagnostic = { message: response.data.error, error: true }
-                    }
-                })
-                .catch(error => {
-                    this.$bvToast.toast(error.toJSON(), {
-                        title: "Could not reach Server",
-                        variant: "danger",
-                    })
-                })
-                .finally(() => {
-                    this.items[row_id].diagnostic.loading = false
-                })
+        queryDiagnostic(server) {
+            this.$store.dispatch("servers/getDiagnostic", server)
         },
         openEditModal(server) {
             this.serverToEdit.formData = JSON.parse(JSON.stringify(server)) // deep clone

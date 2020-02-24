@@ -27,14 +27,18 @@ export default {
             .then((response) => {
                 cb(response.data)
             }).catch(error => {
-                console.log(error)
                 errorCb(error)
             })
     },
 
     queryDiagnostic(server, cb, errorCb) {
-        cb(server)
-        errorCb()
+        const url = `${urls.queryDiagnostic}/${server.id}`
+        return axios.get(url)
+            .then((response) => {
+                cb(response.data)
+            }).catch(error => {
+                errorCb(error)
+            })
     },
 
     add(server, cb, errorCb) {

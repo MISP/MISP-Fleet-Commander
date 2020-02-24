@@ -15,7 +15,7 @@ const getters = {
 // actions
 // API Usage: api.[action]({parameters}, callback, errorCallback)
 const actions = {
-    getAllServers ({ commit }) {
+    getAllServers({ commit }) {
         // this function should not fetch data if it has been fetched already
         return new Promise((resolve, reject) => {
             api.index(
@@ -23,6 +23,7 @@ const actions = {
                     servers.forEach(server => {
                         server.status = {}
                         server.diagnostic = {}
+                        server._showDetails = false
                     })
                     commit("setServers", servers)
                     resolve()
@@ -49,11 +50,26 @@ const actions = {
             promises.push(dispatch("refreshConnectionState", server))
         })
         return Promise.all(promises)
+    },
+    getDiagnostic({ commit }, server) {
+        return new Promise((resolve, reject) => {
+            api.queryDiagnostic(
+                server,
+                diagnostic => {
+                    commit("updateDiagnostic", { server_id: server.id, diagnostic: diagnostic})
+                    resolve()
+                },
+                (error) => { reject(error) }
+            )
+        })
     }
 }
 
 // mutations
 const mutations = {
+    toggleShowDetails (state, index) {
+        state.all[index]._showDetails = !state.all[index]._showDetails
+    },
     setServers (state, servers) {
         state.all = servers
     },
@@ -65,6 +81,18 @@ const mutations = {
                     server.status = { message: connection.version, error: false }
                 } else {
                     server.status = { message: connection.error, error: true }
+                }
+            }
+        })
+    },
+    updateDiagnostic(state, payload) {
+        state.all.forEach(server => {
+            if (server.id == payload.server_id) {
+                const diagnostic = payload.diagnostic
+                if (diagnostic.error === undefined) {
+                    server.diagnostic = { message: diagnostic, error: false }
+                } else {
+                    server.diagnostic = { message: diagnostic.error, error: true }
                 }
             }
         })
