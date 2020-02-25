@@ -184,7 +184,7 @@ export default {
                     })
                 })
                 .catch(error => {
-                    that.$bvToast.toast(error.toJSON(), {
+                    that.$bvToast.toast(error, {
                         title: "Could not save Server",
                         variant: "danger",
                     })

@@ -85,7 +85,7 @@
                 <div class="btn-group">
                     <b-button
                         size="xs" variant ="link"
-                        @click="toggleDiagnostic(row.item, row.index, row)"
+                        @click="toggleServerInfo(row.item, row.index, row)"
                     >
                         <b-icon class="text-secondary" :icon="row.detailsShowing ? 'arrows-collapse' : 'arrows-expand'"></b-icon>
                     </b-button>
@@ -98,11 +98,12 @@
                 </div>
             </template>
 
-            <template v-slot:row-details="{ item }">
+            <template v-slot:row-details="row">
                 <RowDetails 
-                    :details="item.diagnostic"
-                    :server="item"
-                    @actionRefresh="refreshDiagnostic(item)"
+                    :details="row.item.server_info"
+                    :server="row.item"
+                    :row="row"
+                    @actionRefresh="handleRefreshInfo(item, $event)"
                 ></RowDetails>
             </template>
 
@@ -126,7 +127,6 @@
 
 <script>
 import { mapState, mapGetters } from "vuex"
-import axios from "axios"
 import Layout from "@/components/layout/Layout.vue"
 import iconForScope from "@/components/ui/elements/iconForScope.vue"
 import cellLoading from "@/components/ui/elements/cellLoading.vue"
@@ -247,24 +247,21 @@ export default {
         onSorted() {
             this.table.currentPage = 1
         },
-        toggleDiagnostic(server, row_id, row) {
+        toggleServerInfo(server, row_id, row) {
             this.$store.commit("servers/toggleShowDetails", row_id)
             if (server._showDetails) {
                 row.item._rowVariant = "primary"
-                this.queryDiagnostic(server, row_id)
+                this.refreshInfo(server, false)
             } else {
                 row.item._rowVariant = ""
             }
         },
         handleDelete() {
             this.serverToDelete = {}
-            this.$refs.serverTable.refresh()
+            this.refreshServerIndex()
         },
         handleAdd() {
-            this.$refs.serverTable.refresh()
-        },
-        queryDiagnostic(server) {
-            this.$store.dispatch("servers/getDiagnostic", server)
+            this.refreshServerIndex()
         },
         openEditModal(server) {
             this.serverToEdit.formData = JSON.parse(JSON.stringify(server)) // deep clone
@@ -295,7 +292,7 @@ export default {
         refreshAllServerOnlineStatus() {
             this.$store.dispatch("servers/refreshAllConnectionState")
                 .catch(error => {
-                    this.$bvToast.toast(error.toJSON(), {
+                    this.$bvToast.toast(error, {
                         title: "Could not reach Server",
                         variant: "danger",
                     })
@@ -306,8 +303,20 @@ export default {
                 this.refreshAllServerOnlineStatus
             )
         },
-        refreshDiagnostic(server) {
-            this.$store.dispatch("servers/getDiagnostic", server)
+        handleRefreshInfo(server, event) {
+            this.refreshInfo(server, event == "no_cache")
+        },
+        refreshInfo(server, no_cache=false, callback=()=>{}) {
+            this.$store.dispatch("servers/getInfo", {server: server, no_cache: no_cache})
+                .then(() => {
+                    callback()
+                })
+                .catch(error => {
+                    this.$bvToast.toast(error, {
+                        title: "Could not fetch server info",
+                        variant: "danger",
+                    })
+                })
         }
     },
     created () {

@@ -2,7 +2,7 @@ import axios from "axios"
 
 const urls = {
     testConnection: "http://127.0.0.1:5000/servers/testConnection",
-    queryDiagnostic: "http://127.0.0.1:5000/servers/queryDiagnostic",
+    queryInfo: "http://127.0.0.1:5000/servers/queryInfo",
     index: "http://127.0.0.1:5000/servers/index",
     add: "http://127.0.0.1:5000/servers/add",
     edit: "http://127.0.0.1:5000/servers/edit",
@@ -17,7 +17,7 @@ export default {
             .then((response) => {
                 cb(response.data)
             }).catch(error => {
-                errorCb(error)
+                errorCb(error.toJSON().message)
             })
     },
 
@@ -27,17 +27,18 @@ export default {
             .then((response) => {
                 cb(response.data)
             }).catch(error => {
-                errorCb(error)
+                errorCb(error.toJSON().message)
             })
     },
 
-    queryDiagnostic(server, cb, errorCb) {
-        const url = `${urls.queryDiagnostic}/${server.id}`
+    queryInfo(payload, cb, errorCb) {
+        let url = `${urls.queryInfo}/${payload.server.id}`
+        url += payload.no_cache ? "/1" : ""
         return axios.get(url)
             .then((response) => {
                 cb(response.data)
             }).catch(error => {
-                errorCb(error)
+                errorCb(error.toJSON().message)
             })
     },
 

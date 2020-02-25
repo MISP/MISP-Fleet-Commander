@@ -22,8 +22,9 @@ const actions = {
                 servers => {
                     servers.forEach(server => {
                         server.status = {}
-                        server.diagnostic = {}
+                        server.server_info = {data: {}, error: null}
                         server._showDetails = false
+                        server._loading = false
                     })
                     commit("setServers", servers)
                     resolve()
@@ -51,13 +52,13 @@ const actions = {
         })
         return Promise.all(promises)
     },
-    getDiagnostic({ commit }, server) {
+    getInfo({ commit }, payload) {
         return new Promise((resolve, reject) => {
-            commit("updateDiagnostic", { server_id: server.id, diagnostic: { loading: true }})
-            api.queryDiagnostic(
-                server,
-                diagnostic => {
-                    commit("updateDiagnostic", { server_id: server.id, diagnostic: diagnostic})
+            commit("updateInfo", { server_id: payload.server.id, info: {}, loading: true })
+            api.queryInfo(
+                payload,
+                (info) => {
+                    commit("updateInfo", { server_id: payload.server.id, info: info, loading: false})
                     resolve()
                 },
                 (error) => { reject(error) }
@@ -70,7 +71,6 @@ const actions = {
 const mutations = {
     toggleShowDetails (state, index) {
         state.all[index]._showDetails = !state.all[index]._showDetails
-        state.all[index].diagnostic.loading = !state.all[index].diagnostic.loading
     },
     setServers (state, servers) {
         state.all = servers
@@ -87,14 +87,17 @@ const mutations = {
             }
         })
     },
-    updateDiagnostic(state, payload) {
+    updateInfo(state, payload) {
         state.all.forEach(server => {
             if (server.id == payload.server_id) {
-                const diagnostic = payload.diagnostic
-                if (diagnostic.error === undefined) {
-                    server.diagnostic = { data: diagnostic, error: false }
+                server._loading = payload.loading
+                const info = payload.info
+                if (info.error === undefined) {
+                    server.server_info.data = info
+                    server.server_info.error = false
                 } else {
-                    server.diagnostic = { data: diagnostic.error, error: true }
+                    server.server_info.data = info.error
+                    server.server_info.error = true
                 }
             }
         })

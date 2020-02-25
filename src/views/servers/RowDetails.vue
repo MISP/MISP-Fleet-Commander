@@ -1,6 +1,6 @@
 <template>
     <b-card>
-        <template v-if="details.data.loading">
+        <template v-if="server._loading">
             <div class="text-center text-danger my-2">
                 <b-spinner class="align-middle"></b-spinner>
                 <strong class="ml-2">Loading...</strong>
@@ -8,6 +8,16 @@
         </template>
         <template v-else>
             <template v-if="details.error">
+                <div class="mb-2 text-right">
+                    <span class="mr-1 text-muted">
+                        <i class="far fa-clock mr-1"></i>
+                        <small class="align-middle">{{ details.data.query_result.timestamp | moment("from") }}</small>
+                    </span>
+                    <b-button 
+                        size="sm" variant="primary"
+                        @click="refreshDiagnostic()"
+                    ><b-icon icon="arrow-clockwise"></b-icon></b-button>
+                </div>
                 <b-alert show variant="danger">
                     Error while accessing diagnostic:
                     <strong>{{ details.data }}</strong>
@@ -20,7 +30,7 @@
                             <b-card no-body>
                                 <b-tabs pills card vertical>
                                     <b-tab
-                                        v-for="(value, setting) in details.data"
+                                        v-for="(value, setting) in details.data.query_result.serverSettings"
                                         v-bind:key="setting"
                                         :title="setting"
                                     >
@@ -52,13 +62,13 @@
 
                         <template v-slot:tabs-end>
                             <b-nav-item href="#" class="ml-auto rightmost-action">
-                                <span class="mr-1 text-muted">
+                                <span class="mr-1 text-muted" style="cursor: auto;">
                                     <i class="far fa-clock mr-1"></i>
                                     <small class="align-middle">{{ details.data.timestamp | moment("from") }}</small>
                                 </span>
                                 <b-button 
                                     size="sm" variant="primary"
-                                    @click="refreshDiagnostic()"
+                                    @click="refreshDiagnosticFull()"
                                 ><b-icon icon="arrow-clockwise"></b-icon></b-button>
                             </b-nav-item>
                         </template>
@@ -80,6 +90,10 @@ export default {
         server: {
             type: Object,
             required: true
+        },
+        row: {
+            type: Object,
+            required: true
         }
     },
     data: function() {
@@ -89,8 +103,8 @@ export default {
     computed: {
     },
     methods: {
-        refreshDiagnostic() {
-            this.$emit("actionRefresh", "done")
+        refreshDiagnosticFull() {
+            this.$emit("actionRefresh", "no_cache")
         }
     }
 }

@@ -72,7 +72,7 @@ export default {
                     })
                 })
                 .catch(error => {
-                    that.$bvToast.toast(error.toJSON(), {
+                    that.$bvToast.toast(error, {
                         title: "Could not delete Server",
                         variant: "danger",
                     })
