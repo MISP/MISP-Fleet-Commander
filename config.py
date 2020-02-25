@@ -1,5 +1,8 @@
 from os import environ
+from os import path as osPath
 
+
+basedir = osPath.abspath(osPath.dirname(__file__))
 
 class Config:
     """Set Flask configuration vars from .env file."""
@@ -29,5 +32,6 @@ class DevelopmentConfig(Config):
     SECRET_KEY = 'secret'
 
     # Database
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///database3.db'
+    # SQLALCHEMY_DATABASE_URI = 'sqlite:///database3.db'
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///' + osPath.join(basedir, 'app.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = True

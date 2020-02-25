@@ -11,8 +11,12 @@ def mispGetRequest(server, url, data={}):
     full_url = urljoin(server.url, url)
     try:
         response = requests.get(full_url, data=data, headers=headers, verify=(not server.skip_ssl))
-        if str(response.status_code)[0:2] == "40":
+        print(response.status_code)
+        print(response.text)
+        if response.status_code == 403:
             return { "error": "Authentication error" }
+        if response.status_code == 405:
+            return { "error": "Unsufficent permission" }
         return response.json()
     except requests.exceptions.SSLError:
         return { "error": "SSL error" }
@@ -28,9 +32,11 @@ def mispPostRequest(server, url, data={}):
     }
     full_url = urljoin(server.url, url)
     try:
-        response = requests.get(full_url, data=data, headers=headers, verify=(not server.skip_ssl))
-        if str(response.status_code)[0:2] == "40":
+        response = requests.post(full_url, data=data, headers=headers, verify=(not server.skip_ssl))
+        if response.status_code == 403:
             return { "error": "Authentication error" }
+        if response.status_code == 405:
+            return { "error": "Unsufficent permission" }
         return response.json()
     except requests.exceptions.SSLError:
         return { "error": "SSL Error" }
