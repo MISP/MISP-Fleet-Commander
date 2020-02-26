@@ -46,7 +46,7 @@
                         </b-tab>
                         <b-tab title="User">
                             <b-card no-body>
-                                User
+                                <pre>{{ details.data.query_result.serverUser }}</pre>
                             </b-card>
                         </b-tab>
                         <b-tab title="Connected MISP Servers">
@@ -62,10 +62,7 @@
 
                         <template v-slot:tabs-end>
                             <b-nav-item href="#" class="ml-auto rightmost-action">
-                                <span class="mr-1 text-muted" style="cursor: auto;">
-                                    <i class="far fa-clock mr-1"></i>
-                                    <small class="align-middle">{{ details.data.timestamp | moment("from") }}</small>
-                                </span>
+                                <timeSinceRefresh :timestamp="details.data.timestamp"></timeSinceRefresh>
                                 <b-button 
                                     size="sm" variant="primary"
                                     @click="refreshDiagnosticFull()"
@@ -80,18 +77,19 @@
 </template>
 
 <script>
+import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
+
 export default {
     name: "RowDetails",
+    component: {
+        timeSinceRefresh
+    },
     props: {
         details: {
             type: Object,
             required: true
         },
         server: {
-            type: Object,
-            required: true
-        },
-        row: {
             type: Object,
             required: true
         }

@@ -22,7 +22,9 @@ const actions = {
                 servers => {
                     servers.forEach(server => {
                         server.status = {}
-                        server.server_info = {data: {}, error: null}
+                        if (server.server_info === undefined || server.server_info === null) {
+                            server.server_info = {data: {}, error: null}
+                        }
                         server._showDetails = false
                         server._loading = false
                     })
@@ -54,14 +56,18 @@ const actions = {
     },
     getInfo({ commit }, payload) {
         return new Promise((resolve, reject) => {
-            commit("updateInfo", { server_id: payload.server.id, info: {}, loading: true })
+            // commit("updateInfo", { server_id: payload.server.id, info: {}, loading: true })
+            commit("updateInfo", { server_id: payload.server.id, loading: true }) // try to only change loading and not replace the info field? create a new mutation `updateLoading`
             api.queryInfo(
                 payload,
                 (info) => {
                     commit("updateInfo", { server_id: payload.server.id, info: info, loading: false})
                     resolve()
                 },
-                (error) => { reject(error) }
+                (error) => { 
+                    // commit("updateInfo", { server_id: payload.server.id, loading: true })
+                    reject(error)
+                }
             )
         })
     }
@@ -92,12 +98,17 @@ const mutations = {
             if (server.id == payload.server_id) {
                 server._loading = payload.loading
                 const info = payload.info
-                if (info.error === undefined) {
-                    server.server_info.data = info
-                    server.server_info.error = false
-                } else {
-                    server.server_info.data = info.error
-                    server.server_info.error = true
+                if (info !== undefined) {
+                    if (info.error === undefined) {
+                        server.server_info.data = info
+                        // For an unkwown reason, when the server get update after fetching the server query, the update is not propageted to the badge component
+                        // this.$set(server.server_info, "data", info)
+                        // server.server_info.data = Object.assign({}, server.server_info.data, info)
+                        server.server_info.error = false
+                    } else {
+                        server.server_info.data = info.error
+                        server.server_info.error = true
+                    }
                 }
             }
         })

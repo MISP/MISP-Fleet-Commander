@@ -81,6 +81,27 @@
                 <cellLoading v-else :width="'70px'"></cellLoading>
             </template>
 
+            <template v-slot:cell(remote_user)="row">
+                <userPerms
+                    :perms="row.value"
+                    :server_id="row.item.id"
+                ></userPerms>
+            </template>
+
+            <template v-slot:cell(last_refresh)="row">
+                <timeSinceRefresh
+                    :timestamp="row.value.timestamp"
+                ></timeSinceRefresh>
+            </template>
+
+            <template v-slot:cell(proxy)="row">
+                <proxyStatus :proxy="row.value"></proxyStatus>
+            </template>
+
+            <template v-slot:cell(submodule_status)="row">
+                <submodulesStatus :submodules="row.value"></submodulesStatus>
+            </template>
+
             <template v-slot:cell(actions)="row">
                 <div class="btn-group">
                     <b-button
@@ -102,8 +123,7 @@
                 <RowDetails 
                     :details="row.item.server_info"
                     :server="row.item"
-                    :row="row"
-                    @actionRefresh="handleRefreshInfo(item, $event)"
+                    @actionRefresh="handleRefreshInfo(row.item, $event)"
                 ></RowDetails>
             </template>
 
@@ -130,6 +150,10 @@ import { mapState, mapGetters } from "vuex"
 import Layout from "@/components/layout/Layout.vue"
 import iconForScope from "@/components/ui/elements/iconForScope.vue"
 import cellLoading from "@/components/ui/elements/cellLoading.vue"
+import userPerms from "@/components/ui/elements/userPerms.vue"
+import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
+import proxyStatus from "@/components/ui/elements/proxyStatus.vue"
+import submodulesStatus from "@/components/ui/elements/submodulesStatus.vue"
 import RowDetails from "@/views/servers/RowDetails.vue"
 import DeleteModal from "@/views/servers/DeleteModal.vue"
 import AddModal from "@/views/servers/AddModal.vue"
@@ -141,6 +165,10 @@ export default {
         Layout,
         iconForScope,
         cellLoading,
+        userPerms,
+        timeSinceRefresh,
+        proxyStatus,
+        submodulesStatus,
         RowDetails,
         DeleteModal,
         AddModal
@@ -183,21 +211,45 @@ export default {
                         tdClass: "align-middle"
                     },
                     {
-                        key: "user",
+                        key: "remote_user",
                         label: "User",
                         sortable: true,
                         class: "d-none d-xl-table-cell",
+                        formatter: (value, key, item) => {
+                            if (item.server_info.query_result !== undefined && item.server_info.query_result !== null) {
+                                return item.server_info.query_result.serverUser.Role
+                            } else {
+                                return {}
+                            }
+                        }
                     },
                     {
-                        key: "submoduleStatus",
+                        key: "submodule_status",
                         label: "Sub-modules",
                         sortable: true,
                         class: "d-none d-xl-table-cell",
+                        formatter: (value, key, item) => {
+                            if (item.server_info.query_result !== undefined && item.server_info.query_result !== null) {
+                                const serverSettings = item.server_info.query_result.serverSettings
+                                return serverSettings.error !== undefined ? serverSettings.error : serverSettings.moduleStatus
+                            } else {
+                                return false
+                            }
+                        }
                     },
                     {
                         key: "proxy",
                         sortable: true,
                         class: "d-none d-xxl-table-cell",
+                        formatter: (value, key, item) => {
+                            if (item.server_info.query_result !== undefined && item.server_info.query_result !== null) {
+                                const proxyStatus = item.server_info.query_result.serverSettings.proxyStatus
+                                return  proxyStatus === "undefined" || proxyStatus == "not configured (so not tested)"
+                                    ? true : proxyStatus
+                            } else {
+                                return false
+                            }
+                        }
                     },
                     {
                         key: "zeromq",
@@ -219,8 +271,15 @@ export default {
                         }
                     },
                     {
-                        key: "lastRefresh",
+                        key: "last_refresh",
                         sortable: true,
+                        formatter: (value, key, item) => {
+                            if (item.server_info.query_result !== undefined && item.server_info.query_result !== null) {
+                                return item.server_info
+                            } else {
+                                return {}
+                            }
+                        }
                     },
                     {
                         key: "actions",
@@ -306,11 +365,8 @@ export default {
         handleRefreshInfo(server, event) {
             this.refreshInfo(server, event == "no_cache")
         },
-        refreshInfo(server, no_cache=false, callback=()=>{}) {
+        refreshInfo(server, no_cache=false) {
             this.$store.dispatch("servers/getInfo", {server: server, no_cache: no_cache})
-                .then(() => {
-                    callback()
-                })
                 .catch(error => {
                     this.$bvToast.toast(error, {
                         title: "Could not fetch server info",

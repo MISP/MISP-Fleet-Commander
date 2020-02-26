@@ -103,3 +103,13 @@
         display: table-cell !important;
     }
 }
+
+.popover.mw-25 {
+    max-width: 25%;
+}
+.popover.mw-50 {
+    max-width: 50%;
+}
+.popover.mw-75 {
+    max-width: 75%;
+}
