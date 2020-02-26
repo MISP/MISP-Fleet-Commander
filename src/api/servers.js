@@ -32,13 +32,10 @@ export default {
     },
 
     queryInfo(payload, cb, errorCb) {
-        console.log(payload)
         let url = `${urls.queryInfo}/${payload.server.id}`
         url += payload.no_cache ? "/1" : ""
-        console.log(url)
         return axios.get(url)
             .then((response) => {
-                console.log(response)
                 cb(response.data)
             }).catch(error => {
                 errorCb(error.toJSON().message)

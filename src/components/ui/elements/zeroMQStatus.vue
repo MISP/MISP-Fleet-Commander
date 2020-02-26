@@ -10,9 +10,9 @@
 
 <script>
 export default {
-    name: "proxyStatus",
+    name: "zeroMQStatus",
     props: {
-        proxy: {
+        status: {
             default: function() {
                 return false
             }
@@ -20,7 +20,8 @@ export default {
     },
     computed: {
         printable() {
-            return this.proxy == "not configured (so not tested)" ? true : this.proxy
+            return this.status
+            // return this.status == "not configured (so not tested)" ? true : this.status
         }
     },
     data: function() {

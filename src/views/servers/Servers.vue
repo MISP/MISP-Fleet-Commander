@@ -102,6 +102,10 @@
                 <submodulesStatus :submodules="row.value"></submodulesStatus>
             </template>
 
+            <template v-slot:cell(zeromq_status)="row">
+                <submodulesStatus :status="row.value"></submodulesStatus>
+            </template>
+
             <template v-slot:cell(actions)="row">
                 <div class="btn-group">
                     <b-button
@@ -244,18 +248,27 @@ export default {
                         formatter: (value, key, item) => {
                             if (item.server_info.query_result !== undefined && item.server_info.query_result !== null) {
                                 const proxyStatus = item.server_info.query_result.serverSettings.proxyStatus
-                                return  proxyStatus === "undefined" || proxyStatus == "not configured (so not tested)"
-                                    ? true : proxyStatus
+                                // return  proxyStatus === "undefined" || proxyStatus == "not configured (so not tested)"
+                                //     ? true : proxyStatus
+                                return proxyStatus
                             } else {
                                 return false
                             }
                         }
                     },
                     {
-                        key: "zeromq",
+                        key: "zeromq_status",
                         label: "ZeroMQ",
                         sortable: true,
                         class: "d-none d-xxl-table-cell",
+                        formatter: (value, key, item) => {
+                            if (item.server_info.query_result !== undefined && item.server_info.query_result !== null) {
+                                const zeromqStatus = item.server_info.query_result.serverSettings.zeromqStatus
+                                return zeromqStatus
+                            } else {
+                                return false
+                            }
+                        }
                     },
                     {
                         key: "workers",

@@ -1,5 +1,5 @@
 <template>
-    <b-card>
+    <b-card no-body>
         <template v-if="server._loading">
             <div class="text-center text-danger my-2">
                 <b-spinner class="align-middle"></b-spinner>
@@ -26,11 +26,11 @@
             <template v-else>
                 <b-card no-body>
                     <b-tabs card>
-                        <b-tab title="Server settings" active>
+                        <b-tab title="Diagnostic" active no-body>
                             <b-card no-body>
                                 <b-tabs pills card vertical>
                                     <b-tab
-                                        v-for="(value, setting) in details.data.query_result.serverSettings"
+                                        v-for="(value, setting) in getDiagnostic"
                                         v-bind:key="setting"
                                         :title="setting"
                                     >
@@ -39,22 +39,25 @@
                                 </b-tabs>
                             </b-card>
                         </b-tab>
-                        <b-tab title="Usage">
+                        <b-tab title="Server settings" no-body>
+                                <pre>{{ getConfig }}</pre>
+                        </b-tab>
+                        <b-tab title="Usage" no-body>
                             <b-card no-body>
                                 Usage
                             </b-card>
                         </b-tab>
-                        <b-tab title="User">
+                        <b-tab title="User" no-body>
                             <b-card no-body>
                                 <pre>{{ details.data.query_result.serverUser }}</pre>
                             </b-card>
                         </b-tab>
-                        <b-tab title="Connected MISP Servers">
+                        <b-tab title="Connected MISP Servers" no-body>
                             <b-card no-body>
                                 Synchronisation status
                             </b-card>
                         </b-tab>
-                        <b-tab title="Content" disabled>
+                        <b-tab title="Content" no-body disabled>
                             <b-card no-body>
                                 Content
                             </b-card>
@@ -62,7 +65,10 @@
 
                         <template v-slot:tabs-end>
                             <b-nav-item href="#" class="ml-auto rightmost-action">
-                                <timeSinceRefresh :timestamp="details.data.timestamp"></timeSinceRefresh>
+                                <timeSinceRefresh
+                                    :timestamp="details.data.timestamp"
+                                    type="ddd DD/MM/YYYY hh:mm"
+                                ></timeSinceRefresh>
                                 <b-button 
                                     size="sm" variant="primary"
                                     @click="refreshDiagnosticFull()"
@@ -81,8 +87,8 @@ import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
 
 export default {
     name: "RowDetails",
-    component: {
-        timeSinceRefresh
+    components: {
+        timeSinceRefresh,
     },
     props: {
         details: {
@@ -99,6 +105,14 @@ export default {
         }
     },
     computed: {
+        getDiagnostic() {
+            // eslint-disable-next-line no-unused-vars
+            let {finalSettings, ...diagnostic} = this.details.data.query_result.serverSettings
+            return diagnostic
+        },
+        getConfig() {
+            return this.details.data.query_result.serverSettings.finalSettings
+        }
     },
     methods: {
         refreshDiagnosticFull() {
@@ -121,5 +135,10 @@ ul.nav-tabs > li.nav-item.rightmost-action > a:hover {
 }
 ul.nav-tabs > li.nav-item.rightmost-action > a:focus {
     border: 1px solid #ffffff00;
+}
+
+pre {
+    white-space: pre-wrap;
+    max-height: 75vh;
 }
 </style>
