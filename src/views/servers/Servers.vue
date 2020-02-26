@@ -106,6 +106,10 @@
                 <submodulesStatus :status="row.value"></submodulesStatus>
             </template>
 
+            <template v-slot:cell(workers_status)="row">
+                <workersStatus :workers="row.value" :server_id="row.item.id"></workersStatus>
+            </template>
+
             <template v-slot:cell(actions)="row">
                 <div class="btn-group">
                     <b-button
@@ -157,6 +161,7 @@ import cellLoading from "@/components/ui/elements/cellLoading.vue"
 import userPerms from "@/components/ui/elements/userPerms.vue"
 import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
 import proxyStatus from "@/components/ui/elements/proxyStatus.vue"
+import workersStatus from "@/components/ui/elements/workersStatus.vue"
 import submodulesStatus from "@/components/ui/elements/submodulesStatus.vue"
 import RowDetails from "@/views/servers/RowDetails.vue"
 import DeleteModal from "@/views/servers/DeleteModal.vue"
@@ -173,6 +178,7 @@ export default {
         timeSinceRefresh,
         proxyStatus,
         submodulesStatus,
+        workersStatus,
         RowDetails,
         DeleteModal,
         AddModal
@@ -271,9 +277,17 @@ export default {
                         }
                     },
                     {
-                        key: "workers",
+                        key: "workers_status",
                         sortable: true,
                         class: "d-none d-md-table-cell",
+                        formatter: (value, key, item) => {
+                            if (item.server_info.query_result !== undefined && item.server_info.query_result !== null) {
+                                const workers = item.server_info.query_result.serverSettings.workers
+                                return workers
+                            } else {
+                                return false
+                            }
+                        }
                     },
                     {
                         key: "authkey",
