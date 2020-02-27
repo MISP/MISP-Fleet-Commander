@@ -94,6 +94,10 @@ export default {
         width: fit-content;
     }
 
+    .badge-list > .badge {
+        cursor: default;
+    }
+
     .badge-list > .badge:not(:last-child) {
         border-right: 1px solid #dee2e6
     }

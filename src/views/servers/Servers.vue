@@ -71,43 +71,56 @@
             </template>
 
             <template v-slot:cell(status)="row">
-                <span
-                    v-if="Object.keys(row.value).length != 0"
-                    :class="['text-nowrap', row.value.error ? 'text-danger' : 'text-success']"
-                >
-                    <b-icon icon="circle-fill"></b-icon>
-                    {{ row.value.data }}
-                </span>
-                <cellLoading v-else :width="'70px'"></cellLoading>
+                <loaderPlaceholder :loading="!row.value._loading">
+                    <span
+                        :class="['text-nowrap', row.value.error ? 'text-danger' : 'text-success']"
+                    >
+                        <b-icon icon="circle-fill"></b-icon>
+                        {{ row.value.data }}
+                    </span>
+                </loaderPlaceholder>
             </template>
 
             <template v-slot:cell(server_info.query_result.serverUser.Role)="row">
-                <userPerms
-                    :perms="row.value"
-                    :server_id="row.item.id"
-                ></userPerms>
+                <loaderPlaceholder :loading="!row.item.server_info._loading">
+                    <userPerms
+                        v-if="!row.item.server_info._loading"
+                        :perms="row.value"
+                        :server_id="row.item.id"
+                    ></userPerms>
+                </loaderPlaceholder>
             </template>
 
             <template v-slot:cell(last_refresh)="row">
-                <timeSinceRefresh
-                    :timestamp="row.value.timestamp"
-                ></timeSinceRefresh>
+                <loaderPlaceholder :loading="!row.value._loading">
+                    <timeSinceRefresh
+                        :timestamp="row.value.timestamp"
+                    ></timeSinceRefresh>
+                </loaderPlaceholder>
             </template>
 
             <template v-slot:cell(server_info.query_result.serverSettings.proxyStatus)="row">
-                <proxyStatus :proxy="row.value"></proxyStatus>
+                <loaderPlaceholder :loading="!row.item.server_info._loading">
+                    <proxyStatus :proxy="row.value"></proxyStatus>
+                </loaderPlaceholder>
             </template>
 
             <template v-slot:cell(server_info.query_result.serverSettings.moduleStatus)="row">
-                <submodulesStatus :submodules="row.value"></submodulesStatus>
+                <loaderPlaceholder :loading="!row.item.server_info._loading">
+                    <submodulesStatus :submodules="row.value"></submodulesStatus>
+                </loaderPlaceholder>
             </template>
 
             <template v-slot:cell(server_info.query_result.serverSettings.zmqStatus)="row">
-                <zeroMQStatus :status="row.value"></zeroMQStatus>
+                <loaderPlaceholder :loading="!row.item.server_info._loading">
+                    <zeroMQStatus :status="row.value"></zeroMQStatus>
+                </loaderPlaceholder>
             </template>
 
             <template v-slot:cell(server_info.query_result.serverSettings.workers)="row">
-                <workersStatus :workers="row.value" :server_id="row.item.id"></workersStatus>
+                <loaderPlaceholder :loading="!row.item.server_info._loading">
+                    <workersStatus :workers="row.value" :server_id="row.item.id"></workersStatus>
+                </loaderPlaceholder>
             </template>
 
             <template v-slot:cell(actions)="row">
@@ -121,9 +134,30 @@
                     <b-button class="ml-1" size="xs" variant="link" @click="openEditModal(row.item)">
                         <i class="fas fa-edit"></i>
                     </b-button>
-                    <b-button class="ml-1" size="xs" variant="link" @click="openDeletionModal(row.item)">
-                        <b-icon icon="trash-fill" class="text-danger"></b-icon>
+                    <b-button :id="`popover-row-option-${row.index}`" href="#" class="ml-1" size="xs" variant="link">
+                        <i class="fas fa-ellipsis-v"></i>
                     </b-button>
+                     <b-popover
+                        :ref="`popoverRow${row.index}`"
+                        :target="`popover-row-option-${row.index}`"
+                        placement="bottomleft"
+                        triggers="focus"
+                    >
+                        <b-button 
+                            size="sm" variant="primary" class="d-flex w-100 mb-1"
+                            @click="closePopover(row.index, handleRefreshInfo(row.item, 'no_cache'))"
+                        >
+                            <b-icon icon="arrow-clockwise" class="mr-1"></b-icon>
+                            <span class="w-100">Refresh</span>
+                        </b-button>
+                        <b-button
+                            size="sm" variant="danger" class="d-block w-100"
+                            @click="openDeletionModal(row.item)"
+                        >
+                            <b-icon icon="trash-fill" class="mr-1"></b-icon>
+                            <span class="w-100">Delete server</span>
+                        </b-button>
+                    </b-popover>
                 </div>
             </template>
 
@@ -157,7 +191,7 @@
 import { mapState, mapGetters } from "vuex"
 import Layout from "@/components/layout/Layout.vue"
 import iconForScope from "@/components/ui/elements/iconForScope.vue"
-import cellLoading from "@/components/ui/elements/cellLoading.vue"
+import loaderPlaceholder from "@/components/ui/elements/loaderPlaceholder.vue"
 import userPerms from "@/components/ui/elements/userPerms.vue"
 import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
 import proxyStatus from "@/components/ui/elements/proxyStatus.vue"
@@ -174,7 +208,7 @@ export default {
     components: {
         Layout,
         iconForScope,
-        cellLoading,
+        loaderPlaceholder,
         userPerms,
         timeSinceRefresh,
         proxyStatus,
@@ -224,33 +258,33 @@ export default {
                     },
                     {
                         key: "server_info.query_result.serverUser.Role",
-                        label: "User",
+                        label: "User perms",
                         sortable: true,
-                        class: "d-none d-xl-table-cell",
+                        class: "align-middle d-none d-xl-table-cell",
                     },
                     {
                         key: "server_info.query_result.serverSettings.moduleStatus",
                         label: "Sub-modules",
                         sortable: true,
-                        class: "d-none d-xl-table-cell",
+                        class: "align-middle d-none d-xl-table-cell",
                     },
                     {
                         key: "server_info.query_result.serverSettings.proxyStatus",
                         label: "Proxy",
                         sortable: true,
-                        class: "d-none d-xxl-table-cell",
+                        class: "align-middle d-none d-xxl-table-cell",
                     },
                     {
                         key: "server_info.query_result.serverSettings.zmqStatus",
                         label: "ZeroMQ",
                         sortable: true,
-                        class: "d-none d-xxl-table-cell",
+                        class: "align-middle d-none d-xxl-table-cell",
                     },
                     {
                         key: "server_info.query_result.serverSettings.workers",
                         label: "Workers",
                         sortable: true,
-                        class: "d-none d-md-table-cell",
+                        class: "align-middle d-none d-md-table-cell",
                     },
                     {
                         key: "authkey",
@@ -263,13 +297,14 @@ export default {
                     {
                         key: "last_refresh",
                         sortable: true,
+                        class: "align-middle",
                         formatter: (value, key, item) => {
                             return item.server_info
                         }
                     },
                     {
                         key: "actions",
-                        class: "d-none d-md-table-cell",
+                        class: "align-middle d-none d-md-table-cell",
                     }
                 ],
             },
@@ -300,6 +335,9 @@ export default {
             } else {
                 row.item._rowVariant = ""
             }
+        },
+        closePopover(row_id) {
+            this.$refs[`popoverRow${row_id}`].$emit("close")
         },
         handleDelete() {
             this.serverToDelete = {}
@@ -349,6 +387,7 @@ export default {
             )
         },
         handleRefreshInfo(server, event) {
+            this.$store.dispatch("servers/refreshConnectionState", server)
             this.refreshInfo(server, event == "no_cache")
         },
         refreshInfo(server, no_cache=false) {
@@ -368,4 +407,7 @@ export default {
 </script>
 
 <style scoped>
+    #server-table > tbody > tr > td {
+        /* vertical-align: middle !important; */
+    }
 </style>

@@ -21,9 +21,9 @@ const actions = {
             api.index(
                 servers => {
                     servers.forEach(server => {
-                        server.status = {}
+                        server.status = { _loading: false }
                         if (server.server_info === null) {
-                            server.server_info = {query_result: {}, error: null}
+                            server.server_info = {query_result: {}, error: null, _loading: false}
                         }
                         server._showDetails = false
                         server._loading = false
@@ -37,6 +37,7 @@ const actions = {
     },
     refreshConnectionState({ commit }, server) {
         return new Promise((resolve, reject) => {
+            commit("resetConnectionState", { server_id: server.id })
             api.testConnection(
                 server,
                 connectionState => {
@@ -80,14 +81,21 @@ const mutations = {
     setServers (state, servers) {
         state.all = servers
     },
+    resetConnectionState(state, payload) {
+        state.all.forEach(server => {
+            if (server.id == payload.server_id) {
+                server.status = { _loading: true }
+            }
+        })
+    },
     updateConnectionState(state, payload) {
         state.all.forEach(server => {
             if (server.id == payload.server_id) {
                 const connection = payload.connectionState
                 if (connection.version !== undefined) {
-                    server.status = { data: connection.version, error: false }
+                    server.status = { _loading: false, data: connection.version, error: false }
                 } else {
-                    server.status = { data: connection.error, error: true }
+                    server.status = { _loading: false, data: connection.error, error: true }
                 }
             }
         })
@@ -96,6 +104,7 @@ const mutations = {
         state.all.forEach(server => {
             if (server.id == payload.server_id) {
                 server._loading = payload.loading
+                server.server_info._loading = payload.loading
                 const info = payload.info
                 if (info !== undefined) {
                     if (info.error === undefined) {

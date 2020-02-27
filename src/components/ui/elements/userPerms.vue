@@ -31,20 +31,20 @@ export default {
     computed: {
         summary() {
             let remote_user = {}
-            if (this.perms.perms_site_admin) {
+            if (this.perms.perm_site_admin) {
                 remote_user.state = "success"
                 remote_user.text = "site_admin"
             } else if (this.perms.perm_admin) {
-                remote_user.state = "success"
+                remote_user.state = "danger"
                 remote_user.text = "admin"
             } else if (this.perms.perm_sync) {
-                remote_user.state = "warning"
+                remote_user.state = "danger"
                 remote_user.text = "sync"
             } else if (this.perms.perm_add) {
-                remote_user.state = "warning"
+                remote_user.state = "danger"
                 remote_user.text = "user"
             } else {
-                remote_user.state = "danger"
+                remote_user.state = "dark"
                 remote_user.text = "read only"
             }
             return remote_user

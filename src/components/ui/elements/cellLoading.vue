@@ -26,7 +26,8 @@ export default {
         pStyle: function() {
             let style = {
                 height: this.height,
-                width: this.width
+                width: this.width,
+                "max-width": "120px"
             }
             return style
         }
