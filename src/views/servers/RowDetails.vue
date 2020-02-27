@@ -11,7 +11,7 @@
                 <div class="mb-2 text-right">
                     <span class="mr-1 text-muted">
                         <i class="far fa-clock mr-1"></i>
-                        <small class="align-middle">{{ details.data.query_result.timestamp | moment("from") }}</small>
+                        <small class="align-middle">{{ details.query_result.timestamp | moment("from") }}</small>
                     </span>
                     <b-button 
                         size="sm" variant="primary"
@@ -20,7 +20,7 @@
                 </div>
                 <b-alert show variant="danger">
                     Error while accessing diagnostic:
-                    <strong>{{ details.data }}</strong>
+                    <strong>{{ details }}</strong>
                 </b-alert>
             </template>
             <template v-else>
@@ -49,7 +49,7 @@
                         </b-tab>
                         <b-tab title="User" class="p-1" no-body>
                             <b-card no-body>
-                                <pre>{{ details.data.query_result.serverUser }}</pre>
+                                <pre>{{ details.query_result.serverUser }}</pre>
                             </b-card>
                         </b-tab>
                         <b-tab title="Connected MISP Servers" class="p-1" no-body>
@@ -66,7 +66,7 @@
                         <template v-slot:tabs-end>
                             <b-nav-item href="#" class="ml-auto rightmost-action">
                                 <timeSinceRefresh
-                                    :timestamp="details.data.timestamp"
+                                    :timestamp="details.timestamp"
                                     type="ddd DD/MM/YYYY hh:mm"
                                 ></timeSinceRefresh>
                                 <b-button 
@@ -107,11 +107,11 @@ export default {
     computed: {
         getDiagnostic() {
             // eslint-disable-next-line no-unused-vars
-            let {finalSettings, ...diagnostic} = this.details.data.query_result.serverSettings
+            let {finalSettings, ...diagnostic} = this.details.query_result.serverSettings
             return diagnostic
         },
         getConfig() {
-            return this.details.data.query_result.serverSettings.finalSettings
+            return this.details.query_result.serverSettings.finalSettings
         }
     },
     methods: {

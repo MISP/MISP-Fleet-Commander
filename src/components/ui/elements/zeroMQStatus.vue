@@ -1,6 +1,6 @@
 <template>
     <span
-        v-if="proxy !== false"
+        v-if="status !== ''"
         :class="printable === true ? 'text-success' : 'text-danger'"
     >
         <span :class="['fas', printable === true ? 'fa-check' : 'fa-times']"></span>
@@ -12,16 +12,11 @@
 export default {
     name: "zeroMQStatus",
     props: {
-        status: {
-            default: function() {
-                return false
-            }
-        }
+        status: {}
     },
     computed: {
         printable() {
-            return this.status
-            // return this.status == "not configured (so not tested)" ? true : this.status
+            return this.status !== ""
         }
     },
     data: function() {

@@ -1,10 +1,10 @@
 <template>
     <span
-        v-if="submodules !== false"
+        v-if="submodules !== ''"
         :class="allValids === true ? 'text-success' : 'text-danger'"
     >
         <span :class="['fas', allValids === true ? 'fa-check' : 'fa-times']"></span>
-        {{ invalidModules }}
+        {{ invalidModuleNames }}
     </span>
 </template>
 
@@ -12,14 +12,12 @@
 export default {
     name: "submoduleStatus",
     props: {
-        submodules: {
-            default: function() {return false}
-        }
+        submodules: {}
     },
     computed: {
-        invalidModules() {
-            if (typeof this.submodules === "string") {
-                return this.submodules
+        invalidModuleNames() {
+            if (typeof this.submodules === "string" || this.submodules === undefined) {
+                return ""
             } else {
                 let invalids = []
                 for (const [modulesName, moduleState] of Object.entries(this.submodules)) {
@@ -31,7 +29,7 @@ export default {
             }
         },
         allValids() {
-            return this.invalidModules.length == 0
+            return this.invalidModuleNames.length == 0
         }
     },
     data: function() {

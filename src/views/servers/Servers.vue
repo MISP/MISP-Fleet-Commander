@@ -81,7 +81,7 @@
                 <cellLoading v-else :width="'70px'"></cellLoading>
             </template>
 
-            <template v-slot:cell(remote_user)="row">
+            <template v-slot:cell(server_info.query_result.serverUser.Role)="row">
                 <userPerms
                     :perms="row.value"
                     :server_id="row.item.id"
@@ -94,19 +94,19 @@
                 ></timeSinceRefresh>
             </template>
 
-            <template v-slot:cell(proxy)="row">
+            <template v-slot:cell(server_info.query_result.serverSettings.proxyStatus)="row">
                 <proxyStatus :proxy="row.value"></proxyStatus>
             </template>
 
-            <template v-slot:cell(submodule_status)="row">
+            <template v-slot:cell(server_info.query_result.serverSettings.moduleStatus)="row">
                 <submodulesStatus :submodules="row.value"></submodulesStatus>
             </template>
 
-            <template v-slot:cell(zeromq_status)="row">
-                <submodulesStatus :status="row.value"></submodulesStatus>
+            <template v-slot:cell(server_info.query_result.serverSettings.zmqStatus)="row">
+                <zeroMQStatus :status="row.value"></zeroMQStatus>
             </template>
 
-            <template v-slot:cell(workers_status)="row">
+            <template v-slot:cell(server_info.query_result.serverSettings.workers)="row">
                 <workersStatus :workers="row.value" :server_id="row.item.id"></workersStatus>
             </template>
 
@@ -163,6 +163,7 @@ import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
 import proxyStatus from "@/components/ui/elements/proxyStatus.vue"
 import workersStatus from "@/components/ui/elements/workersStatus.vue"
 import submodulesStatus from "@/components/ui/elements/submodulesStatus.vue"
+import zeroMQStatus from "@/components/ui/elements/zeroMQStatus.vue"
 import RowDetails from "@/views/servers/RowDetails.vue"
 import DeleteModal from "@/views/servers/DeleteModal.vue"
 import AddModal from "@/views/servers/AddModal.vue"
@@ -178,6 +179,7 @@ export default {
         timeSinceRefresh,
         proxyStatus,
         submodulesStatus,
+        zeroMQStatus,
         workersStatus,
         RowDetails,
         DeleteModal,
@@ -221,73 +223,34 @@ export default {
                         tdClass: "align-middle"
                     },
                     {
-                        key: "remote_user",
+                        key: "server_info.query_result.serverUser.Role",
                         label: "User",
                         sortable: true,
                         class: "d-none d-xl-table-cell",
-                        formatter: (value, key, item) => {
-                            if (item.server_info.query_result !== undefined && item.server_info.query_result !== null) {
-                                return item.server_info.query_result.serverUser.Role
-                            } else {
-                                return {}
-                            }
-                        }
                     },
                     {
-                        key: "submodule_status",
+                        key: "server_info.query_result.serverSettings.moduleStatus",
                         label: "Sub-modules",
                         sortable: true,
                         class: "d-none d-xl-table-cell",
-                        formatter: (value, key, item) => {
-                            if (item.server_info.query_result !== undefined && item.server_info.query_result !== null) {
-                                const serverSettings = item.server_info.query_result.serverSettings
-                                return serverSettings.error !== undefined ? serverSettings.error : serverSettings.moduleStatus
-                            } else {
-                                return false
-                            }
-                        }
                     },
                     {
-                        key: "proxy",
+                        key: "server_info.query_result.serverSettings.proxyStatus",
+                        label: "Proxy",
                         sortable: true,
                         class: "d-none d-xxl-table-cell",
-                        formatter: (value, key, item) => {
-                            if (item.server_info.query_result !== undefined && item.server_info.query_result !== null) {
-                                const proxyStatus = item.server_info.query_result.serverSettings.proxyStatus
-                                // return  proxyStatus === "undefined" || proxyStatus == "not configured (so not tested)"
-                                //     ? true : proxyStatus
-                                return proxyStatus
-                            } else {
-                                return false
-                            }
-                        }
                     },
                     {
-                        key: "zeromq_status",
+                        key: "server_info.query_result.serverSettings.zmqStatus",
                         label: "ZeroMQ",
                         sortable: true,
                         class: "d-none d-xxl-table-cell",
-                        formatter: (value, key, item) => {
-                            if (item.server_info.query_result !== undefined && item.server_info.query_result !== null) {
-                                const zeromqStatus = item.server_info.query_result.serverSettings.zeromqStatus
-                                return zeromqStatus
-                            } else {
-                                return false
-                            }
-                        }
                     },
                     {
-                        key: "workers_status",
+                        key: "server_info.query_result.serverSettings.workers",
+                        label: "Workers",
                         sortable: true,
                         class: "d-none d-md-table-cell",
-                        formatter: (value, key, item) => {
-                            if (item.server_info.query_result !== undefined && item.server_info.query_result !== null) {
-                                const workers = item.server_info.query_result.serverSettings.workers
-                                return workers
-                            } else {
-                                return false
-                            }
-                        }
                     },
                     {
                         key: "authkey",
@@ -301,11 +264,7 @@ export default {
                         key: "last_refresh",
                         sortable: true,
                         formatter: (value, key, item) => {
-                            if (item.server_info.query_result !== undefined && item.server_info.query_result !== null) {
-                                return item.server_info
-                            } else {
-                                return {}
-                            }
+                            return item.server_info
                         }
                     },
                     {

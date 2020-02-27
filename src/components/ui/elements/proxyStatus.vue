@@ -1,6 +1,6 @@
 <template>
     <span
-        v-if="proxy !== false"
+        v-if="proxy !== ''"
         :class="printable === true ? 'text-success' : 'text-danger'"
     >
         <span :class="['fas', printable === true ? 'fa-check' : 'fa-times']"></span>
@@ -12,11 +12,7 @@
 export default {
     name: "proxyStatus",
     props: {
-        proxy: {
-            default: function() {
-                return false
-            }
-        }
+        proxy: {}
     },
     computed: {
         printable() {

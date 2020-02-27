@@ -22,10 +22,7 @@
 <script>
 export default {
     props: {
-        perms: {
-            type: Object,
-            default: function() {return {}}
-        },
+        perms: {},
         server_id: {
             type: Number,
             required: true
@@ -53,7 +50,7 @@ export default {
             return remote_user
         },
         permCount() {
-            return Object.keys(this.perms).length
+            return this.perms === "" ? 0 : Object.keys(this.perms).length
         }
     },
     data: function() {
