@@ -26,6 +26,21 @@
                 </b-form-group>
 
                 <b-form-group
+                    label="Server Description:"
+                    label-for="input-name"
+                    description="Short server description"
+                >
+                    <ValidationProvider v-slot="validationContext" name="Server Description">
+                        <b-form-input
+                            v-model="serverForm.description"
+                            :state="getValidationState(validationContext)"
+                            placeholder=""
+                        ></b-form-input>
+                        <b-form-invalid-feedback v-for="(error, index) in validationContext.errors" v-bind:key="index">{{ error }}</b-form-invalid-feedback>
+                    </ValidationProvider>
+                </b-form-group>
+
+                <b-form-group
                     label="Server URL:"
                     label-for="input-url"
                     description="The URL to access the server"
@@ -125,6 +140,7 @@ export default {
             default: () => {
                 return {
                     name: "",
+                    description: "",
                     url: "",
                     skip_ssl: false,
                     authkey: "",
