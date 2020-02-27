@@ -7,12 +7,6 @@
             <b-badge v-b-tooltip.hover.html="getTitle('update', workerUpdate)" class="rounded-0" :variant="workerUpdate.variant">{{ workerUpdate.jobCount }}</b-badge>
             <b-badge v-b-tooltip.hover.html="getTitle('mail', workerMail)" class="rounded-right flat-left" :variant="workerMail.variant">{{ workerMail.jobCount }}</b-badge>
         </div>
-        <!-- <b-popover
-            custom-class="mw-25"
-            :target="`badge-workers-${server_id}`"
-            triggers="hover" placement="righttop">
-            <pre>{{ workers }}</pre>
-        </b-popover> -->
     </div>
 </template>
 
@@ -88,7 +82,7 @@ export default {
         },
         getTitle(workerName, workerType) {
             return {
-                title: `Worker <strong>${workerName}</strong>:<div class="text-left">${workerType.jobCount} in queue</br>${workerType.dead}/${workerType.total} alive</div>`
+                title: `Worker <strong>${workerName}</strong>:<div class="text-left">${workerType.jobCount} in queue</br>${workerType.alive}/${workerType.total} alive</div>`
             }
         }
     }

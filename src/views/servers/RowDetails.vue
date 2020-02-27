@@ -26,7 +26,7 @@
             <template v-else>
                 <b-card no-body>
                     <b-tabs card>
-                        <b-tab title="Diagnostic" active no-body>
+                        <b-tab title="Diagnostic" class="p-1" active no-body>
                             <b-card no-body>
                                 <b-tabs pills card vertical>
                                     <b-tab
@@ -39,7 +39,7 @@
                                 </b-tabs>
                             </b-card>
                         </b-tab>
-                        <b-tab title="Server settings" no-body>
+                        <b-tab title="Server settings" class="p-1" no-body>
                                 <pre>{{ getConfig }}</pre>
                         </b-tab>
                         <b-tab title="Usage" no-body>
@@ -47,17 +47,17 @@
                                 Usage
                             </b-card>
                         </b-tab>
-                        <b-tab title="User" no-body>
+                        <b-tab title="User" class="p-1" no-body>
                             <b-card no-body>
                                 <pre>{{ details.data.query_result.serverUser }}</pre>
                             </b-card>
                         </b-tab>
-                        <b-tab title="Connected MISP Servers" no-body>
+                        <b-tab title="Connected MISP Servers" class="p-1" no-body>
                             <b-card no-body>
                                 Synchronisation status
                             </b-card>
                         </b-tab>
-                        <b-tab title="Content" no-body disabled>
+                        <b-tab title="Content" class="p-1" no-body disabled>
                             <b-card no-body>
                                 Content
                             </b-card>
@@ -139,6 +139,6 @@ ul.nav-tabs > li.nav-item.rightmost-action > a:focus {
 
 pre {
     white-space: pre-wrap;
-    max-height: 75vh;
+    max-height: 800px;
 }
 </style>
