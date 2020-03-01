@@ -54,6 +54,11 @@ export default {
                     scope: "servers"
                 },
                 {
+                    name: "MISP Connections",
+                    to: { name: "connections" },
+                    scope: "connections"
+                },
+                {
                     name: "MISP Network",
                     to: { name: "serverNetwork" },
                     scope: "serverNetwork"
@@ -118,6 +123,16 @@ export default {
     background-color: var(--var-color-lapislazuli);
 }
 
+.sidebar-item a.router-link-active:before {
+    content: " ";
+    position: absolute;
+    height: 100%;
+    width: 10px;
+    left: 4px;
+    top: 0px;
+    background-color: var(--var-color-giantorgane);
+}
+
 .sidebar-item:hover {
     background-color: var(--var-color-charcoal);
 }
@@ -131,6 +146,12 @@ export default {
     transition: left .2s;
     transition-timing-function: cubic-bezier(.23,1,.32,1);
     left: 0px;
+}
+
+.sidebar-link > span.icon {
+    display: block;
+    width: 30px;
+    height: 30px;
 }
 
 .link-text {

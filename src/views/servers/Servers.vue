@@ -84,7 +84,6 @@
             <template v-slot:cell(server_info.query_result.serverUser.Role)="row">
                 <loaderPlaceholder :loading="!row.item.server_info._loading">
                     <userPerms
-                        v-if="!row.item.server_info._loading"
                         :perms="row.value"
                         :server_id="row.item.id"
                     ></userPerms>
@@ -96,6 +95,16 @@
                     <timeSinceRefresh
                         :timestamp="row.value.timestamp"
                     ></timeSinceRefresh>
+                </loaderPlaceholder>
+            </template>
+
+            <template v-slot:cell(server_info.query_result.connectedServers)="row">
+                <loaderPlaceholder :loading="!row.item.server_info._loading">
+                    <connectionsSummary
+                        v-if="typeof row.value !== 'string'"
+                        :connections="row.value"
+                        :server_id="row.item.id"
+                    ></connectionsSummary>
                 </loaderPlaceholder>
             </template>
 
@@ -144,14 +153,21 @@
                         triggers="focus"
                     >
                         <b-button 
-                            size="sm" variant="primary" class="d-flex w-100 mb-1"
+                            size="sm" variant="primary" class="d-flex align-items-center w-100 mb-1"
                             @click="closePopover(row.index, handleRefreshInfo(row.item, 'no_cache'))"
                         >
                             <b-icon icon="arrow-clockwise" class="mr-1"></b-icon>
                             <span class="w-100">Refresh</span>
                         </b-button>
                         <b-button
-                            size="sm" variant="danger" class="d-block w-100"
+                            size="sm" variant="primary" class="d-flex align-items-center w-100 mb-1"
+                            @click="viewConnections(row.item)"
+                        >
+                            <i class="mr-1 fas fa-network-wired"></i>
+                            <span class="w-100">View connections</span>
+                        </b-button>
+                        <b-button
+                            size="sm" variant="danger" class="d-flex align-items-center w-100"
                             @click="openDeletionModal(row.item)"
                         >
                             <b-icon icon="trash-fill" class="mr-1"></b-icon>
@@ -198,6 +214,7 @@ import proxyStatus from "@/components/ui/elements/proxyStatus.vue"
 import workersStatus from "@/components/ui/elements/workersStatus.vue"
 import submodulesStatus from "@/components/ui/elements/submodulesStatus.vue"
 import zeroMQStatus from "@/components/ui/elements/zeroMQStatus.vue"
+import connectionsSummary from "@/components/ui/elements/connectionsSummary.vue"
 import RowDetails from "@/views/servers/RowDetails.vue"
 import DeleteModal from "@/views/servers/DeleteModal.vue"
 import AddModal from "@/views/servers/AddModal.vue"
@@ -214,6 +231,7 @@ export default {
         proxyStatus,
         submodulesStatus,
         zeroMQStatus,
+        connectionsSummary,
         workersStatus,
         RowDetails,
         DeleteModal,
@@ -263,10 +281,16 @@ export default {
                         class: "align-middle d-none d-xl-table-cell",
                     },
                     {
+                        key: "server_info.query_result.connectedServers",
+                        label: "Remote Connections",
+                        sortable: true,
+                        class: "align-middle d-none d-xl-table-cell",
+                    },
+                    {
                         key: "server_info.query_result.serverSettings.moduleStatus",
                         label: "Sub-modules",
                         sortable: true,
-                        class: "align-middle d-none d-xl-table-cell",
+                        class: "align-middle d-none d-xxl-table-cell",
                     },
                     {
                         key: "server_info.query_result.serverSettings.proxyStatus",
@@ -400,14 +424,11 @@ export default {
                 })
         }
     },
-    created () {
+    mounted () {
         this.fullRefresh()
     }
 }
 </script>
 
 <style scoped>
-    #server-table > tbody > tr > td {
-        /* vertical-align: middle !important; */
-    }
 </style>

@@ -44,7 +44,7 @@
                         </b-tab>
                         <b-tab title="Usage" no-body>
                             <b-card no-body>
-                                Usage
+                                <pre>{{ details.query_result.serverUsage }}</pre>
                             </b-card>
                         </b-tab>
                         <b-tab title="User" class="p-1" no-body>
@@ -54,7 +54,7 @@
                         </b-tab>
                         <b-tab title="Connected MISP Servers" class="p-1" no-body>
                             <b-card no-body>
-                                Synchronisation status
+                                <pre>{{ details.query_result.connectedServers }}</pre>
                             </b-card>
                         </b-tab>
                         <b-tab title="Content" class="p-1" no-body disabled>
@@ -112,7 +112,7 @@ export default {
         },
         getConfig() {
             return this.details.query_result.serverSettings.finalSettings
-        }
+        },
     },
     methods: {
         refreshDiagnosticFull() {

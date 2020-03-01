@@ -1,6 +1,6 @@
 <template>
     <div v-if="workerCount > 0">
-        <div :id="`badge-workers-${server_id}`" class="badge-list">
+        <div :id="`badge-workers-${server_id}`" class="badge-list d-flex flex-nowrap">
             <b-badge v-b-tooltip.hover.html="getTitle('cache', workerCache)" class="rounded-left flat-right" :variant="workerCache.variant">{{ workerCache.jobCount }}</b-badge>
             <b-badge v-b-tooltip.hover.html="getTitle('default', workerDefault)" class="rounded-0 border-right" :variant="workerDefault.variant">{{ workerDefault.jobCount }}</b-badge>
             <b-badge v-b-tooltip.hover.html="getTitle('prio', workerPrio)" class="rounded-0" :variant="workerPrio.variant">{{ workerPrio.jobCount }}</b-badge>

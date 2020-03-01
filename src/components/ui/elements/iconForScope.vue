@@ -8,6 +8,10 @@
         :class="['fa', 'fa-server']"
     ></i>
     <i
+        v-else-if="scope === 'connections'"
+        :class="['fas', 'fa-network-wired']"
+    ></i>
+    <i
         v-else-if="scope === 'serverNetwork'"
         :class="['fa', 'fa-project-diagram']"
     ></i>
@@ -25,7 +29,7 @@ export default {
             type: String,
             required: true,
             validator: function (value) {
-                return ["", "home", "servers", "serverNetwork"].indexOf(value) !== -1
+                return ["", "home", "servers", "connections", "serverNetwork"].indexOf(value) !== -1
             }
         },
         forceBlack: {

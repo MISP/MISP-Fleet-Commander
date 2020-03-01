@@ -2,6 +2,7 @@ import Vue from "vue"
 import Router from "vue-router"
 import Home from "./views/home/Home.vue"
 import Servers from "./views/servers/Servers.vue"
+import Connections from "./views/connections/Connections.vue"
 import ServerNetwork from "./views/serverNetwork/ServerNetwork.vue"
 
 Vue.use(Router)
@@ -21,6 +22,11 @@ export default new Router({
             path: "/servers",
             name: "servers",
             component: Servers
+        },
+        {
+            path: "/connections",
+            name: "connections",
+            component: Connections
         },
         {
             path: "/serverNetwork",

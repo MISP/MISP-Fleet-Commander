@@ -10,7 +10,7 @@
                 custom-class="mw-25"
                 :target="`badge-perms-${server_id}`"
                 :variant="summary.state"
-                triggers="hover" placement="righttop">
+                triggers="hover" placement="auto">
                 <pre>{{ perms }}</pre>
             </b-popover>
         </template>

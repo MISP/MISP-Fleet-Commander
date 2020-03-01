@@ -24,6 +24,8 @@ const actions = {
                         server.status = { _loading: false }
                         if (server.server_info === null) {
                             server.server_info = {query_result: {}, error: null, _loading: false}
+                        } else {
+                            server.server_info._loading = false
                         }
                         server._showDetails = false
                         server._loading = false
@@ -65,7 +67,8 @@ const actions = {
                     resolve()
                 },
                 (error) => { 
-                    // commit("updateInfo", { server_id: payload.server.id, loading: true })
+                    console.log('errors')
+                    commit("updateInfo", { server_id: payload.server.id, loading: false })
                     reject(error)
                 }
             )
