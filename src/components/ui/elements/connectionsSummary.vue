@@ -1,20 +1,25 @@
 <template>
     <div v-if="connectionCount > 0">
-        <div :id="`badge-connections-${server_id}`" class="badge-list">
+        <div :id="`badge-connections-${row_index}`" class="badge-list">
             <b-badge
                 v-for="(connection, index) in connections"
                 v-bind:key="index"
-                :id="`connection-popover-${index}`"
+                :id="`connection-popover-${row_index}-${index}`"
                 :class="getRoundedClass(index)"
-                :variant="connection.connectionTest.status_color"
+                :variant="connection.connectionTest.status.color"
             >
-                {{ connection.Server.name }}
+                <template v-if="text_in_badge !== ''">
+                    {{ text_in_badge }}
+                </template>
+                <template v-else>
+                    {{ connection.Server.name }}
+                </template>
                 <b-popover
                     href="#" tabindex="0"
                     triggers="hover"
                     placement="top"
-                    :target="`connection-popover-${index}`"
-                    :variant="connection.connectionTest.status_color"
+                    :target="`connection-popover-${row_index}-${index}`"
+                    :variant="connection.connectionTest.status.color"
                 >
                     <connectionState :connection="connection.connectionTest" :user="connection.connectionUser"></connectionState>
                 </b-popover>
@@ -33,9 +38,13 @@ export default {
     },
     props: {
         connections: {},
-        server_id: {
+        row_index: {
             type: Number,
             required: true
+        },
+        text_in_badge: {
+            type: String,
+            default: function() { return "" }
         }
     },
     data: function() {

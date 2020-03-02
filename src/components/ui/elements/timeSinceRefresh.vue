@@ -1,5 +1,5 @@
 <template>
-    <span :class="['mr-1', moreThanOneDay ? 'text-danger' : 'text-muted']" style="cursor: auto;">
+    <span :class="['text-nowrap', 'mr-1', moreThanOneDay ? 'text-danger' : 'text-muted']" style="cursor: auto;">
         <template v-if="validTimestamp !== false">
             <i class="far fa-clock mr-1"></i>
             <small class="align-middle">

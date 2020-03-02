@@ -3,7 +3,7 @@
     <div>
         <h3>
             <iconForScope scope="servers"></iconForScope>
-            MISP Servers
+            Servers
         </h3>
         
         <div class="mb-3">
@@ -103,7 +103,7 @@
                     <connectionsSummary
                         v-if="typeof row.value !== 'string'"
                         :connections="row.value"
-                        :server_id="row.item.id"
+                        :row_index="row.index"
                     ></connectionsSummary>
                 </loaderPlaceholder>
             </template>
@@ -252,7 +252,6 @@ export default {
                 totalRows: 0,
                 currentPage: 1,
                 perPage: 30,
-                serverStatus: {},
                 filterFields: ["name", "url"],
                 fields: [
                     {
@@ -424,7 +423,7 @@ export default {
                 })
         }
     },
-    mounted () {
+    mounted() {
         this.fullRefresh()
     }
 }
