@@ -10,7 +10,7 @@ BPuser = Blueprint('user', __name__)
 @BPuser.route('/users/index', methods=['GET'])
 def index():
     users = User.query.all()
-    return jsonify(User.serialize_list(users))
+    return jsonify([u.to_dict() for u in users])
 
 
 @BPuser.route('/user/add', methods=['GET'])

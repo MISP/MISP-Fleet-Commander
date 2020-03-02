@@ -1,23 +1,10 @@
 from application import db
-from sqlalchemy.inspection import inspect
 from datetime import datetime
+from application.baseModel import BaseModel
 import json
 
 
-class Serializer(object):
-
-    def serialize(self):
-        # for c in inspect(self).attrs.keys():
-        #     print(c, getattr(self, c))
-        return {c: getattr(self, c) for c in inspect(self).attrs.keys()}
-
-
-    @staticmethod
-    def serialize_list(l):
-        return [m.serialize() for m in l]
-
-
-class User(db.Model, Serializer):
+class User(BaseModel):
     __tablename__ = 'users'
     id = db.Column(db.Integer,
                    primary_key=True)
@@ -35,11 +22,16 @@ class User(db.Model, Serializer):
                       unique=False,
                       nullable=False)
 
+    _default_fields = ['email', 'created']
+    _hidden_fields = ['password']
+    _readonly_fields = ['created']
+
     def __repr__(self):
-        return f'<User[{self.id}] {self.email}, {self.created}>'
+        return self.to_json()
 
 
-class Server(db.Model, Serializer):
+
+class Server(BaseModel):
     __tablename__ = 'servers'
     id = db.Column(db.Integer,
                    primary_key=True)
@@ -61,28 +53,31 @@ class Server(db.Model, Serializer):
                         db.ForeignKey('users.id'),
                         nullable=False,
                         index=True)
+    server_query_id = db.Column(db.Integer,
+                        db.ForeignKey('server_queries.id'),
+                        nullable=True,
+                        index=True)
 
     user = db.relationship('User',
-        backref=db.backref('servers', lazy=True))
+        backref=db.backref('servers', lazy='joined'))
     
-    server_query = db.relationship('ServerQuery',
-        backref=db.backref('server', lazy=False))
+    server_info = db.relationship('ServerQuery',
+        backref=db.backref('hostServer', lazy='joined', uselist=False))
 
-    # def serialize(self):
-    #     pass
-        # handle recursive serialize???
+    _default_fields = ['id', 'name', 'comment', 'url', 'skip_ssl', 'authkey', 'user', 'server_info']
+    _hidden_fields = []
+    _readonly_fields = ['user_id']
 
 
     def __repr__(self):
-       return f"<Server(name='{self.name}', url='{self.url}'[{self.skip_ssl}], user_id='{self.user_id}', ServerQuery='{self.server_query}')>"
+        return self.to_json()
 
 
-class ServerQuery(db.Model, Serializer):
+class ServerQuery(BaseModel):
     __tablename__ = 'server_queries'
     id = db.Column(db.Integer,
                    primary_key=True)
     server_id = db.Column(db.Integer,
-                     db.ForeignKey('servers.id'),
                      nullable=False,
                      unique=True,
                      index=True)
@@ -91,5 +86,9 @@ class ServerQuery(db.Model, Serializer):
                     index=True)
     query_result = db.Column(db.JSON, nullable=False)
 
+    _default_fields = ['server_id', 'timestamp', 'query_result']
+    _hidden_fields = []
+    _readonly_fields = []
+
     def __repr__(self):
-       return f"<ServerQuery(server_id='{self.server_id}', timestamp='{self.timestamp}', query_result='{self.query_result}')>"
+        return self.to_json()

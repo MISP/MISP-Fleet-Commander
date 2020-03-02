@@ -11,12 +11,10 @@ def mispGetRequest(server, url, data={}):
     full_url = urljoin(server.url, url)
     try:
         response = requests.get(full_url, data=data, headers=headers, verify=(not server.skip_ssl))
-        print(response.status_code)
-        print(response.text)
         if response.status_code == 403:
             return { "error": "Authentication error" }
         if response.status_code == 405:
-            return { "error": "Unsufficent permission" }
+            return { "error": "Insufficent permission" }
         return response.json()
     except requests.exceptions.SSLError:
         return { "error": "SSL error" }
