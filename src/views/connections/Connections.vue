@@ -48,6 +48,7 @@
             :no-provider-paging="true"
             :no-provider-sorting="true"
             :no-provider-filtering="true"
+            :sort-icon-left="true"
             @filtered="onFiltered"
             @sort-changed="onSorted"
         >
@@ -159,6 +160,28 @@
                         :timestamp="row.value"
                     ></timeSinceRefresh>
                 </loaderPlaceholder>
+            </template>
+
+            <template v-slot:cell(actions)="row">
+                <div class="btn-group">
+                    <b-button :id="`popover-row-option-${row.index}`" href="#" class="ml-1" size="xs" variant="link">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </b-button>
+                     <b-popover
+                        :ref="`popoverRow${row.index}`"
+                        :target="`popover-row-option-${row.index}`"
+                        placement="bottomleft"
+                        triggers="focus"
+                    >
+                        <b-button
+                            size="sm" variant="secondary" class="d-flex align-items-center w-100 mb-1"
+                            @click="viewInServer(row.item)"
+                        >
+                            <i class="mr-2 fas fa-server"></i>
+                            <span class="w-100">View server</span>
+                        </b-button>
+                    </b-popover>
+                </div>
             </template>
 
             <template v-slot:row-details="row">

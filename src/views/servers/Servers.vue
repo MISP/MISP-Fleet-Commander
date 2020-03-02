@@ -56,6 +56,7 @@
             :no-provider-paging="true"
             :no-provider-sorting="true"
             :no-provider-filtering="true"
+            :sort-icon-left="true"
             @filtered="onFiltered"
             @sort-changed="onSorted"
         >
@@ -160,11 +161,18 @@
                             <span class="w-100">Refresh</span>
                         </b-button>
                         <b-button
-                            size="sm" variant="primary" class="d-flex align-items-center w-100 mb-1"
+                            size="sm" variant="secondary" class="d-flex align-items-center w-100 mb-1"
                             @click="viewConnections(row.item)"
                         >
-                            <i class="mr-1 fas fa-network-wired"></i>
+                            <i class="mr-2 fas fa-network-wired"></i>
                             <span class="w-100">View connections</span>
+                        </b-button>
+                        <b-button
+                            size="sm" variant="secondary" class="d-flex align-items-center w-100 mb-1"
+                            @click="viewInNetwork(row.item)"
+                        >
+                            <i class="mr-2 fas fa-project-diagram"></i>
+                            <span class="w-100">View network</span>
                         </b-button>
                         <b-button
                             size="sm" variant="danger" class="d-flex align-items-center w-100"
@@ -312,7 +320,7 @@ export default {
                     {
                         key: "authkey",
                         sortable: false,
-                        class: "d-none d-xl-table-cell",
+                        class: "d-none d-xl-table-cell text-nowrap",
                         formatter: value => {
                             return value.slice(0, 4) + " … " + value.slice(36, 40)
                         }
