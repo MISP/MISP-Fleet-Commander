@@ -1,7 +1,8 @@
 from application import db
 from datetime import datetime
-from application.baseModel import BaseModel
 import json
+from sqlalchemy.ext.hybrid import hybrid_property
+from application.baseModel import BaseModel
 
 
 class User(BaseModel):
@@ -48,7 +49,9 @@ class Server(BaseModel):
                          nullable=False,
                          default=False)
     authkey = db.Column(db.String(40),
-                        nullable=False)
+                        nullable=True)
+    basicauth = db.Column(db.String(120),
+                        nullable=True)
     user_id = db.Column(db.Integer,
                         db.ForeignKey('users.id'),
                         nullable=False,
@@ -64,10 +67,18 @@ class Server(BaseModel):
     server_info = db.relationship('ServerQuery',
         backref=db.backref('hostServer', lazy='joined', uselist=False))
 
-    _default_fields = ['id', 'name', 'comment', 'url', 'skip_ssl', 'authkey', 'user', 'server_info']
-    _hidden_fields = []
+    _default_fields = ['id', 'name', 'comment', 'url', 'skip_ssl', 'user', 'auth_method', 'server_info']
+    _hidden_fields = ['authkey', 'basicauth']
     _readonly_fields = ['user_id']
 
+    @hybrid_property
+    def auth_method(self):
+        methods = []
+        if self.authkey:
+            methods.append("API Key")
+        if self.basicauth:
+            methods.append("Basic Auth")
+        return methods
 
     def __repr__(self):
         return self.to_json()

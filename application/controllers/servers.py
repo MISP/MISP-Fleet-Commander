@@ -34,7 +34,8 @@ def add():
     server = Server(name=request.json.get('name'),
                     url=request.json.get('url'),
                     skip_ssl=request.json.get('skip_ssl', False),
-                    authkey=request.json.get('authkey'),
+                    authkey=request.json.get('authkey', None),
+                    basicauth=request.json.get('basicauth', None),
                     user_id=1)
     db.session.add(server)
     if request.json.get('recursive_add', False):
@@ -46,7 +47,7 @@ def add():
 
 @BPserver.route('/servers/edit', methods=['POST'])
 def edit():
-    saveFields = ['name', 'url', 'skip_ssl', 'authkey']
+    saveFields = ['name', 'description', 'url', 'skip_ssl', 'authkey', 'basicauth']
     server = Server.query.get(request.json['id'])
     if server is not None:
         for field, value in request.json.items():
