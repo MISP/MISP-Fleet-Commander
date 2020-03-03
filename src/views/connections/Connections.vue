@@ -1,6 +1,6 @@
 <template>
 <Layout name="LayoutDefault">
-    <div>
+    <div class="page-container">
         <h3>
             <iconForScope scope="connections"></iconForScope>
             Connections
@@ -34,7 +34,8 @@
         </div>
 
         <b-table 
-            striped outlined hover show-empty small
+            striped outlined show-empty small
+            table-class="table-auto-hide-action"
             responsive="md"
             id="connection-table"
             ref="connectionTable"
@@ -155,33 +156,37 @@
             </template>
 
             <template v-slot:cell(last_refresh)="row">
-                <loaderPlaceholder :loading="!row.value._loading">
-                    <timeSinceRefresh
-                        :timestamp="row.value"
-                    ></timeSinceRefresh>
-                </loaderPlaceholder>
-            </template>
+                <span class="d-block" style="width: 90px;">
+                    <span :class="forcedHidden == row.index ? 'd-none' : 'hide-on-hover'">
+                        <loaderPlaceholder :loading="!row.value._loading">
+                            <timeSinceRefresh
+                                :timestamp="row.value"
+                            ></timeSinceRefresh>
+                        </loaderPlaceholder>
+                    </span>
 
-            <template v-slot:cell(actions)="row">
-                <div class="btn-group">
-                    <b-button :id="`popover-row-option-${row.index}`" href="#" class="ml-1" size="xs" variant="link">
-                        <i class="fas fa-ellipsis-v"></i>
-                    </b-button>
-                     <b-popover
-                        :ref="`popoverRow${row.index}`"
-                        :target="`popover-row-option-${row.index}`"
-                        placement="bottomleft"
-                        triggers="focus"
-                    >
-                        <b-button
-                            size="sm" variant="secondary" class="d-flex align-items-center w-100 mb-1"
-                            @click="viewInServer(row.item)"
-                        >
-                            <i class="mr-2 fas fa-server"></i>
-                            <span class="w-100">View server</span>
-                        </b-button>
-                    </b-popover>
-                </div>
+                    <span :class="forcedHidden == row.index ? '' : 'reveal-on-hover'">
+                        <div class="btn-group">
+                            <b-button :id="`popover-row-option-${row.index}`" href="#" class="ml-1" size="xs" variant="link" @click="forceHidden(row.index)">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </b-button>
+                            <b-popover
+                                :target="`popover-row-option-${row.index}`"
+                                placement="bottomleft"
+                                triggers="focus"
+                                @hidden="clearForcedHidden"
+                            >
+                                <b-button
+                                    size="sm" variant="secondary" class="d-flex align-items-center w-100 mb-1"
+                                    @click="viewInServer(row.item)"
+                                >
+                                    <i class="mr-2 fas fa-server"></i>
+                                    <span class="w-100">View server</span>
+                                </b-button>
+                            </b-popover>
+                        </div>
+                    </span>
+                </span>
             </template>
 
             <template v-slot:row-details="row">
@@ -201,10 +206,8 @@ import { mapState, mapGetters } from "vuex"
 import Layout from "@/components/layout/Layout.vue"
 import iconForScope from "@/components/ui/elements/iconForScope.vue"
 import loaderPlaceholder from "@/components/ui/elements/loaderPlaceholder.vue"
-import userPerms from "@/components/ui/elements/userPerms.vue"
 import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
 import connectionsSummary from "@/components/ui/elements/connectionsSummary.vue"
-import connectionState from "@/components/ui/elements/connectionState.vue"
 import jsonViewer from "@/components/ui/elements/jsonViewer.vue"
 
 export default {
@@ -221,6 +224,7 @@ export default {
         return {
             refreshInProgress: false,
             rulesTreeMode: true,
+            forcedHidden: -1,
             table: {
                 isBusy: false,
                 filtered: "",
@@ -254,11 +258,7 @@ export default {
                     {
                         key: "last_refresh",
                         sortable: true,
-                        class: "align-middle"
-                    },
-                    {
-                        key: "actions",
-                        class: "align-middle d-none d-md-table-cell",
+                        class: "align-middle refresh-column py-1"
                     }
                 ]
             }
@@ -276,6 +276,12 @@ export default {
         },
         onSorted() {
             this.table.currentPage = 1
+        },
+        forceHidden(row_id) {
+            this.forcedHidden = row_id
+        },
+        clearForcedHidden() {
+            this.forcedHidden = -1
         },
         refreshConnections() {
             this.refreshInProgress = true

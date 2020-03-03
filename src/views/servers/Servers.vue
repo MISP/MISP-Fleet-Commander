@@ -42,7 +42,8 @@
            </div>
         </div>
         <b-table 
-            striped outlined hover show-empty small
+            striped outlined show-empty small
+            table-class="table-auto-hide-action"
             responsive="md"
             id="server-table"
             ref="serverTable"
@@ -92,11 +93,67 @@
             </template>
 
             <template v-slot:cell(last_refresh)="row">
-                <loaderPlaceholder :loading="!row.value._loading">
-                    <timeSinceRefresh
-                        :timestamp="row.value.timestamp"
-                    ></timeSinceRefresh>
-                </loaderPlaceholder>
+                <span class="d-block" style="width: 90px;">
+                    <span :class="forcedHidden == row.index ? 'd-none' : 'hide-on-hover'">
+                        <loaderPlaceholder :loading="!row.value._loading">
+                            <timeSinceRefresh
+                                :timestamp="row.value.timestamp"
+                            ></timeSinceRefresh>
+                        </loaderPlaceholder>
+                    </span>
+                    <span :class="forcedHidden == row.index ? '' : 'reveal-on-hover'">
+                        <div class="btn-group">
+                            <b-button
+                                size="xs" variant ="link"
+                                @click="toggleServerInfo(row.item, row.index, row)"
+                            >
+                                <b-icon class="text-secondary" :icon="row.detailsShowing ? 'arrows-collapse' : 'arrows-expand'"></b-icon>
+                            </b-button>
+                            <b-button class="ml-1" size="xs" variant="link" @click="openEditModal(row.item)">
+                                <i class="fas fa-edit"></i>
+                            </b-button>
+                            <b-button :id="`popover-row-option-${row.index}`" href="#" class="ml-1" size="xs" variant="link" @click="forceHidden(row.index)">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </b-button>
+                            <b-popover
+                                :ref="`popoverRow${row.index}`"
+                                :target="`popover-row-option-${row.index}`"
+                                placement="bottomleft"
+                                triggers="focus"
+                                @hidden="clearForcedHidden"
+                            >
+                                <b-button 
+                                    size="sm" variant="primary" class="d-flex align-items-center w-100 mb-1"
+                                    @click="closePopover(row.index, handleRefreshInfo(row.item, 'no_cache'))"
+                                >
+                                    <b-icon icon="arrow-clockwise" class="mr-1"></b-icon>
+                                    <span class="w-100">Refresh</span>
+                                </b-button>
+                                <b-button
+                                    size="sm" variant="secondary" class="d-flex align-items-center w-100 mb-1"
+                                    @click="viewConnections(row.item)"
+                                >
+                                    <i class="mr-2 fas fa-network-wired"></i>
+                                    <span class="w-100">View connections</span>
+                                </b-button>
+                                <b-button
+                                    size="sm" variant="secondary" class="d-flex align-items-center w-100 mb-1"
+                                    @click="viewInNetwork(row.item)"
+                                >
+                                    <i class="mr-2 fas fa-project-diagram"></i>
+                                    <span class="w-100">View network</span>
+                                </b-button>
+                                <b-button
+                                    size="sm" variant="danger" class="d-flex align-items-center w-100"
+                                    @click="openDeletionModal(row.item)"
+                                >
+                                    <b-icon icon="trash-fill" class="mr-1"></b-icon>
+                                    <span class="w-100">Delete server</span>
+                                </b-button>
+                            </b-popover>
+                        </div>
+                    </span>
+                </span>
             </template>
 
             <template v-slot:cell(server_info.query_result.connectedServers)="row">
@@ -133,58 +190,6 @@
                 </loaderPlaceholder>
             </template>
 
-            <template v-slot:cell(actions)="row">
-                <div class="btn-group">
-                    <b-button
-                        size="xs" variant ="link"
-                        @click="toggleServerInfo(row.item, row.index, row)"
-                    >
-                        <b-icon class="text-secondary" :icon="row.detailsShowing ? 'arrows-collapse' : 'arrows-expand'"></b-icon>
-                    </b-button>
-                    <b-button class="ml-1" size="xs" variant="link" @click="openEditModal(row.item)">
-                        <i class="fas fa-edit"></i>
-                    </b-button>
-                    <b-button :id="`popover-row-option-${row.index}`" href="#" class="ml-1" size="xs" variant="link">
-                        <i class="fas fa-ellipsis-v"></i>
-                    </b-button>
-                     <b-popover
-                        :ref="`popoverRow${row.index}`"
-                        :target="`popover-row-option-${row.index}`"
-                        placement="bottomleft"
-                        triggers="focus"
-                    >
-                        <b-button 
-                            size="sm" variant="primary" class="d-flex align-items-center w-100 mb-1"
-                            @click="closePopover(row.index, handleRefreshInfo(row.item, 'no_cache'))"
-                        >
-                            <b-icon icon="arrow-clockwise" class="mr-1"></b-icon>
-                            <span class="w-100">Refresh</span>
-                        </b-button>
-                        <b-button
-                            size="sm" variant="secondary" class="d-flex align-items-center w-100 mb-1"
-                            @click="viewConnections(row.item)"
-                        >
-                            <i class="mr-2 fas fa-network-wired"></i>
-                            <span class="w-100">View connections</span>
-                        </b-button>
-                        <b-button
-                            size="sm" variant="secondary" class="d-flex align-items-center w-100 mb-1"
-                            @click="viewInNetwork(row.item)"
-                        >
-                            <i class="mr-2 fas fa-project-diagram"></i>
-                            <span class="w-100">View network</span>
-                        </b-button>
-                        <b-button
-                            size="sm" variant="danger" class="d-flex align-items-center w-100"
-                            @click="openDeletionModal(row.item)"
-                        >
-                            <b-icon icon="trash-fill" class="mr-1"></b-icon>
-                            <span class="w-100">Delete server</span>
-                        </b-button>
-                    </b-popover>
-                </div>
-            </template>
-
             <template v-slot:row-details="row">
                 <RowDetails 
                     :details="row.item.server_info"
@@ -202,11 +207,10 @@
         ></DeleteModal>
 
         <AddModal
-            :modalAction="modalAddAction"
-            :serverForm="serverToEdit.formData"
+            :modalAction.sync="modalAddAction"
+            :serverForm="validServerToEdit"
             @actionAdd="handleAdd"
         ></AddModal>
-
     </div>
 </Layout>
 </template>
@@ -254,6 +258,7 @@ export default {
             modalAddAction: "Add",
             serverToDelete: {},
             serverToEdit: { formData: {}}, // nested cheat to keep it reactive
+            forcedHidden: -1,
             table: {
                 isBusy: false,
                 filtered: "",
@@ -318,24 +323,20 @@ export default {
                         class: "align-middle d-none d-md-table-cell",
                     },
                     {
-                        key: "authkey",
+                        key: "auth_method",
                         sortable: false,
                         class: "d-none d-xl-table-cell text-nowrap",
-                        formatter: value => {
-                            return value.slice(0, 4) + " … " + value.slice(36, 40)
+                        formatter: (value) => {
+                            return Array.isArray(value) ? value.join(", ") : ""
                         }
                     },
                     {
                         key: "last_refresh",
                         sortable: true,
-                        class: "align-middle",
+                        class: "align-middle py-0",
                         formatter: (value, key, item) => {
                             return item.server_info
                         }
-                    },
-                    {
-                        key: "actions",
-                        class: "align-middle d-none d-md-table-cell",
                     }
                 ],
             },
@@ -349,6 +350,9 @@ export default {
         ...mapGetters({
             serverCount: "servers/serverCount"
         }),
+        validServerToEdit() {
+            return this.serverToEdit.formData
+        }
     },
     methods: {
         onFiltered(filteredItems) {
@@ -366,6 +370,12 @@ export default {
             } else {
                 row.item._rowVariant = ""
             }
+        },
+        forceHidden(row_id) {
+            this.forcedHidden = row_id
+        },
+        clearForcedHidden() {
+            this.forcedHidden = -1
         },
         closePopover(row_id) {
             this.$refs[`popoverRow${row_id}`].$emit("close")
