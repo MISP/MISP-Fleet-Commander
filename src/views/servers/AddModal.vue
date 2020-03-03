@@ -38,30 +38,29 @@
                         <b-form-invalid-feedback v-for="(error, index) in validationContext.errors" v-bind:key="index">{{ error }}</b-form-invalid-feedback>
                     </ValidationProvider>
                 </b-form-group>
-
                 <b-form-group
                     label="Server URL:"
                     label-for="input-url"
                     description="The URL to access the server"
                 >
                     <ValidationProvider v-slot="validationContext" rules="required|url" name="Server URL">
-                        <div class="input-group">
+                        <b-input-group>
                             <b-form-input
                                 v-model="form.url"
                                 :state="getValidationState(validationContext)"
                                 placeholder="https://misp.test"
                                 type="url"
                             ></b-form-input>
-                            <div class="input-group-append">
-                                <div class="input-group-text">
+                            <template v-slot:append>
+                                <b-input-group-text>
                                     <ValidationProvider v-slot="">
                                         <b-form-checkbox v-model="form.skip_ssl" switch>
                                             <small>Skip SSL validation</small>
                                         </b-form-checkbox>
                                     </ValidationProvider>
-                                </div>
-                            </div>
-                        </div>
+                                </b-input-group-text>
+                            </template>
+                         </b-input-group>
 
                         <b-form-invalid-feedback v-for="(error, index) in validationContext.errors" v-bind:key="index">{{ error }}</b-form-invalid-feedback>
                     </ValidationProvider>
