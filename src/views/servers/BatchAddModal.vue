@@ -93,12 +93,6 @@
             </div>
         </b-form-group>
 
-        <b-form-group
-            description="By checking this box, it will try to add other MISP Servers connected to this one using known remote Servers"
-        >
-            <b-form-checkbox v-model="recursive_add">Recursively Add Servers</b-form-checkbox>
-        </b-form-group>
-
         <h4>
             Server to add
             <b-button
@@ -115,27 +109,51 @@
         >
             <template v-slot:head(select)>
                 <b-form-checkbox
-                    id="checkbox-head"
+                    id="checkbox-select-head"
                     v-model="allChecked"
                     @change="setCheckOnServers"
                 ></b-form-checkbox>
             </template>
-
-            <template v-slot:cell(status)="row">
-                <b-badge 
-                    v-if="row.value.message !== undefined"
-                    :variant="row.value.color"
-                >
-                    <div>{{ row.value.message }}</div>
-                    <div>{{ row.value.version }}</div>
-                </b-badge>
+            <template v-slot:head(recursive_add)>
+                <b-form-checkbox
+                    id="checkbox-recursive-head"
+                    title="By checking this box, the application will try to add other MISP Servers connected to this one using the known remote servers index"
+                    v-model="recursiveChecked"
+                    @change="setCheckOnRecursive"
+                ></b-form-checkbox>
             </template>
+
             <template v-slot:cell(select)="row">
                 <b-form-checkbox
-                    :id="`checkbox-${row.index}`"
+                    :id="`checkbox-select-${row.index}`"
                     v-model="row.value.selected"
                     :disabled="row.value.disabled"
                 ></b-form-checkbox>
+            </template>
+            <template v-slot:cell(recursive_add)="row">
+                <b-form-checkbox
+                    :id="`checkbox-recursive-${row.index}`"
+                    v-model="row.value.selected"
+                    :disabled="row.value.disabled"
+                ></b-form-checkbox>
+            </template>
+            <template v-slot:cell(status)="row">
+                <div class="d-flex align-items-center">
+                    <b-badge 
+                        v-if="row.value.connection !== undefined && row.value.connection.message !== undefined"
+                        :variant="row.value.connection.color"
+                    >
+                        <div>{{ row.value.connection.message }}</div>
+                        <div>{{ row.value.connection.version }}</div>
+                    </b-badge>
+                    <userPerms
+                        v-if="row.value.user !== undefined && row.value.user.Role !== undefined"
+                        :perms="row.value.user.Role"
+                        :row_id="row.index"
+                        context="batchadd"
+                        class="ml-1"
+                    ></userPerms>
+                </div>
             </template>
             <template v-slot:cell(name)="row">
                 <b-form-input
@@ -169,15 +187,18 @@
 
 <script>
 import axios from "axios"
+import userPerms from "@/components/ui/elements/userPerms.vue"
 
 export default {
     name: "BatchAddModal",
+    components: {
+        userPerms
+    },
     data: function() {
         return {
             url: "",
             skip_ssl: false,
             authkey: "",
-            recursive_add: "true",
             basic: {
                 email: "",
                 password: ""
@@ -189,6 +210,7 @@ export default {
                 { text: "Basic authorisation (email:password)", value: "basic" }
             ],
             allChecked: false,
+            recursiveChecked: false,
             rangeRegex: /\[(?<start>\S+)(?:,|, )(?<end>\S+)\]/,
             elligibleServers: [],
             postInProgress: false,
@@ -196,6 +218,7 @@ export default {
             table: {
                 fields: [
                     {key: "select", label: ""},
+                    "recursive_add",
                     "status",
                     "name",
                     "url",
@@ -258,7 +281,6 @@ export default {
             this.url = "",
             this.skip_ssl = false,
             this.authkey = "",
-            this.recursive_add = "true",
             this.basic = {
                 email: "",
                 password: ""
@@ -279,7 +301,8 @@ export default {
                         url: url,
                         authkey: this.authMethodSelected == "api" ? this.authkey : this.basicauth,
                         skip_ssl: this.skip_ssl,
-                        select: {selected: false, disabled: false}
+                        select: {selected: false, disabled: false},
+                        recursive_add: {selected: false, disabled: true}
                     }
                 )
             })
@@ -289,10 +312,16 @@ export default {
                 server.skip_ssl = this.skip_ssl
             })
         },
-        setCheckOnServers(newValue) {
+        setCheckOnServers(checked) {
             this.elligibleServers.forEach(server => {
-                server.select.selected = newValue
+                server.select.selected = checked
             })
+        },
+        setCheckOnRecursive(checked) {
+            this.elligibleServers.filter(server => { return server.status.connection.color == "success"})
+                .forEach(server => {
+                    server.recursive_add.selected = checked
+                })
         },
         refreshServers() {
             this.refreshInProgress = true
@@ -305,9 +334,14 @@ export default {
                         })
                         if (elServer.length > 0) {
                             elServer = elServer[0]
-                            elServer.status = server.testResult
+                            elServer.status.connection = server.testResult
+                            elServer.status.user = server.userResult
                             if (server.testResult.color == "success") {
                                 elServer.select.selected = true
+                                elServer.recursive_add.disabled = false
+                                elServer.recursive_add.selected = true
+                            } else {
+                                elServer.recursive_add.disabled = true
                             }
                         }
                     })

@@ -1,14 +1,14 @@
 <template>
     <span>
-        <template v-if="permCount > 0">
+        <template v-if="permCount > 0 && !summaryEmpty">
             <b-badge
-                :id="`badge-perms-${server_id}`"
+                :id="`badge-perms-${context}-${row_id}`"
                 :variant="summary.state"
             >{{ summary.text }}</b-badge>
 
             <b-popover
                 custom-class="mw-25"
-                :target="`badge-perms-${server_id}`"
+                :target="`badge-perms-${context}-${row_id}`"
                 :variant="summary.state"
                 triggers="hover" placement="auto">
                 <pre>{{ perms }}</pre>
@@ -23,7 +23,11 @@
 export default {
     props: {
         perms: {},
-        server_id: {
+        context: {
+            type: String,
+            required: true
+        },
+        row_id: {
             type: Number,
             required: true
         }
@@ -43,14 +47,14 @@ export default {
             } else if (this.perms.perm_add) {
                 remote_user.state = "danger"
                 remote_user.text = "user"
-            } else {
-                remote_user.state = "dark"
-                remote_user.text = "read only"
             }
             return remote_user
         },
         permCount() {
             return this.perms === "" ? 0 : Object.keys(this.perms).length
+        },
+        summaryEmpty() {
+            return Object.keys(this.summary).length == 0
         }
     },
     data: function() {

@@ -96,7 +96,8 @@
                 <loaderPlaceholder :loading="!row.item.server_info._loading">
                     <userPerms
                         :perms="row.value"
-                        :server_id="row.item.id"
+                        :row_id="row.index"
+                        context="serverindex"
                     ></userPerms>
                 </loaderPlaceholder>
             </template>
