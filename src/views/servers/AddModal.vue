@@ -127,7 +127,6 @@
                             </b-input-group>
                         </ValidationProvider>
                     </div>
-
                 </b-form-group>
 
                 <b-form-group
@@ -231,7 +230,6 @@ export default {
             },
             form: this.serverForm,
             postInProgress: false,
-            // authMethodSelected: this.form.auth_method.filter(method => {return method == "Basic Auth"}).length > 0 ? "basic" : "api",
             localAuthMethodSelected: "api",
             authMethodOptions: [
                 { text: "API authorisation", value: "api" },

@@ -12,7 +12,16 @@
                 variant="success"
                 v-b-modal.modal-add
             >
-                <b-icon icon="plus"></b-icon>Add Server
+                <i class="fas fa-plus mr-1"></i>Add Server
+            </b-button>
+            <b-button
+                size="sm"
+                variant="success"
+                class="ml-1"
+                v-b-modal.modal-batch-add
+            >
+                <i class="fas fa-plus mr-1"></i>Batch Add Server
+                <sup class="ml-1"><b-badge pill variant="primary">Experimental</b-badge></sup>
             </b-button>
         </div>
         <div class="d-flex justify-content-between">
@@ -211,6 +220,10 @@
             :serverForm="validServerToEdit"
             @actionAdd="handleAdd"
         ></AddModal>
+
+        <BatchAddModal
+            @actionAdd="handleBatchAdd"
+        ></BatchAddModal>
     </div>
 </Layout>
 </template>
@@ -230,6 +243,7 @@ import connectionsSummary from "@/components/ui/elements/connectionsSummary.vue"
 import RowDetails from "@/views/servers/RowDetails.vue"
 import DeleteModal from "@/views/servers/DeleteModal.vue"
 import AddModal from "@/views/servers/AddModal.vue"
+import BatchAddModal from "@/views/servers/BatchAddModal.vue"
 
 
 export default {
@@ -247,7 +261,8 @@ export default {
         workersStatus,
         RowDetails,
         DeleteModal,
-        AddModal
+        AddModal,
+        BatchAddModal
     },
     data: function() {
         return {
@@ -385,6 +400,9 @@ export default {
             this.refreshServerIndex()
         },
         handleAdd() {
+            this.refreshServerIndex()
+        },
+        handleBatchAdd() {
             this.refreshServerIndex()
         },
         openEditModal(server) {
