@@ -2,7 +2,8 @@ import api from "@/api/servers"
 
 // initial state
 const state = {
-    all: []
+    all: [],
+    idToServer: {}
 }
 
 // getters
@@ -87,9 +88,13 @@ const mutations = {
     },
     setServers (state, servers) {
         state.all = servers
+        state.idToServer = {}
+        servers.forEach(server => {
+            state.idToServer[server.id] = server
+        })
     },
     resetConnectionState(state, payload) {
-        let server = state.all.find(server => {return server.id == payload.server_id})
+        let server = state.idToServer[payload.server_id]
         server.status = { _loading: true }
     },
     resetConnectionsState(state) {
@@ -98,7 +103,7 @@ const mutations = {
         })
     },
     updateConnectionState(state, payload) {
-        let server = state.all.find(server => { return server.id == payload.server_id})
+        let server = state.idToServer[payload.server_id]
         const connection = payload.connectionState
         if (connection.version !== undefined) {
             server.status = { _loading: false, data: connection.version, error: false }
@@ -118,22 +123,19 @@ const mutations = {
         })
     },
     updateInfo(state, payload) {
-        state.all.forEach(server => {
-            if (server.id == payload.server_id) {
-                server._loading = payload.loading
-                server.server_info._loading = payload.loading
-                const info = payload.info
-                if (info !== undefined) {
-                    if (info.error === undefined) {
-                        server.server_info = Object.assign({}, server.server_info, info) // update information keeping the observers
-                        server.server_info.error = false
-                    } else {
-                        server.server_info.error = info.error
-                        server.server_info.error = true
-                    }
-                }
+        let server = state.idToServer[payload.server_id]
+        server._loading = payload.loading
+        server.server_info._loading = payload.loading
+        const info = payload.info
+        if (info !== undefined) {
+            if (info.error === undefined) {
+                server.server_info = Object.assign({}, server.server_info, info) // update information keeping the observers
+                server.server_info.error = false
+            } else {
+                server.server_info.error = info.error
+                server.server_info.error = true
             }
-        })
+        }
     }
 }
 
