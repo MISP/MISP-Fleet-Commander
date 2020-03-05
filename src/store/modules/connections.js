@@ -23,6 +23,17 @@ const actions = {
                 (error) => { reject(error) }
             )
         })
+    },
+    getConnection({ commit }, data) {
+        return new Promise((resolve, reject) => {
+            api.get(
+                connection => {
+                    commit("setConnection", connection)
+                    resolve()
+                },
+                (error) => { reject(error) }
+            )
+        })
     }
 }
 
@@ -30,6 +41,10 @@ const actions = {
 const mutations = {
     setConnections(state, connections) {
         state.all = connections
+    },
+    setConnection(state, connection) {
+        let i = 0
+        state[i] = connection
     },
 }
 

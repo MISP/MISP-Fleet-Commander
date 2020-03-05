@@ -170,7 +170,7 @@
                             <b-button :id="`popover-row-option-${row.index}`" href="#" class="ml-1" size="xs" variant="link" @click="forceHidden(row.index)">
                                 <i class="fas fa-ellipsis-v"></i>
                             </b-button>
-                            <b-popover
+                            <!-- <b-popover
                                 :target="`popover-row-option-${row.index}`"
                                 placement="bottomleft"
                                 triggers="focus"
@@ -183,6 +183,21 @@
                                     <i class="mr-2 fas fa-server"></i>
                                     <span class="w-100">View server</span>
                                 </b-button>
+                            </b-popover> -->
+
+                            <b-popover
+                                :ref="`popoverRow${row.index}`"
+                                :target="`popover-row-option-${row.index}`"
+                                placement="bottomleft"
+                                triggers="focus"
+                                custom-class="popover-no-body"
+                                @hidden="clearForcedHidden"
+                            >
+                                <contextualMenu
+                                    :menu="genContextualMenu(row.index)"
+                                    @handle-refresh-info="handleRefreshInfo"
+                                    @view-in-server="viewInServer"
+                                ></contextualMenu>
                             </b-popover>
                         </div>
                     </span>
@@ -205,6 +220,7 @@
 import { mapState, mapGetters } from "vuex"
 import Layout from "@/components/layout/Layout.vue"
 import iconForScope from "@/components/ui/elements/iconForScope.vue"
+import contextualMenu from "@/components/ui/elements/contextualMenu.vue"
 import loaderPlaceholder from "@/components/ui/elements/loaderPlaceholder.vue"
 import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
 import connectionsSummary from "@/components/ui/elements/connectionsSummary.vue"
@@ -216,6 +232,7 @@ export default {
         Layout,
         iconForScope,
         loaderPlaceholder,
+        contextualMenu,
         timeSinceRefresh,
         jsonViewer,
         connectionsSummary
@@ -283,6 +300,24 @@ export default {
         clearForcedHidden() {
             this.forcedHidden = -1
         },
+        genContextualMenu(index) {
+            return [
+                {
+                    variant: "",
+                    text: "Refresh",
+                    icon: "sync-alt",
+                    eventName: "handle-refresh-info",
+                    callbackData: {index: index, method: "no_cache"}
+                },
+                {
+                    variant: "",
+                    text: "View server",
+                    icon: "server",
+                    eventName: "view-servers",
+                    callbackData: {index: index}
+                }
+            ]
+        },
         refreshConnections() {
             this.refreshInProgress = true
             this.$store.dispatch("connections/getConnections")
@@ -301,7 +336,15 @@ export default {
         },
         toggleRulesTreeMode() {
             this.rulesTreeMode = !this.rulesTreeMode
+        },
+        handleRefreshInfo(data) {
+            const index = data.index
+            let connection = this.getConnections[index]
+            this.$store.dispatch("connections/getConnection", connection)
+        },
+        viewInServer() {
         }
+
     },
     mounted() {
         this.refreshConnections()
