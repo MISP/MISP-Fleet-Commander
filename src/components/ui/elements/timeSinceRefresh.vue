@@ -1,9 +1,12 @@
 <template>
     <span :class="['text-nowrap', 'mr-1', moreThanOneDay ? 'text-danger' : 'text-muted']" style="cursor: auto;">
-        <template v-if="validTimestamp !== false">
+        <template>
             <i class="far fa-clock mr-1"></i>
-            <small class="align-middle">
-                    {{ validTimestamp | moment(type) }}
+            <small v-if="validTimestamp !== false" class="align-middle">
+                {{ validTimestamp | moment(type) }}
+            </small>
+            <small v-else class="align-middle">
+                never
             </small>
         </template>
     </span>

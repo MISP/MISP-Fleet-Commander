@@ -21,7 +21,7 @@
                 v-b-modal.modal-batch-add
             >
                 <i class="fas fa-plus mr-1"></i>Batch Add Server
-                <sup class="ml-1"><b-badge pill variant="primary">Experimental</b-badge></sup>
+                <sup class="ml-1"><b-badge pill variant="light">Experimental</b-badge></sup>
             </b-button>
         </div>
         <div class="d-flex justify-content-between">
@@ -130,36 +130,16 @@
                                 :target="`popover-row-option-${row.index}`"
                                 placement="bottomleft"
                                 triggers="focus"
+                                custom-class="popover-no-body"
                                 @hidden="clearForcedHidden"
                             >
-                                <b-button 
-                                    size="sm" variant="primary" class="d-flex align-items-center w-100 mb-1"
-                                    @click="closePopover(row.index, handleRefreshInfo(row.item, 'no_cache'))"
-                                >
-                                    <b-icon icon="arrow-clockwise" class="mr-1"></b-icon>
-                                    <span class="w-100">Refresh</span>
-                                </b-button>
-                                <b-button
-                                    size="sm" variant="secondary" class="d-flex align-items-center w-100 mb-1"
-                                    @click="viewConnections(row.item)"
-                                >
-                                    <i class="mr-2 fas fa-network-wired"></i>
-                                    <span class="w-100">View connections</span>
-                                </b-button>
-                                <b-button
-                                    size="sm" variant="secondary" class="d-flex align-items-center w-100 mb-1"
-                                    @click="viewInNetwork(row.item)"
-                                >
-                                    <i class="mr-2 fas fa-project-diagram"></i>
-                                    <span class="w-100">View network</span>
-                                </b-button>
-                                <b-button
-                                    size="sm" variant="danger" class="d-flex align-items-center w-100"
-                                    @click="openDeletionModal(row.item)"
-                                >
-                                    <b-icon icon="trash-fill" class="mr-1"></b-icon>
-                                    <span class="w-100">Delete server</span>
-                                </b-button>
+                                <contextualMenu
+                                    :menu="genContextualMenu(row.index)"
+                                    @handle-refresh-info="handleRefreshInfo"
+                                    @view-connections="viewConnections"
+                                    @view-in-network="viewInNetwork"
+                                    @open-deletion-modal="openDeletionModal"
+                                ></contextualMenu>
                             </b-popover>
                         </div>
                     </span>
@@ -204,7 +184,7 @@
                 <RowDetails 
                     :details="row.item.server_info"
                     :server="row.item"
-                    @actionRefresh="handleRefreshInfo(row.item, $event)"
+                    @actionRefresh="handleRefreshInfo({index: row.index, method: $event})"
                 ></RowDetails>
             </template>
 
@@ -241,6 +221,7 @@ import workersStatus from "@/components/ui/elements/workersStatus.vue"
 import submodulesStatus from "@/components/ui/elements/submodulesStatus.vue"
 import zeroMQStatus from "@/components/ui/elements/zeroMQStatus.vue"
 import connectionsSummary from "@/components/ui/elements/connectionsSummary.vue"
+import contextualMenu from "@/components/ui/elements/contextualMenu.vue"
 import RowDetails from "@/views/servers/RowDetails.vue"
 import DeleteModal from "@/views/servers/DeleteModal.vue"
 import AddModal from "@/views/servers/AddModal.vue"
@@ -259,6 +240,7 @@ export default {
         submodulesStatus,
         zeroMQStatus,
         connectionsSummary,
+        contextualMenu,
         workersStatus,
         RowDetails,
         DeleteModal,
@@ -378,6 +360,38 @@ export default {
         onSorted() {
             this.table.currentPage = 1
         },
+        genContextualMenu(index) {
+            return [
+                {
+                    variant: "",
+                    text: "Refresh",
+                    icon: "sync-alt",
+                    eventName: "handle-refresh-info",
+                    callbackData: {index: index, method: "no_cache"}
+                },
+                {
+                    variant: "",
+                    text: "View connections",
+                    icon: "network-wired",
+                    eventName: "view-connections",
+                    callbackData: {index: index}
+                },
+                {
+                    variant: "",
+                    text: "View network",
+                    icon: "project-diagram",
+                    eventName: "view-in-network",
+                    callbackData: {index: index}
+                },
+                {
+                    variant: "outline-danger",
+                    text: "Delete server",
+                    icon: "trash",
+                    eventName: "open-deletion-modal",
+                    callbackData: {index: index}
+                },
+            ]
+        },
         toggleServerInfo(server, row_id, row) {
             this.$store.commit("servers/toggleShowDetails", row_id)
             if (server._showDetails) {
@@ -411,9 +425,16 @@ export default {
             this.modalAddAction = "Edit"
             this.$bvModal.show("modal-add")
         },
-        openDeletionModal(server) {
+        openDeletionModal(data) {
+            let server = this.getIndex[data.index]
             this.$bvModal.show("modal-delete")
             this.serverToDelete = server
+        },
+        viewConnections(data) {
+            return data
+        },
+        viewInNetwork(data) {
+            return data
         },
         refreshServerIndex(callback) {
             this.refreshInProgress = true
@@ -446,9 +467,13 @@ export default {
                 this.refreshAllServerOnlineStatus
             )
         },
-        handleRefreshInfo(server, event) {
+        handleRefreshInfo(data) {
+            const index = data.index
+            const method = data.method
+            this.closePopover(index)
+            let server = this.getIndex[index]
             this.$store.dispatch("servers/refreshConnectionState", server)
-            this.refreshInfo(server, event == "no_cache")
+            this.refreshInfo(server, method == "no_cache")
         },
         refreshInfo(server, no_cache=false) {
             this.$store.dispatch("servers/getInfo", {server: server, no_cache: no_cache})

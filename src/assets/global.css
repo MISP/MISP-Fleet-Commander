@@ -105,6 +105,10 @@
     }
 }
 
+.popover-no-body > .popover-body {
+    padding: 0.3rem 0
+}
+
 .popover.mw-25 {
     max-width: 25%;
 }
