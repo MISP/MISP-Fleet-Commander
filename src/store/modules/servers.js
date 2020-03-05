@@ -50,12 +50,17 @@ const actions = {
             )
         })
     },
-    refreshAllConnectionState({state, dispatch}) {
-        let promises = []
-        state.all.forEach(server => {
-            promises.push(dispatch("refreshConnectionState", server))
+    refreshAllConnectionState({ commit }) {
+        return new Promise((resolve, reject) => {
+            commit("resetConnectionsState")
+            api.batchTestConnection(
+                connectionsState => {
+                    commit("updateConnectionsState", { connectionsState: connectionsState})
+                    resolve()
+                },
+                (error) => { reject(error) }
+            )
         })
-        return Promise.all(promises)
     },
     getInfo({ commit }, payload) {
         return new Promise((resolve, reject) => {
@@ -67,7 +72,6 @@ const actions = {
                     resolve()
                 },
                 (error) => { 
-                    console.log('errors')
                     commit("updateInfo", { server_id: payload.server.id, loading: false })
                     reject(error)
                 }
@@ -85,21 +89,31 @@ const mutations = {
         state.all = servers
     },
     resetConnectionState(state, payload) {
+        let server = state.all.find(server => {return server.id == payload.server_id})
+        server.status = { _loading: true }
+    },
+    resetConnectionsState(state) {
         state.all.forEach(server => {
-            if (server.id == payload.server_id) {
-                server.status = { _loading: true }
-            }
+            server.status = { _loading: true }
         })
     },
     updateConnectionState(state, payload) {
-        state.all.forEach(server => {
-            if (server.id == payload.server_id) {
-                const connection = payload.connectionState
-                if (connection.version !== undefined) {
-                    server.status = { _loading: false, data: connection.version, error: false }
-                } else {
-                    server.status = { _loading: false, data: connection.error, error: true }
-                }
+        let server = state.all.find(server => { return server.id == payload.server_id})
+        const connection = payload.connectionState
+        if (connection.version !== undefined) {
+            server.status = { _loading: false, data: connection.version, error: false }
+        } else {
+            server.status = { _loading: false, data: connection.error, error: true }
+        }
+    },
+    updateConnectionsState(state, payload) {
+        const connectionsState = payload.connectionsState
+        connectionsState.forEach(connection => {
+            let server = state.all.find(server => server.id == connection.server_id)
+            if (connection.version !== undefined) {
+                server.status = { _loading: false, data: connection.version, error: false }
+            } else {
+                server.status = { _loading: false, data: connection.error, error: true }
             }
         })
     },

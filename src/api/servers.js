@@ -2,6 +2,7 @@ import axios from "axios"
 
 const urls = {
     testConnection: "http://127.0.0.1:5000/servers/testConnection",
+    batchTestConnection: "http://127.0.0.1:5000/servers/batchTestConnection",
     queryInfo: "http://127.0.0.1:5000/servers/queryInfo",
     index: "http://127.0.0.1:5000/servers/index",
     add: "http://127.0.0.1:5000/servers/add",
@@ -23,6 +24,16 @@ export default {
 
     testConnection(server, cb, errorCb) {
         const url = `${urls.testConnection}/${server.id}`
+        return axios.get(url)
+            .then((response) => {
+                cb(response.data)
+            }).catch(error => {
+                errorCb(error.toJSON().message)
+            })
+    },
+
+    batchTestConnection(cb, errorCb) {
+        const url = `${urls.batchTestConnection}`
         return axios.get(url)
             .then((response) => {
                 cb(response.data)
