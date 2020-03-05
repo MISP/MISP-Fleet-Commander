@@ -100,83 +100,12 @@
             </div>
         </b-form-group>
 
-        <h4>
-            Server to add
-            <b-button
-                size="sm" variant="primary" :disabled="refreshInProgress"
-                @click="refreshServers"
-                v-b-tooltip.hover="'Test all servers'">
-                <i :class="['fas fa-sync-alt', refreshInProgress ? 'fa-spin' : '']"></i>
-            </b-button>
-        </h4>
-        <b-table-lite
-            small
-            :items="elligibleServers"
-            :fields="table.fields"
-        >
-            <template v-slot:head(select)>
-                <b-form-checkbox
-                    id="checkbox-select-head"
-                    v-model="allChecked"
-                    @change="setCheckOnServers"
-                ></b-form-checkbox>
-            </template>
-            <template v-slot:head(recursive_add)>
-                <b-form-checkbox
-                    id="checkbox-recursive-head"
-                    title="By checking this box, the application will try to add other MISP Servers connected to this one using the known remote servers index"
-                    v-model="recursiveChecked"
-                    @change="setCheckOnRecursive"
-                >Recursive add</b-form-checkbox>
-            </template>
+        <h4>Server to add</h4>
 
-            <template v-slot:cell(select)="row">
-                <b-form-checkbox
-                    :id="`checkbox-select-${row.index}`"
-                    v-model="row.value.selected"
-                    :disabled="row.value.disabled"
-                ></b-form-checkbox>
-            </template>
-            <template v-slot:cell(recursive_add)="row">
-                <b-form-checkbox
-                    :id="`checkbox-recursive-${row.index}`"
-                    v-model="row.value.selected"
-                    :disabled="row.value.disabled"
-                ></b-form-checkbox>
-            </template>
-            <template v-slot:cell(status)="row">
-                <div class="d-flex align-items-center">
-                    <b-badge 
-                        v-if="row.value.connection !== undefined && row.value.connection.message !== undefined"
-                        :variant="row.value.connection.color"
-                    >
-                        <div>{{ row.value.connection.message }}</div>
-                        <div>{{ row.value.connection.version }}</div>
-                    </b-badge>
-                    <userPerms
-                        v-if="row.value.user !== undefined && row.value.user.Role !== undefined"
-                        :perms="row.value.user.Role"
-                        :row_id="row.index"
-                        context="batchadd"
-                        class="ml-1"
-                    ></userPerms>
-                </div>
-            </template>
-            <template v-slot:cell(name)="row">
-                <b-form-input
-                    v-model="row.value"
-                ></b-form-input>
-            </template>
-            <template v-slot:cell(skip_ssl)="row">
-                <b-form-checkbox v-model="row.value" switch>
-                </b-form-checkbox>
-            </template>
-            <template v-slot:cell(authkey)="row">
-                <b-form-input
-                    v-model="row.value"
-                ></b-form-input>
-            </template>
-        </b-table-lite>
+        <batchAddTableServer
+            :servers="elligibleServers"
+            :skip_ssl="skip_ssl"
+        ></batchAddTableServer>
 
         <template v-slot:modal-footer="{ ok, cancel }">
             <b-button variant="primary" @click="ok()" :disabled="!haveElligibleServers">
@@ -194,12 +123,12 @@
 
 <script>
 import axios from "axios"
-import userPerms from "@/components/ui/elements/userPerms.vue"
+import batchAddTableServer from "@/components/ui/elements/batchAddTableServer.vue"
 
 export default {
     name: "BatchAddModal",
     components: {
-        userPerms
+        batchAddTableServer
     },
     data: function() {
         return {
@@ -216,23 +145,9 @@ export default {
                 { text: "API authorisation", value: "api" },
                 { text: "Basic authorisation (email:password)", value: "basic" }
             ],
-            allChecked: false,
-            recursiveChecked: false,
             rangeRegex: /\[(?<start>\S+)(?:,|, )(?<end>\S+)\]/,
             elligibleServers: [],
             postInProgress: false,
-            refreshInProgress: false,
-            table: {
-                fields: [
-                    {key: "select", label: ""},
-                    "recursive_add",
-                    "status",
-                    "name",
-                    "url",
-                    "authkey",
-                    "skip_ssl"
-                ]
-            }
         }
     },
     computed: {
@@ -321,59 +236,9 @@ export default {
                         authkey: this.authMethodSelected == "api" ? this.authkey : this.basicauth,
                         skip_ssl: this.skip_ssl,
                         select: {selected: false, disabled: false},
-                        recursive_add: {selected: false, disabled: true}
                     }
                 )
             })
-        },
-        setSkipSslForAllServers() {
-            this.elligibleServers.forEach(server => {
-                server.skip_ssl = this.skip_ssl
-            })
-        },
-        setCheckOnServers(checked) {
-            this.elligibleServers.forEach(server => {
-                server.select.selected = checked
-            })
-        },
-        setCheckOnRecursive(checked) {
-            this.elligibleServers.filter(server => { return server.status.connection.color == "success"})
-                .forEach(server => {
-                    server.recursive_add.selected = checked
-                })
-        },
-        refreshServers() {
-            this.refreshInProgress = true
-            const url = "http://127.0.0.1:5000/servers/batchTest"
-            axios.post(url, this.elligibleServers)
-                .then((response) => {
-                    response.data.forEach(server => {
-                        let elServer = this.elligibleServers.filter(elServer => {
-                            return elServer.name == server.name && elServer.url == server.url && elServer.authkey == server.authkey
-                        })
-                        if (elServer.length > 0) {
-                            elServer = elServer[0]
-                            elServer.status.connection = server.testResult
-                            elServer.status.user = server.userResult
-                            if (server.testResult.color == "success") {
-                                elServer.select.selected = true
-                                elServer.recursive_add.disabled = false
-                                elServer.recursive_add.selected = true
-                            } else {
-                                elServer.recursive_add.disabled = true
-                            }
-                        }
-                    })
-                })
-                .catch(error => {
-                    this.$bvToast.toast(error, {
-                        title: "Could not test Servers",
-                        variant: "danger",
-                    })
-                })
-                .finally(() => {
-                    this.refreshInProgress = false
-                })
         },
         numberRange(start, end, padding) {
             let range = []
@@ -403,15 +268,21 @@ export default {
         url: function() {
             this.genElligibleServers()
         },
-        authMethodSelected: function() {
-            this.genElligibleServers()
+        authMethodSelected: function(newValue) {
+            this.elligibleServers.forEach(elServer => {
+                elServer.authkey = newValue == "api" ? this.authkey : this.basicauth
+            })
         },
-        authkey: function() {
-            this.genElligibleServers()
+        authkey: function(newValue) {
+            this.elligibleServers.forEach(elServer => {
+                elServer.authkey = newValue
+            })
         },
-        skip_ssl: function() {
-            this.setSkipSslForAllServers()
-        }
+        basicauth: function(newValue) {
+            this.elligibleServers.forEach(elServer => {
+                elServer.basicauth = newValue
+            })
+        },
     }
 }
 </script>

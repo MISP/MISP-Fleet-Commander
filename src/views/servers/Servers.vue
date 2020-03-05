@@ -103,7 +103,7 @@
             </template>
 
             <template v-slot:cell(last_refresh)="row">
-                <span class="d-block" style="width: 90px;">
+                <span class="d-block" style="width: 100px;">
                     <span :class="forcedHidden == row.index ? 'd-none' : 'hide-on-hover'">
                         <loaderPlaceholder :loading="!row.value._loading">
                             <timeSinceRefresh
