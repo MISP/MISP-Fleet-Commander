@@ -20,9 +20,16 @@
                         v-if="getRangeBound.start != 0 || getRangeBound.end != 0"
                         class="d-flex align-items-center ml-4"
                     >
-                        <b-badge variant="primary" class="">{{ getRangeBound.start }}</b-badge>
+                        <b-badge variant="primary" class="">{{ getRangeBound.startText }}</b-badge>
                         <i class="fas fa-arrow-right ml-3"></i>
-                        <b-badge variant="primary" class="ml-3">{{ getRangeBound.end }}</b-badge>
+                        <b-badge variant="primary" class="ml-3">{{ getRangeBound.endText }}</b-badge>
+                        <b-badge
+                            v-if="getRangeBound.type == 'char' && getRangeBound.overflow"
+                            variant="danger" class="ml-3"
+                        >
+                            <i class="fas fa-exclamation"></i>
+                            Only one letter is taken into account for the range
+                        </b-badge>
                     </span>
                 </div>
             </template>
@@ -251,17 +258,29 @@ export default {
             return this.elligibleServers.filter(server => { return server.select.selected }).length > 0
         },
         getRangeBound() {
-            let range = {start: "_", end: "_", type: "?"}
+            let range = {start: "_", end: "_", startText: "_", endText: "_", type: "?"}
             let parsed = this.rangeRegex.exec(this.url)
             if (parsed !== null) {
                 if (isNaN(parsed.groups.start) && isNaN(parsed.groups.end)) { // characters range
-                    range.start = parsed.groups.start
-                    range.end = parsed.groups.end
+                    range.start = parsed.groups.start[0]
+                    range.end = parsed.groups.end[0]
+                    range.startText = range.start
+                    range.endText = range.end
                     range.type = "char"
+                    range.overflow = parsed.groups.start.length > 1
                 } else if (!isNaN(parsed.groups.start) && !isNaN(parsed.groups.end)) { // number range
                     range.start = parseInt(parsed.groups.start)
                     range.end = parseInt(parsed.groups.end)
+                    range.startText = parsed.groups.start
+                    range.endText = parsed.groups.end
                     range.type = "number"
+                    const paddedRegex = /^(?<padding>0+)\d+$/
+                    let parsedPadded = paddedRegex.exec(parsed.groups.start)
+                    if (parsedPadded !== null && parsedPadded.groups.padding.length > 0) {
+                        range.padding = parsed.groups.start.length
+                    } else {
+                        range.padding = 0
+                    }
                 }
             }
             return range
@@ -271,7 +290,7 @@ export default {
             if (this.getRangeBound.type == "char") {
                 range = this.charRange(this.getRangeBound.start, this.getRangeBound.end)
             } else if (this.getRangeBound.type == "number") {
-                range = this.numberRange(this.getRangeBound.start, this.getRangeBound.end)
+                range = this.numberRange(this.getRangeBound.start, this.getRangeBound.end, this.getRangeBound.padding)
             }
             return range
         }
@@ -356,12 +375,16 @@ export default {
                     this.refreshInProgress = false
                 })
         },
-        numberRange(start, end) {
+        numberRange(start, end, padding) {
             let range = []
             let iterCount = 0
             const maxIterCount = 300
             for (let i=start; i<=end && iterCount<maxIterCount; i++) {
-                range.push(i)
+                let number = i
+                if (padding > 0) {
+                    number = String(i).padStart(padding, "0")
+                }
+                range.push(number)
             }
             return range
         },
