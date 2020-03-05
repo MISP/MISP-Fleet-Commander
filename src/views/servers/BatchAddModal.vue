@@ -98,7 +98,7 @@
             <b-button
                 size="sm" variant="primary" :disabled="refreshInProgress"
                 @click="refreshServers"
-                v-b-tooltip.hover="'Test all server'">
+                v-b-tooltip.hover="'Test all servers'">
                 <i :class="['fas fa-sync-alt', refreshInProgress ? 'fa-spin' : '']"></i>
             </b-button>
         </h4>
@@ -120,7 +120,7 @@
                     title="By checking this box, the application will try to add other MISP Servers connected to this one using the known remote servers index"
                     v-model="recursiveChecked"
                     @change="setCheckOnRecursive"
-                ></b-form-checkbox>
+                >Recursive add</b-form-checkbox>
             </template>
 
             <template v-slot:cell(select)="row">
