@@ -34,27 +34,59 @@
                                         v-bind:key="setting"
                                         :title="setting"
                                     >
-                                        <b-card-text><pre>{{ value }}</pre></b-card-text>
+                                        <b-card-text>
+                                            <div class="max-heigth-800">
+                                                <jsonViewer
+                                                    :item="value"
+                                                    :rootKeyName="setting"
+                                                    :open="true"
+                                                ></jsonViewer>
+                                            </div>
+                                        </b-card-text>
                                     </b-tab>
                                 </b-tabs>
                             </b-card>
                         </b-tab>
                         <b-tab title="Server settings" class="p-1" no-body>
-                                <pre>{{ getConfig }}</pre>
+                                <div class="max-heigth-800">
+                                    <jsonViewer
+                                        :item="getConfig"
+                                        rootKeyName="Server settings"
+                                        :open="true"
+                                    ></jsonViewer>
+                                </div>
                         </b-tab>
                         <b-tab title="Usage" no-body>
                             <b-card no-body>
-                                <pre>{{ details.query_result.serverUsage }}</pre>
+                                <div class="max-heigth-800">
+                                    <jsonViewer
+                                        :item="details.query_result.serverUsage"
+                                        rootKeyName="Usage"
+                                        :open="true"
+                                    ></jsonViewer>
+                                </div>
                             </b-card>
                         </b-tab>
                         <b-tab title="User" class="p-1" no-body>
                             <b-card no-body>
-                                <pre>{{ details.query_result.serverUser }}</pre>
+                                <div class="max-heigth-800">
+                                    <jsonViewer
+                                        :item="details.query_result.serverUser"
+                                        rootKeyName="User"
+                                        :open="true"
+                                    ></jsonViewer>
+                                </div>
                             </b-card>
                         </b-tab>
                         <b-tab title="Connected MISP Servers" class="p-1" no-body>
                             <b-card no-body>
-                                <pre>{{ details.query_result.connectedServers }}</pre>
+                                <div class="max-heigth-800">
+                                    <jsonViewer
+                                        :item="details.query_result.connectedServers"
+                                        rootKeyName="Connected MISP Servers"
+                                        :open="true"
+                                    ></jsonViewer>
+                                </div>
                             </b-card>
                         </b-tab>
                         <b-tab title="Content" class="p-1" no-body disabled>
@@ -84,11 +116,13 @@
 
 <script>
 import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
+import jsonViewer from "@/components/ui/elements/jsonViewer.vue"
 
 export default {
     name: "RowDetails",
     components: {
         timeSinceRefresh,
+        jsonViewer,
     },
     props: {
         details: {
@@ -137,8 +171,8 @@ ul.nav-tabs > li.nav-item.rightmost-action > a:focus {
     border: 1px solid #ffffff00;
 }
 
-pre {
-    white-space: pre-wrap;
+.max-heigth-800 {
     max-height: 800px;
+    overflow: auto;
 }
 </style>

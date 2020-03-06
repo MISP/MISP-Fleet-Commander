@@ -9,14 +9,14 @@
         <div class="mb-3">
             <b-button
                 size="sm"
-                variant="success"
+                variant="primary"
                 v-b-modal.modal-add
             >
                 <i class="fas fa-plus mr-1"></i>Add Server
             </b-button>
             <b-button
                 size="sm"
-                variant="success"
+                variant="primary"
                 class="ml-1"
                 v-b-modal.modal-batch-add
             >
@@ -25,14 +25,16 @@
             </b-button>
         </div>
         <div class="d-flex justify-content-between">
-            <div>
+            <div class="d-flex" style="margin-top: -5px">
                 <b-pagination
+                    class="mb-0"
                     v-model="table.currentPage"
-                    v-if="table.totalRows > table.perPage"
+                    size="sm"
                     :per-page="table.perPage"
                     :total-rows="table.totalRows"
                     aria-controls="server-table"
                 ></b-pagination>
+                <b-form-select v-model="table.perPage" :options="table.optionsPerPage" size="sm" class="ml-2"></b-form-select>
             </div>
             <div class="align-items-center d-flex w-25">
                 <b-input-group size="sm">
@@ -263,6 +265,7 @@ export default {
                 totalRows: 0,
                 currentPage: 1,
                 perPage: 30,
+                optionsPerPage: [{ text: 30, value: 30 }, { text: 50, value: 50 }, { text: 100, value: 100 }],
                 filterFields: ["name", "url"],
                 fields: [
                     {

@@ -130,7 +130,10 @@
                 </b-form-group>
             </b-form>
             <div>
-                <b-button variant="primary" @click="handleRecursiveAdd">Recursively add connected servers</b-button>
+                <b-button variant="primary" @click="handleRecursiveAdd">
+                    Recursively add connected servers
+                    <sup class="ml-1"><b-badge pill variant="light">Experimental</b-badge></sup>
+                </b-button>
                 <small class="text-muted d-block">Try to add other MISP Servers connected to this one using the known remote servers index.</small>
                 <small class="text-muted d-block">Behind the scenes, it fetches the index and the authey of associated users and save them locally.</small>
             </div>
