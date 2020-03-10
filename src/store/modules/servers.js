@@ -2,6 +2,7 @@ import api from "@/api/servers"
 
 // initial state
 const state = {
+    githubVersion: "",
     all: [],
     idToServer: {}
 }
@@ -78,6 +79,32 @@ const actions = {
                 }
             )
         })
+    },
+    getAllInfo({ state, dispatch }, payload) {
+        return new Promise((resolve, reject) => {
+            state.all.forEach(server => {
+                dispatch("getInfo", {server: server, no_cache: payload.no_cache})
+                    .then(() => {
+                        resolve()
+                    })
+                    .catch(error => {
+                        reject(error)
+                    })
+            })
+        })
+    },
+    fetchGithubVersion({ commit }) {
+        return new Promise((resolve, reject) => {
+            api.fetchGithubVersion(
+                (githubReply) => {
+                    commit("setGithubVersion", githubReply)
+                    resolve()
+                },
+                (error) => { 
+                    reject(error)
+                }
+            )
+        })
     }
 }
 
@@ -110,6 +137,7 @@ const mutations = {
         } else {
             server.status = { _loading: false, data: connection.error, error: true }
         }
+        setUpdatableServers(state)
     },
     updateConnectionsState(state, payload) {
         const connectionsState = payload.connectionsState
@@ -121,6 +149,7 @@ const mutations = {
                 server.status = { _loading: false, data: connection.error, error: true }
             }
         })
+        setUpdatableServers(state)
     },
     updateInfo(state, payload) {
         let server = state.idToServer[payload.server_id]
@@ -136,7 +165,50 @@ const mutations = {
                 server.server_info.error = true
             }
         }
+    },
+    setGithubVersion(state, githubReply) {
+        // const githubVersion = githubReply.tag_name
+        const githubVersion = "v2.4.123"
+        state.githubVersion = githubVersion
+        setUpdatableServers(state)
     }
+}
+
+function setUpdatableServers(state) {
+    state.all.forEach(server => {
+        server.canBeUpdated = canBeUpdated(state, server)
+    })
+}
+
+function canBeUpdated(state, server) {
+    const githubVersion = state.githubVersion
+    if (githubVersion !== "" && githubVersion !== undefined) {
+        if (server.status.data !== undefined) {
+            const parsedGithubVersion = tokenizeMISPVersion(githubVersion)
+            const parsedServerVersion = tokenizeMISPVersion(server.status.data)
+            if (parsedGithubVersion.major !== parsedServerVersion.major) {
+                return false // update for major version should be done manually
+            } else if (parsedGithubVersion.minor !== parsedServerVersion.minor) {
+                return false // update for major version should be done manually
+            } else if (parsedGithubVersion.patch > parsedServerVersion.patch) {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
+    return false
+}
+function tokenizeMISPVersion(versionString) {
+    let version = {}
+    if (versionString !== "" && versionString !== undefined) {
+        if (versionString.startsWith("v")) {
+            versionString = versionString.slice(1)
+        }
+        let arr = versionString.split(".")
+        version = {major: arr[0], minor: arr[1], patch: arr[2]}
+    }
+    return version
 }
 
 export default {

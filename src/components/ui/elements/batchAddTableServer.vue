@@ -1,7 +1,9 @@
 <template>
     <div>
         <b-button
+            v-if="!noRefreshButton"
             size="sm" variant="primary" :disabled="refreshInProgress"
+            class="mb-1"
             @click="refreshServers"
             v-b-tooltip.hover="'Test all servers'">
             <i :class="['fas fa-sync-alt', refreshInProgress ? 'fa-spin' : '']"></i>
@@ -83,6 +85,14 @@ export default {
         },
         authkey: {
             type: String
+        },
+        disableEdit: {
+            type: Boolean,
+            default: false
+        },
+        noRefreshButton: {
+            type: Boolean,
+            default: false
         }
     },
     data: function() {
@@ -114,11 +124,16 @@ export default {
             localServers = this.servers.slice()
             localServers.forEach(server => {
                 server.selected = false
-                server.skip_ssl = this.skip_ssl
+                if (!this.disableEdit) {
+                    server.skip_ssl = this.skip_ssl
+                }
             })
             return localServers
         },
         setSkipSslForAllServers() {
+            if (this.disableEdit) {
+                return
+            }
             this.localServers.forEach(server => {
                 server.skip_ssl = this.skip_ssl
             })
@@ -157,11 +172,17 @@ export default {
     },
     watch: {
         skip_ssl: function(newValue) {
+            if (this.disableEdit) {
+                return
+            }
             this.localServers.forEach(server => {
                 server.skip_ssl = newValue
             })
         },
         authkey: function(newValue) {
+            if (this.disableEdit) {
+                return
+            }
             this.localServers.forEach(server => {
                 server.authkey = newValue
             })

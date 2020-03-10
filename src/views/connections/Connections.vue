@@ -80,6 +80,7 @@
                         :connections="[row.item.destination]"
                         :row_index="row.index"
                         :text_in_badge="row.value.status.message"
+                        :use_diode="true"
                     ></connectionsSummary>
                 </loaderPlaceholder>
             </template>

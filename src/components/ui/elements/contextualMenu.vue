@@ -5,6 +5,7 @@
             v-bind:key="index"
             size="sm"
             :variant="entry.variant"
+            :disabled="entry.disabled"
             class="compact rounded-0"
             @click="emitClick(entry.eventName, entry.callbackData)"
         >
@@ -60,7 +61,7 @@ export default {
     width: 20px;
 }
 
-.list-group-item-outline-danger {
+.list-group-item-outline-danger, .list-group-item-outline-primary {
     transition: color .15s ease-in-out,background-color .15s ease-in-out,border-color .15s ease-in-out,box-shadow .15s ease-in-out;
 }
 
@@ -68,5 +69,11 @@ export default {
     color: #fff;
     background-color: var(--red);
     border-color: var(--red);
+}
+
+.list-group-item-outline-primary:hover {
+    color: #fff;
+    background-color: var(--blue);
+    border-color: var(--blue);
 }
 </style>

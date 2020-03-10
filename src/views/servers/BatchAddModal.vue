@@ -122,7 +122,6 @@
 </template>
 
 <script>
-import axios from "axios"
 import batchAddTableServer from "@/components/ui/elements/batchAddTableServer.vue"
 
 export default {

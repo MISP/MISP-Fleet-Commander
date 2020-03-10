@@ -53,6 +53,17 @@ export default {
             })
     },
 
+    fetchGithubVersion(cb, errorCb) {
+        const url = "https://api.github.com/repos/MISP/MISP/releases/latest"
+        return axios.get(url)
+            .then((response) => {
+                cb(response.data)
+            }).catch(error => {
+                console.log(error)
+                errorCb(error.data.toJSON())
+            })
+    },
+
     add(server, cb, errorCb) {
         cb(server)
         errorCb()

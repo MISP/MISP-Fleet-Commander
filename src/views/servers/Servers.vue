@@ -36,20 +36,38 @@
                 ></b-pagination>
                 <b-form-select v-model="table.perPage" :options="table.optionsPerPage" size="sm" class="ml-2"></b-form-select>
             </div>
-            <div class="align-items-center d-flex w-25">
-                <b-input-group size="sm">
-                    <b-form-input
-                        v-model="table.filter"
-                        type="search"
-                        id="filterInput"
-                        placeholder="Type to Search"
-                        class="border-bottom-0 rounded-top align-self-end"
-                        style="border-radius: 0"
-                    ></b-form-input>
-                </b-input-group>
-                <b-button class="ml-2" variant="primary" size="sm" @click="fullRefresh()">
-                    <b-icon icon="arrow-clockwise" :class="{'fa-spin': refreshInProgress}" title="Refresh Servers"></b-icon>
-                </b-button>
+            <div class="w-25">
+                <b-button-toolbar class="justify-content-end">
+                    <b-input-group size="sm" class="px-0 col">
+                        <b-form-input
+                            v-model="table.filter"
+                            type="search"
+                            id="filterInput"
+                            placeholder="Type to Search"
+                            class="border-bottom-0 rounded-top align-self-end"
+                            style="border-radius: 0"
+                        ></b-form-input>
+                    </b-input-group>
+                    <b-button-group>
+                        <b-button
+                            class="ml-2"
+                            variant="primary"
+                            size="sm"
+                            title="Quick refresh"
+                            @click="fullRefresh()"
+                        >
+                            <i :class="{'fas fa-sync-alt': true, 'fa-spin': refreshInProgress}" title="Refresh Servers"></i>
+                        </b-button>
+                        <b-dropdown right text="Actions" variant="primary" size="sm" style="border-left: 1px solid #0069d9">
+                            <b-dropdown-item
+                                @click="fullRefresh(false)"
+                            >
+                                <i class="fas fa-sync-alt mr-2" title="Full refresh servers"></i>
+                                Full refresh
+                            </b-dropdown-item>
+                        </b-dropdown>
+                    </b-button-group>
+                </b-button-toolbar>
            </div>
         </div>
         <b-table 
@@ -77,6 +95,11 @@
                     <b-spinner class="align-middle"></b-spinner>
                     <strong class="ml-2">Loading...</strong>
                 </div>
+            </template>
+
+            <template v-slot:head(status)>
+                Status
+                <sup><b-badge class="ml-auto" variant="primary" title="Latest MISP version">{{ githubVersion }}</b-badge></sup>
             </template>
 
             <template v-slot:cell(url)="row">
@@ -141,11 +164,22 @@
                                     @view-connections="viewConnections"
                                     @view-in-network="viewInNetwork"
                                     @open-deletion-modal="openDeletionModal"
+                                    @run-updates="runUpdates"
                                 ></contextualMenu>
                             </b-popover>
                         </div>
                     </span>
                 </span>
+            </template>
+
+            <template v-slot:cell(notification)="row">
+                <loaderPlaceholder :loading="!row.item.server_info._loading">
+                    <i
+                        class="fas fa-arrow-up text-success"
+                        title="Update available"
+                        v-if="row.item.canBeUpdated"
+                    ></i>
+                </loaderPlaceholder>
             </template>
 
             <template v-slot:cell(server_info.query_result.connectedServers)="row">
@@ -338,6 +372,10 @@ export default {
                         formatter: (value, key, item) => {
                             return item.server_info
                         }
+                    },
+                    {
+                        key: "notification",
+                        label: ""
                     }
                 ],
             },
@@ -346,7 +384,8 @@ export default {
     },
     computed: {
         ...mapState({
-            getIndex: state => state.servers.all
+            getIndex: state => state.servers.all,
+            githubVersion: state => state.servers.githubVersion
         }),
         ...mapGetters({
             serverCount: "servers/serverCount"
@@ -384,6 +423,14 @@ export default {
                     text: "View network",
                     icon: "project-diagram",
                     eventName: "view-in-network",
+                    callbackData: {index: index}
+                },
+                {
+                    variant: "outline-primary",
+                    disabled: !this.getIndex[index].canBeUpdated,
+                    text: "Run updates",
+                    icon: "arrow-up",
+                    eventName: "run-updates",
                     callbackData: {index: index}
                 },
                 {
@@ -439,6 +486,18 @@ export default {
         viewInNetwork(data) {
             return data
         },
+        runUpdates(data) {
+            return data
+        },
+        fetchGithubVersion() {
+            this.$store.dispatch("servers/fetchGithubVersion")
+                .catch(error => {
+                    this.$bvToast.toast(error, {
+                        title: "Could not fetch latest version from GitHub",
+                        variant: "danger",
+                    })
+                })
+        },
         refreshServerIndex(callback) {
             this.refreshInProgress = true
             this.$store.dispatch("servers/getAllServers")
@@ -447,6 +506,7 @@ export default {
                     callback()
                 })
                 .catch(error => {
+                    console.log(error)
                     this.$bvToast.toast(error, {
                         title: "Could not fetch server index",
                         variant: "danger",
@@ -465,10 +525,17 @@ export default {
                     })
                 })
         },
-        fullRefresh() {
-            this.refreshServerIndex(
-                this.refreshAllServerOnlineStatus
-            )
+        fullRefresh(quick=true) {
+            if (quick) {
+                this.refreshServerIndex(
+                    this.refreshAllServerOnlineStatus
+                )
+            } else {
+                this.refreshServerIndex(() => {
+                    this.refreshAllServerOnlineStatus()
+                    this.refreshAllInfo(true)
+                })
+            }
         },
         handleRefreshInfo(data) {
             const index = data.index
@@ -486,10 +553,20 @@ export default {
                         variant: "danger",
                     })
                 })
-        }
+        },
+        refreshAllInfo(no_cache=false) {
+            this.$store.dispatch("servers/getAllInfo", {no_cache: no_cache})
+                .catch(error => {
+                    this.$bvToast.toast(error, {
+                        title: "Could not fetch server info",
+                        variant: "danger",
+                    })
+                })
+        },
     },
     mounted() {
         this.fullRefresh()
+        this.fetchGithubVersion()
     }
 }
 </script>

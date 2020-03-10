@@ -1,29 +1,46 @@
 <template>
     <div v-if="connectionCount > 0">
         <div :id="`badge-connections-${row_index}`" class="badge-list">
-            <b-badge
-                v-for="(connection, index) in connections"
-                v-bind:key="index"
-                :id="`connection-popover-${row_index}-${index}`"
-                :class="getRoundedClass(index)"
-                :variant="connection.connectionTest.status.color"
-            >
-                <template v-if="text_in_badge !== ''">
-                    {{ text_in_badge }}
-                </template>
-                <template v-else>
-                    {{ connection.Server.name }}
-                </template>
-                <b-popover
-                    href="#" tabindex="0"
-                    triggers="hover"
-                    placement="top"
-                    :target="`connection-popover-${row_index}-${index}`"
+            <template v-if="use_diode">
+                <span
+                    v-for="(connection, index) in connections"
+                    v-bind:key="index"
+                    :id="`connection-popover-${row_index}-${index}`"
+                    :class="['text-nowrap', `text-${connection.connectionTest.status.color}`]"
+                >
+                    <b-icon icon="circle-fill"></b-icon>
+                    {{ labelText(connection) }}
+                    <b-popover
+                        href="#" tabindex="0"
+                        triggers="hover"
+                        placement="top"
+                        :target="`connection-popover-${row_index}-${index}`"
+                        :variant="connection.connectionTest.status.color"
+                    >
+                        <connectionState :connection="connection.connectionTest" :user="connection.connectionUser"></connectionState>
+                    </b-popover>
+                </span>
+            </template>
+            <template v-else>
+                <b-badge
+                    v-for="(connection, index) in connections"
+                    v-bind:key="index"
+                    :id="`connection-popover-${row_index}-${index}`"
+                    :class="getRoundedClass(index)"
                     :variant="connection.connectionTest.status.color"
                 >
-                    <connectionState :connection="connection.connectionTest" :user="connection.connectionUser"></connectionState>
-                </b-popover>
-            </b-badge>
+                    {{ labelText(connection) }}
+                    <b-popover
+                        href="#" tabindex="0"
+                        triggers="hover"
+                        placement="top"
+                        :target="`connection-popover-${row_index}-${index}`"
+                        :variant="connection.connectionTest.status.color"
+                    >
+                        <connectionState :connection="connection.connectionTest" :user="connection.connectionUser"></connectionState>
+                    </b-popover>
+                </b-badge>
+            </template>
         </div>
     </div>
 </template>
@@ -45,6 +62,10 @@ export default {
         text_in_badge: {
             type: String,
             default: function() { return "" }
+        },
+        use_diode: {
+            type: Boolean,
+            default: function() { return false }
         }
     },
     data: function() {
@@ -66,6 +87,9 @@ export default {
             } else {
                 return "rounded-0"
             }
+        },
+        labelText(connection) {
+            return this.text_in_badge !== "" ? this.text_in_badge : connection.Server.name
         }
     }
 }
