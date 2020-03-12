@@ -105,10 +105,11 @@
         <batchAddTableServer
             :servers="elligibleServers"
             :skip_ssl="skip_ssl"
+            :selectedItems.sync="selectedServers"
         ></batchAddTableServer>
 
         <template v-slot:modal-footer="{ ok, cancel }">
-            <b-button variant="primary" @click="ok()" :disabled="!haveElligibleServers">
+            <b-button variant="primary" @click="ok()" :disabled="!haveSelectedServers">
                 <b-spinner 
                     small
                     v-if="postInProgress"
@@ -147,6 +148,7 @@ export default {
             rangeRegex: /\[(?<start>\S+)(?:,|, )(?<end>\S+)\]/,
             elligibleServers: [],
             postInProgress: false,
+            selectedServers: []
         }
     },
     computed: {
@@ -168,8 +170,8 @@ export default {
                 this.basicauth = `${this.basic.email}:${this.basic.password}`
             }
         },
-        haveElligibleServers() {
-            return this.elligibleServers.filter(server => { return server.select.selected }).length > 0
+        haveSelectedServers() {
+            return this.selectedServers.length > 0
         },
         getRangeBound() {
             let range = {start: "_", end: "_", startText: "_", endText: "_", type: "?"}
@@ -229,12 +231,13 @@ export default {
                 const url = this.url.replace(this.rangeRegex, i)
                 this.elligibleServers.push( // Seems not to be tracked by reactivity
                     {
-                        status: {},
-                        name: url,
-                        url: url,
-                        authkey: this.authMethodSelected == "api" ? this.authkey : this.basicauth,
+                        testResult: {},
+                        Server: {
+                            name: url,
+                            url: url,
+                            authkey: this.authMethodSelected == "api" ? this.authkey : this.basicauth,
+                        },
                         skip_ssl: this.skip_ssl,
-                        select: {selected: false, disabled: false},
                     }
                 )
             })
@@ -269,17 +272,17 @@ export default {
         },
         authMethodSelected: function(newValue) {
             this.elligibleServers.forEach(elServer => {
-                elServer.authkey = newValue == "api" ? this.authkey : this.basicauth
+                elServer.Server.authkey = newValue == "api" ? this.authkey : this.basicauth
             })
         },
         authkey: function(newValue) {
             this.elligibleServers.forEach(elServer => {
-                elServer.authkey = newValue
+                elServer.Server.authkey = newValue
             })
         },
         basicauth: function(newValue) {
             this.elligibleServers.forEach(elServer => {
-                elServer.basicauth = newValue
+                elServer.Server.basicauth = newValue
             })
         },
     }

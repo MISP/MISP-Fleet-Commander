@@ -279,7 +279,7 @@ import RowDetails from "@/views/servers/RowDetails.vue"
 import DeleteModal from "@/views/servers/DeleteModal.vue"
 import AddModal from "@/views/servers/AddModal.vue"
 import BatchAddModal from "@/views/servers/BatchAddModal.vue"
-import discoverServers from "@/components/ui/elements/discoverServers.vue"
+import discoverServers from "@/views/servers/discoverServers.vue"
 import iconButton from "@/components/ui/elements/iconButton.vue"
 
 

@@ -12,7 +12,7 @@
         <b-table
             small
             ref="selectableTable"
-            :items="getLocalServers"
+            :items="localServers"
             :fields="table.fields"
             @row-selected="onRowSelected"
             selected-variant="table-none"
@@ -33,7 +33,9 @@
                 ></b-form-checkbox>
             </template>
             <template v-slot:cell(status)="row">
-                <div class="d-flex align-items-center">
+                <div 
+                    class="d-flex align-items-center"
+                >
                     <b-badge 
                         v-if="row.item.testResult.message !== undefined && row.item.testResult.message !== undefined"
                         :variant="row.item.testResult.color"
@@ -86,13 +88,6 @@ export default {
             type: Boolean,
             required: true
         },
-        authkey: {
-            type: String
-        },
-        disableEdit: {
-            type: Boolean,
-            default: false
-        },
         noRefreshButton: {
             type: Boolean,
             default: false
@@ -122,9 +117,6 @@ export default {
         }
     },
     computed: {
-        getLocalServers() {
-            return this.localServers
-        }
     },
     methods: {
         makeLocalServers() {
@@ -132,9 +124,6 @@ export default {
             localServers = this.servers.slice()
             localServers.forEach(server => {
                 server.selected = false
-                if (!this.disableEdit) {
-                    server.skip_ssl = this.skip_ssl
-                }
             })
             return localServers
         },
@@ -143,9 +132,6 @@ export default {
             this.$emit("update:selectedItems", this.selectedItems)
         },
         setSkipSslForAllServers() {
-            if (this.disableEdit) {
-                return
-            }
             this.localServers.forEach(server => {
                 server.skip_ssl = this.skip_ssl
             })
@@ -160,16 +146,17 @@ export default {
         refreshServers() {
             this.refreshInProgress = true
             const url = "http://127.0.0.1:5000/servers/batchTest"
-            axios.post(url, this.localServers)
+            let payload = this.createValidServerForm(this.localServers)
+            axios.post(url, payload)
                 .then((response) => {
-                    response.data.forEach(reServer => {
-                        let loServer = this.localServers.find(loServer => {
-                            return loServer.name == reServer.name && loServer.url == reServer.url && loServer.authkey == reServer.authkey
+                    this.localServers.forEach((loServer, index) => {
+                        let reServer = response.data.find(reServer => {
+                            return loServer.Server.name == reServer.name && loServer.Server.url == reServer.url && loServer.Server.authkey == reServer.authkey
                         })
-                        loServer.status.connection = reServer.testResult
-                        loServer.status.user = reServer.userResult
+                        loServer.testResult = reServer.testResult
+                        loServer.userResult = reServer.userResult
                         if (reServer.testResult.color == "success") {
-                            loServer.selected = true
+                            this.$refs.selectableTable.selectRow(index)
                         }
                     })
                 })
@@ -183,20 +170,26 @@ export default {
                     this.refreshInProgress = false
                 })
         },
+        createValidServerForm(servers) {
+            let serverList = []
+            servers.forEach(server => {
+                serverList.push({
+                    name: server.Server.name,
+                    skip_ssl: server.skip_ssl,
+                    url: server.Server.url,
+                    authkey: server.Server.authkey
+                })
+            })
+            return serverList
+        }
     },
     watch: {
         skip_ssl: function(newValue) {
-            if (this.disableEdit) {
-                return
-            }
             this.localServers.forEach(server => {
                 server.skip_ssl = newValue
             })
         },
         authkey: function(newValue) {
-            if (this.disableEdit) {
-                return
-            }
             this.localServers.forEach(server => {
                 server.authkey = newValue
             })
