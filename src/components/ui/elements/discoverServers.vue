@@ -1,12 +1,14 @@
 <template>
     <b-modal 
-        id="modal-recursive-add-result"
+        id="modal-discover-servers-result"
         title="Servers discovered recursively"
         size="xl"
         scrollable
         @hidden="resetModal"
-        @ok="handleSubmission"
+        @ok.prevent="handleSubmission"
     >
+        <small class="text-muted d-block">Try to add other MISP Servers connected to this one using the known remote servers index.</small>
+        <small class="text-muted d-block">Behind the scenes, it fetches the index and the authey of associated users and save them locally.</small>
         <h5>Root server</h5>
         <b-form inline>
             <div class="d-flex w-100 mb-2">
@@ -14,10 +16,11 @@
                     <b-input
                         placeholder="URL"
                         v-model="rootServer.url"
+                        disabled
                     ></b-input>
                     <template v-slot:append>
                         <b-input-group-text>
-                            <b-form-checkbox v-model="rootServer.skip_ssl" class="force-custom-va" switch>
+                            <b-form-checkbox v-model="rootServer.skip_ssl" class="force-custom-va" disabled switch>
                                 <small>Skip SSL</small>
                             </b-form-checkbox>
                         </b-input-group-text>
@@ -27,6 +30,7 @@
                     class="w-50 ml-2"
                     placeholder="AuthKey"
                     v-model="rootServer.authkey"
+                    disabled
                 ></b-input>
             </div>
         </b-form>
@@ -35,7 +39,7 @@
             size="sm" variant="primary" :disabled="refreshInProgress"
             class="mb-1"
             @click="discoverServer"
-            v-b-tooltip.hover="'Discover connected servers'">
+        >
             <i :class="['fas fa-sync-alt', refreshInProgress ? 'fa-spin' : '']"></i>
             Discover connected server
         </b-button>
@@ -44,10 +48,11 @@
             :servers="discoveredServers"
             :skip_ssl="false"
             :noRefreshButton="true"
+            :selectedItems.sync="selectedServers"
         ></batchAddTableServer>
 
         <template v-slot:modal-footer="{ ok, cancel }">
-            <b-button variant="primary" @click="ok()" :disabled="!haveElligibleServers">
+            <b-button variant="primary" @click="ok()" :disabled="!haveSelectedServers || postInProgress">
                 <b-spinner 
                     small
                     v-if="postInProgress"
@@ -65,7 +70,7 @@ import axios from "axios"
 import batchAddTableServer from "@/components/ui/elements/batchAddTableServer.vue"
 
 export default {
-    name: "recursiveAddRestul",
+    name: "discoverServers",
     components: {
         batchAddTableServer
     },
@@ -76,7 +81,6 @@ export default {
         },
         items: {
             type: Array,
-            // required: true
         }
     },
     data: function() {
@@ -95,17 +99,38 @@ export default {
             refreshInProgress: false,
             discoveredServers: [],
             postInProgress: false,
-            haveElligibleServers: false
+            selectedServers: [],
+        }
+    },
+    computed: {
+        haveSelectedServers() {
+            return this.selectedServers.length > 0
         }
     },
     methods: {
         resetModal() {
         },
         handleSubmission() {
+            this.postInProgress = true
+            let payload = this.createValidServerForm(this.selectedServers)
+            return
+            this.$store.dispatch("servers/add", payload)
+                .then(() => {
+                    this.$emit("addition-success")
+                })
+                .catch(error => {
+                    this.$bvToast.toast(error, {
+                        title: "Could not fetch latest version from GitHub",
+                        variant: "danger",
+                    })
+                })
+                .finally(() => {
+                    this.postInProgress = true
+                })
         },
         discoverServer() {
             const url = "http://127.0.0.1:5000/servers/discoverConnected"
-            this.postInProgress = true
+            this.refreshInProgress = true
             let server = {
                 url: this.rootServer.url,
                 authkey: this.rootServer.authkey,
@@ -122,8 +147,20 @@ export default {
                     })
                 })
                 .finally(() => {
-                    this.postInProgress = false
+                    this.refreshInProgress = false
                 })
+        },
+        createValidServerForm(servers) {
+            let serverList = []
+            servers.forEach(server => {
+                serverList.push({
+                    name: server.Server.name,
+                    skip_ssl: server.skip_ssl,
+                    url: server.Server.url,
+                    authkey: server.Server.authkey
+                })
+            })
+            return serverList
         }
     }
 }

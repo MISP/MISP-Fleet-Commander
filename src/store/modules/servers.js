@@ -17,6 +17,8 @@ const getters = {
 // actions
 // API Usage: api.[action]({parameters}, callback, errorCallback)
 const actions = {
+
+    /* FETCH */
     getAllServers({ commit }) {
         // this function should not fetch data if it has been fetched already
         return new Promise((resolve, reject) => {
@@ -105,7 +107,21 @@ const actions = {
                 }
             )
         })
-    }
+    },
+
+    /* ADD & EDIT */
+    addServer(context, payload) {
+        return new Promise((resolve, reject) => {
+            api.add(
+                payload,
+                () => {
+                    resolve()
+                },
+                (error) => { reject(error) }
+            )
+        })
+    },
+
 }
 
 // mutations

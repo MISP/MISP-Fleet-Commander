@@ -1,29 +1,31 @@
 <template>
     <b-list-group>
-        <b-list-group-item button
+        <b-dropdown-item-button
             v-for="(entry, index) in getMenu"
             v-bind:key="index"
-            size="sm"
-            :variant="entry.variant"
             :disabled="entry.disabled"
-            class="compact rounded-0"
-            @click="emitClick(entry.eventName, entry.callbackData)"
+            :class="['compact rounded-0', entry.variant ? entry.variant : '', entry.disabled ? 'disabled' : '']"
+            @click.stop="emitClick(entry.eventName, entry.callbackData)"
         >
-            <div class="row">
-                <div class="col-1 text-center">
-                    <i :class="`mr-2 fas fa-${entry.icon}`"></i>
-                </div>
-                <div class="col-md-auto">
-                    {{ entry.text }}
-                </div>
-            </div>
-        </b-list-group-item>
+            <iconButton
+                    :text="entry.text"
+                    :title="entry.title"
+                    :icon="entry.icon"
+                    :useAsset="entry.useAsset"
+                    :forceWhite="entry.forceWhite"
+                ></iconButton>
+        </b-dropdown-item-button>
     </b-list-group>
 </template>
 
 <script>
+import iconButton from "@/components/ui/elements/iconButton.vue"
+
 export default {
     name: "contextualMenu",
+    components: {
+        iconButton
+    },
     props: {
         menu: {
             type: Array,
@@ -53,27 +55,25 @@ export default {
 </script>
 
 <style scoped>
-.compact {
-    padding: 0.5rem 0.5rem;
-}
-
-.compact i.fas {
-    width: 20px;
-}
-
-.list-group-item-outline-danger, .list-group-item-outline-primary {
+.list-group > .outline-danger, .list-group > .outline-primary {
     transition: color .15s ease-in-out,background-color .15s ease-in-out,border-color .15s ease-in-out,box-shadow .15s ease-in-out;
 }
 
-.list-group-item-outline-danger:hover {
+.list-group > .outline-danger:not(.disabled):hover {
     color: #fff;
     background-color: var(--red);
     border-color: var(--red);
 }
 
-.list-group-item-outline-primary:hover {
+.list-group > .outline-primary:not(.disabled):hover {
     color: #fff;
     background-color: var(--blue);
     border-color: var(--blue);
+}
+
+.list-group >>> .outline-primary:not(.disabled) .dropdown-item:hover,
+.list-group >>> .outline-danger:not(.disabled) .dropdown-item:hover {
+    color: unset !important;
+    background-color: unset !important;
 }
 </style>

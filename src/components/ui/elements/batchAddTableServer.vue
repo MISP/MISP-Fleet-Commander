@@ -9,38 +9,41 @@
             <i :class="['fas fa-sync-alt', refreshInProgress ? 'fa-spin' : '']"></i>
             Fetch server status
         </b-button>
-        <b-table-lite
+        <b-table
             small
+            ref="selectableTable"
             :items="getLocalServers"
             :fields="table.fields"
+            @row-selected="onRowSelected"
+            selected-variant="table-none"
+            tbody-tr-class="no-outline"
+            selectable
         >
-            <template v-slot:head(select)>
+            <template v-slot:head(selected)>
                 <b-form-checkbox
                     id="checkbox-select-head"
-                    v-model="table.allChecked"
                     @change="setCheckOnServers"
                 ></b-form-checkbox>
             </template>
 
-            <template v-slot:cell(select)="row">
+            <template v-slot:cell(selected)="row">
                 <b-form-checkbox
                     :id="`checkbox-select-${row.index}`"
-                    v-model="row.item.select.selected"
-                    :disabled="row.item.select.disabled"
+                    v-model="row.rowSelected"
                 ></b-form-checkbox>
             </template>
             <template v-slot:cell(status)="row">
                 <div class="d-flex align-items-center">
                     <b-badge 
-                        v-if="row.value.connection !== undefined && row.value.connection.message !== undefined"
-                        :variant="row.value.connection.color"
+                        v-if="row.item.testResult.message !== undefined && row.item.testResult.message !== undefined"
+                        :variant="row.item.testResult.color"
                     >
-                        <div>{{ row.value.connection.message }}</div>
-                        <div>{{ row.value.connection.version }}</div>
+                        <div>{{ row.item.testResult.message }}</div>
+                        <div>{{ row.item.testResult.version }}</div>
                     </b-badge>
                     <userPerms
-                        v-if="row.value.user !== undefined && row.value.user.Role !== undefined"
-                        :perms="row.value.user.Role"
+                        v-if="row.item.userResult !== undefined && row.item.userResult.Role !== undefined"
+                        :perms="row.item.userResult.Role"
                         :row_id="row.index"
                         context="batchadd"
                         class="ml-1"
@@ -49,7 +52,7 @@
             </template>
             <template v-slot:cell(name)="row">
                 <b-form-input
-                    v-model="row.item.name"
+                    v-model="row.item.Server.name"
                 ></b-form-input>
             </template>
             <template v-slot:cell(skip_ssl)="row">
@@ -58,10 +61,10 @@
             </template>
             <template v-slot:cell(authkey)="row">
                 <b-form-input
-                    v-model="row.item.authkey"
+                    v-model="row.item.Server.authkey"
                 ></b-form-input>
             </template>
-        </b-table-lite>
+        </b-table>
     </div>
 </template>
 
@@ -93,6 +96,10 @@ export default {
         noRefreshButton: {
             type: Boolean,
             default: false
+        },
+        selectedServers: {
+            type: Array,
+            default: function() { return [] }
         }
     },
     data: function() {
@@ -100,15 +107,16 @@ export default {
             table: {
                 allChecked: false,
                 fields: [
-                    {key: "select", label: ""},
+                    {key: "selected", label: ""},
                     "status",
                     "name",
-                    "url",
+                    "Server.url",
                     "authkey",
                     "skip_ssl"
                 ]
             },
             localServers: this.makeLocalServers(),
+            selectedItems: [],
             recursiveChecked: false,
             refreshInProgress: false,
         }
@@ -130,6 +138,10 @@ export default {
             })
             return localServers
         },
+        onRowSelected(items) {
+            this.selectedItems = items
+            this.$emit("update:selectedItems", this.selectedItems)
+        },
         setSkipSslForAllServers() {
             if (this.disableEdit) {
                 return
@@ -139,9 +151,11 @@ export default {
             })
         },
         setCheckOnServers(checked) {
-            this.localServers.forEach(server => {
-                server.select.selected = checked
-            })
+            if (checked) {
+                this.$refs.selectableTable.selectAllRows()
+            } else {
+                this.$refs.selectableTable.clearSelected()
+            }
         },
         refreshServers() {
             this.refreshInProgress = true
@@ -155,7 +169,7 @@ export default {
                         loServer.status.connection = reServer.testResult
                         loServer.status.user = reServer.userResult
                         if (reServer.testResult.color == "success") {
-                            loServer.select.selected = true
+                            loServer.selected = true
                         }
                     })
                 })
@@ -195,4 +209,7 @@ export default {
 </script>
 
 <style scoped>
+table >>> .no-outline {
+    outline: none;
+}
 </style>

@@ -176,7 +176,7 @@
                                     @view-in-network="viewInNetwork"
                                     @open-deletion-modal="openDeletionModal"
                                     @run-updates="runUpdates"
-                                    @handle-recursive-add="handleRecursiveAdd"
+                                    @handle-discover-servers-add="handleDiscoverServersAdd"
                                 ></contextualMenu>
                             </b-dropdown>
                         </div>
@@ -254,9 +254,10 @@
             @actionAdd="handleBatchAdd"
         ></BatchAddModal>
 
-        <recursiveAddResult
-            :rootServer="recursiveAddServerRoot"
-        ></recursiveAddResult>
+        <discoverServers
+            :rootServer="discoverServersRoot"
+            @addition-success="this.refreshServerIndex"
+        ></discoverServers>
     </div>
 </Layout>
 </template>
@@ -278,7 +279,7 @@ import RowDetails from "@/views/servers/RowDetails.vue"
 import DeleteModal from "@/views/servers/DeleteModal.vue"
 import AddModal from "@/views/servers/AddModal.vue"
 import BatchAddModal from "@/views/servers/BatchAddModal.vue"
-import recursiveAddResult from "@/components/ui/elements/recursiveAddResult.vue"
+import discoverServers from "@/components/ui/elements/discoverServers.vue"
 import iconButton from "@/components/ui/elements/iconButton.vue"
 
 
@@ -300,7 +301,7 @@ export default {
         DeleteModal,
         AddModal,
         BatchAddModal,
-        recursiveAddResult,
+        discoverServers,
         iconButton
     },
     data: function() {
@@ -312,7 +313,7 @@ export default {
             modalAddAction: "Add",
             serverToDelete: {},
             serverToEdit: { formData: {}}, // nested cheat to keep it reactive
-            recursiveAddServerRoot: {},
+            discoverServersRoot: {},
             forcedHidden: -1,
             table: {
                 isBusy: false,
@@ -452,7 +453,7 @@ export default {
                     title: "Discover connected servers",
                     icon: "radar",
                     useAsset: true,
-                    eventName: "handle-recursive-add",
+                    eventName: "handle-discover-servers-add",
                     callbackData: {index: index}
                 },
                 {
@@ -507,8 +508,9 @@ export default {
             this.$bvModal.show("modal-delete")
             this.serverToDelete = server
         },
-        handleRecursiveAdd() {
-            this.$bvModal.show("modal-recursive-add-result")
+        handleDiscoverServersAdd(data) {
+            this.discoverServersRoot = this.getIndex[data.index]
+            this.$bvModal.show("modal-discover-servers-result")
         },
         viewConnections(data) {
             return data

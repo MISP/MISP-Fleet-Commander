@@ -129,14 +129,6 @@
                     </div>
                 </b-form-group>
             </b-form>
-            <div>
-                <b-button variant="primary" @click="handleRecursiveAdd">
-                    Recursively add connected servers
-                    <sup class="ml-1"><b-badge pill variant="light">Experimental</b-badge></sup>
-                </b-button>
-                <small class="text-muted d-block">Try to add other MISP Servers connected to this one using the known remote servers index.</small>
-                <small class="text-muted d-block">Behind the scenes, it fetches the index and the authey of associated users and save them locally.</small>
-            </div>
         </ValidationObserver>
 
         <template v-slot:modal-footer="{ ok, cancel }">
@@ -150,9 +142,6 @@
             </b-button>
             <b-button variant="secondary" @click="cancel()">Cancel</b-button>
         </template>
-
-        <recursiveAddResult :rootServer="form"
-        ></recursiveAddResult>
     </b-modal>
 </template>
 
@@ -163,7 +152,6 @@
 <script>
 import { ValidationProvider, ValidationObserver, extend } from "vee-validate"
 import { required, min, length, email } from "vee-validate/dist/rules"
-import recursiveAddResult from "@/components/ui/elements/recursiveAddResult.vue"
 import axios from "axios"
 
 extend("required", required)
@@ -182,8 +170,7 @@ export default {
     name: "AddModal",
     components: {
         ValidationProvider,
-        ValidationObserver,
-        recursiveAddResult
+        ValidationObserver
     },
     props: {
         modalAction: {
@@ -270,9 +257,6 @@ export default {
                 }
                 this.submitForm()
             })
-        },
-        handleRecursiveAdd() {
-            this.$bvModal.show("modal-recursive-add-result")
         },
         submitForm() {
             let url = "http://127.0.0.1:5000/servers/"
