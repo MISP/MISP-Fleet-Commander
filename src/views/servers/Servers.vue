@@ -7,22 +7,33 @@
         </h3>
         
         <div class="mb-3">
-            <b-button
-                size="sm"
-                variant="primary"
-                v-b-modal.modal-add
-            >
-                <i class="fas fa-plus mr-1"></i>Add Server
-            </b-button>
-            <b-button
-                size="sm"
-                variant="primary"
-                class="ml-1"
-                v-b-modal.modal-batch-add
-            >
-                <i class="fas fa-plus mr-1"></i>Batch Add Server
-                <sup class="ml-1"><b-badge pill variant="light">Experimental</b-badge></sup>
-            </b-button>
+            <b-button-group>
+                <b-button
+                    size="sm"
+                    variant="primary"
+                    v-b-modal.modal-add
+                >
+                    <i class="fas fa-plus"></i> Add servers
+                </b-button>
+                <b-dropdown left variant="primary" size="sm" style="border-left: 1px solid #0069d9">
+                    <b-dropdown-item
+                        v-b-modal.modal-batch-add
+                    >
+                       <iconButton
+                            text="Batch mode"
+                            icon="list-ol"
+                        ></iconButton>
+                    </b-dropdown-item>
+                    <b-dropdown-item
+                        v-b-modal.modal-csv-add
+                    >
+                        <iconButton
+                            text="From CSV"
+                            icon="file-csv"
+                        ></iconButton>
+                    </b-dropdown-item>
+                </b-dropdown>
+            </b-button-group>
         </div>
         <div class="d-flex justify-content-between">
             <div class="d-flex" style="margin-top: -5px">
@@ -99,11 +110,11 @@
 
             <template v-slot:head(status)>
                 Status
-                <sup><b-badge class="ml-auto" variant="primary" title="Latest MISP version">{{ githubVersion }}</b-badge></sup>
+                <sup><b-badge class="ml-auto" variant="primary" :title="`Latest MISP version: ${githubVersion}`">{{ githubVersion }}</b-badge></sup>
             </template>
 
             <template v-slot:cell(url)="row">
-                <b-link :href="row.value" target="_blank">{{ row.value }} <sup class="fa fa-external-link-alt"></sup></b-link>
+                <b-link :href="row.value" target="_blank" class="text-nowrap">{{ row.value }} <sup class="fa fa-external-link-alt"></sup></b-link>
             </template>
 
             <template v-slot:cell(status)="row">
@@ -147,17 +158,17 @@
                             <b-button class="ml-1" size="xs" variant="link" @click="openEditModal(row.item)">
                                 <i class="fas fa-edit"></i>
                             </b-button>
-                            <b-button :id="`popover-row-option-${row.index}`" href="#" class="ml-1" size="xs" variant="link" @click="forceHidden(row.index)">
-                                <i class="fas fa-ellipsis-v"></i>
-                            </b-button>
-                            <b-popover
-                                :ref="`popoverRow${row.index}`"
-                                :target="`popover-row-option-${row.index}`"
-                                placement="bottomleft"
-                                triggers="focus"
-                                custom-class="popover-no-body"
+                            <b-dropdown 
+                                variant="link" size="xs" class="ml-1"
                                 @hidden="clearForcedHidden"
+                                right no-caret lazy
                             >
+                                <template v-slot:button-content>
+                                    <i 
+                                        class="fas fa-ellipsis-v"
+                                        @click="forceHidden(row.index)"
+                                    ></i>
+                                </template>
                                 <contextualMenu
                                     :menu="genContextualMenu(row.index)"
                                     @handle-refresh-info="handleRefreshInfo"
@@ -165,8 +176,9 @@
                                     @view-in-network="viewInNetwork"
                                     @open-deletion-modal="openDeletionModal"
                                     @run-updates="runUpdates"
+                                    @handle-recursive-add="handleRecursiveAdd"
                                 ></contextualMenu>
-                            </b-popover>
+                            </b-dropdown>
                         </div>
                     </span>
                 </span>
@@ -241,6 +253,10 @@
         <BatchAddModal
             @actionAdd="handleBatchAdd"
         ></BatchAddModal>
+
+        <recursiveAddResult
+            :rootServer="recursiveAddServerRoot"
+        ></recursiveAddResult>
     </div>
 </Layout>
 </template>
@@ -262,6 +278,8 @@ import RowDetails from "@/views/servers/RowDetails.vue"
 import DeleteModal from "@/views/servers/DeleteModal.vue"
 import AddModal from "@/views/servers/AddModal.vue"
 import BatchAddModal from "@/views/servers/BatchAddModal.vue"
+import recursiveAddResult from "@/components/ui/elements/recursiveAddResult.vue"
+import iconButton from "@/components/ui/elements/iconButton.vue"
 
 
 export default {
@@ -281,7 +299,9 @@ export default {
         RowDetails,
         DeleteModal,
         AddModal,
-        BatchAddModal
+        BatchAddModal,
+        recursiveAddResult,
+        iconButton
     },
     data: function() {
         return {
@@ -292,6 +312,7 @@ export default {
             modalAddAction: "Add",
             serverToDelete: {},
             serverToEdit: { formData: {}}, // nested cheat to keep it reactive
+            recursiveAddServerRoot: {},
             forcedHidden: -1,
             table: {
                 isBusy: false,
@@ -426,6 +447,15 @@ export default {
                     callbackData: {index: index}
                 },
                 {
+                    variant: "",
+                    text: "Discover servers",
+                    title: "Discover connected servers",
+                    icon: "radar",
+                    useAsset: true,
+                    eventName: "handle-recursive-add",
+                    callbackData: {index: index}
+                },
+                {
                     variant: "outline-primary",
                     disabled: !this.getIndex[index].canBeUpdated,
                     text: "Run updates",
@@ -457,9 +487,6 @@ export default {
         clearForcedHidden() {
             this.forcedHidden = -1
         },
-        closePopover(row_id) {
-            this.$refs[`popoverRow${row_id}`].$emit("close")
-        },
         handleDelete() {
             this.serverToDelete = {}
             this.refreshServerIndex()
@@ -479,6 +506,9 @@ export default {
             let server = this.getIndex[data.index]
             this.$bvModal.show("modal-delete")
             this.serverToDelete = server
+        },
+        handleRecursiveAdd() {
+            this.$bvModal.show("modal-recursive-add-result")
         },
         viewConnections(data) {
             return data
@@ -506,7 +536,6 @@ export default {
                     callback()
                 })
                 .catch(error => {
-                    console.log(error)
                     this.$bvToast.toast(error, {
                         title: "Could not fetch server index",
                         variant: "danger",
@@ -527,9 +556,12 @@ export default {
         },
         fullRefresh(quick=true) {
             if (quick) {
-                this.refreshServerIndex(
-                    this.refreshAllServerOnlineStatus
-                )
+                this.refreshServerIndex(() => {
+                    this.refreshAllServerOnlineStatus()
+                    if (this.$refs.serverTable !== undefined) {
+                        this.$refs.serverTable.refresh()
+                    }
+                })
             } else {
                 this.refreshServerIndex(() => {
                     this.refreshAllServerOnlineStatus()
@@ -540,7 +572,6 @@ export default {
         handleRefreshInfo(data) {
             const index = data.index
             const method = data.method
-            this.closePopover(index)
             let server = this.getIndex[index]
             this.$store.dispatch("servers/refreshConnectionState", server)
             this.refreshInfo(server, method == "no_cache")
