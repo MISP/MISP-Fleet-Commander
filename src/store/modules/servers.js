@@ -66,6 +66,19 @@ const actions = {
             )
         })
     },
+    refreshSelectedConnectionState({ dispatch }, payload) {
+        return new Promise((resolve, reject) => {
+            payload.selection.forEach(server => {
+                dispatch("refreshConnectionState", server)
+                    .then(() => {
+                        resolve()
+                    })
+                    .catch(error => {
+                        reject(error)
+                    })
+            })
+        })
+    },
     getInfo({ commit }, payload) {
         return new Promise((resolve, reject) => {
             commit("updateInfo", { server_id: payload.server.id, loading: true }) // try to only change loading and not replace the info field? create a new mutation `updateLoading`
@@ -85,6 +98,19 @@ const actions = {
     getAllInfo({ state, dispatch }, payload) {
         return new Promise((resolve, reject) => {
             state.all.forEach(server => {
+                dispatch("getInfo", {server: server, no_cache: payload.no_cache})
+                    .then(() => {
+                        resolve()
+                    })
+                    .catch(error => {
+                        reject(error)
+                    })
+            })
+        })
+    },
+    getSelectedInfo({ dispatch }, payload) {
+        return new Promise((resolve, reject) => {
+            payload.selection.forEach(server => {
                 dispatch("getInfo", {server: server, no_cache: payload.no_cache})
                     .then(() => {
                         resolve()

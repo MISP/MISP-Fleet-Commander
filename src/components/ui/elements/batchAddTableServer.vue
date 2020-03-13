@@ -16,7 +16,7 @@
             :items="localServers"
             :fields="table.fields"
             @row-selected="onRowSelected"
-            selected-variant="table-none"
+            selected-variant="none"
             tbody-tr-class="no-outline"
             selectable
         >
@@ -29,15 +29,14 @@
 
             <template v-slot:head(selected)>
                 <b-form-checkbox
-                    id="checkbox-select-head"
                     @change="setCheckOnServers"
                 ></b-form-checkbox>
             </template>
 
             <template v-slot:cell(selected)="row">
                 <b-form-checkbox
-                    :id="`checkbox-select-${row.index}`"
                     v-model="row.rowSelected"
+                    @input="selectRow(row.rowSelected, row.index)"
                 ></b-form-checkbox>
             </template>
             <template v-slot:cell(status)="row">
@@ -155,6 +154,13 @@ export default {
                 this.$refs.selectableTable.clearSelected()
             }
         },
+        selectRow(checked, index) {
+            if (checked) {
+                this.$refs.selectableTable.selectRow(index)
+            } else {
+                this.$refs.selectableTable.unselectRow(index)
+            }
+        },
         refreshServers() {
             this.refreshInProgress = true
             const url = "http://127.0.0.1:5000/servers/batchTest"
@@ -214,7 +220,4 @@ export default {
 </script>
 
 <style scoped>
-table >>> .no-outline {
-    outline: none;
-}
 </style>

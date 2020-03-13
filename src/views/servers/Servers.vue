@@ -34,6 +34,22 @@
                     </b-dropdown-item>
                 </b-dropdown>
             </b-button-group>
+            <b-button-group class="ml-2">
+                <b-dropdown left variant="primary" size="sm" text="Selection" :disabled="!haveSelectedServers">
+                    <b-dropdown-item
+                        @click="refreshSelected"
+                    >
+                        <i class="fas fa-sync-alt mr-2" title="Refresh selected servers"></i>
+                        Refresh selected
+                    </b-dropdown-item>
+                    <b-dropdown-item
+                        @click="openDeleteSelectedModal"
+                    >
+                        <i class="fas fa-trash mr-2" title="Delete selected servers"></i>
+                        Delete selected
+                    </b-dropdown-item>
+                </b-dropdown>
+            </b-button-group>
         </div>
         <div class="d-flex justify-content-between">
             <div class="d-flex" style="margin-top: -5px">
@@ -82,8 +98,10 @@
            </div>
         </div>
         <b-table 
-            striped outlined show-empty small
+            striped outlined show-empty small selectable
             table-class="table-auto-hide-action"
+            selected-variant="table-none"
+            tbody-tr-class="no-outline"
             responsive="md"
             id="server-table"
             ref="serverTable"
@@ -100,12 +118,25 @@
             :sort-icon-left="true"
             @filtered="onFiltered"
             @sort-changed="onSorted"
+            @row-selected="onRowSelected"
         >
             <template v-slot:table-busy>
                 <div class="text-center text-danger my-2">
                     <b-spinner class="align-middle"></b-spinner>
                     <strong class="ml-2">Loading...</strong>
                 </div>
+            </template>
+
+            <template v-slot:head(selected)>
+                <b-form-checkbox
+                    @change="setCheckOnServers"
+                ></b-form-checkbox>
+            </template>
+            <template v-slot:cell(selected)="row">
+                <b-form-checkbox
+                    v-model="row.rowSelected"
+                    @input="selectRow(row.rowSelected, row.index)"
+                ></b-form-checkbox>
             </template>
 
             <template v-slot:head(status)>
@@ -143,6 +174,7 @@
                     <span :class="forcedHidden == row.index ? 'd-none' : 'hide-on-hover'">
                         <loaderPlaceholder :loading="!row.value._loading">
                             <timeSinceRefresh
+                                :key="table.timeKey"
                                 :timestamp="row.value.timestamp"
                             ></timeSinceRefresh>
                         </loaderPlaceholder>
@@ -244,6 +276,11 @@
             @actionDelete="handleDelete"
         ></DeleteModal>
 
+        <DeleteSelectedModal
+            :servers="selectedServers"
+            @actionDelete="handleDelete"
+        ></DeleteSelectedModal>
+
         <AddModal
             :modalAction.sync="modalAddAction"
             :serverForm="validServerToEdit"
@@ -277,6 +314,7 @@ import connectionsSummary from "@/components/ui/elements/connectionsSummary.vue"
 import contextualMenu from "@/components/ui/elements/contextualMenu.vue"
 import RowDetails from "@/views/servers/RowDetails.vue"
 import DeleteModal from "@/views/servers/DeleteModal.vue"
+import DeleteSelectedModal from "@/views/servers/DeleteSelectedModal.vue"
 import AddModal from "@/views/servers/AddModal.vue"
 import BatchAddModal from "@/views/servers/BatchAddModal.vue"
 import discoverServers from "@/views/servers/discoverServers.vue"
@@ -301,6 +339,7 @@ export default {
         DeleteModal,
         AddModal,
         BatchAddModal,
+        DeleteSelectedModal,
         discoverServers,
         iconButton
     },
@@ -316,6 +355,7 @@ export default {
             discoverServersRoot: {},
             forcedHidden: -1,
             table: {
+                timeKey: 0,
                 isBusy: false,
                 filtered: "",
                 totalRows: 0,
@@ -324,6 +364,10 @@ export default {
                 optionsPerPage: [{ text: 30, value: 30 }, { text: 50, value: 50 }, { text: 100, value: 100 }],
                 filterFields: ["name", "url"],
                 fields: [
+                    {
+                        key: "selected",
+                        label: ""
+                    },
                     {
                         key: "name",
                         sortable: true
@@ -402,6 +446,7 @@ export default {
                 ],
             },
             tableItems: [],
+            selectedServers: []
         }
     },
     computed: {
@@ -414,9 +459,29 @@ export default {
         }),
         validServerToEdit() {
             return this.serverToEdit.formData
+        },
+        haveSelectedServers() {
+            return this.selectedServers.length > 0
         }
     },
     methods: {
+        setCheckOnServers(checked) {
+            if (checked) {
+                this.$refs.serverTable.selectAllRows()
+            } else {
+                this.$refs.serverTable.clearSelected()
+            }
+        },
+        onRowSelected(items) {
+            this.selectedServers = items
+        },
+        selectRow(checked, index) {
+            if (checked) {
+                this.$refs.serverTable.selectRow(index)
+            } else {
+                this.$refs.serverTable.unselectRow(index)
+            }
+        },
         onFiltered(filteredItems) {
             this.table.totalRows = filteredItems.length
             this.table.currentPage = 1
@@ -512,6 +577,9 @@ export default {
             this.discoverServersRoot = this.getIndex[data.index]
             this.$bvModal.show("modal-discover-servers-result")
         },
+        openDeleteSelectedModal() {
+            this.$bvModal.show("modal-delete-selected")
+        },
         viewConnections(data) {
             return data
         },
@@ -545,6 +613,22 @@ export default {
                 })
                 .finally(() => {
                     this.refreshInProgress = false
+                })
+        },
+        refreshSelected() {
+            this.$store.dispatch("servers/refreshSelectedConnectionState", {selection: this.selectedServers})
+                .catch(error => {
+                    this.$bvToast.toast(error, {
+                        title: "Could not reach Server",
+                        variant: "danger",
+                    })
+                })
+            this.$store.dispatch("servers/getSelectedInfo", {no_cache: true, selection: this.selectedServers})
+                .catch(error => {
+                    this.$bvToast.toast(error, {
+                        title: "Could not fetch server info",
+                        variant: "danger",
+                    })
                 })
         },
         refreshAllServerOnlineStatus() {
@@ -596,6 +680,11 @@ export default {
                     })
                 })
         },
+    },
+    watch: {
+        refreshInProgress: function() {
+            this.table.timeKey += 1 // used to force reload of the timeSinceLastRefresh component
+        }
     },
     mounted() {
         this.fullRefresh()
