@@ -46,6 +46,7 @@
 
         <batchAddTableServer
             :servers="discoveredServers"
+            :busy="table.busy"
             :skip_ssl="false"
             :noRefreshButton="true"
             :selectedItems.sync="selectedServers"
@@ -86,7 +87,7 @@ export default {
     data: function() {
         return {
             table: {
-                allChecked: false,
+                busy: false,
                 fields: [
                     "selected",
                     "status",
@@ -97,8 +98,8 @@ export default {
                 ]
             },
             refreshInProgress: false,
-            discoveredServers: [],
             postInProgress: false,
+            discoveredServers: [],
             selectedServers: [],
         }
     },
@@ -109,6 +110,10 @@ export default {
     },
     methods: {
         resetModal() {
+            this.refreshInProgress = false
+            this.postInProgress = false
+            this.selectedServers = []
+            this.discoveredServers = []
         },
         handleSubmission() {
             this.postInProgress = true
@@ -130,6 +135,7 @@ export default {
         },
         discoverServer() {
             const url = "http://127.0.0.1:5000/servers/discoverConnected"
+            this.table.busy = true
             this.refreshInProgress = true
             let server = {
                 url: this.rootServer.url,
@@ -148,6 +154,7 @@ export default {
                 })
                 .finally(() => {
                     this.refreshInProgress = false
+                    this.table.busy = false
                 })
         },
         createValidServerForm(servers) {

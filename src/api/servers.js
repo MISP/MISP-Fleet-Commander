@@ -64,9 +64,16 @@ export default {
             })
     },
 
-    add(server, cb, errorCb) {
-        cb(server)
-        errorCb()
+    add(payload, cb, errorCb) {
+        const url = urls.addServer
+        return axios.post(url, payload)
+            .then((response) => {
+                cb(response.data)
+            })
+            .catch(error => {
+                console.log(error)
+                errorCb(error.data.toJSON())
+            })
     },
 
     edit(server, cb, errorCb) {

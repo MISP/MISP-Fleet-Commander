@@ -12,6 +12,7 @@
         <b-table
             small
             ref="selectableTable"
+            :busy="busy"
             :items="localServers"
             :fields="table.fields"
             @row-selected="onRowSelected"
@@ -19,6 +20,13 @@
             tbody-tr-class="no-outline"
             selectable
         >
+            <template v-slot:table-busy>
+                <div class="text-center text-danger my-2">
+                <b-spinner class="align-middle"></b-spinner>
+                <strong> Discovering connected servers...</strong>
+                </div>
+            </template>
+
             <template v-slot:head(selected)>
                 <b-form-checkbox
                     id="checkbox-select-head"
@@ -89,6 +97,10 @@ export default {
             required: true
         },
         noRefreshButton: {
+            type: Boolean,
+            default: false
+        },
+        busy: {
             type: Boolean,
             default: false
         },
