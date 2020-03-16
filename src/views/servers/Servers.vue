@@ -34,26 +34,6 @@
                     </b-dropdown-item>
                 </b-dropdown>
             </b-button-group>
-            <b-button-group class="ml-2">
-                <b-dropdown left variant="primary" size="sm" :disabled="!haveSelectedServers">
-                    <template v-slot:button-content>
-                         <i class="fas fa-tasks"></i> Selection
-                    </template>
-                    <b-dropdown-item
-                        @click="refreshSelected"
-                    >
-                        <i class="fas fa-sync-alt mr-2" title="Refresh selected servers"></i>
-                        Refresh selected
-                    </b-dropdown-item>
-                    <b-dropdown-item
-                        @click="openDeleteSelectedModal"
-                        variant="outline-danger"
-                    >
-                        <i class="fas fa-trash mr-2" title="Delete selected servers"></i>
-                        Delete selected
-                    </b-dropdown-item>
-                </b-dropdown>
-            </b-button-group>
         </div>
         <div class="d-flex justify-content-between">
             <div class="d-flex" style="margin-top: -5px">
@@ -90,12 +70,30 @@
                             <i :class="{'fas fa-sync-alt': true, 'fa-spin': refreshInProgress}" title="Refresh Servers"></i>
                         </b-button>
                         <b-dropdown right text="Actions" variant="primary" size="sm" style="border-left: 1px solid #0069d9">
-                            <b-dropdown-item
+                            <b-dropdown-item-button
                                 @click="fullRefresh(false)"
                             >
                                 <i class="fas fa-sync-alt mr-2" title="Full refresh servers"></i>
                                 Refresh all
-                            </b-dropdown-item>
+                            </b-dropdown-item-button>
+                        </b-dropdown>
+                        <b-dropdown variant="primary" size="sm" :disabled="!haveSelectedServers" right>
+                            <template v-slot:button-content>
+                                <i class="fas fa-tasks"></i> Selection
+                            </template>
+                            <b-dropdown-item-button
+                                @click="refreshSelected"
+                            >
+                                <i class="fas fa-sync-alt mr-2" title="Refresh selected servers"></i>
+                                Refresh selected
+                            </b-dropdown-item-button>
+                            <b-dropdown-item-button
+                                @click="openDeleteSelectedModal"
+                                class="outline-danger"
+                            >
+                                <i class="fas fa-trash mr-2" title="Delete selected servers"></i>
+                                Delete selected
+                            </b-dropdown-item-button>
                         </b-dropdown>
                     </b-button-group>
                 </b-button-toolbar>

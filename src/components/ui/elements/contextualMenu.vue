@@ -54,25 +54,28 @@ export default {
 }
 </script>
 
-<style scoped>
-.list-group > .outline-danger, .list-group > .outline-primary {
+<style>
+.list-group > .outline-danger, .list-group > .outline-primary,
+.dropdown-menu > li.outline-danger > .dropdown-item, .dropdown-menu > li.outline-primary > .dropdown-item {
     transition: color .15s ease-in-out,background-color .15s ease-in-out,border-color .15s ease-in-out,box-shadow .15s ease-in-out;
 }
 
-.list-group > .outline-danger:not(.disabled):hover {
+.list-group > .outline-danger:not(.disabled):hover,
+.dropdown-menu > li.outline-danger > .dropdown-item:not(.disabled):hover  {
     color: #fff;
     background-color: var(--red);
     border-color: var(--red);
 }
 
-.list-group > .outline-primary:not(.disabled):hover {
+.list-group > .outline-primary:not(.disabled):hover,
+.dropdown-menu > li.outline-primary.dropdown-item:not(.disabled):hover {
     color: #fff;
     background-color: var(--blue);
     border-color: var(--blue);
 }
 
-.list-group >>> .outline-primary:not(.disabled) .dropdown-item:hover,
-.list-group >>> .outline-danger:not(.disabled) .dropdown-item:hover {
+.list-group .outline-primary:not(.disabled) .dropdown-item:hover,
+.list-group .outline-danger:not(.disabled) .dropdown-item:hover {
     color: unset !important;
     background-color: unset !important;
 }
