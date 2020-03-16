@@ -271,8 +271,6 @@ export default {
                 .then((response) => {
                     this.$nextTick(() => {
                         this.$refs.observer.reset()
-                    })
-                    this.$nextTick(() => {
                         this.$bvModal.hide("modal-add")
                     })
                     const toastText = response.data.name + " [" + response.data.url + "]"
@@ -280,6 +278,7 @@ export default {
                         title: "Server successfully added",
                         variant: "success",
                     })
+                    this.$emit("addition-success", "done")
                 })
                 .catch(error => {
                     that.$bvToast.toast(error, {
@@ -289,13 +288,12 @@ export default {
                 })
                 .finally(() => {
                     this.postInProgress = false
-                    this.$emit("addition-success", "done")
                 })
         },
     },
     watch: {
         serverForm: function() {
-            this.form = this.serverForm
+            this.form = this.serverForm.slice()
         }
     }
 }

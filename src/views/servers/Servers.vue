@@ -73,8 +73,10 @@
                             <b-dropdown-item-button
                                 @click="fullRefresh(false)"
                             >
-                                <i class="fas fa-sync-alt mr-2" title="Full refresh servers"></i>
-                                Refresh all
+                                <iconButton
+                                    text="Full refresh"
+                                    icon="sync-alt"
+                                ></iconButton>
                             </b-dropdown-item-button>
                         </b-dropdown>
                         <b-dropdown variant="primary" size="sm" :disabled="!haveSelectedServers" right>
@@ -84,15 +86,20 @@
                             <b-dropdown-item-button
                                 @click="refreshSelected"
                             >
-                                <i class="fas fa-sync-alt mr-2" title="Refresh selected servers"></i>
-                                Refresh selected
+                                <iconButton
+                                    text="Refresh selected"
+                                    icon="sync-alt"
+                                ></iconButton>
                             </b-dropdown-item-button>
                             <b-dropdown-item-button
                                 @click="openDeleteSelectedModal"
                                 class="outline-danger"
                             >
-                                <i class="fas fa-trash mr-2" title="Delete selected servers"></i>
-                                Delete selected
+                                <iconButton
+                                    text="Delete selected"
+                                    title="Delete selected servers"
+                                    icon="trash"
+                                ></iconButton>
                             </b-dropdown-item-button>
                         </b-dropdown>
                     </b-button-group>
