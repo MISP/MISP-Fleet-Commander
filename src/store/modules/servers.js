@@ -220,8 +220,7 @@ const mutations = {
         }
     },
     setGithubVersion(state, githubReply) {
-        // const githubVersion = githubReply.tag_name
-        const githubVersion = "v2.4.123"
+        const githubVersion = githubReply.tag_name
         state.githubVersion = githubVersion
         setUpdatableServers(state)
     }
