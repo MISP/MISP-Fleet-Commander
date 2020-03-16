@@ -105,6 +105,11 @@
     }
 }
 
+button:disabled,
+ul.dropdown-menu li.disabled {
+    cursor: not-allowed;
+}
+
 .popover-no-body > .popover-body {
     padding: 0.3rem 0
 }
