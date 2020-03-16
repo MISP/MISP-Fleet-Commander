@@ -125,7 +125,7 @@
 </template>
 
 <script>
-import batchAddTableServer from "@/components/ui/elements/batchAddTableServer.vue"
+import batchAddTableServer from "@/views/servers/elements/batchAddTableServer.vue"
 
 export default {
     name: "BatchAddModal",

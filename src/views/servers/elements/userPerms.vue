@@ -21,6 +21,7 @@
 
 <script>
 export default {
+    name: "userPerms",
     props: {
         perms: {},
         context: {

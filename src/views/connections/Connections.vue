@@ -224,7 +224,7 @@ import iconForScope from "@/components/ui/elements/iconForScope.vue"
 import contextualMenu from "@/components/ui/elements/contextualMenu.vue"
 import loaderPlaceholder from "@/components/ui/elements/loaderPlaceholder.vue"
 import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
-import connectionsSummary from "@/components/ui/elements/connectionsSummary.vue"
+import connectionsSummary from "@/views/servers/elements/connectionsSummary.vue"
 import jsonViewer from "@/components/ui/elements/jsonViewer.vue"
 
 export default {

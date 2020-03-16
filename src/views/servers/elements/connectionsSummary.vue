@@ -46,7 +46,7 @@
 </template>
 
 <script>
-import connectionState from "@/components/ui/elements/connectionState.vue"
+import connectionState from "@/views/servers/elements/connectionState.vue"
 
 export default {
     name: "connectionsSummary",

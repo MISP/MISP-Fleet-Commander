@@ -68,7 +68,7 @@
 
 <script>
 import axios from "axios"
-import batchAddTableServer from "@/components/ui/elements/batchAddTableServer.vue"
+import batchAddTableServer from "@/views/servers/elements/batchAddTableServer.vue"
 
 export default {
     name: "DiscoverServers",

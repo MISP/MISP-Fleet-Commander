@@ -79,7 +79,7 @@
 
 <script>
 import axios from "axios"
-import userPerms from "@/components/ui/elements/userPerms.vue"
+import userPerms from "@/views/servers/elements/userPerms.vue"
 
 export default {
     name: "batchAddTableServer",
