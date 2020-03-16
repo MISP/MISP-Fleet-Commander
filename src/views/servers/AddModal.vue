@@ -289,7 +289,7 @@ export default {
                 })
                 .finally(() => {
                     this.postInProgress = false
-                    this.$emit("actionAdd", "done")
+                    this.$emit("addition-success", "done")
                 })
         },
     },

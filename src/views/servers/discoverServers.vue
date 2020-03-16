@@ -118,7 +118,6 @@ export default {
         handleSubmission() {
             this.postInProgress = true
             let payload = this.createValidServerForm(this.selectedServers)
-            return
             this.$store.dispatch("servers/add", payload)
                 .then(() => {
                     this.$emit("addition-success")

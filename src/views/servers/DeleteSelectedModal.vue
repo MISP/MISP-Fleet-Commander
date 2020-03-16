@@ -45,6 +45,7 @@ export default {
             let simplifiedServers = []
             this.servers.forEach(server => {
                 simplifiedServers.push({
+                    id: server.id,
                     name: server.name,
                     comment: server.comment,
                     url: server.url,
@@ -58,7 +59,23 @@ export default {
     methods: {
         handleSubmission() {
             this.postInProgress = true
-        }
+            this.$store.dispatch("servers/delete", this.getServers)
+                .then(() => {
+                    this.$nextTick(() => {
+                        this.$bvModal.hide("modal-delete-selected")
+                    })
+                    this.$emit("deletion-success")
+                })
+                .catch(error => {
+                    this.$bvToast.toast(error, {
+                        title: "Could not delete selected servers",
+                        variant: "danger",
+                    })
+                })
+                .finally(() => {
+                    this.postInProgress = false
+                })
+        },
     }
 }
 </script>

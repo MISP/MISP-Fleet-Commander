@@ -119,6 +119,10 @@
     max-width: 75%;
 }
 
+table.b-table > thead > tr > th {
+    user-select: none;
+}
+
 table.table-auto-hide-action > tbody > tr > td .hide-on-hover {
     display: inline-block;
 }

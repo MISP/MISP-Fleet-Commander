@@ -5,7 +5,7 @@
         size="xl"
         scrollable
         @hidden="resetModal"
-        @ok="handleSubmission"
+        @ok.prevent="handleSubmission"
     >
         <b-form-group
             label="Server URL:"
@@ -115,7 +115,9 @@
                     v-if="postInProgress"
                 ></b-spinner>
                 <span class="sr-only">Saving...</span>
-                <span v-if="!postInProgress">Save</span>
+                <span v-if="!postInProgress">
+                    {{ haveSelectedServers ? "Save" : "No server selected"}}
+                </span>
             </b-button>
             <b-button variant="secondary" @click="cancel()">Cancel</b-button>
         </template>
@@ -224,6 +226,36 @@ export default {
             this.authMethodSelected = "api"
         },
         handleSubmission() {
+            this.postInProgress = true
+            let payload = this.createValidServerForm(this.selectedServers)
+            this.$store.dispatch("servers/add", payload)
+                .then(() => {
+                    this.$nextTick(() => {
+                        this.$bvModal.hide("modal-batch-add")
+                    })
+                    this.$emit("addition-success")
+                })
+                .catch(error => {
+                    this.$bvToast.toast(error, {
+                        title: "Could not add multiple servers",
+                        variant: "danger",
+                    })
+                })
+                .finally(() => {
+                    this.postInProgress = false
+                })
+        },
+        createValidServerForm(servers) {
+            let serverList = []
+            servers.forEach(server => {
+                serverList.push({
+                    name: server.Server.name,
+                    skip_ssl: server.skip_ssl,
+                    url: server.Server.url,
+                    authkey: server.Server.authkey
+                })
+            })
+            return serverList
         },
         genElligibleServers() {
             this.elligibleServers.splice(0, this.elligibleServers.length)

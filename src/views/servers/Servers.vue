@@ -35,7 +35,10 @@
                 </b-dropdown>
             </b-button-group>
             <b-button-group class="ml-2">
-                <b-dropdown left variant="primary" size="sm" text="Selection" :disabled="!haveSelectedServers">
+                <b-dropdown left variant="primary" size="sm" :disabled="!haveSelectedServers">
+                    <template v-slot:button-content>
+                         <i class="fas fa-tasks"></i> Selection
+                    </template>
                     <b-dropdown-item
                         @click="refreshSelected"
                     >
@@ -44,6 +47,7 @@
                     </b-dropdown-item>
                     <b-dropdown-item
                         @click="openDeleteSelectedModal"
+                        variant="outline-danger"
                     >
                         <i class="fas fa-trash mr-2" title="Delete selected servers"></i>
                         Delete selected
@@ -90,7 +94,7 @@
                                 @click="fullRefresh(false)"
                             >
                                 <i class="fas fa-sync-alt mr-2" title="Full refresh servers"></i>
-                                Full refresh
+                                Refresh all
                             </b-dropdown-item>
                         </b-dropdown>
                     </b-button-group>
@@ -151,9 +155,9 @@
             <template v-slot:cell(status)="row">
                 <loaderPlaceholder :loading="!row.value._loading">
                     <span
-                        :class="['text-nowrap', row.value.error ? 'text-danger' : 'text-success']"
+                        :class="{'text-nowrap': true, 'text-danger': row.value.error, 'text-success': !row.value.error}"
                     >
-                        <b-icon icon="circle-fill"></b-icon>
+                        <b-icon v-if="row.value.data !== undefined" icon="circle-fill"></b-icon>
                         {{ row.value.data }}
                     </span>
                 </loaderPlaceholder>
@@ -278,22 +282,22 @@
 
         <DeleteSelectedModal
             :servers="selectedServers"
-            @actionDelete="handleDelete"
+            @deletion-success="refreshServerIndex"
         ></DeleteSelectedModal>
 
         <AddModal
             :modalAction.sync="modalAddAction"
             :serverForm="validServerToEdit"
-            @actionAdd="handleAdd"
+            @addition-success="handleAdd"
         ></AddModal>
 
         <BatchAddModal
-            @actionAdd="handleBatchAdd"
+            @addition-success="handleBatchAdd"
         ></BatchAddModal>
 
         <discoverServers
             :rootServer="discoverServersRoot"
-            @addition-success="this.refreshServerIndex"
+            @addition-success="handleBatchAdd"
         ></discoverServers>
     </div>
 </Layout>
@@ -598,22 +602,25 @@ export default {
                     })
                 })
         },
-        refreshServerIndex(callback) {
+        refreshServerIndex() {
             this.refreshInProgress = true
-            this.$store.dispatch("servers/getAllServers")
-                .then(() => {
-                    this.table.totalRows = this.serverCount
-                    callback()
-                })
-                .catch(error => {
-                    this.$bvToast.toast(error, {
-                        title: "Could not fetch server index",
-                        variant: "danger",
+            return new Promise((resolve, reject) => {
+                this.$store.dispatch("servers/getAllServers")
+                    .then(() => {
+                        this.table.totalRows = this.serverCount
+                        resolve()
                     })
-                })
-                .finally(() => {
-                    this.refreshInProgress = false
-                })
+                    .catch(error => {
+                        this.$bvToast.toast(error, {
+                            title: "Could not fetch server index",
+                            variant: "danger",
+                        })
+                        reject()
+                    })
+                    .finally(() => {
+                        this.refreshInProgress = false
+                    })
+            })
         },
         refreshSelected() {
             this.$store.dispatch("servers/refreshSelectedConnectionState", {selection: this.selectedServers})
@@ -642,17 +649,22 @@ export default {
         },
         fullRefresh(quick=true) {
             if (quick) {
-                this.refreshServerIndex(() => {
-                    this.refreshAllServerOnlineStatus()
-                    if (this.$refs.serverTable !== undefined) {
-                        this.$refs.serverTable.refresh()
-                    }
-                })
+                this.refreshServerIndex()
+                    .then(() => {
+                        this.refreshAllServerOnlineStatus()
+                        this.tableQuickRefresh()
+                    })
             } else {
-                this.refreshServerIndex(() => {
-                    this.refreshAllServerOnlineStatus()
-                    this.refreshAllInfo(true)
-                })
+                this.refreshServerIndex()
+                    .then(() => {
+                        this.refreshAllServerOnlineStatus()
+                        this.refreshAllInfo(true)
+                    })
+            }
+        },
+        tableQuickRefresh() {
+            if (this.$refs.serverTable !== undefined) {
+                this.$refs.serverTable.refresh()
             }
         },
         handleRefreshInfo(data) {

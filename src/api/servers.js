@@ -65,7 +65,7 @@ export default {
     },
 
     add(payload, cb, errorCb) {
-        const url = urls.addServer
+        const url = urls.add
         return axios.post(url, payload)
             .then((response) => {
                 cb(response.data)
@@ -81,8 +81,15 @@ export default {
         errorCb()
     },
 
-    delete(server, cb, errorCb) {
-        cb(server)
-        errorCb()
+    delete(payload, cb, errorCb) {
+        const url = urls.delete
+        return axios.post(url, payload)
+            .then((response) => {
+                cb(response.data)
+            })
+            .catch(error => {
+                console.log(error)
+                errorCb(error.data.toJSON())
+            })
     }
 }

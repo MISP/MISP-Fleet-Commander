@@ -135,10 +135,21 @@ const actions = {
         })
     },
 
-    /* ADD & EDIT */
-    addServer(context, payload) {
+    /* ADD, EDIT & DELETE */
+    add(context, payload) {
         return new Promise((resolve, reject) => {
             api.add(
+                payload,
+                () => {
+                    resolve()
+                },
+                (error) => { reject(error) }
+            )
+        })
+    },
+    delete(context, payload) {
+        return new Promise((resolve, reject) => {
+            api.delete(
                 payload,
                 () => {
                     resolve()
