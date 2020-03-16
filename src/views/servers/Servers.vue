@@ -300,10 +300,10 @@
             @addition-success="handleBatchAdd"
         ></BatchAddModal>
 
-        <discoverServers
+        <DiscoverServers
             :rootServer="discoverServersRoot"
             @addition-success="handleBatchAdd"
-        ></discoverServers>
+        ></DiscoverServers>
     </div>
 </Layout>
 </template>
@@ -326,7 +326,7 @@ import DeleteModal from "@/views/servers/DeleteModal.vue"
 import DeleteSelectedModal from "@/views/servers/DeleteSelectedModal.vue"
 import AddModal from "@/views/servers/AddModal.vue"
 import BatchAddModal from "@/views/servers/BatchAddModal.vue"
-import discoverServers from "@/views/servers/discoverServers.vue"
+import DiscoverServers from "@/views/servers/DiscoverServers.vue"
 import iconButton from "@/components/ui/elements/iconButton.vue"
 
 
@@ -349,7 +349,7 @@ export default {
         AddModal,
         BatchAddModal,
         DeleteSelectedModal,
-        discoverServers,
+        DiscoverServers,
         iconButton
     },
     data: function() {

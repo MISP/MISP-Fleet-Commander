@@ -71,7 +71,7 @@ import axios from "axios"
 import batchAddTableServer from "@/components/ui/elements/batchAddTableServer.vue"
 
 export default {
-    name: "discoverServers",
+    name: "DiscoverServers",
     components: {
         batchAddTableServer
     },
