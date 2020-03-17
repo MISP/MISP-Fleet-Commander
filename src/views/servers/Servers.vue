@@ -300,6 +300,10 @@
             @addition-success="handleBatchAdd"
         ></BatchAddModal>
 
+        <CSVAddModal
+            @addition-success="handleBatchAdd"
+        ></CSVAddModal>
+
         <DiscoverServers
             :rootServer="discoverServersRoot"
             @addition-success="handleBatchAdd"
@@ -326,6 +330,7 @@ import DeleteModal from "@/views/servers/DeleteModal.vue"
 import DeleteSelectedModal from "@/views/servers/DeleteSelectedModal.vue"
 import AddModal from "@/views/servers/AddModal.vue"
 import BatchAddModal from "@/views/servers/BatchAddModal.vue"
+import CSVAddModal from "@/views/servers/CSVAddModal.vue"
 import DiscoverServers from "@/views/servers/DiscoverServers.vue"
 import iconButton from "@/components/ui/elements/iconButton.vue"
 
@@ -348,6 +353,7 @@ export default {
         DeleteModal,
         AddModal,
         BatchAddModal,
+        CSVAddModal,
         DeleteSelectedModal,
         DiscoverServers,
         iconButton

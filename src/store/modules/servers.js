@@ -157,7 +157,7 @@ const actions = {
                 (error) => { reject(error) }
             )
         })
-    },
+    }
 
 }
 

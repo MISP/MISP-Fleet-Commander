@@ -293,7 +293,7 @@ export default {
     },
     watch: {
         serverForm: function() {
-            this.form = this.serverForm.slice()
+            this.form = Object.assign({}, this.serverForm)
         }
     }
 }
