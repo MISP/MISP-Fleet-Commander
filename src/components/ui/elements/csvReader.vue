@@ -228,7 +228,6 @@ export default {
                 csvLines = csvLines.splice(1)
             } else {
                 this.csvHeader = csvLines[0]
-                // this.csvHeader = this.defaultHeader.join(this.delimiter)
             }
             this.speratedCSV = []
             csvLines.forEach(line => {
@@ -239,7 +238,6 @@ export default {
         handleSelectableFieldChange() {
             const allRequiredFields = Object.entries(this.mappedFields)
                 .filter(field => { return field.required && field.csvIndex === null })
-            console.log(allRequiredFields)
             this.$emit("update:allRequiredFieldsPicked", allRequiredFields.length == 0 )
         }
     },
