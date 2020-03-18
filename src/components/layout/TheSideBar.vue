@@ -1,5 +1,5 @@
 <template>
-    <div :class="['sidebar-container', sidebarCollapsed ? 'sidebar-collapsed' : '']">
+    <div class="sidebar-container sidebar-collapsed">
         <ul class="sidebar-list">
             <li 
                 class="sidebar-item"
@@ -17,17 +17,6 @@
                 </router-link>
             </li>
         </ul>
-        <div class="collapse-container position-absolute w-100">
-            <div
-                class="d-flex justify-content-between align-middle sidebar-collapse-button useCursorPointer"
-                @click="toggleSidebar"
-            >
-                <span class="link-text text-nowrap">Collapse sidebar</span>
-                <span class="icon">
-                    <i class="fa"></i>
-                </span>
-            </div>
-        </div>
     </div>
 </template>
 
@@ -67,28 +56,20 @@ export default {
         }
     },
     props: {
-        // selected_item: String,
     },
     computed: {
-        ...mapState({
-            sidebarCollapsed: state => state.ui.sidebarCollapsed
-        }),
     },
     methods: {
-        toggleSidebar() {
-            this.$store.commit("ui/toggleSidebar")
-        }
     }
 }
 </script>
 
 <style scoped>
 .sidebar-collapsed {
-    width: 5em !important;
+    width: 60px !important;
 }
 
 .sidebar-container {
-    width: 15em;
     background-color: var(--var-color-yankeesblue);
     height: 100vh;
     padding-top: 20px;
@@ -127,9 +108,9 @@ export default {
     content: " ";
     position: absolute;
     height: 100%;
-    width: 10px;
-    left: 4px;
-    top: 0px;
+    width: calc(4px + 0.3em);
+    left: -0.3em;
+    top: 0;
     background-color: var(--var-color-giantorgane);
 }
 
@@ -139,7 +120,7 @@ export default {
 
 .sidebar-link {
     display: block;
-    padding: 15px 30px;
+    padding: 15px 15px;
     font-size: .9375rem;
     position: relative;
     -webkit-transition: left .2s;

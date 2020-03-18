@@ -7,7 +7,7 @@
             <div class="sidebar">
                 <TheSideBar></TheSideBar>
             </div>
-            <div :class="['app-body', 'strech', sidebarCollapsed ? 'body-sidebar-collapse' : '']">
+            <div class="app-body strech body-sidebar-collapse">
                 <slot/>
             </div>
         </div>
@@ -21,7 +21,7 @@ import TheSideBar from "@/components/layout/TheSideBar.vue"
 import TheNavBar from "@/components/layout/TheNavBar.vue"
 
 export default {
-    name: "LayoutDefault",
+    name: "LayoutStretch",
     components: {
         TheSideBar,
         TheNavBar
@@ -33,7 +33,6 @@ export default {
     },
     computed: {
         ...mapState({
-            sidebarCollapsed: state => state.ui.sidebarCollapsed
         }),
     }
 }

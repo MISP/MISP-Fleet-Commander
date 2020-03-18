@@ -7,7 +7,7 @@
             <div class="sidebar">
                 <TheSideBar></TheSideBar>
             </div>
-            <div :class="['app-body', 'container-fluid', sidebarCollapsed ? 'body-sidebar-collapse' : '']">
+            <div class="app-body container-fluid body-sidebar-collapse">
                 <slot/>
             </div>
         </div>
@@ -33,7 +33,6 @@ export default {
     },
     computed: {
         ...mapState({
-            sidebarCollapsed: state => state.ui.sidebarCollapsed
         }),
     },
 }
