@@ -35,7 +35,7 @@
                                         :title="setting"
                                     >
                                         <b-card-text>
-                                            <div class="max-heigth-800">
+                                            <div class="max-heigth-700">
                                                 <jsonViewer
                                                     :item="value"
                                                     :rootKeyName="setting"
@@ -48,7 +48,7 @@
                             </b-card>
                         </b-tab>
                         <b-tab title="Server settings" class="p-1" no-body>
-                                <div class="max-heigth-800">
+                                <div class="max-heigth-700">
                                     <jsonViewer
                                         :item="getConfig"
                                         rootKeyName="Server settings"
@@ -58,7 +58,7 @@
                         </b-tab>
                         <b-tab title="Usage" no-body>
                             <b-card no-body>
-                                <div class="max-heigth-800">
+                                <div class="max-heigth-700">
                                     <jsonViewer
                                         :item="details.query_result.serverUsage"
                                         rootKeyName="Usage"
@@ -69,7 +69,7 @@
                         </b-tab>
                         <b-tab title="User" class="p-1" no-body>
                             <b-card no-body>
-                                <div class="max-heigth-800">
+                                <div class="max-heigth-700">
                                     <jsonViewer
                                         :item="details.query_result.serverUser"
                                         rootKeyName="User"
@@ -80,7 +80,7 @@
                         </b-tab>
                         <b-tab title="Connected MISP Servers" class="p-1" no-body>
                             <b-card no-body>
-                                <div class="max-heigth-800">
+                                <div class="max-heigth-700">
                                     <jsonViewer
                                         :item="details.query_result.connectedServers"
                                         rootKeyName="Connected MISP Servers"
@@ -171,8 +171,8 @@ ul.nav-tabs > li.nav-item.rightmost-action > a:focus {
     border: 1px solid #ffffff00;
 }
 
-.max-heigth-800 {
-    max-height: 800px;
+.max-heigth-700 {
+    max-height: 700px;
     overflow: auto;
 }
 </style>

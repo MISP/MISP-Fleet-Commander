@@ -64,8 +64,8 @@ export default {
                 .then(() => {
                     this.$nextTick(() => {
                         this.$bvModal.hide("modal-csv-add")
+                        this.$emit("addition-success")
                     })
-                    this.$emit("addition-success")
                 })
                 .catch(error => {
                     this.$bvToast.toast(error, {

@@ -97,14 +97,14 @@ export default {
             fileMaxAllowedSize: 102400,
             rawText: "",
             has_header: true,
-            defaultHeader: ["name", "description", "url", "skip_ssl", "authorization", "auth_method"],
+            defaultHeader: ["name", "description", "url", "skip_ssl", "authkey", "auth_method"],
             delimiter: ",",
             mappedFields: {
                 name: {label: "Name", csvIndex: null, required: true},
                 description: {label: "Description", csvIndex: null, required: false},
                 url: {label: "URL", csvIndex: null, required: true},
                 skip_ssl: {label: "Skip SSL", csvIndex: null, required: false},
-                authorization: {label: "Authorization", csvIndex: null, required: true},
+                authkey: {label: "Authkey", csvIndex: null, required: true},
                 auth_method: {label: "Basic auth", csvIndex: null, required: false},
             },
             csvHeader:"",
@@ -220,6 +220,7 @@ export default {
                     this.mappedFields[option.text].csvIndex = i
                 }
             })
+            this.handleSelectableFieldChange()
         },
         updateAfterRead() {
             let csvLines = this.rawText.trim().split(/\r?\n/)
@@ -237,7 +238,8 @@ export default {
         },
         handleSelectableFieldChange() {
             const allRequiredFields = Object.entries(this.mappedFields)
-                .filter(field => { return field.required && field.csvIndex === null })
+                // eslint-disable-next-line no-unused-vars
+                .filter(([fieldName, field]) => { return field.required && field.csvIndex === null })
             this.$emit("update:allRequiredFieldsPicked", allRequiredFields.length == 0 )
         }
     },

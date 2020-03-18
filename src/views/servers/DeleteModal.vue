@@ -61,12 +61,8 @@ export default {
             this.postInProgress = true
             let that = this
             axios.post(url, this.serverToDelete)
-                .then((response) => {
-                    this.$nextTick(() => {
-                        this.$bvModal.hide("modal-delete")
-                    })
-                    const toastText = response.data.name + " [" + response.data.url + "]"
-                    that.$bvToast.toast(toastText, {
+                .then(() => {
+                    that.$bvToast.toast("", {
                         title: "Server successfully delete",
                         variant: "success",
                     })
@@ -78,6 +74,9 @@ export default {
                     })
                 })
                 .finally(() => {
+                    this.$nextTick(() => {
+                        this.$bvModal.hide("modal-delete")
+                    })
                     this.postInProgress = false
                     this.$emit("actionDelete", "done")
                 })

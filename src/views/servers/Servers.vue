@@ -48,8 +48,8 @@
                 <b-form-select v-model="table.perPage" :options="table.optionsPerPage" size="sm" class="ml-2"></b-form-select>
             </div>
             <div class="w-25">
-                <b-button-toolbar class="justify-content-end">
-                    <b-input-group size="sm" class="px-0 col">
+                <b-button-toolbar class="justify-content-end flex-nowrap">
+                    <b-input-group size="sm" class="px-0 col" style="min-width: 150px;">
                         <b-form-input
                             v-model="table.filter"
                             type="search"
@@ -325,7 +325,7 @@ import submodulesStatus from "@/views/servers/elements/submodulesStatus.vue"
 import zeroMQStatus from "@/views/servers/elements/zeroMQStatus.vue"
 import connectionsSummary from "@/views/servers/elements/connectionsSummary.vue"
 import contextualMenu from "@/components/ui/elements/contextualMenu.vue"
-import RowDetails from "@/views/servers/RowDetails.vue"
+import RowDetails from "@/views/servers/elements/RowDetails.vue"
 import DeleteModal from "@/views/servers/DeleteModal.vue"
 import DeleteSelectedModal from "@/views/servers/DeleteSelectedModal.vue"
 import AddModal from "@/views/servers/AddModal.vue"
