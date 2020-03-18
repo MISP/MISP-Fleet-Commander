@@ -66,7 +66,7 @@ export default {
 
 <style scoped>
 .sidebar-collapsed {
-    width: 60px !important;
+    width: 50px !important;
 }
 
 .sidebar-container {
@@ -108,7 +108,7 @@ export default {
     content: " ";
     position: absolute;
     height: 100%;
-    width: calc(4px + 0.3em);
+    width: calc(2px + 0.3em);
     left: -0.3em;
     top: 0;
     background-color: var(--var-color-giantorgane);
@@ -120,7 +120,9 @@ export default {
 
 .sidebar-link {
     display: block;
-    padding: 15px 15px;
+    padding: 10px 0;
+    padding-left: calc(10px + 2px);
+    padding-right: calc(10px - 2px);
     font-size: .9375rem;
     position: relative;
     -webkit-transition: left .2s;
