@@ -1,8 +1,5 @@
 <template>
     <div class="main">
-        <div class="app-header">
-            <TheNavBar></TheNavBar>
-        </div>
         <div class="app">
             <div class="sidebar">
                 <TheSideBar></TheSideBar>
@@ -18,13 +15,11 @@
 // @ is an alias to /src
 import { mapState } from "vuex"
 import TheSideBar from "@/components/layout/TheSideBar.vue"
-import TheNavBar from "@/components/layout/TheNavBar.vue"
 
 export default {
     name: "LayoutStretch",
     components: {
         TheSideBar,
-        TheNavBar
     },
     data () {
         return {

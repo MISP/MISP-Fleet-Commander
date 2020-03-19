@@ -1,0 +1,104 @@
+import * as d3 from "d3"
+
+export default {
+    constructNetwork(containerId, containerBoundingRect, d3data, htmlTemplateGenerator, eventHandlers) {
+        // const boundingRect = this.$refs["networkContainer"].getBoundingClientRect()
+        const boundingRect = containerBoundingRect
+        const nodeHeight = 500
+        const nodeWidth = 300
+        const width = boundingRect.width
+        const height = boundingRect.height
+
+        // const svg = d3.select("#network").append("svg")
+        const svg = d3.select(containerId).append("svg")
+            .attr("width", width)
+            .attr("height", height)
+        const container = svg.append("g")
+
+        // const simulation = d3.forceSimulation(this.d3data.nodes)
+        const simulation = d3.forceSimulation(d3data.nodes)
+            .alphaDecay(0.15)
+            // .force("link", d3.forceLink(this.d3data.links).id(function(d) { return d.id }))
+            // .force("link", d3.forceLink(this.d3data.links).id(function(d) { return d.id }).distance(nodeWidth/2).strength(0.5))
+            .force("link", d3.forceLink(d3data.links).id(function(d) { return d.id }).distance(nodeWidth/2).strength(0.5))
+            // .force("charge", d3.forceManyBody())
+            // .force("charge", d3.forceManyBody().strength(-5000))
+            .force("collide", d3.forceCollide(nodeWidth))
+            .force("center", d3.forceCenter(width / 2, height / 2))
+
+        const zoom = d3.zoom()
+            .scaleExtent([.1, 4])
+            .on("zoom", function() { container.attr("transform", d3.event.transform) })
+        svg.call(zoom)
+
+        const link = container.append("g")
+            .attr("class", "links")
+            .selectAll("line")
+            // .data(this.d3data.links)
+            .data(d3data.links)
+            .enter().append("line")
+            .attr("class", "link")
+            .attr("stroke", "#999")
+            .attr("stroke-opacity", 0.6)
+            .style("stroke-width", function(d) { return Math.sqrt(d.weight) })
+
+        const node = container.append("g")
+            .attr("class", "nodes")
+            .selectAll("div")
+            // .data(this.d3data.nodes)
+            .data(d3data.nodes)
+            .enter().append("g")
+            .on("click", function(node, index, nodes) {
+                // that.selectNode(node)
+                eventHandlers.nodeClick(node)
+            })
+            .call(drag(simulation))
+
+        node.append("foreignObject")
+            .attr("height", nodeHeight)
+            .attr("width", nodeWidth)
+            .append("xhtml:div")
+            .attr("style", "height: 100%")
+            .html(d => htmlTemplateGenerator.nodeHtml(d))
+
+        simulation
+            .nodes(d3data.nodes)
+            .on("tick", () => {
+                link
+                    .attr("x1", d => d.source.x + nodeWidth/2)
+                    .attr("y1", d => d.source.y + nodeHeight/2)
+                    .attr("x2", d => d.target.x + nodeWidth/2)
+                    .attr("y2", d => d.target.y + nodeHeight/2)
+
+                node.attr("transform", d => "translate(" + d.x + "," + d.y + ")")
+            })
+
+        simulation.force("link")
+            .links(d3data.links)
+
+
+        function drag(simulation) {
+            function dragstarted(d) {
+                if (!d3.event.active) simulation.alphaTarget(0.3).restart()
+                d.fx = d.x
+                d.fy = d.y
+            }
+            
+            function dragged(d) {
+                d.fx = d3.event.x
+                d.fy = d3.event.y
+            }
+            
+            function dragended(d) {
+                if (!d3.event.active) simulation.alphaTarget(0)
+                d.fx = null
+                d.fy = null
+            }
+            
+            return d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended)
+        }
+    }
+}

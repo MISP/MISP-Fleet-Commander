@@ -7,29 +7,32 @@
         </h3>
 
         <div class="d-flex justify-content-between">
-            <div>
+            <div class="d-flex" style="margin-top: -5px">
                 <b-pagination
+                    class="mb-0"
                     v-model="table.currentPage"
-                    v-if="table.totalRows > table.perPage"
+                    size="sm"
                     :per-page="table.perPage"
                     :total-rows="table.totalRows"
                     aria-controls="server-table"
                 ></b-pagination>
             </div>
-            <div class="align-items-center d-flex w-25">
-                <b-input-group size="sm">
-                    <b-form-input
-                        v-model="table.filter"
-                        type="search"
-                        id="filterInput"
-                        placeholder="Type to Search"
-                        class="border-bottom-0 rounded-top align-self-end"
-                        style="border-radius: 0"
-                    ></b-form-input>
-                </b-input-group>
-                <b-button class="ml-2" variant="primary" size="sm" @click="refreshConnections()">
-                    <b-icon icon="arrow-clockwise" :class="{'fa-spin': refreshInProgress}" title="Refresh Servers"></b-icon>
-                </b-button>
+            <div class="w-25">
+                <b-button-toolbar class="justify-content-end flex-nowrap">
+                    <b-input-group size="sm">
+                        <b-form-input
+                            v-model="table.filter"
+                            type="search"
+                            id="filterInput"
+                            placeholder="Type to Search"
+                            class="border-bottom-0 rounded-top align-self-end"
+                            style="border-radius: 0"
+                        ></b-form-input>
+                    </b-input-group>
+                    <b-button class="ml-2" variant="primary" size="sm" @click="refreshConnections()">
+                        <i :class="{'fas fa-sync-alt': true, 'fa-spin': refreshInProgress}" title="Refresh Connections"></i>
+                    </b-button>
+                </b-button-toolbar>
            </div>
         </div>
 
@@ -168,38 +171,23 @@
 
                     <span :class="forcedHidden == row.index ? '' : 'reveal-on-hover'">
                         <div class="btn-group">
-                            <b-button :id="`popover-row-option-${row.index}`" href="#" class="ml-1" size="xs" variant="link" @click="forceHidden(row.index)">
-                                <i class="fas fa-ellipsis-v"></i>
-                            </b-button>
-                            <!-- <b-popover
-                                :target="`popover-row-option-${row.index}`"
-                                placement="bottomleft"
-                                triggers="focus"
+                            <b-dropdown 
+                                variant="link" size="xs" class="ml-1"
                                 @hidden="clearForcedHidden"
+                                right no-caret lazy
                             >
-                                <b-button
-                                    size="sm" variant="secondary" class="d-flex align-items-center w-100 mb-1"
-                                    @click="viewInServer(row.item)"
-                                >
-                                    <i class="mr-2 fas fa-server"></i>
-                                    <span class="w-100">View server</span>
-                                </b-button>
-                            </b-popover> -->
-
-                            <b-popover
-                                :ref="`popoverRow${row.index}`"
-                                :target="`popover-row-option-${row.index}`"
-                                placement="bottomleft"
-                                triggers="focus"
-                                custom-class="popover-no-body"
-                                @hidden="clearForcedHidden"
-                            >
+                                <template v-slot:button-content>
+                                    <i 
+                                        class="fas fa-ellipsis-v"
+                                        @click="forceHidden(row.index)"
+                                    ></i>
+                                </template>
                                 <contextualMenu
                                     :menu="genContextualMenu(row.index)"
                                     @handle-refresh-info="handleRefreshInfo"
                                     @view-in-server="viewInServer"
                                 ></contextualMenu>
-                            </b-popover>
+                            </b-dropdown>
                         </div>
                     </span>
                 </span>
