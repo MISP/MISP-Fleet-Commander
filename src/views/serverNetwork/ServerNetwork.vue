@@ -10,22 +10,30 @@
                 button-variant="outline-primary"
                 size="sm"
             ></b-form-radio-group>
-            <b-button
-                @click="resetPositions"
-            >Reset positions</b-button>
+             <b-dropdown variant="primary" size="sm" text="Layout">
+                <b-dropdown-item
+                    @click="resetPositions"
+                >
+                    <iconButton
+                        text="Reset info window location"
+                        icon="window-restore"
+                    ></iconButton>
+                </b-dropdown-item>
+            </b-dropdown>
         </div>
         <div id="network" ref="networkContainer" class="w-100 h-100"></div>
-        <div
-            class="right-panel position-absolute"
-            :style="{top: infoCard.position.top, right: infoCard.position.right, left: infoCard.position.left}"
+        <DraggableComponent
+            class="right-panel"
+            :positions.sync="infoCard.position"
+            draggableContainer="networkInfoPanel"
+            handleClass=".card-header"
         >
             <TheInfoCard
                 :server="selectedNode"
                 :open.sync="infoCard.show"
-                :cardPosition.sync="infoCard.position"
             ></TheInfoCard>
-        </div>
-    </div>>
+        </DraggableComponent>
+    </div>
 </Layout>
 </template>
 
@@ -33,15 +41,19 @@
 import Vue from "vue"
 import { mapState, mapGetters } from "vuex"
 import Layout from "@/components/layout/Layout.vue"
+import iconButton from "@/components/ui/elements/iconButton.vue"
 import Node from "@/views/serverNetwork/elements/ServerNode.vue"
 import TheInfoCard from "@/views/serverNetwork/elements/InfoCard.vue"
+import DraggableComponent from "@/components/ui/DraggableComponent.vue"
 import d3Network from "@/helpers/d3Network.js"
 
 export default {
     name: "TheServerNetwork",
     components: {
         Layout,
-        TheInfoCard
+        iconButton,
+        TheInfoCard,
+        DraggableComponent
     },
     data: function () {
         return {

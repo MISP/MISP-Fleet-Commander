@@ -1,10 +1,9 @@
 <template>
     <b-card no-body
-        v-if="open && (hasSelection || true)"
+        v-show="open && (hasSelection || true)"
         bg-variant=""
         text-variant=""
-        ref="infoPanel"
-        @mousedown.prevent="enableCardDrag"
+        id="networkInfoPanel"
     >
         <b-tabs
             card fill small
@@ -53,23 +52,13 @@ export default {
             type: Boolean,
             required: true
         },
-        cardPosition: {
-            type: Object,
-            required: true
-        }
     },
     data: function() {
         return {
             fields: [
                 { key: "property", thStyle: { display: "none" } },
                 { key: "value", thStyle: { display: "none" } }
-            ],
-            localCardPosition: {
-                dx: 0,
-                dy: 0,
-                origClientX: 0,
-                origClientY: 0,
-            }
+            ]
         }
     },
     computed: {
@@ -118,37 +107,6 @@ export default {
         close() {
             this.$emit("update:open", false)
         },
-        enableCardDrag(e) {
-            e = e || window.event
-            this.localCardPosition.origClientX = e.clientX
-            this.localCardPosition.origClientY = e.clientY
-            document.onmouseup = this.disableCardDrag
-            document.onmousemove = this.cardDrag
-        },
-        disableCardDrag() {
-            document.onmouseup = null
-            document.onmousemove = null
-        },
-        cardDrag(e) {
-            e = e || window.event
-            e.preventDefault()
-            this.localCardPosition.dx = this.localCardPosition.origClientX - e.clientX
-            this.localCardPosition.dy = this.localCardPosition.origClientY - e.clientY
-            this.localCardPosition.origClientX = e.clientX
-            this.localCardPosition.origClientY = e.clientY
-            const parentNode = this.$refs["infoPanel"].parentNode
-            const left = parentNode.offsetLeft - this.localCardPosition.dx
-            const top = parentNode.offsetTop - this.localCardPosition.dy
-            let positions = {
-                top: `${top}px`,
-                left: `${left}px`,
-                right: "unset"
-            }
-            this.$emit("update:cardPosition", positions)
-        }
-    },
-    updated() {
-        // console.log(this.$refs["infoPanel"])
     }
 }
 </script>
