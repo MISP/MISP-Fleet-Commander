@@ -67,8 +67,9 @@ class Server(BaseModel):
     server_info = db.relationship('ServerQuery',
         backref=db.backref('hostServer', lazy='joined', uselist=False))
 
-    _default_fields = ['id', 'name', 'comment', 'url', 'skip_ssl', 'user', 'auth_method', 'server_info']
-    _hidden_fields = ['authkey', 'basicauth']
+    _default_fields = ['id', 'name', 'comment', 'url', 'skip_ssl', 'user', 'auth_method', 'server_info', 'authkey', 'basicauth']
+    _hidden_fields = []
+    # _hidden_fields = ['authkey', 'basicauth']
     _readonly_fields = ['user_id']
 
     @hybrid_property

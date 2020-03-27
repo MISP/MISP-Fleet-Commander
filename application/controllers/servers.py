@@ -1,4 +1,4 @@
-from flask import Blueprint, request, render_template, make_response, jsonify
+from flask import Blueprint, request, render_template, make_response, jsonify, abort, Response
 # from flask import current_app as app
 from datetime import datetime as dt
 import time
@@ -6,9 +6,13 @@ import json
 from collections import Mapping, MutableSequence
 from sqlalchemy.orm import with_parent
 from application.models import db, User, Server, ServerQuery
-from application.controllers.utils import mispGetRequest, mispPostRequest
+from application.controllers.utils import mispGetRequest, mispPostRequest, batchRequest
 
 BPserver = Blueprint('server', __name__)
+
+class DictToObject:
+    def __init__(self, **entries):
+        self.__dict__.update(entries)
 
 
 @BPserver.route('/servers/index', methods=['GET'])
@@ -31,18 +35,33 @@ def get(server_id):
 
 @BPserver.route('/servers/add', methods=['POST'])
 def add():
-    server = Server(name=request.json.get('name'),
-                    url=request.json.get('url'),
-                    skip_ssl=request.json.get('skip_ssl', False),
-                    authkey=request.json.get('authkey', None),
-                    basicauth=request.json.get('basicauth', None),
-                    user_id=1)
-    db.session.add(server)
-    if request.json.get('recursive_add', False):
-        # recursively add servers
-        pass
-    db.session.commit()
-    return jsonify(server.to_dict())
+    servers = []
+    if isinstance(request.json, list):
+        servers = []
+        for server in request.json:
+            server = Server(name=server.get('name'),
+                        url=server.get('url'),
+                        skip_ssl=server.get('skip_ssl', False),
+                        authkey=server.get('authkey', None),
+                        basicauth=server.get('basicauth', None),
+                        user_id=1)
+            db.session.add(server)
+            servers.append(server)
+        db.session.commit()
+        return jsonify([s.to_dict() for s in servers])
+    else:
+        server = Server(name=request.json.get('name'),
+                        url=request.json.get('url'),
+                        skip_ssl=request.json.get('skip_ssl', False),
+                        authkey=request.json.get('authkey', None),
+                        basicauth=request.json.get('basicauth', None),
+                        user_id=1)
+        db.session.add(server)
+        if request.json.get('recursive_add', False):
+            # recursively add servers
+            pass
+        db.session.commit()
+        return jsonify(server.to_dict())
 
 
 @BPserver.route('/servers/edit', methods=['POST'])
@@ -62,13 +81,24 @@ def edit():
 
 @BPserver.route('/servers/delete', methods=['POST'])
 def delete():
-    server = Server.query.get(request.json['id'])
-    if server is not None:
-        db.session.delete(server)
+    if isinstance(request.json, list):
+        deletedServers = []
+        for server in request.json:
+            server = Server.query.get(server['id'])
+            if server is not None:
+                db.session.delete(server)
+                deletedServers.append(server.id)
         db.session.commit()
-        return jsonify(server.to_dict())
+        return jsonify(deletedServers)
     else:
-        return jsonify({})
+        server = Server.query.get(request.json['id'])
+        if server is not None:
+            server_id = server.id
+            db.session.delete(server)
+            db.session.commit()
+            return jsonify([server_id])
+        else:
+            return jsonify([])
 
 @BPserver.route('/servers/testConnection/<int:server_id>', methods=['GET'])
 def ping_server(server_id):
@@ -79,6 +109,22 @@ def ping_server(server_id):
         return jsonify(testConnection)
     else:
         return jsonify({})
+
+@BPserver.route('/servers/batchTestConnection', methods=['GET'])
+def batch_ping_server():
+    servers = Server.query.all()
+    allRequests = []
+    if servers:
+        for server in servers:
+            allRequests.append({
+                'fn': mispGetRequest,
+                'server': server,
+                'path': '/servers/getVersion'
+            })
+        allTestConnections = batchRequest(allRequests)
+        return jsonify(allTestConnections)
+    else:
+        return jsonify([])
 
 @BPserver.route('/servers/queryInfo/<int:server_id>', defaults={'no_cache': False}, methods=['GET'])
 @BPserver.route('/servers/queryInfo/<int:server_id>/<int:no_cache>', methods=['GET'])
@@ -96,9 +142,73 @@ def queryInfo(server_id, no_cache):
     else:
         return jsonify({'error': 'Unkown server'})
 
+@BPserver.route('/servers/batchTest', methods=['POST'])
+def batchTest():
+    test_result = []
+    allVersionRequests = []
+    allUserRequests = []
+    server_to_test = request.json
+    for index, server in enumerate(server_to_test):
+        serverObject = DictToObject(**server)
+        if 'id' not in server:
+            serverObject.id = index
+        allVersionRequests.append({
+            'fn': mispGetRequest,
+            'server': serverObject,
+            'path': '/servers/getVersion'
+        })
+        allUserRequests.append({
+            'fn': mispGetRequest,
+            'server': serverObject,
+            'path': '/users/view/me'
+        })
+    allTestConnections = batchRequest(allVersionRequests)
+    allTestUsers = batchRequest(allUserRequests)
+    for index, server in enumerate(server_to_test):
+        server_id = server['id'] if 'id' in server else index
+        version = next(filter(lambda x: x['server_id'] == server_id, allTestConnections))
+        user = next(filter(lambda x: x['server_id'] == server_id, allTestUsers))
+        server['testResult'] = parseGetVersion(version)
+        server['userResult'] = user
+        test_result.append(server)
+    return jsonify(test_result)
+
+@BPserver.route('/servers/discoverConnected', methods=['POST'])
+def discoverConnected():
+    rootServer = request.json
+    test_result = []
+    if rootServer:
+        rootServerObject = DictToObject(**rootServer)
+        rootIndex = mispGetRequest(rootServerObject, '/servers/index')
+        if type(rootIndex) != list:
+            abort(404, Response('Could not fetch valid server index'))
+        allVersionRequests = []
+        allUserRequests = []
+        for server in rootIndex:
+            remoteServer = server['Server']
+            remoteServerObject = DictToObject(**remoteServer)
+            allVersionRequests.append({
+                'fn': mispGetRequest,
+                'server': remoteServerObject,
+                'path': '/servers/getVersion'
+            })
+            allUserRequests.append({
+                'fn': mispGetRequest,
+                'server': remoteServerObject,
+                'path': '/users/view/me'
+            })
+        allTestConnections = batchRequest(allVersionRequests)
+        allTestUsers = batchRequest(allUserRequests)
+        for server in rootIndex:
+            version = next(filter(lambda x: x['server_id'] == server['Server']['id'], allTestConnections))
+            user = next(filter(lambda x: x['server_id'] == server['Server']['id'], allTestUsers))
+            server['testResult'] = parseGetVersion(version)
+            server['userResult'] = user
+            test_result.append(server)
+    return jsonify(test_result)
+
 @BPserver.route('/servers/network/')
 def network():
-    # servers = ServerQuery.query.all()
     servers = Server.query.all()
     network = buildNetwork(servers)
     return jsonify(network)
@@ -254,6 +364,26 @@ def parseMISPConnectionOutput(connection):
         parsed['status']['message'] = "Unkown response status"
     return parsed
 
+def parseGetVersion(connection):
+    parsed = {
+        'color': '',
+        'message': ''
+    }
+    if 'error' in connection:
+        parsed['color'] = 'danger'
+        parsed['message'] = connection['error']
+    else:
+        parsed['color'] = 'success'
+        parsed['version'] = connection['version']
+        if connection['perm_sync']:
+            parsed['message'] = 'Perm Sync' 
+        elif connection['perm_sighting']:
+            parsed['message'] = 'Perm Sighting' 
+        else:
+            parsed['color'] = 'warning' 
+            parsed['message'] = 'No perm' 
+    return parsed
+
 def buildNetwork(servers):
     network = []
     for server in servers:
@@ -271,7 +401,7 @@ def buildNetwork(servers):
                     link['pull'] = connectedServer['Server']['pull']
                     link['push'] = connectedServer['Server']['push']
                     pull_rules = json.loads(connectedServer['Server']['pull_rules'])
-                    if pull_rules['url_params'] != '':
+                    if not isinstance(destinations, list) and pull_rules.get('url_params', '') != '':
                         pull_rules['url_params'] = json.loads(pull_rules['url_params'])
                     push_rules = json.loads(connectedServer['Server']['push_rules'])
                     link['filtering_rules'] = {
