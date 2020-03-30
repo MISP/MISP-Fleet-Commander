@@ -1,7 +1,17 @@
 <template>
     <div class="nodeServer">
         <div class="node-container shadow-sm d-inline-block">
-                <div class="card">
+            <b-card no-body>
+                <b-tabs card>
+                <b-tab title="Tab 1" active>
+                    <b-card-text>Tab contents 1</b-card-text>
+                </b-tab>
+                <b-tab title="Tab 2">
+                    <b-card-text>Tab contents 2</b-card-text>
+                </b-tab>
+                </b-tabs>
+            </b-card>
+                <!-- <div class="card">
                     <div class="card-header">
                         <div class="top-header d-flex flex-wrap">
                             <div class="d-flex flex-wrap align-items-center mr-1">
@@ -56,8 +66,8 @@
                         <ServerNodeSync :sync="{}"></ServerNodeSync>
                         <ServerNodeContent :content="{}"></ServerNodeContent>
                     </div>
-                </div>
-            </div>
+                </div> -->
+        </div>
     </div>
 </template>
 
@@ -75,12 +85,12 @@ import ServerNodeContent from "@/views/serverNetwork/elements/nodeElements/Serve
 export default {
     name: "Node",
     components: {
-        timeSinceRefresh,
-        ServerNodeDiagnostic,
-        ServerNodeUsage,
-        ServerNodeUser,
-        ServerNodeSync,
-        ServerNodeContent
+        // timeSinceRefresh,
+        // ServerNodeDiagnostic,
+        // ServerNodeUsage,
+        // ServerNodeUser,
+        // ServerNodeSync,
+        // ServerNodeContent
     },
     data: function () {
         return {
@@ -101,6 +111,7 @@ export default {
 
 <style scoped>
 .nodeServer {
+    width: unset;
 }
 
 .nodeServer > .node-container, .nodeServer > .node-container > div.card {

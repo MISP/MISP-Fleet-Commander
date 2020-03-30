@@ -42,7 +42,7 @@ import Vue from "vue"
 import { mapState, mapGetters } from "vuex"
 import Layout from "@/components/layout/Layout.vue"
 import iconButton from "@/components/ui/elements/iconButton.vue"
-import Node from "@/views/serverNetwork/elements/ServerNode.vue"
+import ServerNode from "@/views/serverNetwork/elements/ServerNode.vue"
 import TheInfoCard from "@/views/serverNetwork/elements/InfoCard.vue"
 import DraggableComponent from "@/components/ui/DraggableComponent.vue"
 import d3Network from "@/helpers/d3Network.js"
@@ -94,7 +94,7 @@ export default {
             this.infoCard.position.right = "1em"
         },
         generateNodeHtml(node) {
-            let ComponentNodeClass = Vue.extend(Node)
+            let ComponentNodeClass = Vue.extend(ServerNode)
             let nodeInstance = new ComponentNodeClass({
                 propsData: { 
                     // server: this.fetchServers(),
