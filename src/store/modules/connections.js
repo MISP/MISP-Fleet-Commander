@@ -6,22 +6,30 @@ const state = {
 }
 
 // getters
-const getters = {}
+const getters = {
+    connectionCount: state => {
+        return state.all.length
+    }
+}
 
 // actions
 const actions = {
-    getConnections({ commit }) {
+    getConnections({ commit }, payload={}) {
         return new Promise((resolve, reject) => {
-            api.index(
-                connections => {
-                    connections.forEach(connection => {
-                        connection._loading = false
-                    })
-                    commit("setConnections", connections)
-                    resolve()
-                },
-                (error) => { reject(error) }
-            )
+            if (payload.init_only && getters.connectionCount > 0) {
+                resolve("Server already loaded")
+            } else {
+                api.index(
+                    connections => {
+                        connections.forEach(connection => {
+                            connection._loading = false
+                        })
+                        commit("setConnections", connections)
+                        resolve()
+                    },
+                    (error) => { reject(error) }
+                )
+            }
         })
     },
     getConnection({ commit }, data) {

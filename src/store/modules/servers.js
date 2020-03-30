@@ -19,26 +19,30 @@ const getters = {
 const actions = {
 
     /* FETCH */
-    getAllServers({ commit }) {
+    getAllServers({ getters, commit }, payload) {
         // this function should not fetch data if it has been fetched already
         return new Promise((resolve, reject) => {
-            api.index(
-                servers => {
-                    servers.forEach(server => {
-                        server.status = { _loading: false }
-                        if (server.server_info === null) {
-                            server.server_info = {query_result: {}, error: null, _loading: false}
-                        } else {
-                            server.server_info._loading = false
-                        }
-                        server._showDetails = false
-                        server._loading = false
-                    })
-                    commit("setServers", servers)
-                    resolve()
-                },
-                (error) => { reject(error) }
-            )
+            if (payload !== undefined && payload.init_only && getters.serverCount > 0) {
+                resolve("Server already loaded")
+            } else {
+                api.index(
+                    servers => {
+                        servers.forEach(server => {
+                            server.status = { _loading: false }
+                            if (server.server_info === null) {
+                                server.server_info = {query_result: {}, error: null, _loading: false}
+                            } else {
+                                server.server_info._loading = false
+                            }
+                            server._showDetails = false
+                            server._loading = false
+                        })
+                        commit("setServers", servers)
+                        resolve()
+                    },
+                    (error) => { reject(error) }
+                )
+            }
         })
     },
     refreshConnectionState({ commit }, server) {
@@ -186,9 +190,9 @@ const mutations = {
         let server = state.idToServer[payload.server_id]
         const connection = payload.connectionState
         if (connection.version !== undefined) {
-            server.status = { _loading: false, data: connection.version, error: false }
+            server.status = { _loading: false, data: connection.version, error: false, timestamp: connection.timestamp }
         } else {
-            server.status = { _loading: false, data: connection.error, error: true }
+            server.status = { _loading: false, data: connection.error, error: true, timestamp: connection.timestamp }
         }
         setUpdatableServers(state)
     },
@@ -197,9 +201,9 @@ const mutations = {
         connectionsState.forEach(connection => {
             let server = state.all.find(server => server.id == connection.server_id)
             if (connection.version !== undefined) {
-                server.status = { _loading: false, data: connection.version, error: false }
+                server.status = { _loading: false, data: connection.version, error: false, timestamp: connection.timestamp }
             } else {
-                server.status = { _loading: false, data: connection.error, error: true }
+                server.status = { _loading: false, data: connection.error, error: true, timestamp: connection.timestamp }
             }
         })
         setUpdatableServers(state)

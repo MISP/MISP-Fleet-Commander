@@ -7,8 +7,15 @@
 </template>
 
 <script>
+import LayoutDefault from "@/components/layout/LayoutDefault.vue"
+import LayoutStretch from "@/components/layout/LayoutStretch.vue"
+
 export default {
     name: "App",
+    components: {
+        LayoutDefault,
+        LayoutStretch
+    },
     data () {
         return {
             layout: "div" // fallback value if the layout is not set in the view
