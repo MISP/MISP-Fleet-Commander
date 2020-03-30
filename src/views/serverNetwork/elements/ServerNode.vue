@@ -101,11 +101,9 @@ export default {
 
 <style scoped>
 .nodeServer {
-    height: 100%
 }
 
 .nodeServer > .node-container, .nodeServer > .node-container > div.card {
-    height: 100%
 }
 
 .nodeServer > .node-container > div.card > div.card-body {

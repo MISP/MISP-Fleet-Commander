@@ -54,8 +54,8 @@ export default {
             .attr("height", nodeHeight)
             .attr("width", nodeWidth)
             .append("xhtml:div")
-            .attr("style", "height: 100%")
             .html(d => htmlTemplateGenerator.nodeHtml(d))
+            .call(resizeForeignObject)
 
         simulation
             .nodes(d3data.nodes)
@@ -71,6 +71,10 @@ export default {
 
         function drag(simulation) {
             function dragstarted(d) {
+                if (d3.event.sourceEvent.button === 2) { // ignore right click
+                    dragended(d)
+                    return
+                }
                 if (!d3.event.active) simulation.alphaTarget(0.3).restart()
                 d.fx = d.x
                 d.fy = d.y
@@ -107,6 +111,15 @@ export default {
                 .on("start", dragstarted)
                 .on("drag", dragged)
                 .on("end", dragended)
+        }
+
+        function resizeForeignObject(selection) {
+            selection.nodes().forEach((div) => {
+                const divBoundingRect = div.getBoundingClientRect()
+                const parentSVG = div.parentNode
+                parentSVG.setAttribute("width", `${divBoundingRect.width}px`)
+                parentSVG.setAttribute("height", `${divBoundingRect.height}px`)
+            })
         }
     }
 }
