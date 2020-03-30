@@ -44,6 +44,7 @@ export default {
             .selectAll("div")
             .data(d3data.nodes)
             .enter().append("g")
+            // eslint-disable-next-line no-unused-vars
             .on("click", function(node, index, nodes) {
                 eventHandlers.nodeClick(node)
             })
@@ -68,10 +69,6 @@ export default {
                 node.attr("transform", d => "translate(" + d.x + "," + d.y + ")")
             })
 
-        simulation.force("link")
-            .links(d3data.links)
-
-
         function drag(simulation) {
             function dragstarted(d) {
                 if (!d3.event.active) simulation.alphaTarget(0.3).restart()
@@ -89,8 +86,24 @@ export default {
                 d.fx = null
                 d.fy = null
             }
+
+            // Add support of the drag handle
+            function dragfilter() {
+                const handleClass = "top-header"
+                const maxDepth = 5
+                for (let index = 0; index < maxDepth; index++) {
+                    const node = d3.event.path[index]
+                    if (node.classList !== undefined) {
+                        if (node.classList.contains(handleClass)) {
+                            return true
+                        }
+                    }
+                }
+                return false
+            }
             
             return d3.drag()
+                .filter(dragfilter)
                 .on("start", dragstarted)
                 .on("drag", dragged)
                 .on("end", dragended)
