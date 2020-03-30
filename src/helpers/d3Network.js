@@ -1,25 +1,23 @@
+/* eslint-disable no-unreachable */
 import * as d3 from "d3"
 
 export default {
     constructNetwork(containerId, containerBoundingRect, d3data, htmlTemplateGenerator, eventHandlers) {
-        // const boundingRect = this.$refs["networkContainer"].getBoundingClientRect()
         const boundingRect = containerBoundingRect
-        const nodeHeight = 500
-        const nodeWidth = 300
+        const nodeHeight = 300
+        const nodeWidth = 350
         const width = boundingRect.width
         const height = boundingRect.height
 
-        // const svg = d3.select("#network").append("svg")
         const svg = d3.select(containerId).append("svg")
             .attr("width", width)
             .attr("height", height)
         const container = svg.append("g")
 
-        // const simulation = d3.forceSimulation(this.d3data.nodes)
         const simulation = d3.forceSimulation(d3data.nodes)
-            .alphaDecay(0.15)
+            .alphaDecay(0.35)
+            // .alphaDecay(0.15)
             // .force("link", d3.forceLink(this.d3data.links).id(function(d) { return d.id }))
-            // .force("link", d3.forceLink(this.d3data.links).id(function(d) { return d.id }).distance(nodeWidth/2).strength(0.5))
             .force("link", d3.forceLink(d3data.links).id(function(d) { return d.id }).distance(nodeWidth/2).strength(0.5))
             // .force("charge", d3.forceManyBody())
             // .force("charge", d3.forceManyBody().strength(-5000))
@@ -34,22 +32,19 @@ export default {
         const link = container.append("g")
             .attr("class", "links")
             .selectAll("line")
-            // .data(this.d3data.links)
             .data(d3data.links)
             .enter().append("line")
             .attr("class", "link")
             .attr("stroke", "#999")
             .attr("stroke-opacity", 0.6)
-            .style("stroke-width", function(d) { return Math.sqrt(d.weight) })
+            .style("stroke-width", function(d) { return Math.sqrt(d.weight ? d.weight : 1) })
 
         const node = container.append("g")
             .attr("class", "nodes")
             .selectAll("div")
-            // .data(this.d3data.nodes)
             .data(d3data.nodes)
             .enter().append("g")
             .on("click", function(node, index, nodes) {
-                // that.selectNode(node)
                 eventHandlers.nodeClick(node)
             })
             .call(drag(simulation))

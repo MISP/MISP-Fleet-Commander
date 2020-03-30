@@ -58,49 +58,26 @@ export default {
     data: function () {
         return {
             scope: "administration",
+            refreshInProgress: false,
             infoCard: {
                 show: false,
                 position: {top: "4em", left: "unset", right: "1em"}
             },
-            selectedNode: {
-                Server: {
-                    name: "",
-                    url: "",
-                    authkey: "",
-                    push: "",
-                    pull: "",
-                },
-                Organisation: {
-                    name: "",
-                    uuid: "",
-                    type: ""
-                }
-            },
+            selectedNode: {},
             availableScopes: [
                 { text: "Administration", value: "administration" },
                 { text: "Realtime Sharing Simulation", value: "simulation" }
             ],
-            MISP: {
-            },
             d3data: {
-                "nodes":[
-                    {"id": "node1", "name":"node1","group":1},
-                    {"id": "node2", "name":"node2","group":2},
-                    {"id": "node3", "name":"node3","group":2},
-                    {"id": "node4", "name":"node4","group":3},
-                    {"id": "node5", "name":"node5","group":1}
-                ],
-                "links":[
-                    {"source": "node2","target": "node1","weight":1},
-                    {"source": "node1","target": "node3","weight":3},
-                    {"source": "node4","target": "node5","weight":3}
-                ]
-            }
+                nodes: [],
+                links: []
+            },
         }
     },
     computed: {
         ...mapState({
             getServers: state => state.servers.all,
+            getConnections: state => state.connections.all
         })
     },
     methods: {
@@ -116,11 +93,12 @@ export default {
             this.infoCard.position.left = "unset"
             this.infoCard.position.right = "1em"
         },
-        generateNodeHtml() {
+        generateNodeHtml(node) {
             let ComponentNodeClass = Vue.extend(Node)
             let nodeInstance = new ComponentNodeClass({
                 propsData: { 
-                    server: this.fetchServers(),
+                    // server: this.fetchServers(),
+                    server: node,
                     event: {}
                 }
             })
@@ -131,31 +109,111 @@ export default {
         tempgenerateNodeHtml() {
             return "<div style='border:1px solid black;background-color: blue;height:100%'>Node</div>"
         },
-        selectNode() {
-            // eslint-disable-next-line
-            this.selectedNode = {"Server":{"id":"1","name":"self","url":"https:\/\/127.0.0.1","authkey":"HMg9FljTPLk5V1U8i5oQEh4HpYa1oMYpEKoZ1wby","org_id":"1","push":false,"pull":true,"push_sightings":false,"lastpulledid":null,"lastpushedid":null,"organization":null,"remote_org_id":"1","publish_without_email":false,"unpublish_event":false,"self_signed":true,"pull_rules":"{\"tags\":{\"OR\":[\"tlp:red\"],\"NOT\":[]},\"orgs\":{\"OR\":[],\"NOT\":[]},\"url_params\":\"\"}","push_rules":"{\"tags\":{\"OR\":[],\"NOT\":[]},\"orgs\":{\"OR\":[],\"NOT\":[]}}","cert_file":null,"client_cert_file":null,"internal":false,"skip_proxy":false,"caching_enabled":true,"priority":"1","cache_timestamp":"1580137725"},"Organisation":{"id":"1","name":"ORGNAME","uuid":"5e29617d-f100-4370-92f9-50aaa4a3d503","nationality":"Not specified","sector":null,"type":"ADMIN"},"RemoteOrg":{"id":"1","name":"ORGNAME","uuid":"5e29617d-f100-4370-92f9-50aaa4a3d503","nationality":"Not specified","sector":null,"type":"ADMIN"},"User":[]},{"Server":{"id":"2","name":"self-wrong","url":"http:\/\/127.0.0.1:8443","authkey":"HMg9FljTPLk5V1U8i5oQEh4HpYa1oMYpEKoZ1wby","org_id":"1","push":false,"pull":false,"push_sightings":false,"lastpulledid":null,"lastpushedid":null,"organization":null,"remote_org_id":"1","publish_without_email":false,"unpublish_event":false,"self_signed":false,"pull_rules":"{\"tags\":{\"OR\":[],\"NOT\":[]},\"orgs\":{\"OR\":[],\"NOT\":[]},\"url_params\":\"\"}","push_rules":"{\"tags\":{\"OR\":[],\"NOT\":[]},\"orgs\":{\"OR\":[],\"NOT\":[]}}","cert_file":null,"client_cert_file":null,"internal":false,"skip_proxy":false,"caching_enabled":false,"priority":"2","cache_timestamp":false},"Organisation":{"id":"1","name":"ORGNAME","uuid":"5e29617d-f100-4370-92f9-50aaa4a3d503","nationality":"Not specified","sector":null,"type":"ADMIN"},"RemoteOrg":{"id":"1","name":"ORGNAME","uuid":"5e29617d-f100-4370-92f9-50aaa4a3d503","nationality":"Not specified","sector":null,"type":"ADMIN"},"User":[]}
+        selectNode(node) {
+            this.selectedNode = node
+        },
+        constructNetwork() {
+            const vm = this
+            let eventHandlers = {
+                nodeClick: function(node) {
+                    vm.selectNode(node)
+                    vm.toggleInfoSideBar(true)
+                }
+            }
+            let htmlTemplateGenerator = {
+                nodeHtml: function(node) {
+                    // return vm.tempgenerateNodeHtml(node)
+                    return vm.generateNodeHtml(node)
+                }
+            }
+            if (this.$refs["networkContainer"] !== undefined) {
+                d3Network.constructNetwork(
+                    "#network",
+                    this.$refs["networkContainer"].getBoundingClientRect(),
+                    this.d3data,
+                    htmlTemplateGenerator,
+                    eventHandlers
+                )
+            }
+        },
+        refreshServers(init_only=false) {
+            this.refreshInProgress = true
+            return new Promise((resolve, reject) => {
+                this.$store.dispatch("servers/getAllServers", {init_only: init_only})
+                    .then(() => {
+                        resolve()
+                    })
+                    .catch(error => {
+                        this.$bvToast.toast(error, {
+                            title: "Could not fetch server index",
+                            variant: "danger",
+                        })
+                        reject()
+                    })
+                    .finally(() => {
+                        this.refreshInProgress = false
+                    })
+            })
+        },
+        refreshConnections(init_only=false) {
+            this.refreshInProgress = true
+            return new Promise((resolve, reject) => {
+                this.$store.dispatch("connections/getConnections", {init_only: init_only})
+                    .then(() => {
+                        resolve()
+                    })
+                    .catch(error => {
+                        this.$bvToast.toast(error, {
+                            title: "Could not fetch connection index",
+                            variant: "danger",
+                        })
+                        reject()
+                    })
+                    .finally(() => {
+                        this.refreshInProgress = false
+                    })
+            })
+        },
+        refreshAllServerOnlineStatus() {
+            this.refreshInProgress = true
+            return new Promise((resolve, reject) => {
+                this.$store.dispatch("servers/refreshAllConnectionState")
+                    .then(() => {
+                        resolve()
+                    })
+                    .catch(error => {
+                        this.$bvToast.toast(error, {
+                            title: "Could not reach Server",
+                            variant: "danger",
+                        })
+                        reject()
+                    })
+                    .finally(() => {
+                        this.refreshInProgress = false
+                    })
+            })
+        },
+        syncWithStore() {
+            this.d3data.nodes = JSON.parse(JSON.stringify(this.getServers))
+            this.d3data.links = JSON.parse(JSON.stringify(this.getConnections))
+            this.d3data.links.forEach(link => { // remap source -> origin
+                link.origin = link.source
+                link.source = parseInt(link.origin.id)
+                link.target = parseInt(link.destination.Server.id)
+                link.id = `${link.source}-${link.target}`
+            })
         }
     },
     mounted() {
-        const vm = this
-        let eventHandlers = {
-            nodeClick: function(node) {
-                vm.selectNode(node)
-                vm.toggleInfoSideBar(true)
-            }
-        }
-        let htmlTemplateGenerator = {
-            nodeHtml: function(node) {
-                return vm.tempgenerateNodeHtml(node)
-            }
-        }
-        d3Network.constructNetwork(
-            "#network",
-            this.$refs["networkContainer"].getBoundingClientRect(),
-            this.d3data,
-            htmlTemplateGenerator,
-            eventHandlers
-        )
+        Promise.all([
+            this.refreshServers(true),
+            this.refreshConnections(true),
+            this.refreshAllServerOnlineStatus()
+        ])
+            .then(() => {
+                this.syncWithStore()
+                this.constructNetwork()
+            })
     }
 }
 </script>

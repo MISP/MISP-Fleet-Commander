@@ -8,7 +8,7 @@
         <b-tabs
             card fill small
         >
-            <b-tab title="Diagnostic" no-body active>
+            <b-tab title="Info" no-body active>
                 <b-table
                     striped small
                     class="mb-0"
@@ -20,11 +20,11 @@
                 >
                 </b-table>
             </b-tab>
-            <b-tab title="Events">
-                Event pic and data
+            <b-tab title="Diagnostic">
+                Diagnostic
             </b-tab>
-            <b-tab title="Galaxies" disabled>
-                Galaxy data
+            <b-tab title="Content">
+                Event pic and data
             </b-tab>
             <template v-slot:tabs-end>
                 <b-btn-close
@@ -35,14 +35,26 @@
         </b-tabs>
 
         <template v-slot:footer>
-            <small class="text-muted">Last updated 3 mins ago</small>
+            <timeSinceRefresh
+                v-if="server.status"
+                :key="server.id"
+                :timestamp="server.status.timestamp"
+            ></timeSinceRefresh>
+            <!-- <timeSinceRefresh
+                :timestamp="server.server_info.query_result.timestamp"
+            ></timeSinceRefresh> -->
         </template>
     </b-card>
 </template>
 
 <script>
+import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
+
 export default {
     name: "TheInfoCard",
+    components: {
+        timeSinceRefresh
+    },
     props: {
         server: {
             type: Object,
@@ -66,40 +78,55 @@ export default {
             return Object.keys(this.server).length > 0
         },
         serverInfoTable() {
-            let items = [
+            let items = []
+            items = items.concat([
                 {
                     property: "Name",
-                    value: this.server.Server.name
+                    value: this.server.name
                 },
                 {
                     property: "URL",
-                    value: this.server.Server.url
+                    value: this.server.url
                 },
                 {
                     property: "Auth key",
-                    value: this.server.Server.authkey
-                },
-                {
-                    property: "Push",
-                    value: this.server.Server.push
-                },
-                {
-                    property: "Pull",
-                    value: this.server.Server.pull
-                },
-                {
-                    property: "Org. name",
-                    value: this.server.Organisation.name
-                },
-                {
-                    property: "Org. uuid",
-                    value: this.server.Organisation.uuid
-                },
-                {
-                    property: "Org. type",
-                    value: this.server.Organisation.type
+                    value: this.server.authkey
                 }
-            ]
+            ])
+            if (
+                this.server.server_info !== undefined &&
+                this.server.server_info.query_result.serverUser.Organisation !== undefined
+            ) {
+                items = items.concat([
+                    {
+                        property: "Org. name",
+                        value: this.server.server_info.query_result.serverUser.Organisation.name
+                    },
+                    {
+                        property: "Org. uuid",
+                        value: this.server.server_info.query_result.serverUser.Organisation.uuid
+                    },
+                    {
+                        property: "Org. type",
+                        value: this.server.server_info.query_result.serverUser.Organisation.type
+                    }
+                ])
+            } else {
+                items = items.concat([
+                    {
+                        property: "Org. name",
+                        value: ""
+                    },
+                    {
+                        property: "Org. uuid",
+                        value: ""
+                    },
+                    {
+                        property: "Org. type",
+                        value: ""
+                    }
+                ])
+            }
             return items
         },
     },
