@@ -1,8 +1,8 @@
 <template>
     <div class="nodeServer">
         <div class="node-container shadow-sm d-inline-block">
-            <div class="card">
-                <div class="card-header">
+            <b-card no-body>
+                <template v-slot:header>
                     <div class="top-header d-flex flex-wrap">
                         <div class="d-flex flex-wrap align-items-center mr-1">
                             <span class="server-name mr-1">
@@ -22,49 +22,42 @@
                             <span class="badge badge-success">Online</span>
                         </div>
                     </div>
-                    <ul class="nav nav-tabs card-header-tabs">
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">Diagnostic</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link active" href="#">Usage</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">User</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">Sync</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link disabled" href="#" tabindex="-1" aria-disabled="true"
-                            title="Only available when Sync test is enabled">Content</a>
-                        </li>
-                        <li class="nav-item ml-auto">
-                            <a class="nav-link disabled pb-0" href="#" style="pointer-events: auto;">
-                                <timeSinceRefresh :timestamp="server.server_info.timestamp"></timeSinceRefresh>
-                                <button type="button btn-sm" class="btn btn-link sync-btn p-0">
-                                    <i class="fas fa-sync"></i>
-                                </button>
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-                <div class="card-body">
-                    <ServerNodeUsage :usage="{}"></ServerNodeUsage>
-                    <ServerNodeDiagnostic :diagnostic="{}"></ServerNodeDiagnostic>
-                    <ServerNodeUser :user="{}"></ServerNodeUser>
-                    <ServerNodeSync :sync="{}"></ServerNodeSync>
-                    <ServerNodeContent :content="{}"></ServerNodeContent>
-                </div>
-            </div>
+                </template>
+                <b-tabs card nav-class="card-header-tabs" @input="tabChanged">
+                    <b-tab title="Diagnostic" active>
+                        <ServerNodeDiagnostic :diagnostic="{}"></ServerNodeDiagnostic>
+                    </b-tab>
+                    <b-tab title="Usage">
+                        <ServerNodeUsage :usage="{}"></ServerNodeUsage>
+                    </b-tab>
+                    <b-tab title="User">
+                        <ServerNodeUsage :usage="{}"></ServerNodeUsage>
+                        <ServerNodeUser :user="{}"></ServerNodeUser>
+                    </b-tab>
+                    <b-tab title="Sync">
+                        <ServerNodeSync :sync="{}"></ServerNodeSync>
+                    </b-tab>
+                    <b-tab title="Content">
+                        <ServerNodeContent :content="{}"></ServerNodeContent>
+                    </b-tab>
+                    <template v-slot:tabs-end>
+                        <a class="nav-link disabled ml-auto border-0" href="#" style="pointer-events: auto;">
+                            <timeSinceRefresh :timestamp="server.server_info.timestamp" :clockNoMargin="true"></timeSinceRefresh>
+                            <button type="button btn-sm" class="btn btn-link sync-btn p-0">
+                                <i class="fas fa-sync"></i>
+                            </button>
+                        </a>
+                    </template>
+                </b-tabs>
+            </b-card>
         </div>
     </div>
 </template>
 
 <script>
+/* eslint-disable vue/no-unused-components */
 import loaderPlaceholder from "@/components/ui/elements/loaderPlaceholder.vue"
 import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
-import connectionsSummary from "@/views/servers/elements/connectionsSummary.vue"
 import iconButton from "@/components/ui/elements/iconButton.vue"
 import ServerNodeDiagnostic from "@/views/serverNetwork/elements/nodeElements/ServerNodeDiagnostic.vue"
 import ServerNodeUsage from "@/views/serverNetwork/elements/nodeElements/ServerNodeUsage.vue"
@@ -89,9 +82,24 @@ export default {
     computed: {
     },
     methods: {
+        tabChanged() {
+            this.$nextTick(() => {
+                this.resizeParentForeignObject()
+            })
+        },
+        resizeParentForeignObject() { // sync SVG's ForeignObject dimensions with those of this child node 
+            const divBoundingRect = this.$el.getBoundingClientRect()
+            const parentSVG = this.$el.closest("foreignObject.nodeFO")
+            parentSVG.setAttribute("width", `${divBoundingRect.width}px`)
+            parentSVG.setAttribute("height", `${divBoundingRect.height}px`)
+        }
     },
     props: {
         server: {
+            type: Object,
+            required: true
+        },
+        d3Node: {
             type: Object,
             required: true
         }
@@ -104,9 +112,6 @@ export default {
     width: unset;
 }
 
-.nodeServer > .node-container, .nodeServer > .node-container > div.card {
-}
-
 .nodeServer > .node-container > div.card > div.card-body {
     flex-grow: 1;
 }
@@ -116,6 +121,10 @@ export default {
 }
 
 .node-container > .card > .card-header {
+    border-bottom: 0;
+}
+
+.node-container > .card > .card-header, .node-container > .card > .tabs >>> .card-header {
     padding: 0 0.1rem;
     padding-bottom: 0.3rem;
 }
@@ -126,22 +135,22 @@ export default {
     cursor: grab;
 }
 
-.node-container > .card > .card-header > .card-header-tabs {
+.node-container > .card > .tabs >>> .card-header > .card-header-tabs {
     margin-left: 0;
     margin-right: 0;
-    margin-bottom: -0.3rem;
+    margin-bottom: -0.33rem;
 }
 
-.node-container > .card > .card-header > .card-header-tabs > .nav-item {
+.node-container > .card > .tabs >>> .card-header > .card-header-tabs > .nav-item {
     margin-left: 0.1rem;
 }
 
-.node-container > .card > .card-header > .card-header-tabs > .nav-item > .nav-link {
+.node-container > .card > .tabs >>> .card-header > .card-header-tabs .nav-link {
     border-radius: 0.15rem;
     padding: 0.15rem 0.3rem;
 }
 
-.node-container > .card > .card-body {
+.node-container > .card > .tabs >>> .card-body {
     padding: 0.5rem 0;
 }
 

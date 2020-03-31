@@ -57,9 +57,9 @@ export default {
             .classed("nodeFO", true)
             .append("xhtml:div")
             .attr("data-vue-component", (selection, index, htmlNodes) => {
+                const d3Node = d3.select(`#node-${selection.id}`)
                 const htmlNode = htmlNodes[index]
-                const vm = componentGenerator.nodeComponent(selection, htmlNode)
-                resizeParentForeignObject(vm.$el)
+                componentGenerator.nodeComponent(selection, htmlNode, d3Node)
             })
 
         simulation
@@ -116,14 +116,6 @@ export default {
                 .on("start", dragstarted)
                 .on("drag", dragged)
                 .on("end", dragended)
-        }
-
-        // sync svgForeignObject dimensions with those of its html child 
-        function resizeParentForeignObject(htmlNode) {
-            const divBoundingRect = htmlNode.getBoundingClientRect()
-            const parentSVG = htmlNode.closest("foreignObject.nodeFO")
-            parentSVG.setAttribute("width", `${divBoundingRect.width}px`)
-            parentSVG.setAttribute("height", `${divBoundingRect.height}px`)
         }
 
         function getNodeHalfDimension(node, dimension) {
