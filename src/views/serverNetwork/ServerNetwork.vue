@@ -93,12 +93,13 @@ export default {
             this.infoCard.position.left = "unset"
             this.infoCard.position.right = "1em"
         },
-        generateNodeComponent(node, htmlNode, d3Node) {
+        generateNodeComponent(node, htmlNode, d3Node, d3SVGNode) {
             let ComponentServerNodeClass = Vue.extend(ServerNode)
             let nodeInstance = new ComponentServerNodeClass({
                 propsData: { 
                     server: node,
-                    d3Node: d3Node
+                    d3Node: d3Node,
+                    d3SVGNode: d3SVGNode
                 }
             })
             // nodeInstance.$slots.default = ['Click me!']
@@ -117,8 +118,8 @@ export default {
                 }
             }
             let componentGenerator = {
-                nodeComponent: function(node, htmlNode, d3Node) {
-                    return vm.generateNodeComponent(node, htmlNode, d3Node)
+                nodeComponent: function(node, htmlNode, d3Node, d3SVGNode) {
+                    return vm.generateNodeComponent(node, htmlNode, d3Node, d3SVGNode)
                 }
             }
             if (this.$refs["networkContainer"] !== undefined) {

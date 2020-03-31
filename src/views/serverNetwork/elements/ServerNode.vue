@@ -56,6 +56,7 @@
 
 <script>
 /* eslint-disable vue/no-unused-components */
+import * as d3 from "d3"
 import loaderPlaceholder from "@/components/ui/elements/loaderPlaceholder.vue"
 import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
 import iconButton from "@/components/ui/elements/iconButton.vue"
@@ -88,10 +89,12 @@ export default {
             })
         },
         resizeParentForeignObject() { // sync SVG's ForeignObject dimensions with those of this child node 
+            const tranformScale = d3.zoomTransform(this.d3SVGNode).k
+            const tranformScaleInverse = 1 / tranformScale
             const divBoundingRect = this.$el.getBoundingClientRect()
             const parentSVG = this.$el.closest("foreignObject.nodeFO")
-            parentSVG.setAttribute("width", `${divBoundingRect.width}px`)
-            parentSVG.setAttribute("height", `${divBoundingRect.height}px`)
+            parentSVG.setAttribute("width", `${divBoundingRect.width * tranformScaleInverse}px`)
+            parentSVG.setAttribute("height", `${divBoundingRect.height * tranformScaleInverse}px`)
         }
     },
     props: {
@@ -101,6 +104,10 @@ export default {
         },
         d3Node: {
             type: Object,
+            required: true
+        },
+        d3SVGNode: {
+            type: SVGSVGElement,
             required: true
         }
     }

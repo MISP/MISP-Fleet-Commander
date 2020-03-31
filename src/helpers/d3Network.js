@@ -27,6 +27,8 @@ export default {
         const zoom = d3.zoom()
             .scaleExtent([.1, 4])
             .on("zoom", function() { container.attr("transform", d3.event.transform) })
+        // window.svg = svg
+        // window.d3 = d3
         svg.call(zoom)
 
         const link = container.append("g")
@@ -58,8 +60,9 @@ export default {
             .append("xhtml:div")
             .attr("data-vue-component", (selection, index, htmlNodes) => {
                 const d3Node = d3.select(`#node-${selection.id}`)
+                const d3SVGNode = svg.node()
                 const htmlNode = htmlNodes[index]
-                componentGenerator.nodeComponent(selection, htmlNode, d3Node)
+                componentGenerator.nodeComponent(selection, htmlNode, d3Node, d3SVGNode)
             })
 
         simulation
