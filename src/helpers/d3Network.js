@@ -2,7 +2,7 @@
 import * as d3 from "d3"
 
 export default {
-    constructNetwork(containerId, containerBoundingRect, d3data, htmlTemplateGenerator, eventHandlers) {
+    constructNetwork(containerId, containerBoundingRect, d3data, componentGenerator, eventHandlers) {
         const boundingRect = containerBoundingRect
         const nodeHeight = 300
         const nodeWidth = 350
@@ -54,9 +54,13 @@ export default {
             .attr("id", d => `node-${d.id}`)
             .attr("height", nodeHeight)
             .attr("width", nodeWidth)
+            .classed("nodeFO", true)
             .append("xhtml:div")
-            .html(d => htmlTemplateGenerator.nodeHtml(d))
-            .call(resizeForeignObject)
+            .attr("data-vue-component", (selection, index, htmlNodes) => {
+                const htmlNode = htmlNodes[index]
+                const vm = componentGenerator.nodeComponent(selection, htmlNode)
+                resizeParentForeignObject(vm.$el)
+            })
 
         simulation
             .nodes(d3data.nodes)
@@ -94,7 +98,6 @@ export default {
 
             // Add support of the drag handle
             function dragfilter() {
-                return true
                 const handleClass = "top-header"
                 const maxDepth = 5
                 for (let index = 0; index < maxDepth; index++) {
@@ -116,13 +119,11 @@ export default {
         }
 
         // sync svgForeignObject dimensions with those of its html child 
-        function resizeForeignObject(selection) {
-            selection.selectAll(".node-container").nodes().forEach((nodeContainer) => {
-                const divBoundingRect = nodeContainer.getBoundingClientRect()
-                const parentSVG = nodeContainer.parentNode.parentNode.parentNode // FIXME: Find a better way to select parent SVG
-                parentSVG.setAttribute("width", `${divBoundingRect.width}px`)
-                parentSVG.setAttribute("height", `${divBoundingRect.height}px`)
-            })
+        function resizeParentForeignObject(htmlNode) {
+            const divBoundingRect = htmlNode.getBoundingClientRect()
+            const parentSVG = htmlNode.closest("foreignObject.nodeFO")
+            parentSVG.setAttribute("width", `${divBoundingRect.width}px`)
+            parentSVG.setAttribute("height", `${divBoundingRect.height}px`)
         }
 
         function getNodeHalfDimension(node, dimension) {

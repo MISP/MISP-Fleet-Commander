@@ -1,72 +1,62 @@
 <template>
     <div class="nodeServer">
         <div class="node-container shadow-sm d-inline-block">
-            <b-card no-body>
-                <b-tabs card>
-                <b-tab title="Tab 1" active>
-                    <b-card-text>Tab contents 1</b-card-text>
-                </b-tab>
-                <b-tab title="Tab 2">
-                    <b-card-text>Tab contents 2</b-card-text>
-                </b-tab>
-                </b-tabs>
-            </b-card>
-                <!-- <div class="card">
-                    <div class="card-header">
-                        <div class="top-header d-flex flex-wrap">
-                            <div class="d-flex flex-wrap align-items-center mr-1">
-                                <span class="server-name mr-1">
-                                    <i class="fa fa-server"></i>
-                                    <span class="text-monospace">
-                                        {{ server.name }}
-                                    </span>
+            <div class="card">
+                <div class="card-header">
+                    <div class="top-header d-flex flex-wrap">
+                        <div class="d-flex flex-wrap align-items-center mr-1">
+                            <span class="server-name mr-1">
+                                <i class="fa fa-server"></i>
+                                <span class="text-monospace">
+                                    {{ server.name }}
                                 </span>
-                                <span class="server-url">
-                                    <a href="#" class="text-muted font-weight-light text-wrap">
-                                       {{ server.url }}
-                                        <sup class="fa fa-external-link-alt text-muted"></sup>
-                                    </a>
-                                </span>
-                            </div>
-                            <div class="ml-auto">
-                                <span class="badge badge-success">Online</span>
-                            </div>
-                        </div>
-                        <ul class="nav nav-tabs card-header-tabs">
-                            <li class="nav-item">
-                                <a class="nav-link" href="#">Diagnostic</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link active" href="#">Usage</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="#">User</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="#">Sync</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link disabled" href="#" tabindex="-1" aria-disabled="true"
-                                title="Only available when Sync test is enabled">Content</a>
-                            </li>
-                            <li class="nav-item ml-auto">
-                                <a class="nav-link disabled pb-0" href="#" style="pointer-events: auto;">
-                                    <timeSinceRefresh :timestamp="server.server_info.timestamp"></timeSinceRefresh>
-                                    <button type="button btn-sm" class="btn btn-link sync-btn p-0">
-                                        <i class="fas fa-sync"></i>
-                                    </button>
+                            </span>
+                            <span class="server-url">
+                                <a href="#" class="text-muted font-weight-light text-wrap">
+                                    {{ server.url }}
+                                    <sup class="fa fa-external-link-alt text-muted"></sup>
                                 </a>
-                            </li>
-                        </ul>
+                            </span>
+                        </div>
+                        <div class="ml-auto">
+                            <span class="badge badge-success">Online</span>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <ServerNodeUsage :usage="{}"></ServerNodeUsage>
-                        <ServerNodeDiagnostic :diagnostic="{}"></ServerNodeDiagnostic>
-                        <ServerNodeUser :user="{}"></ServerNodeUser>
-                        <ServerNodeSync :sync="{}"></ServerNodeSync>
-                        <ServerNodeContent :content="{}"></ServerNodeContent>
-                    </div>
-                </div> -->
+                    <ul class="nav nav-tabs card-header-tabs">
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">Diagnostic</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#">Usage</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">User</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">Sync</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link disabled" href="#" tabindex="-1" aria-disabled="true"
+                            title="Only available when Sync test is enabled">Content</a>
+                        </li>
+                        <li class="nav-item ml-auto">
+                            <a class="nav-link disabled pb-0" href="#" style="pointer-events: auto;">
+                                <timeSinceRefresh :timestamp="server.server_info.timestamp"></timeSinceRefresh>
+                                <button type="button btn-sm" class="btn btn-link sync-btn p-0">
+                                    <i class="fas fa-sync"></i>
+                                </button>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-body">
+                    <ServerNodeUsage :usage="{}"></ServerNodeUsage>
+                    <ServerNodeDiagnostic :diagnostic="{}"></ServerNodeDiagnostic>
+                    <ServerNodeUser :user="{}"></ServerNodeUser>
+                    <ServerNodeSync :sync="{}"></ServerNodeSync>
+                    <ServerNodeContent :content="{}"></ServerNodeContent>
+                </div>
+            </div>
         </div>
     </div>
 </template>
@@ -83,14 +73,14 @@ import ServerNodeSync from "@/views/serverNetwork/elements/nodeElements/ServerNo
 import ServerNodeContent from "@/views/serverNetwork/elements/nodeElements/ServerNodeContent.vue"
 
 export default {
-    name: "Node",
+    name: "ServerNode",
     components: {
-        // timeSinceRefresh,
-        // ServerNodeDiagnostic,
-        // ServerNodeUsage,
-        // ServerNodeUser,
-        // ServerNodeSync,
-        // ServerNodeContent
+        timeSinceRefresh,
+        ServerNodeDiagnostic,
+        ServerNodeUsage,
+        ServerNodeUser,
+        ServerNodeSync,
+        ServerNodeContent
     },
     data: function () {
         return {

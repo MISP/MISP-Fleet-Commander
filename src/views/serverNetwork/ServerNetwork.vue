@@ -53,7 +53,7 @@ export default {
         Layout,
         iconButton,
         TheInfoCard,
-        DraggableComponent
+        DraggableComponent,
     },
     data: function () {
         return {
@@ -93,21 +93,17 @@ export default {
             this.infoCard.position.left = "unset"
             this.infoCard.position.right = "1em"
         },
-        generateNodeHtml(node) {
-            let ComponentNodeClass = Vue.extend(ServerNode)
-            let nodeInstance = new ComponentNodeClass({
+        generateNodeComponent(node, htmlNode) {
+            let ComponentServerNodeClass = Vue.extend(ServerNode)
+            let nodeInstance = new ComponentServerNodeClass({
                 propsData: { 
-                    // server: this.fetchServers(),
                     server: node,
                     event: {}
                 }
             })
             // nodeInstance.$slots.default = ['Click me!']
-            nodeInstance.$mount() // pass nothing
-            return nodeInstance.$el.outerHTML
-        },
-        tempgenerateNodeHtml() {
-            return "<div style='border:1px solid black;background-color: blue;height:100%'>Node</div>"
+            nodeInstance.$mount(htmlNode)
+            return nodeInstance
         },
         selectNode(node) {
             this.selectedNode = node
@@ -120,10 +116,9 @@ export default {
                     vm.toggleInfoSideBar(true)
                 }
             }
-            let htmlTemplateGenerator = {
-                nodeHtml: function(node) {
-                    // return vm.tempgenerateNodeHtml(node)
-                    return vm.generateNodeHtml(node)
+            let componentGenerator = {
+                nodeComponent: function(node, htmlNode) {
+                    return vm.generateNodeComponent(node, htmlNode)
                 }
             }
             if (this.$refs["networkContainer"] !== undefined) {
@@ -131,7 +126,7 @@ export default {
                     "#network",
                     this.$refs["networkContainer"].getBoundingClientRect(),
                     this.d3data,
-                    htmlTemplateGenerator,
+                    componentGenerator,
                     eventHandlers
                 )
             }
