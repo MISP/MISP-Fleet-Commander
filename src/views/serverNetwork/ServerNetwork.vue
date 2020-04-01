@@ -33,6 +33,17 @@
                 :open.sync="infoCard.show"
             ></TheInfoCard>
         </DraggableComponent>
+
+        <div
+            class="position-absolute border"
+            :style="minimapPosition"
+        >
+            <NetworkMinimap
+                :network="d3data"
+                :networkSvgSelection="svg"
+                :redrawCount="minimapRedrawCount"
+            ></NetworkMinimap>
+        </div>
     </div>
 </Layout>
 </template>
@@ -43,6 +54,7 @@ import { mapState, mapGetters } from "vuex"
 import Layout from "@/components/layout/Layout.vue"
 import iconButton from "@/components/ui/elements/iconButton.vue"
 import ServerNode from "@/views/serverNetwork/elements/ServerNode.vue"
+import NetworkMinimap from "@/views/serverNetwork/elements/NetworkMinimap.vue"
 import TheInfoCard from "@/views/serverNetwork/elements/InfoCard.vue"
 import DraggableComponent from "@/components/ui/DraggableComponent.vue"
 import d3Network from "@/helpers/d3Network.js"
@@ -54,6 +66,7 @@ export default {
         iconButton,
         TheInfoCard,
         DraggableComponent,
+        NetworkMinimap
     },
     data: function () {
         return {
@@ -72,6 +85,9 @@ export default {
                 nodes: [],
                 links: []
             },
+            svg: null,
+            minimapPosition: {top: "unset", right: "unset", left: "30px", bottom: "30px"},
+            minimapRedrawCount: 0
         }
     },
     computed: {
@@ -115,6 +131,9 @@ export default {
                 nodeClick: function(node) {
                     vm.selectNode(node)
                     vm.toggleInfoSideBar(true)
+                },
+                refreshMinimap: function() {
+                    vm.minimapRedrawCount++
                 }
             }
             let componentGenerator = {
@@ -123,13 +142,14 @@ export default {
                 }
             }
             if (this.$refs["networkContainer"] !== undefined) {
-                d3Network.constructNetwork(
+                const network = d3Network.constructNetwork(
                     "#network",
                     this.$refs["networkContainer"].getBoundingClientRect(),
                     this.d3data,
                     componentGenerator,
                     eventHandlers
                 )
+                this.svg = network.svg
             }
         },
         refreshServers(init_only=false) {

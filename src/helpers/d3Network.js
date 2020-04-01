@@ -12,7 +12,7 @@ export default {
         const svg = d3.select(containerId).append("svg")
             .attr("width", width)
             .attr("height", height)
-        const container = svg.append("g")
+        const container = svg.append("g").attr("class", "zoomContainer")
 
         const simulation = d3.forceSimulation(d3data.nodes)
             .alphaDecay(0.35)
@@ -27,8 +27,7 @@ export default {
         const zoom = d3.zoom()
             .scaleExtent([.1, 4])
             .on("zoom", function() { container.attr("transform", d3.event.transform) })
-        // window.svg = svg
-        // window.d3 = d3
+            .on("end", function() { eventHandlers.refreshMinimap() })
         svg.call(zoom)
 
         const link = container.append("g")
@@ -76,6 +75,14 @@ export default {
 
                 node.attr("transform", d => "translate(" + d.x + "," + d.y + ")")
             })
+            .on("end", () => {
+                eventHandlers.refreshMinimap()
+            })
+
+        return {
+            svg: svg,
+            simulation: simulation
+        }
 
         function drag(simulation) {
             function dragstarted(d) {
