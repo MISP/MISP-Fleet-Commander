@@ -75,25 +75,21 @@ export default {
             var screenTop = -(zoomBCR.y - rootSvgBCR.y) / transform.k
             var screenHeight = rootSvgBCR.height / transform.k
 
+            // view can be used to adjust the screen dimension
             let viewLeft = screenLeft
             let viewWidth = screenWidth
             let viewTop = screenTop
             let viewHeight = screenHeight
 
-            let screenXRatio = viewLeft / zoomBB.width
-            let screenYRatio = viewTop / zoomBB.height
-            let screenWidthRatio = viewWidth / zoomBB.width
-            let screenHeightRatio = viewHeight / zoomBB.height
+            let viewXRatio = viewLeft / zoomBB.width
+            let viewYRatio = viewTop / zoomBB.height
+            let viewWidthRatio = viewWidth / zoomBB.width
+            let viewHeightRatio = viewHeight / zoomBB.height
 
-            // screenXRatio = Math.max(0, screenXRatio)
-            // screenYRatio = Math.max(0, screenYRatio)
-            // screenWidthRatio = Math.min(1, screenWidthRatio)
-            // screenHeightRatio = Math.min(1, screenHeightRatio)
-
-            this.viewPosition.x = screenXRatio * svgWidth
-            this.viewPosition.y = screenYRatio * svgHeight
-            this.viewPosition.width = screenWidthRatio * svgWidth
-            this.viewPosition.height = screenHeightRatio * svgHeight
+            this.viewPosition.x = viewXRatio * svgWidth
+            this.viewPosition.y = viewYRatio * svgHeight
+            this.viewPosition.width = viewWidthRatio * svgWidth
+            this.viewPosition.height = viewHeightRatio * svgHeight
         },
         getRelativeNodePosition(node) {
             if (this.svgNetworkNode !== null && this.$refs["svgMap"] !== undefined) {
