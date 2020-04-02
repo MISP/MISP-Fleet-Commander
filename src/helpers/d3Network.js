@@ -81,7 +81,8 @@ export default {
 
         return {
             svg: svg,
-            simulation: simulation
+            simulation: simulation,
+            zoom: zoom
         }
 
         function drag(simulation) {

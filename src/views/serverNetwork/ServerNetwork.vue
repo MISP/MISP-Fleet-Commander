@@ -41,6 +41,7 @@
             <NetworkMinimap
                 :network="d3data"
                 :networkSvgSelection="svg"
+                :zoom="zoom"
                 :redrawCount="minimapRedrawCount"
             ></NetworkMinimap>
         </div>
@@ -86,6 +87,7 @@ export default {
                 links: []
             },
             svg: null,
+            zoom: null,
             minimapPosition: {top: "unset", right: "unset", left: "30px", bottom: "30px"},
             minimapRedrawCount: 0
         }
@@ -150,6 +152,7 @@ export default {
                     eventHandlers
                 )
                 this.svg = network.svg
+                this.zoom = network.zoom
             }
         },
         refreshServers(init_only=false) {

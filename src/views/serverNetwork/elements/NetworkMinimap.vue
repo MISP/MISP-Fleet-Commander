@@ -1,16 +1,18 @@
 <template>
     <div class="minimap-container">
-        <svg v-if="svgRootNodeExists" :width="svg.width" :height="svg.height" ref="svgMap">
-            <rect
-                v-bind="viewPosition"
-                stroke-width="1px"
-                stroke="blue"
-                fill="none"
-            ></rect>
-            <g v-for="(node, index) in network.nodes" :key="index" :redrawCount="redrawCount">
+        <svg v-if="svgRootNodeExists" ref="svgMap" @click="handleMinimapClick">
+            <g ref="minimap-group-container" class="minimap-group-container" fill="white">
+                <g v-for="(node, index) in network.nodes" :key="index" :redrawCount="redrawCount">
+                    <rect
+                        v-bind="getRelativeNodePosition(node)"
+                        fill="red"
+                    ></rect>
+                </g>
                 <rect
-                    v-bind="getRelativeNodePosition(node)"
-                    fill="red"
+                    v-bind="viewPosition"
+                    stroke-width="1px"
+                    stroke="#0000ff"
+                    fill="#0000ff11"
                 ></rect>
             </g>
         </svg>
@@ -32,6 +34,9 @@ export default {
         },
         redrawCount: {
             type: Number,
+            required: true
+        },
+        zoom: {
             required: true
         }
     },
@@ -65,9 +70,14 @@ export default {
             const zoomBCR = zoomContainer.getBoundingClientRect()
             const rootSvgBCR = this.svgNetworkNode.getBoundingClientRect()
 
-            const svgMap = this.$refs["svgMap"].getBoundingClientRect()
-            const svgWidth = svgMap.width
-            const svgHeight = svgMap.height
+            const svgMap = this.$refs["svgMap"]
+            const svgMapBCR = this.$refs["svgMap"].getBoundingClientRect()
+            let svgWidth = svgMapBCR.width
+            let svgHeight = svgMapBCR.height
+            if (getComputedStyle(svgMap).transform.startsWith("matrix")) { // check if minimap is scaled through css
+                svgWidth /= 2
+                svgHeight /= 2
+            }
 
             // get the screen bounding box and convert into canvas space
             var screenLeft = -(zoomBCR.x - rootSvgBCR.x) / transform.k
@@ -123,23 +133,48 @@ export default {
                 return {
                     x: positionRatioZoomContainerX * svgWidth,
                     y: positionRatioZoomContainerY * svgHeight,
-                    // x: positionRatioMaxX * this.svg.width,
-                    // y: positionRatioMaxY * this.svg.height,
-                    // x: positionRatioViewportX * this.svg.width,
-                    // y: positionRatioViewportY * this.svg.height,
                     width: rectBaseWidth * svgWidth,
                     height: rectBaseHeight * svgHeight
                 }
             } else {
                 return {x: 0, y: 0, width: 1, height: 1}
             }
+        },
+        handleMinimapClick(mouseEvent) {
+            const svgMap = this.$refs["svgMap"].getBoundingClientRect()
+            const relativeX = mouseEvent.clientX - svgMap.left
+            const relativeY = mouseEvent.clientY - svgMap.top
+            const ratioX = relativeX / svgMap.width
+            const ratioY = relativeY / svgMap.height
+            this.moveZoom(ratioX, ratioY)
+        },
+        moveZoom(ratioX, ratioY) {
+            const svgNetworkTransform = d3.zoomTransform(this.svgNetworkNode)
+            const zoomContainer = this.svgNetworkNode.getElementsByClassName("zoomContainer")[0]
+            const zoomBCR = zoomContainer.getBoundingClientRect()
+            const adaptedRatioX = 0.5 - ratioX
+            const adaptedRatioY = 0.5 - ratioY
+            const transX = adaptedRatioX * (zoomBCR.width)
+            const transY = adaptedRatioY * (zoomBCR.height)
+            const zommTransform = d3.zoomIdentity.scale(1).translate(transX, transY)
+            // const zommTransform = d3.zoomIdentity.scale(svgNetworkTransform.k).translate(transX, transY)
+            this.networkSvgSelection.transition()
+                .duration(500)
+                .call(this.zoom.transform, zommTransform)
+                .on("end", () => {
+                    // console.log("end")
+                    // this.quickUpdate()
+                })
+        },
+        quickUpdate() {
+            this.$nextTick(() => {
+                this.updateViewPosition()
+            })
         }
     },
     watch: {
         redrawCount: function () {
-            this.$nextTick(() => {
-                this.updateViewPosition()
-            })
+            this.quickUpdate()
         },
     }
 }
@@ -149,11 +184,22 @@ export default {
 .minimap-container {
     width: 10vw;
     height: 10vh;
-    transition: width 0.2s, height 0.2s;
+    transition: width 0.1s, height 0.1s ease-out;
 }
 
 .minimap-container:hover {
-    width: 15vw;
-    height: 15vh;
+    width: 20vw;
+    height: 20vh;
+}
+
+.minimap-container svg {
+    width: 10vw;
+    height: 10vh;
+    transition: transform 0.1s ease-out;
+    transform-origin: top left;
+}
+
+.minimap-container:hover svg {
+    transform: scale(2, 2);
 }
 </style>
