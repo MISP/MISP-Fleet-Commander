@@ -2,14 +2,14 @@
 import * as d3 from "d3"
 
 export default {
-    constructNetwork(containerId, containerBoundingRect, d3data, componentGenerator, eventHandlers) {
+    constructNetwork(svgNode, containerBoundingRect, d3data, componentGenerator, eventHandlers) {
         const boundingRect = containerBoundingRect
         const nodeHeight = 300
         const nodeWidth = 350
         const width = boundingRect.width
         const height = boundingRect.height
 
-        const svg = d3.select(containerId).append("svg")
+        const svg = d3.select(svgNode)
             .attr("width", width)
             .attr("height", height)
         const container = svg.append("g").attr("class", "zoomContainer")
@@ -80,7 +80,7 @@ export default {
             })
 
         return {
-            svg: svg,
+            svgSelection: svg,
             simulation: simulation,
             zoom: zoom
         }

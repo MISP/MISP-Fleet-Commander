@@ -19,9 +19,19 @@
                         icon="window-restore"
                     ></iconButton>
                 </b-dropdown-item>
+                 <b-dropdown-item
+                    @click="zoomFit"
+                >
+                    <iconButton
+                        text="Fit network in the view"
+                        icon="expand"
+                    ></iconButton>
+                </b-dropdown-item>
             </b-dropdown>
         </div>
-        <div id="network" ref="networkContainer" class="w-100 h-100"></div>
+        <div ref="networkContainer" class="w-100 h-100">
+            <svg ref="networkSVG"></svg>
+        </div>
         <DraggableComponent
             class="right-panel"
             :positions.sync="infoCard.position"
@@ -39,10 +49,14 @@
             :style="minimapPosition"
         >
             <NetworkMinimap
+                v-if="svgSelection !== null"
+                ref="minimap"
                 :network="d3data"
-                :networkSvgSelection="svg"
+                :svgRootNode="svg"
+                :networkSvgSelection="svgSelection"
                 :zoom="zoom"
                 :redrawCount="minimapRedrawCount"
+                :selectedNode="selectedNode"
             ></NetworkMinimap>
         </div>
     </div>
@@ -87,8 +101,9 @@ export default {
                 links: []
             },
             svg: null,
+            svgSelection: null,
             zoom: null,
-            minimapPosition: {top: "unset", right: "unset", left: "30px", bottom: "30px"},
+            minimapPosition: {top: "unset", right: "unset", left: "20px", bottom: "20px"},
             minimapRedrawCount: 0
         }
     },
@@ -110,6 +125,9 @@ export default {
             this.infoCard.position.top = "4em"
             this.infoCard.position.left = "unset"
             this.infoCard.position.right = "1em"
+        },
+        zoomFit() {
+            this.$refs["minimap"].zoomFit()
         },
         generateNodeComponent(node, htmlNode, d3Node, d3SVGNode) {
             let ComponentServerNodeClass = Vue.extend(ServerNode)
@@ -145,13 +163,13 @@ export default {
             }
             if (this.$refs["networkContainer"] !== undefined) {
                 const network = d3Network.constructNetwork(
-                    "#network",
+                    this.$refs["networkSVG"],
                     this.$refs["networkContainer"].getBoundingClientRect(),
                     this.d3data,
                     componentGenerator,
                     eventHandlers
                 )
-                this.svg = network.svg
+                this.svgSelection = network.svgSelection
                 this.zoom = network.zoom
             }
         },
@@ -224,6 +242,7 @@ export default {
         }
     },
     mounted() {
+        this.svg = this.$refs["networkSVG"]
         Promise.all([
             this.refreshServers(true),
             this.refreshConnections(true),

@@ -1,19 +1,14 @@
 <template>
     <div class="minimap-container">
-        <svg v-if="svgRootNodeExists" ref="svgMap" @click="handleMinimapClick">
-            <g ref="minimap-group-container" class="minimap-group-container" fill="white">
+        <svg ref="svgMap">
+            <g ref="minimap-group-container" class="minimap-group-container" fill="white" :transform="`translate(${minimapGroupPosition.x}, ${minimapGroupPosition.y})`">
                 <g v-for="(node, index) in network.nodes" :key="index" :redrawCount="redrawCount">
                     <rect
                         v-bind="getRelativeNodePosition(node)"
-                        fill="red"
+                        :fill="node.status.error ? 'red' : 'green'"
+                        :class="['server', selectedNode.id == node.id ? 'selected' : '']"
                     ></rect>
                 </g>
-                <rect
-                    v-bind="viewPosition"
-                    stroke-width="1px"
-                    stroke="#0000ff"
-                    fill="#0000ff11"
-                ></rect>
             </g>
         </svg>
     </div>
@@ -29,8 +24,17 @@ export default {
             type: Object,
             required: true
         },
-        networkSvgSelection: {
+        selectedNode: {
+            type: Object,
             required: true
+        },
+        svgRootNode: {
+            type: SVGSVGElement,
+            required: true
+        },
+        networkSvgSelection: {
+            required: true,
+            type: Object
         },
         redrawCount: {
             type: Number,
@@ -44,31 +48,32 @@ export default {
         return {
             svg: {
                 width: "10vw",
-                height: "10vh"
+                height: "10vh",
+                realWidth: null,
+                realHeight: null
             },
             viewPosition: {
                 x: 5,
                 y: 5,
                 width: 10,
                 height: 10
-            }
+            },
+            minimapGroupPosition: {
+                x: 0,
+                y: 0
+            },
+            brush: null
         }
     },
     computed: {
-        svgRootNodeExists() {
-            return this.networkSvgSelection !== null
-        },
-        svgNetworkNode() {
-            return this.svgRootNodeExists ? this.networkSvgSelection.node() : null
-        }
     },
     methods: {
-        updateViewPosition() {
-            const transform = d3.zoomTransform(this.svgNetworkNode)
-            const zoomContainer = this.svgNetworkNode.getElementsByClassName("zoomContainer")[0]
+        updateBrushPosition() {
+            const transform = d3.zoomTransform(this.svgRootNode)
+            const zoomContainer = this.svgRootNode.getElementsByClassName("zoomContainer")[0]
             const zoomBB = zoomContainer.getBBox()
             const zoomBCR = zoomContainer.getBoundingClientRect()
-            const rootSvgBCR = this.svgNetworkNode.getBoundingClientRect()
+            const rootSvgBCR = this.svgRootNode.getBoundingClientRect()
 
             const svgMap = this.$refs["svgMap"]
             const svgMapBCR = this.$refs["svgMap"].getBoundingClientRect()
@@ -96,86 +101,116 @@ export default {
             let viewWidthRatio = viewWidth / zoomBB.width
             let viewHeightRatio = viewHeight / zoomBB.height
 
-            this.viewPosition.x = viewXRatio * svgWidth
-            this.viewPosition.y = viewYRatio * svgHeight
-            this.viewPosition.width = viewWidthRatio * svgWidth
-            this.viewPosition.height = viewHeightRatio * svgHeight
+            this.viewPosition.x = viewXRatio * svgWidth * this.minimapGroupPosition.ratioX + this.minimapGroupPosition.x
+            this.viewPosition.y = viewYRatio * svgHeight * this.minimapGroupPosition.ratioY + this.minimapGroupPosition.y
+            this.viewPosition.width = viewWidthRatio * svgWidth * this.minimapGroupPosition.ratioX
+            this.viewPosition.height = viewHeightRatio * svgHeight * this.minimapGroupPosition.ratioY
+
+            d3.select(this.$refs["svgMap"]).select(".brush")
+                .call(this.brush.move, [[this.viewPosition.x, this.viewPosition.y], [this.viewPosition.x + this.viewPosition.width, this.viewPosition.y + this.viewPosition.height]])
         },
         getRelativeNodePosition(node) {
-            if (this.svgNetworkNode !== null && this.$refs["svgMap"] !== undefined) {
+            if (this.$refs["svgMap"] !== undefined) {
                 const svgMap = this.$refs["svgMap"].getBoundingClientRect()
                 const svgWidth = svgMap.width
                 const svgHeight = svgMap.height
-                const svgNetworkTransform = d3.zoomTransform(this.svgNetworkNode)
-                const zoomContainer = this.svgNetworkNode.getElementsByClassName("zoomContainer")[0]
+                const zoomContainer = this.svgRootNode.getElementsByClassName("zoomContainer")[0]
                 const zoomBB = zoomContainer.getBBox()
-                const zoomBCR = zoomContainer.getBoundingClientRect()
-                const nodeBCR = d3.select(`#node-${node.id}`).node().getBoundingClientRect()
                 const nodeBB = d3.select(`#node-${node.id}`).node().getBBox()
-                const rootSVGBoundingRect = this.svgNetworkNode.getBoundingClientRect()
                 
                 const rectBaseWidth = nodeBB.width / zoomBB.width
                 const rectBaseHeight = nodeBB.height / zoomBB.height
 
-                const maxX = Math.max(rootSVGBoundingRect.width, svgNetworkTransform.x + zoomBCR.width)
-                const minX = Math.min(0, svgNetworkTransform.x)
-                const maxY = Math.max(rootSVGBoundingRect.height, svgNetworkTransform.y + zoomBCR.height)
-                const minY = Math.min(0, svgNetworkTransform.y)
-
                 const positionRatioZoomContainerX = (node.x - zoomBB.x) / zoomBB.width
                 const positionRatioZoomContainerY = (node.y - zoomBB.y) / zoomBB.height
 
-                const positionRatioMaxX = (svgNetworkTransform.x + node.x * svgNetworkTransform.k) / maxX
-                const positionRatioMaxY = (svgNetworkTransform.y + node.y * svgNetworkTransform.k) / maxY
+                let ratioX = 1, ratioY = 1
+                let offsetX = 0, offsetY = 0
+                if (zoomBB.width > zoomBB.height) {
+                    ratioY = zoomBB.height / zoomBB.width
+                    offsetY = svgMap.height / 2 - this.$refs["minimap-group-container"].getBoundingClientRect().height / 2
+                } else {
+                    ratioX = zoomBB.width / zoomBB.height
+                    offsetX = svgMap.width / 2 - this.$refs["minimap-group-container"].getBoundingClientRect().width / 2
+                }
+                this.minimapGroupPosition.x = offsetX
+                this.minimapGroupPosition.y = offsetY
+                this.minimapGroupPosition.ratioX = ratioX
+                this.minimapGroupPosition.ratioY = ratioY
 
-                const positionRatioViewportX = (svgNetworkTransform.x + node.x * svgNetworkTransform.k) / rootSVGBoundingRect.width
-                const positionRatioViewportY = (svgNetworkTransform.y + node.y * svgNetworkTransform.k) / rootSVGBoundingRect.height
                 return {
-                    x: positionRatioZoomContainerX * svgWidth,
-                    y: positionRatioZoomContainerY * svgHeight,
-                    width: rectBaseWidth * svgWidth,
-                    height: rectBaseHeight * svgHeight
+                    x: positionRatioZoomContainerX * svgWidth * ratioX,
+                    y: positionRatioZoomContainerY * svgHeight * ratioY,
+                    width: rectBaseWidth * svgWidth * ratioX,
+                    height: rectBaseHeight * svgHeight * ratioY
                 }
             } else {
                 return {x: 0, y: 0, width: 1, height: 1}
             }
         },
-        handleMinimapClick(mouseEvent) {
-            const svgMap = this.$refs["svgMap"].getBoundingClientRect()
-            const relativeX = mouseEvent.clientX - svgMap.left
-            const relativeY = mouseEvent.clientY - svgMap.top
-            const ratioX = relativeX / svgMap.width
-            const ratioY = relativeY / svgMap.height
-            this.moveZoom(ratioX, ratioY)
+        zoomFit() {
+            const zoomContainer = this.svgRootNode.getElementsByClassName("zoomContainer")[0]
+            const zoomBounds = zoomContainer.getBBox()
+            const rootSVG = this.svgRootNode
+            const fullWidth = rootSVG.clientWidth
+            const fullHeight = rootSVG.clientHeight
+            const midX = zoomBounds.x + zoomBounds.width / 2
+            const midY = zoomBounds.y + zoomBounds.height / 2
+            if (zoomBounds.width == 0 || zoomBounds.height == 0) {
+                return // nothing to fit
+            }
+            let scale = 1 / Math.max(zoomBounds.width / fullWidth, zoomBounds.height / fullHeight)
+            scale *= 0.9 // zoom out a bit more
+            var translateX = fullWidth / 2 - scale * midX
+            var translateY = fullHeight / 2 - scale * midY
+            this.moveZoom(translateX, translateY, scale)
         },
-        moveZoom(ratioX, ratioY) {
-            const svgNetworkTransform = d3.zoomTransform(this.svgNetworkNode)
-            const zoomContainer = this.svgNetworkNode.getElementsByClassName("zoomContainer")[0]
-            const zoomBCR = zoomContainer.getBoundingClientRect()
-            const adaptedRatioX = 0.5 - ratioX
-            const adaptedRatioY = 0.5 - ratioY
-            const transX = adaptedRatioX * (zoomBCR.width)
-            const transY = adaptedRatioY * (zoomBCR.height)
-            const zommTransform = d3.zoomIdentity.scale(1).translate(transX, transY)
-            // const zommTransform = d3.zoomIdentity.scale(svgNetworkTransform.k).translate(transX, transY)
+        moveZoom(x, y, k) {
+            const zommTransform = d3.zoomIdentity.translate(x, y).scale(k)
             this.networkSvgSelection.transition()
                 .duration(500)
                 .call(this.zoom.transform, zommTransform)
-                .on("end", () => {
-                    // console.log("end")
-                    // this.quickUpdate()
-                })
         },
         quickUpdate() {
             this.$nextTick(() => {
-                this.updateViewPosition()
+                this.updateSVGRealDimension()
+                this.updateBrushPosition()
             })
+        },
+        updateSVGRealDimension() {
+            const svgMap = this.$refs["svgMap"].getBoundingClientRect()
+            this.svg.realWidth = svgMap.width
+            this.svg.realHeight = svgMap.height
+        },
+        initBrush() {
+            this.brush = d3.brush()
+                .extent([[0, 0], [this.svg.realWidth, this.svg.realHeight]])
+                .on("brush", null) // remove listener
+                // .on("start", this.handleBrushStart)
+                // .on("end", this.handleBrushEnd)
+                // .on("brush", this.handleBrushDrag)
+
+            d3.select(this.$refs["svgMap"]).append("g")
+                .attr("class", "brush")
+                .call(this.brush)
+            d3.select(this.$refs["svgMap"]).select("g.brush")
+                .attr("pointer-events", "none")
+        },
+        initAll() {
+            this.updateSVGRealDimension()
+            this.initBrush()
+            this.zoomFit()
         }
     },
     watch: {
         redrawCount: function () {
             this.quickUpdate()
         },
+    },
+    mounted: function() {
+        this.$nextTick(() => {
+            this.initAll()
+        })
     }
 }
 </script>
@@ -184,22 +219,47 @@ export default {
 .minimap-container {
     width: 10vw;
     height: 10vh;
-    transition: width 0.1s, height 0.1s ease-out;
+    background-color: white;
+    /* transition: width 0.1s, height 0.1s ease-out; */
 }
 
 .minimap-container:hover {
-    width: 20vw;
-    height: 20vh;
+    width: 25vw;
+    height: 25vh;
 }
 
 .minimap-container svg {
     width: 10vw;
     height: 10vh;
-    transition: transform 0.1s ease-out;
+    /* transition: transform 0.1s ease-out; */
     transform-origin: top left;
 }
 
 .minimap-container:hover svg {
-    transform: scale(2, 2);
+    transform: scale(2.5, 2.5);
+}
+
+svg >>> .brush rect.selection {
+    fill: #3578a0;
+    fill-opacity: 0.1;
+    shape-rendering: auto;
+    stroke: #212d40;
+    stroke-opacity: 0.3;
+}
+
+svg >>> .brush .handle {
+    display: none;
+}
+
+svg >>> .brush .overlay {
+    pointer-events: none;
+}
+
+rect.server {
+}
+
+rect.server.selected {
+    stroke: black;
+    stroke-width: 1px;
 }
 </style>
