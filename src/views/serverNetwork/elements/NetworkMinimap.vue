@@ -5,7 +5,7 @@
                 <g v-for="(node, index) in network.nodes" :key="index" :redrawCount="redrawCount">
                     <rect
                         v-bind="getRelativeNodePosition(node)"
-                        :fill="node.status.error ? 'red' : 'green'"
+                        :fill="node.status.error === undefined ? 'grey' : (node.status.error ? 'red' : 'green')"
                         :class="['server', selectedNode.id == node.id ? 'selected' : '']"
                     ></rect>
                 </g>

@@ -19,7 +19,7 @@
                             </span>
                         </div>
                         <div class="ml-auto">
-                            <span class="badge badge-success">Online</span>
+                            <span :class="['badge', server.status.error ? 'badge-danger' : 'badge-success']">{{ server.status.data }}</span>
                         </div>
                     </div>
                 </template>
@@ -28,10 +28,9 @@
                         <ServerNodeDiagnostic :diagnostic="{}"></ServerNodeDiagnostic>
                     </b-tab>
                     <b-tab title="Usage">
-                        <ServerNodeUsage :usage="{}"></ServerNodeUsage>
+                        <ServerNodeUsage :usage="server.server_info.query_result.serverUsage" :server="server"></ServerNodeUsage>
                     </b-tab>
                     <b-tab title="User">
-                        <ServerNodeUsage :usage="{}"></ServerNodeUsage>
                         <ServerNodeUser :user="{}"></ServerNodeUser>
                     </b-tab>
                     <b-tab title="Sync">
