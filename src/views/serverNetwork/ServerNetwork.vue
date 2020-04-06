@@ -45,7 +45,7 @@
         </DraggableComponent>
 
         <div
-            class="position-absolute border"
+            class="position-absolute border overflow-hidden p-1"
             :style="minimapPosition"
         >
             <NetworkMinimap

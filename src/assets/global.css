@@ -71,6 +71,10 @@
     margin-left: 5em;
 }
 
+.overflow-visible {
+    overflow: visible;
+}
+
 .btn-xs, .btn-group-xs > .btn {
     padding: 0.05rem 0.1rem;
     font-size: 0.875rem;

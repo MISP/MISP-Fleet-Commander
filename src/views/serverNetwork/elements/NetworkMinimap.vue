@@ -1,6 +1,6 @@
 <template>
-    <div class="minimap-container">
-        <svg ref="svgMap">
+    <div class="minimap-container overflow-visible">
+        <svg ref="svgMap" class="overflow-visible">
             <g ref="minimap-group-container" class="minimap-group-container" fill="white" :transform="`translate(${minimapGroupPosition.x}, ${minimapGroupPosition.y})`">
                 <g v-for="(node, index) in network.nodes" :key="index" :redrawCount="redrawCount">
                     <rect
@@ -138,12 +138,13 @@ export default {
                 this.minimapGroupPosition.ratioX = ratioX
                 this.minimapGroupPosition.ratioY = ratioY
 
-                return {
+                let nodePosition = {
                     x: positionRatioZoomContainerX * svgWidth * ratioX,
                     y: positionRatioZoomContainerY * svgHeight * ratioY,
                     width: rectBaseWidth * svgWidth * ratioX,
                     height: rectBaseHeight * svgHeight * ratioY
                 }
+                return nodePosition
             } else {
                 return {x: 0, y: 0, width: 1, height: 1}
             }
