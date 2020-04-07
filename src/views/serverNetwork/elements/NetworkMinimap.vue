@@ -1,5 +1,5 @@
 <template>
-    <div class="minimap-container overflow-visible">
+    <div ref="minimapContainer" class="minimap-container overflow-visible">
         <svg ref="svgMap" class="overflow-visible">
             <g ref="minimap-group-container" class="minimap-group-container" fill="white" :transform="`translate(${minimapGroupPosition.x}, ${minimapGroupPosition.y})`">
                 <g v-for="(node, index) in network.nodes" :key="index" :redrawCount="redrawCount">
@@ -68,6 +68,9 @@ export default {
     computed: {
     },
     methods: {
+        extractNumberFromPixel(str) {
+            return str.split("px")[0]
+        },
         updateBrushPosition() {
             const transform = d3.zoomTransform(this.svgRootNode)
             const zoomContainer = this.svgRootNode.getElementsByClassName("zoomContainer")[0]
@@ -105,6 +108,27 @@ export default {
             this.viewPosition.y = viewYRatio * svgHeight * this.minimapGroupPosition.ratioY + this.minimapGroupPosition.y
             this.viewPosition.width = viewWidthRatio * svgWidth * this.minimapGroupPosition.ratioX
             this.viewPosition.height = viewHeightRatio * svgHeight * this.minimapGroupPosition.ratioY
+
+            // prevent overflowing to much and take care of padding from outer container
+            const outerMinimapContainer = this.$refs["minimapContainer"].parentNode
+            const outerMinimapContainerComputedStyle = getComputedStyle(outerMinimapContainer)
+            const padding = parseInt(this.extractNumberFromPixel(outerMinimapContainerComputedStyle.padding))
+            this.viewPosition.width = Math.max(
+                Math.min(this.viewPosition.width + (this.viewPosition.x > 0 ? 0 : this.viewPosition.x - padding), svgWidth - this.viewPosition.x + padding),
+                padding
+            )
+            this.viewPosition.x = Math.min(
+                Math.max(this.viewPosition.x, -padding),
+                svgWidth
+            )
+            this.viewPosition.height = Math.max(
+                Math.min(this.viewPosition.height + (this.viewPosition.y > 0 ? 0 : this.viewPosition.y - padding), svgHeight - this.viewPosition.y + padding),
+                padding
+            )
+            this.viewPosition.y = Math.min(
+                Math.max(this.viewPosition.y, -padding),
+                svgHeight
+            )
 
             d3.select(this.$refs["svgMap"]).select(".brush")
                 .call(this.brush.move, [[this.viewPosition.x, this.viewPosition.y], [this.viewPosition.x + this.viewPosition.width, this.viewPosition.y + this.viewPosition.height]])
