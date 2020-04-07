@@ -1,4 +1,3 @@
-/* eslint-disable no-unreachable */
 import * as d3 from "d3"
 
 export default {
@@ -27,7 +26,10 @@ export default {
         const zoom = d3.zoom()
             .scaleExtent([.1, 4])
             .on("zoom", function() { container.attr("transform", d3.event.transform) })
-            .on("end", function() { eventHandlers.refreshMinimap() })
+            .on("end", function() {
+                eventHandlers.refreshMinimap()
+                eventHandlers.updateScale(d3.event.transform)
+            })
         svg.call(zoom)
 
         const link = container.append("g")
@@ -61,7 +63,7 @@ export default {
                 const d3Node = d3.select(`#node-${selection.id}`)
                 const d3SVGNode = svg.node()
                 const htmlNode = htmlNodes[index]
-                componentGenerator.nodeComponent(selection, htmlNode, d3Node, d3SVGNode)
+                componentGenerator.genericNodeComponent(selection, htmlNode, d3Node, d3SVGNode)
             })
 
         simulation
@@ -77,6 +79,10 @@ export default {
             })
             .on("end", () => {
                 eventHandlers.refreshMinimap()
+            })
+            .on("end.init_simulation", () => {
+                eventHandlers.zoomFit()
+                simulation.on("end.init_simulation", null)
             })
 
         return {

@@ -87,7 +87,7 @@ export default {
                 this.resizeParentForeignObject()
             })
         },
-        resizeParentForeignObject() { // sync SVG's ForeignObject dimensions with those of this child node 
+        resizeParentForeignObject() { // sync SVG's ForeignObject dimensions with those of this child node
             const tranformScale = d3.zoomTransform(this.d3SVGNode).k
             const tranformScaleInverse = 1 / tranformScale
             const divBoundingRect = this.$el.getBoundingClientRect()

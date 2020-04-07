@@ -2,6 +2,7 @@
 <Layout name="LayoutStretch" class="position-relative">
     <div>
         <div class="network-toolbar position-absolute px-3 py-1 mx-5 bg-light shadow-sm">
+            {{scaleInfo}}
             <b-form-radio-group
                 id="btn-radios-2"
                 v-model="scope"
@@ -68,7 +69,10 @@ import Vue from "vue"
 import { mapState, mapGetters } from "vuex"
 import Layout from "@/components/layout/Layout.vue"
 import iconButton from "@/components/ui/elements/iconButton.vue"
+import ServerNodeGeneric from "@/views/serverNetwork/elements/ServerNodeGeneric.vue"
 import ServerNode from "@/views/serverNetwork/elements/ServerNode.vue"
+import ServerNodeMini from "@/views/serverNetwork/elements/ServerNodeMini.vue"
+import ServerNodeMicro from "@/views/serverNetwork/elements/ServerNodeMicro.vue"
 import NetworkMinimap from "@/views/serverNetwork/elements/NetworkMinimap.vue"
 import TheInfoCard from "@/views/serverNetwork/elements/InfoCard.vue"
 import DraggableComponent from "@/components/ui/DraggableComponent.vue"
@@ -103,6 +107,7 @@ export default {
             svg: null,
             svgSelection: null,
             zoom: null,
+            scaleInfo: {x: 0, y: 0, k: 1},
             minimapPosition: {top: "unset", right: "unset", left: "20px", bottom: "20px"},
             minimapRedrawCount: 0
         }
@@ -129,10 +134,12 @@ export default {
         zoomFit() {
             this.$refs["minimap"].zoomFit()
         },
-        generateNodeComponent(node, htmlNode, d3Node, d3SVGNode) {
-            let ComponentServerNodeClass = Vue.extend(ServerNode)
-            let nodeInstance = new ComponentServerNodeClass({
-                propsData: { 
+        generateGenericNodeComponent(node, htmlNode, d3Node, d3SVGNode) {
+            let ComponentGenericServerNodeClass = Vue.extend(ServerNodeGeneric)
+            let nodeInstance = new ComponentGenericServerNodeClass({
+                parent: this,
+                propsData: {
+                    scaleInfo: this.scaleInfo,
                     server: node,
                     d3Node: d3Node,
                     d3SVGNode: d3SVGNode
@@ -154,11 +161,26 @@ export default {
                 },
                 refreshMinimap: function() {
                     vm.minimapRedrawCount++
+                },
+                zoomFit: function() {
+                    vm.zoomFit()
+                },
+                updateScale: function(scaleInfo) {
+                    vm.scaleInfo = Object.assign(vm.scaleInfo, scaleInfo)
                 }
             }
             let componentGenerator = {
                 nodeComponent: function(node, htmlNode, d3Node, d3SVGNode) {
                     return vm.generateNodeComponent(node, htmlNode, d3Node, d3SVGNode)
+                },
+                miniNodeComponent: function(node, htmlNode, d3Node, d3SVGNode) {
+                    return vm.generateMiniNodeComponent(node, htmlNode, d3Node, d3SVGNode)
+                },
+                microNodeComponent: function(node, htmlNode, d3Node, d3SVGNode) {
+                    return vm.generateMicroNodeComponent(node, htmlNode, d3Node, d3SVGNode)
+                },
+                genericNodeComponent: function(node, htmlNode, d3Node, d3SVGNode) {
+                    return vm.generateGenericNodeComponent(node, htmlNode, d3Node, d3SVGNode)
                 }
             }
             if (this.$refs["networkContainer"] !== undefined) {

@@ -200,7 +200,6 @@ export default {
         initAll() {
             this.updateSVGRealDimension()
             this.initBrush()
-            this.zoomFit()
         }
     },
     watch: {
