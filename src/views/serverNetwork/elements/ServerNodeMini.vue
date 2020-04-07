@@ -93,9 +93,9 @@ export default {
 }
 
 .nodeServer.nodeServerMini {
-    border: 1px solid rgba(0, 0, 0, 0.125);
+    border: 1px solid rgba(0, 0, 0, 0.3);
     background-color: rgba(0, 0, 0, 0.03);
-    border-radius: 0.25rem;
+    border-radius: 0.5rem;
 }
 
 .nodeServer.nodeServerMini div, .nodeServer.nodeServerMini h2, .nodeServer.nodeServerMini h5 {

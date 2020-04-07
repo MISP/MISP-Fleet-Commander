@@ -1,7 +1,7 @@
 import * as d3 from "d3"
 
 export default {
-    constructNetwork(svgNode, containerBoundingRect, d3data, componentGenerator, eventHandlers) {
+    constructNetwork(svgNode, containerBoundingRect, d3data, componentGenerator, eventHandlers, callbacks) {
         const boundingRect = containerBoundingRect
         const nodeHeight = 300
         const nodeWidth = 350
@@ -24,7 +24,7 @@ export default {
             .force("center", d3.forceCenter(width / 2, height / 2))
 
         const zoom = d3.zoom()
-            .scaleExtent([.1, 4])
+            .scaleExtent([.08, 4])
             .on("zoom", function() { container.attr("transform", d3.event.transform) })
             .on("end", function() {
                 eventHandlers.refreshMinimap()
@@ -83,6 +83,7 @@ export default {
             .on("end.init_simulation", () => {
                 eventHandlers.zoomFit()
                 simulation.on("end.init_simulation", null)
+                callbacks.simulationDone()
             })
 
         return {

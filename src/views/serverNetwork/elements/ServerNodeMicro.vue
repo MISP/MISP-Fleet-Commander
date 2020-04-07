@@ -79,7 +79,7 @@ export default {
 
 .nodeServer.nodeServerMicro {
     max-width: 1000px;
-    border: 3px solid rgba(0, 0, 0, 0.5);
+    border: 3px solid rgba(0, 0, 0, 0.3);
     background-color: rgba(0, 0, 0, 0.03);
     border-radius: 1rem;
 }

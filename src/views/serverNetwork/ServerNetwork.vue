@@ -2,7 +2,6 @@
 <Layout name="LayoutStretch" class="position-relative">
     <div>
         <div class="network-toolbar position-absolute px-3 py-1 mx-5 bg-light shadow-sm">
-            {{scaleInfo}}
             <b-form-radio-group
                 id="btn-radios-2"
                 v-model="scope"
@@ -184,12 +183,16 @@ export default {
                 }
             }
             if (this.$refs["networkContainer"] !== undefined) {
+                let callbacks = {
+                    simulationDone: () => { console.log("simu done") }
+                }
                 const network = d3Network.constructNetwork(
                     this.$refs["networkSVG"],
                     this.$refs["networkContainer"].getBoundingClientRect(),
                     this.d3data,
                     componentGenerator,
-                    eventHandlers
+                    eventHandlers,
+                    callbacks
                 )
                 this.svgSelection = network.svgSelection
                 this.zoom = network.zoom
