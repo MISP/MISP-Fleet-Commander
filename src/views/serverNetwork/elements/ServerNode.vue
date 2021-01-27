@@ -88,6 +88,7 @@ export default {
             })
         },
         resizeParentForeignObject() { // sync SVG's ForeignObject dimensions with those of this child node
+            console.log("resizing")
             const tranformScale = d3.zoomTransform(this.d3SVGNode).k
             const tranformScaleInverse = 1 / tranformScale
             const divBoundingRect = this.$el.getBoundingClientRect()
@@ -128,6 +129,7 @@ export default {
 
 .node-container > .card > .card-header {
     border-bottom: 0;
+    min-width: 350px;
 }
 
 .node-container > .card > .card-header, .node-container > .card > .tabs >>> .card-header {
