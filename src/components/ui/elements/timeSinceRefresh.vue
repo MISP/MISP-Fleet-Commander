@@ -1,16 +1,18 @@
 <template>
-    <span :class="['mr-1', 'align-middle', 'text-nowrap', moreThanOneDay ? 'text-danger' : 'text-muted']" style="cursor: auto;">
+    <span :class="['mr-1', 'align-middle', 'text-nowrap', noformat ? '' : (moreThanOneDay ? 'text-danger' : 'text-muted')]" style="cursor: auto;" :title="timestampTitle">
         <i v-if="!noicon" :class="['far fa-clock', clockMarginClass]"></i>
-        <small v-if="validTimestamp !== false" class="align-middle">
+        <component :is="small ? 'small' : 'span'" v-if="validTimestamp !== false" class="align-middle">
             {{ validTimestamp | moment(type) }}
-        </small>
-        <small v-else class="align-middle">
+        </component>
+        <component :is="small ? 'small' : 'span'" v-else class="align-middle">
             never
-        </small>
+        </component>
     </span>
 </template>
 
 <script>
+import moment from "moment"
+
 export default {
     name: "timeSinceRefresh",
     props: {
@@ -26,6 +28,14 @@ export default {
         clockNoMargin: {
             type: Boolean,
             default: false
+        },
+        noformat: {
+            type: Boolean,
+            default: false
+        },
+        small: {
+            type: Boolean,
+            default: true
         }
     },
     computed: {
@@ -37,6 +47,15 @@ export default {
         },
         clockMarginClass() {
             return this.clockNoMargin ? "" : "mr-1"
+        },
+        timestampDate() {
+            return moment(this.timestamp * 1000).format("ddd DD/MM/YYYY hh:mm")
+        },
+        timestampFromNow() {
+            return moment(this.timestamp * 1000).fromNow()
+        },
+        timestampTitle() {
+            return this.type == "from" ? this.timestampDate : this.timestampFromNow
         }
     }
 }

@@ -73,7 +73,9 @@ export default {
         ServerNodeUsage,
         ServerNodeUser,
         ServerNodeSync,
-        ServerNodeContent
+        ServerNodeContent,
+        iconButton,
+        loaderPlaceholder
     },
     data: function () {
         return {

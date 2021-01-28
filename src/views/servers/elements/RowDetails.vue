@@ -30,6 +30,16 @@
             <template v-else>
                 <b-card no-body>
                     <b-tabs card>
+                        <b-tab class="p-1" no-body>
+                            <template #title>
+                                <i class="fas fa-tools mr-1"></i><strong>Remote administration</strong>
+                            </template>
+                            <div class="max-heigth-700">
+                                <MISPRemoteAdministration
+                                    :server="server"
+                                ></MISPRemoteAdministration>
+                            </div>
+                        </b-tab>
                         <b-tab title="Diagnostic" class="p-1" active no-body>
                             <b-card no-body>
                                 <b-tabs pills card vertical>
@@ -52,13 +62,13 @@
                             </b-card>
                         </b-tab>
                         <b-tab title="Server settings" class="p-1" no-body>
-                                <div class="max-heigth-700">
-                                    <jsonViewer
-                                        :item="getConfig"
-                                        rootKeyName="Server settings"
-                                        :open="true"
-                                    ></jsonViewer>
-                                </div>
+                            <div class="max-heigth-700">
+                                <jsonViewer
+                                    :item="getConfig"
+                                    rootKeyName="Server settings"
+                                    :open="true"
+                                ></jsonViewer>
+                            </div>
                         </b-tab>
                         <b-tab title="Usage" no-body>
                             <b-card no-body>
@@ -128,13 +138,15 @@
 import iconButton from "@/components/ui/elements/iconButton.vue"
 import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
 import jsonViewer from "@/components/ui/elements/jsonViewer.vue"
+import MISPRemoteAdministration from "@/views/servers/elements/MISPRemoteAdministration.vue"
 
 export default {
     name: "RowDetails",
     components: {
         timeSinceRefresh,
         jsonViewer,
-        iconButton
+        iconButton,
+        MISPRemoteAdministration
     },
     props: {
         details: {

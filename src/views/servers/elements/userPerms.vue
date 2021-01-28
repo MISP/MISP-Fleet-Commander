@@ -10,7 +10,7 @@
                 custom-class="mw-25"
                 :target="`badge-perms-${context}-${row_id}`"
                 :variant="summary.state"
-                triggers="hover" placement="auto">
+                triggers="hover" placement="auto" boundary="viewport">
                 <pre>{{ perms }}</pre>
             </b-popover>
         </template>

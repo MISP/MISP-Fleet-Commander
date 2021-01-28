@@ -110,7 +110,7 @@
             striped outlined show-empty small selectable
             table-class="table-auto-hide-action"
             selected-variant="table-none"
-            tbody-tr-class="no-outline"
+            :tbody-tr-class="rowClass"
             responsive="md"
             id="server-table"
             ref="serverTable"
@@ -374,6 +374,7 @@ export default {
                 timeKey: 0,
                 isBusy: false,
                 filtered: "",
+                filter: null,
                 totalRows: 0,
                 currentPage: 1,
                 perPage: 30,
@@ -478,7 +479,7 @@ export default {
         },
         haveSelectedServers() {
             return this.selectedServers.length > 0
-        }
+        },
     },
     methods: {
         setCheckOnServers(checked) {
@@ -554,13 +555,20 @@ export default {
                 },
             ]
         },
+        rowClass(item, type) {
+            let classes = ["no-outline"]
+            if ((type == "row" || type == "row-details") && item && item.detailsShown) {
+                classes.push("table-primary-background")
+            }
+            return classes
+        },
         toggleServerInfo(server, row_id, row) {
             this.$store.commit("servers/toggleShowDetails", row_id)
             if (server._showDetails) {
-                row.item._rowVariant = "primary"
+                row.item.detailsShown = true
                 this.refreshInfo(server, false)
             } else {
-                row.item._rowVariant = ""
+                row.item.detailsShown = false
             }
         },
         forceHidden(row_id) {
@@ -717,5 +725,8 @@ export default {
 }
 </script>
 
-<style scoped>
+<style>
+.table-primary-background {
+    background-color: #b8daff;
+}
 </style>
