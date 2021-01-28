@@ -274,6 +274,7 @@
                     :details="row.item.server_info"
                     :server="row.item"
                     @actionRefresh="handleRefreshInfo({index: row.index, method: $event})"
+                    @actionClose="toggleServerInfo(row.item, row.index, row)"
                 ></RowDetails>
             </template>
 

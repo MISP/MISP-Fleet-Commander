@@ -1,5 +1,5 @@
 <template>
-     <div class="d-flex flex-nowrap compact" :title="title">
+     <div class="d-flex flex-nowrap compact" :title="title" :style="tight ? 'line-height: 1.2' : ''">
         <span class="text-center">
             <img
                 v-if="useAsset"
@@ -9,7 +9,7 @@
             />
             <i 
                 v-else
-                :class="`mr-2 fas fa-${icon}`"
+                :class="[`fas fa-${icon}`, tight ? 'mr-1' : 'mr-2']"
             ></i>
         </span>
         <span :class="['text-nowrap', forceWhite ? 'text-white' : '']">
@@ -37,6 +37,10 @@ export default {
             default: false
         },
         forceWhite: {
+            type: Boolean,
+            default: false
+        },
+        tight: {
             type: Boolean,
             default: false
         }

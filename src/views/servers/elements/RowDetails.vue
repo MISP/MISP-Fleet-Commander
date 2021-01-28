@@ -14,8 +14,12 @@
                         <small class="align-middle">{{ details.query_result.timestamp | moment("from") }}</small>
                     </span>
                     <b-button 
-                        size="sm" variant="primary"
+                        size="sm" variant="primary" title="Refresh"
                         @click="refreshDiagnostic()"
+                    ><b-icon icon="arrow-clockwise"></b-icon></b-button>
+                    <b-button 
+                        size="sm" variant=""
+                        @click="closeDetails()"
                     ><b-icon icon="arrow-clockwise"></b-icon></b-button>
                 </div>
                 <b-alert show variant="danger">
@@ -101,10 +105,16 @@
                                     :timestamp="details.timestamp"
                                     type="ddd DD/MM/YYYY hh:mm"
                                 ></timeSinceRefresh>
-                                <b-button 
-                                    size="sm" variant="primary"
-                                    @click="refreshDiagnosticFull()"
-                                ><b-icon icon="arrow-clockwise"></b-icon></b-button>
+                                <b-button variant="primary" size="sm" @click="refreshDiagnostic()">
+                                    <iconButton
+                                        text="Refresh"
+                                        icon="sync-alt"
+                                        :tight="true"
+                                    ></iconButton>
+                                </b-button>
+                                <b-button class="ml-1 darken-on-hover" size="xs" variant="link" @click="closeDetails()">
+                                    <i class="fas fa-times"></i>
+                                </b-button>
                             </b-nav-item>
                         </template>
                     </b-tabs>
@@ -115,6 +125,7 @@
 </template>
 
 <script>
+import iconButton from "@/components/ui/elements/iconButton.vue"
 import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
 import jsonViewer from "@/components/ui/elements/jsonViewer.vue"
 
@@ -123,6 +134,7 @@ export default {
     components: {
         timeSinceRefresh,
         jsonViewer,
+        iconButton
     },
     props: {
         details: {
@@ -149,8 +161,11 @@ export default {
         },
     },
     methods: {
-        refreshDiagnosticFull() {
+        refreshDiagnostic() {
             this.$emit("actionRefresh", "no_cache")
+        },
+        closeDetails() {
+            this.$emit("actionClose", "no_cache")
         }
     }
 }
@@ -169,6 +184,13 @@ ul.nav-tabs > li.nav-item.rightmost-action > a:hover {
 }
 ul.nav-tabs > li.nav-item.rightmost-action > a:focus {
     border: 1px solid #ffffff00;
+}
+
+.darken-on-hover > i.fas{
+    color: #6c757d;
+}
+.darken-on-hover:hover > i.fas{
+    color: #5a6268;
 }
 
 .max-heigth-700 {
