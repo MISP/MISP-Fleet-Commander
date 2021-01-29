@@ -111,13 +111,13 @@ export default {
             type: SVGSVGElement,
             required: true
         }
-    }
+    },
 }
 </script>
 
 <style scoped>
 .nodeServer {
-    width: unset;
+    width: min-content;
 }
 
 .nodeServer > .node-container > div.card > div.card-body {
@@ -130,6 +130,7 @@ export default {
 
 .node-container > .card > .card-header {
     border-bottom: 0;
+    min-width: 350px;
 }
 
 .node-container > .card > .card-header, .node-container > .card > .tabs >>> .card-header {

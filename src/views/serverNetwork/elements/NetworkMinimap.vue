@@ -78,14 +78,9 @@ export default {
             const zoomBCR = zoomContainer.getBoundingClientRect()
             const rootSvgBCR = this.svgRootNode.getBoundingClientRect()
 
-            const svgMap = this.$refs["svgMap"]
-            const svgMapBCR = this.$refs["svgMap"].getBoundingClientRect()
-            let svgWidth = svgMapBCR.width
-            let svgHeight = svgMapBCR.height
-            if (getComputedStyle(svgMap).transform.startsWith("matrix")) { // check if minimap is scaled through css
-                svgWidth /= 2
-                svgHeight /= 2
-            }
+            const svgDimension = this.getSVGDimension()
+            const svgWidth = svgDimension.width
+            const svgHeight = svgDimension.height
 
             // get the screen bounding box and convert into canvas space
             var screenLeft = -(zoomBCR.x - rootSvgBCR.x) / transform.k
@@ -190,13 +185,66 @@ export default {
             var translateY = fullHeight / 2 - scale * midY
             this.moveZoom(translateX, translateY, scale)
         },
+        handleMinimapMouseClick(mouseCoord) {
+            const transform = d3.zoomTransform(this.svgRootNode)
+            const zoomContainer = this.svgRootNode.getElementsByClassName("zoomContainer")[0]
+            const zoomBCR = zoomContainer.getBoundingClientRect()
+            const zoomBB = zoomContainer.getBBox()
+            const svgDimension = this.getSVGDimension()
+            const rootSvgBCR = this.svgRootNode.getBoundingClientRect()
+
+            const absoluteX = mouseCoord[0]
+            const absoluteY = mouseCoord[1]
+            const relativeX = absoluteX / svgDimension.width
+            const relativeY = absoluteY / svgDimension.height
+
+            const px = zoomBCR.width - (1/this.minimapGroupPosition.ratioX) * relativeX * zoomBCR.width - rootSvgBCR.width/2
+            const py = zoomBCR.height - (1/this.minimapGroupPosition.ratioY) * relativeY * zoomBCR.height - rootSvgBCR.height/2
+            const x = 0
+            const y = 0
+            const p = [px, py]
+            this.translateZoomTo(x, y, p)
+        },
+        getSVGDimension() {
+            const svgMap = this.$refs["svgMap"]
+            const svgMapBCR = this.$refs["svgMap"].getBoundingClientRect()
+            let svgWidth = svgMapBCR.width
+            let svgHeight = svgMapBCR.height
+            const style = getComputedStyle(svgMap).transform
+            const re = /matrix\((?<scale>[^)]+), 0, 0, 2.5, 0, 0\)/
+            let reMatch = { groups: {scale: 1}}
+            if (style.startsWith("matrix")) { // check if minimap is scaled through css
+                reMatch = re.exec(style)
+                svgWidth /= reMatch.groups.scale
+                svgHeight /= reMatch.groups.scale
+            }
+            return { width: svgWidth, height: svgHeight, scale: reMatch.groups.scale }
+        },
         moveZoom(x, y, k) {
-            const zommTransform = d3.zoomIdentity.translate(x, y).scale(k)
+            let zoomTransform = d3.zoomIdentity.translate(x, y)
+            if (k !== undefined) {
+                zoomTransform = zoomTransform.scale(k)
+            }
             this.networkSvgSelection.transition()
                 .duration(500)
-                .call(this.zoom.transform, zommTransform)
+                .call(this.zoom.transform, zoomTransform)
+        },
+        translateZoomBy(x, y) {
+            this.zoom.translateBy(this.networkSvgSelection, x, y)
+            // const zommTransform = d3.zoomIdentity.translateBy(x, y)
+            // this.networkSvgSelection.transition()
+            //     .duration(500)
+            //     .call(this.zoom.transform, zommTransform)
+        },
+        translateZoomTo(x, y, p) {
+            this.zoom.translateTo(this.networkSvgSelection, x, y, p)
+            // const zommTransform = d3.zoomIdentity.translateBy(x, y)
+            // this.networkSvgSelection.transition()
+            //     .duration(500)
+            //     .call(this.zoom.transform, zommTransform)
         },
         quickUpdate() {
+            window.tzt = this.translateZoomTo
             this.$nextTick(() => {
                 this.updateSVGRealDimension()
                 this.updateBrushPosition()
@@ -208,6 +256,7 @@ export default {
             this.svg.realHeight = svgMap.height
         },
         initBrush() {
+            const vm = this
             this.brush = d3.brush()
                 .extent([[0, 0], [this.svg.realWidth, this.svg.realHeight]])
                 .on("brush", null) // remove listener
@@ -220,8 +269,13 @@ export default {
                 .call(this.brush)
             d3.select(this.$refs["svgMap"]).select("g.brush")
                 .attr("pointer-events", "none")
+
+            d3.select(this.$refs["svgMap"]).on("click", function() {
+                vm.handleMinimapMouseClick(d3.mouse(this))
+            })
         },
         initAll() {
+            window.moveZoom = this.moveZoom
             this.updateSVGRealDimension()
             this.initBrush()
         }
@@ -248,8 +302,8 @@ export default {
 }
 
 .minimap-container:hover {
-    width: 25vw;
-    height: 25vh;
+    /* width: 25vw;
+    height: 25vh; */
 }
 
 .minimap-container svg {
@@ -260,7 +314,7 @@ export default {
 }
 
 .minimap-container:hover svg {
-    transform: scale(2.5, 2.5);
+    /* transform: scale(2.5, 2.5); */
 }
 
 svg >>> .brush rect.selection {
