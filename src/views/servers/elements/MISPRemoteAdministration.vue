@@ -35,8 +35,6 @@ export default {
             administrationAction: {
                 Users: { component: "userAdministration" },
                 Organisation: { component: "orgAdministration" },
-                Connections: {},
-                Updates: {}
             }
         }
     },

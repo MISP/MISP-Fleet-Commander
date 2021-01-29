@@ -330,12 +330,5 @@ export default {
 }
 </script>
 
-<style>
-tr.no-bgcolor {
-    background-color: unset !important;
-}
-
-table.table-no-select tbody > tr {
-    cursor: auto;
-}
+<style scoped>
 </style>

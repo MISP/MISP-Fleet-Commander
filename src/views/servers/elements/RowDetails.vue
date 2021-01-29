@@ -50,7 +50,34 @@
                                     >
                                         <b-card-text>
                                             <div class="max-heigth-700">
+                                                <MISPSchemaDiagnostic
+                                                    v-if="setting == 'dbSchemaDiagnostics'"
+                                                    :schemaDiagnostic="value"
+                                                ></MISPSchemaDiagnostic>
+                                                <b-table
+                                                    v-else-if="isTabularView(setting)"
+                                                    striped
+                                                    table-class="table-no-select"
+                                                    :fields="fieldsFromObject(value[0])"
+                                                    :items="value"
+                                                ></b-table>
+                                                <b-table-simple
+                                                    v-else-if="isListView(setting)"
+                                                    striped small
+                                                    class="mb-0"
+                                                    :bordered="false"
+                                                    :borderless="true"
+                                                    :outlined="false"
+                                                >
+                                                    <b-tbody>
+                                                        <b-tr v-for="(v, k) in value" v-bind:key="k">
+                                                            <b-th>{{ k }}</b-th>
+                                                            <b-td>{{ v }}</b-td>
+                                                        </b-tr>
+                                                    </b-tbody>
+                                                </b-table-simple>
                                                 <jsonViewer
+                                                    v-else
                                                     :item="value"
                                                     :rootKeyName="setting"
                                                     :open="true"
@@ -81,23 +108,23 @@
                                 </div>
                             </b-card>
                         </b-tab>
-                        <b-tab title="User" class="p-1" no-body>
+                        <b-tab title="User profile" class="p-1" no-body>
                             <b-card no-body>
                                 <div class="max-heigth-700">
                                     <jsonViewer
                                         :item="details.query_result.serverUser"
-                                        rootKeyName="User"
+                                        rootKeyName="User profile"
                                         :open="true"
                                     ></jsonViewer>
                                 </div>
                             </b-card>
                         </b-tab>
-                        <b-tab title="Connected MISP Servers" class="p-1" no-body>
+                        <b-tab title="Connected MISP servers" class="p-1" no-body>
                             <b-card no-body>
                                 <div class="max-heigth-700">
                                     <jsonViewer
                                         :item="details.query_result.connectedServers"
-                                        rootKeyName="Connected MISP Servers"
+                                        rootKeyName="Connected MISP servers"
                                         :open="true"
                                     ></jsonViewer>
                                 </div>
@@ -139,6 +166,7 @@ import iconButton from "@/components/ui/elements/iconButton.vue"
 import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
 import jsonViewer from "@/components/ui/elements/jsonViewer.vue"
 import MISPRemoteAdministration from "@/views/servers/elements/MISPRemoteAdministration.vue"
+import MISPSchemaDiagnostic from "@/views/servers/elements/MISPSchemaDiagnostic.vue"
 
 export default {
     name: "RowDetails",
@@ -146,7 +174,8 @@ export default {
         timeSinceRefresh,
         jsonViewer,
         iconButton,
-        MISPRemoteAdministration
+        MISPRemoteAdministration,
+        MISPSchemaDiagnostic,
     },
     props: {
         details: {
@@ -160,6 +189,8 @@ export default {
     },
     data: function() {
         return {
+            diagnosticTabularView: ["dbDiagnostics", ],
+            diagnosticListView: ["dbSchemaDiagnostic", "moduleStatus", "readableFiles", "redisInfo", "version", "writeableDirs", "writeableFiles"],
         }
     },
     computed: {
@@ -171,6 +202,9 @@ export default {
         getConfig() {
             return this.details.query_result.serverSettings.finalSettings
         },
+        getDiagnosticForTabularView() {
+            return this.diagnostic
+        }
     },
     methods: {
         refreshDiagnostic() {
@@ -178,6 +212,20 @@ export default {
         },
         closeDetails() {
             this.$emit("actionClose", "no_cache")
+        },
+        isTabularView(name) {
+            return this.diagnosticTabularView.includes(name)
+        },
+        isListView(name) {
+            return this.diagnosticListView.includes(name)
+        },
+        fieldsFromObject(object) {
+            return Object.keys(object).map(key => {
+                return {
+                    key: key,
+                    sortable: true
+                }
+            })
         }
     }
 }

@@ -154,6 +154,18 @@ table.table-auto-hide-action > tbody > tr:hover .custom-control-label:before {
     border-color: #4f4f4f;
 }
 
+.table.b-table.b-table-selectable:not(.b-table-selectable-no-click) > tbody > tr.b-table-details {
+    cursor: auto;
+}
+
 table .no-outline {
     outline: none;
+}
+
+tr.no-bgcolor {
+    background-color: unset !important;
+}
+
+table.table-no-select tbody, table.table-no-select thead > tr {
+    cursor: auto;
 }
