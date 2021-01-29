@@ -118,13 +118,14 @@ export default {
             function dragfilter() {
                 const handleClass = "top-header"
                 const maxDepth = 5
+                let cElement = d3.event.target
                 for (let index = 0; index < maxDepth; index++) {
-                    const node = d3.event.path[index]
-                    if (node.classList !== undefined) {
-                        if (node.classList.contains(handleClass)) {
+                    if (cElement.classList !== undefined) {
+                        if (cElement.classList.contains(handleClass)) {
                             return true
                         }
                     }
+                    cElement = cElement.parentElement
                 }
                 return false
             }
