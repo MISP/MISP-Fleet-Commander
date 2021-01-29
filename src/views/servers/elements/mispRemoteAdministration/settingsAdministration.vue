@@ -17,19 +17,29 @@
         </div>
         <b-table
             striped
-            table-class="table-no-select mb-0"
+            table-class="table-auto-hide-action mb-0"
+            selected-variant="table-none"
             :fields="fields"
             :items="settings"
             :filter="filter"
+            @row-clicked="rowClickHandler"
         ></b-table>
+        <SettingsAdministrationModal
+            v-if="selectedItem !== null"
+            ref="modal-settings-administration"
+            :setting="selectedItem"
+            :server="server"
+        ></SettingsAdministrationModal>
     </div>
 </template>
 
 <script>
+import SettingsAdministrationModal from "@/views/servers/elements/mispRemoteAdministration/SettingsAdministrationModal.vue"
 
 export default {
     name: "settingsAdministration",
     components: {
+        SettingsAdministrationModal
     },
     props: {
         server: {
@@ -48,6 +58,7 @@ export default {
             ],
             tabs: [],
             settings: [],
+            selectedItem: null
         }
     },
     computed: {
@@ -74,6 +85,12 @@ export default {
             } else {
                 return "info"
             }
+        },
+        rowClickHandler(item) {
+            this.selectedItem = item
+            this.$nextTick(() => {
+                this.$bvModal.show("modal-settings-administration")
+            })
         }
     },
     created: function() {
