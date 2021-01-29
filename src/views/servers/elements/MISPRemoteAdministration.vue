@@ -17,12 +17,14 @@
 <script>
 import userAdministration from "@/views/servers/elements/mispRemoteAdministration/userAdministration.vue"
 import orgAdministration from "@/views/servers/elements/mispRemoteAdministration/orgAdministration.vue"
+import settingsAdministration from "@/views/servers/elements/mispRemoteAdministration/settingsAdministration.vue"
 
 export default {
     name: "MISPRemoteAdministration",
     components: {
         userAdministration,
         orgAdministration,
+        settingsAdministration,
     },
     props: {
         server: {
@@ -35,6 +37,7 @@ export default {
             administrationAction: {
                 Users: { component: "userAdministration" },
                 Organisation: { component: "orgAdministration" },
+                "Server Settings": { component: "settingsAdministration" },
             }
         }
     },

@@ -88,15 +88,6 @@
                                 </b-tabs>
                             </b-card>
                         </b-tab>
-                        <b-tab title="Server settings" class="p-1" no-body>
-                            <div class="max-heigth-700">
-                                <jsonViewer
-                                    :item="getConfig"
-                                    rootKeyName="Server settings"
-                                    :open="true"
-                                ></jsonViewer>
-                            </div>
-                        </b-tab>
                         <b-tab title="Usage" no-body>
                             <b-card no-body>
                                 <div class="max-heigth-700">
