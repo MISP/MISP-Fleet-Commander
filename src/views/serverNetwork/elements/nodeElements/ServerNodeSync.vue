@@ -1,5 +1,7 @@
 <template>
-    <div>sync</div>
+    <div>
+        Synchronization logs goes here
+    </div>
 </template>
 
 <script>

@@ -24,19 +24,16 @@
                     </div>
                 </template>
                 <b-tabs card nav-class="card-header-tabs" @input="tabChanged">
-                    <b-tab title="Diagnostic" active>
-                        <ServerNodeDiagnostic :diagnostic="{}"></ServerNodeDiagnostic>
+                    <b-tab title="Info" active>
+                        <ServerNodeInfo :server="server"></ServerNodeInfo>
                     </b-tab>
                     <b-tab title="Usage">
                         <ServerNodeUsage :usage="server.server_info.query_result.serverUsage" :server="server"></ServerNodeUsage>
                     </b-tab>
-                    <b-tab title="User">
-                        <ServerNodeUser :user="{}"></ServerNodeUser>
-                    </b-tab>
-                    <b-tab title="Sync">
+                    <b-tab title="Synchronization">
                         <ServerNodeSync :sync="{}"></ServerNodeSync>
                     </b-tab>
-                    <b-tab title="Content">
+                    <b-tab title="Content" disabled>
                         <ServerNodeContent :content="{}"></ServerNodeContent>
                     </b-tab>
                     <template v-slot:tabs-end>
@@ -59,9 +56,8 @@ import * as d3 from "d3"
 import loaderPlaceholder from "@/components/ui/elements/loaderPlaceholder.vue"
 import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
 import iconButton from "@/components/ui/elements/iconButton.vue"
-import ServerNodeDiagnostic from "@/views/serverNetwork/elements/nodeElements/ServerNodeDiagnostic.vue"
+import ServerNodeInfo from "@/views/serverNetwork/elements/nodeElements/ServerNodeInfo.vue"
 import ServerNodeUsage from "@/views/serverNetwork/elements/nodeElements/ServerNodeUsage.vue"
-import ServerNodeUser from "@/views/serverNetwork/elements/nodeElements/ServerNodeUser.vue"
 import ServerNodeSync from "@/views/serverNetwork/elements/nodeElements/ServerNodeSync.vue"
 import ServerNodeContent from "@/views/serverNetwork/elements/nodeElements/ServerNodeContent.vue"
 
@@ -69,9 +65,8 @@ export default {
     name: "ServerNode",
     components: {
         timeSinceRefresh,
-        ServerNodeDiagnostic,
+        ServerNodeInfo,
         ServerNodeUsage,
-        ServerNodeUser,
         ServerNodeSync,
         ServerNodeContent,
         iconButton,

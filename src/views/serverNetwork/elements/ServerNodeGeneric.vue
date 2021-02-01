@@ -7,7 +7,7 @@
             :d3SVGNode="d3SVGNode"
         ></ServerNodeMicro>
         <ServerNodeMini
-            v-else-if="scale < 0.5"
+            v-else-if="scale < 0.6"
             :server="server"
             :d3Node="d3Node"
             :d3SVGNode="d3SVGNode"
