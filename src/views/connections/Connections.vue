@@ -171,6 +171,12 @@
 
                     <span :class="forcedHidden == row.index ? '' : 'reveal-on-hover'">
                         <div class="btn-group">
+                            <b-button
+                                size="xs" variant ="link"
+                                @click="toggleConnectionInfo(row.item, row.index, row)"
+                            >
+                                <i :class="['text-secondary', 'fas', `fa-${row.detailsShowing ? 'compress-alt' : 'expand-alt'}`]"></i>
+                            </b-button>
                             <b-dropdown 
                                 variant="link" size="xs" class="ml-1"
                                 @hidden="clearForcedHidden"
@@ -194,12 +200,11 @@
             </template>
 
             <template v-slot:row-details="row">
-                <RowDetails 
-                    :details="row.item"
-                    :server="row.item"
-                ></RowDetails>
+                Detail!
+                {{ row }}
             </template>
 
+            <template v-slot:table-caption>Showing {{ table.totalRows }} out of {{ connectionCount }} Connections</template>
         </b-table>
     </div>
 </Layout>
@@ -274,6 +279,9 @@ export default {
         ...mapState({
             getConnections: state => state.connections.all
         }),
+        ...mapGetters({
+            connectionCount: "connections/connectionCount"
+        }),
     },
     methods: {
         onFiltered(filteredItems) {
@@ -311,7 +319,7 @@ export default {
             this.refreshInProgress = true
             this.$store.dispatch("connections/getConnections")
                 .then(() => {
-                    this.table.totalRows = this.serverCount
+                    this.table.totalRows = this.connectionCount
                 })
                 .catch(error => {
                     this.$bvToast.toast(error, {
@@ -323,12 +331,21 @@ export default {
                     this.refreshInProgress = false
                 })
         },
+        toggleConnectionInfo(connection, row_id) {
+            this.$store.commit("connections/toggleShowDetails", row_id)
+            if (connection._showDetails) {
+                this.refreshInfo(connection)
+            }
+        },
         toggleRulesTreeMode() {
             this.rulesTreeMode = !this.rulesTreeMode
         },
         handleRefreshInfo(data) {
             const index = data.index
             let connection = this.getConnections[index]
+            this.refreshInfo(connection)
+        },
+        refreshInfo(connection) {
             this.$store.dispatch("connections/getConnection", connection)
         },
         viewInServer() {

@@ -1,4 +1,5 @@
 import api from "@/api/connections"
+import Vue from "vue"
 
 // initial state
 const state = {
@@ -32,9 +33,10 @@ const actions = {
             }
         })
     },
-    getConnection({ commit }, data) {
+    getConnection({ commit }, payload={}) {
         return new Promise((resolve, reject) => {
             api.get(
+                payload,
                 connection => {
                     commit("setConnection", connection)
                     resolve()
@@ -47,12 +49,20 @@ const actions = {
 
 // mutations
 const mutations = {
+    toggleShowDetails (state, index) {
+        state.all[index]._showDetails = !state.all[index]._showDetails
+    },
     setConnections(state, connections) {
         state.all = connections
     },
     setConnection(state, connection) {
-        let i = 0
-        state[i] = connection
+        for (let i = 0; i < state.all.length; i++) {
+            if (state.all[i].vid == connection.vid) {
+                const updatedConnection = state.all[i] = {...state.all[i], connection}
+                Vue.set(state.all, i, updatedConnection)
+                break
+            }
+        }
     },
 }
 

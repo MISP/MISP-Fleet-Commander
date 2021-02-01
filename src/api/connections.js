@@ -16,9 +16,9 @@ export default {
                 errorCb(error.toJSON().message)
             })
     },
-    get(cb, errorCb) {
+    get(connection, cb, errorCb) {
         // const url = `${url.index}?page=${ctx.currentPage}&size=${ctx.perPage}`
-        const url = `${urls.get}`
+        const url = `${urls.get}/${connection.source.id}/${connection.destination.Server.id}`
         return axios.get(url)
             .then((response) => {
                 cb(response.data)
