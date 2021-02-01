@@ -194,7 +194,7 @@
                                 size="xs" variant ="link"
                                 @click="toggleServerInfo(row.item, row.index, row)"
                             >
-                                <b-icon class="text-secondary" :icon="row.detailsShowing ? 'arrows-collapse' : 'arrows-expand'"></b-icon>
+                                <i :class="['text-secondary', 'fas', `fa-${row.detailsShowing ? 'compress-alt' : 'expand-alt'}`]"></i>
                             </b-button>
                             <b-button class="ml-1" size="xs" variant="link" @click="openEditModal(row.item)">
                                 <i class="fas fa-edit"></i>
@@ -557,18 +557,15 @@ export default {
         },
         rowClass(item, type) {
             let classes = ["no-outline"]
-            if ((type == "row" || type == "row-details") && item && item.detailsShown) {
+            if ((type == "row" || type == "row-details") && item && item._showDetails) {
                 classes.push("table-primary-background")
             }
             return classes
         },
-        toggleServerInfo(server, row_id, row) {
+        toggleServerInfo(server, row_id) {
             this.$store.commit("servers/toggleShowDetails", row_id)
             if (server._showDetails) {
-                row.item.detailsShown = true
                 this.refreshInfo(server, false)
-            } else {
-                row.item.detailsShown = false
             }
         },
         forceHidden(row_id) {
