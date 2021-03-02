@@ -1,9 +1,11 @@
 from flask import Blueprint, request, render_template, make_response, jsonify, abort, Response
 # from flask import current_app as app
 from datetime import datetime as dt
+from datetime import timedelta
 import time
 import json
-from collections import Mapping, MutableSequence
+import re
+from collections import Mapping, MutableSequence, defaultdict
 from sqlalchemy.orm import with_parent
 from application.models import db, User, Server, ServerQuery
 from application.controllers.utils import mispGetRequest, mispPostRequest, batchRequest
@@ -36,6 +38,7 @@ def get(server_id):
 @BPserver.route('/servers/add', methods=['POST'])
 def add():
     servers = []
+    # TODO: If password provided, fetch the associated API key
     if isinstance(request.json, list):
         servers = []
         for server in request.json:
@@ -213,6 +216,35 @@ def network():
     network = buildNetwork(servers)
     return jsonify(network)
 
+@BPserver.route('/servers/getConnection/<int:server_id>/<int:connection_id>')
+def getConnection(server_id, connection_id):
+    server = Server.query.get(server_id)
+    if server is not None:
+        destinations = server.server_info.query_result['connectedServers']
+        connection = [ d for d in destinations if int(d['Server']['id']) == connection_id]
+        if len(connection) > 0:
+            connection = connection[0]
+            if 'vid' not in connection:
+                connection['vid'] = f"{server_id}-{connection['Server']['id']}"
+            return jsonify(connection)
+        else:
+            return jsonify({})
+    else:
+        return jsonify({})
+
+@BPserver.route('/servers/syncOvertime/<int:server_id>', methods=['GET'])
+def syncOvertime(server_id):
+    server = Server.query.get(server_id)
+    if server is not None:
+        syncLogs = mispPostRequest(server, '/logs/admin_search/search', {"Log":{"model":"Server","action":"pull","email":"","org":"","model_id":"","title":"","change":""}})
+        syncOvertime = parseGetSyncOvertime(syncLogs)
+        result = {
+            'timestamp': int(time.time()),
+            'data': syncOvertime
+        }
+        return jsonify(result)
+    else:
+        return jsonify({})
 # ===========
 def saveInfo(server, queryResult):
     now = int(time.time())
@@ -255,6 +287,7 @@ def attachConnectedServerStatus(server, connectedServers):
             connectionTest['timestamp'] = int(time.time())
             connectedServer['connectionTest'] = parseMISPConnectionOutput(connectionTest)
             connectedServer['connectionUser'] = parseMISPUserConnectionOutput(connectionUser)
+            connectedServer['vid'] = f"{server.id}-{connectedServer['Server']['id']}"
     return connectedServers
 
 def parseMISPUserConnectionOutput(userConnection):
@@ -397,6 +430,7 @@ def buildNetwork(servers):
                         'last_refresh': server.server_info.timestamp,
                     }
                     link['destination'] = connectedServer
+                    link['vid'] = f"{link['source']['id']}-{connectedServer['Server']['id']}"
                     link['status'] = connectedServer['connectionTest']
                     link['pull'] = connectedServer['Server']['pull']
                     link['push'] = connectedServer['Server']['push']
@@ -412,6 +446,28 @@ def buildNetwork(servers):
                     }
                     network.append(link)
     return network
+
+def parseGetSyncOvertime(syncLogs, afterTime=None):
+    if afterTime is None:
+        afterTime = dt.now() - timedelta(days=7)
+    servers = defaultdict(dict)
+    for logEntry in syncLogs:
+        if title.startsWith('Pull from'):
+            created = dt.fromisoformat(logEntry['Log']['created']).timestamp()
+            if created > afterTime:
+                title = logEntry['Log']['title']
+                url = re.search(r'Pull from (?P<url>[\S]+) .*', title).group('url')
+                change = logEntry['Log']['change']
+                parsedChange = re.search(r'(?P<events>[\d]+) events, (?P<proposals>[\d]+) proposals and (?P<sightings>[\d]+) sightings pulled or updated. (?P<event_failed>[\d]+) events failed or didn\'t need an update.', change)
+                syncMetrics = {
+                    'events': parsedChange.group('events'),
+                    'events_failed': parsedChange.group('events_failed'),
+                    'proposals': parsedChange.group('proposals'),
+                    'sightings': parsedChange.group('sightings')
+                }
+                servers[url][created] = syncMetrics
+    return servers
+
 
 def countJsonLeaves(json_obj, ignore_empty_string=True):
     def leaf_iterator(json_obj):

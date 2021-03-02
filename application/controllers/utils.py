@@ -15,12 +15,9 @@ def mispGetRequest(server, url, data={}):
     full_url = urljoin(server.url, url)
     try:
         response = requests.get(full_url, data=data, headers=headers, verify=(not getattr(server, 'skip_ssl', True)))
-        if response.status_code == 403:
-            return { "error": "Authentication error" }
-        if response.status_code == 405:
-            return { "error": "Insufficent permission" }
-        if response.status_code == 400:
-            return { "error" : "Bad Request" }
+        error = handleStatusCode(response)
+        if error is not None:
+            return error
         return response.json()
     except requests.exceptions.SSLError:
         return { "error": "SSL error" }
@@ -37,15 +34,23 @@ def mispPostRequest(server, url, data={}):
     full_url = urljoin(server.url, url)
     try:
         response = requests.post(full_url, data=data, headers=headers, verify=(not getattr(server, 'skip_ssl', True)))
-        if response.status_code == 403:
-            return { "error": "Authentication error" }
-        if response.status_code == 405:
-            return { "error": "Unsufficent permission" }
+        error = handleStatusCode(response)
+        if error is not None:
+            return error
         return response.json()
     except requests.exceptions.SSLError:
         return { "error": "SSL Error" }
     except requests.exceptions.ConnectionError:
         return { "error": "Server unreachable" }
+
+def handleStatusCode(response):
+    if response.status_code == 403:
+        return { "error": "Authentication error" }
+    if response.status_code == 405:
+        return { "error": "Insufficent permission" }
+    if response.status_code == 400:
+        return { "error" : "Bad Request" }
+    return None
 
 
 def batchRequest(batch_request):
