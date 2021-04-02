@@ -6,7 +6,7 @@ import concurrent.futures
 import time
 from urllib.parse import urljoin
 
-def mispGetRequest(server, url, data={}):
+def mispGetRequest(server, url, data={}, rawResponse=False):
     headers = {
         "Authorization": server.authkey,
         "Accept": "application/json",
@@ -18,14 +18,14 @@ def mispGetRequest(server, url, data={}):
         error = handleStatusCode(response)
         if error is not None:
             return error
-        return response.json()
+        return response.json() if not rawResponse else response
     except requests.exceptions.SSLError:
         return { "error": "SSL error" }
     except requests.exceptions.ConnectionError:
         return { "error": "Server unreachable" }
 
 
-def mispPostRequest(server, url, data={}):
+def mispPostRequest(server, url, data={}, rawResponse=False):
     headers = {
         "Authorization": server.authkey,
         "Accept": "application/json",
@@ -33,11 +33,11 @@ def mispPostRequest(server, url, data={}):
     }
     full_url = urljoin(server.url, url)
     try:
-        response = requests.post(full_url, data=data, headers=headers, verify=(not getattr(server, 'skip_ssl', True)))
+        response = requests.post(full_url, json=data, headers=headers, verify=(not getattr(server, 'skip_ssl', True)))
         error = handleStatusCode(response)
         if error is not None:
             return error
-        return response.json()
+        return response.json() if not rawResponse else response
     except requests.exceptions.SSLError:
         return { "error": "SSL Error" }
     except requests.exceptions.ConnectionError:

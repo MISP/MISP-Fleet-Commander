@@ -1,5 +1,5 @@
 import json
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from application import db
 from sqlalchemy.orm.attributes import QueryableAttribute
 from sqlalchemy.sql.expression import not_
@@ -15,7 +15,9 @@ from sqlalchemy.sql.expression import not_
 def _default(self, obj):
     if isinstance(obj, (datetime, date)):
         return obj.isoformat()
-    return getattr(obj.__class__, "to_json", _default.default)(obj)
+    elif isinstance(obj, (timedelta)):
+        return str(obj)
+    return getattr(obj.__class__, "to_json", _default.default)(self, obj)
 
 
 _default.default = json.JSONEncoder.default

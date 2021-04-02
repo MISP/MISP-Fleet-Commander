@@ -7,8 +7,10 @@ import json
 import re
 from collections import Mapping, MutableSequence, defaultdict
 from sqlalchemy.orm import with_parent
-from application.models import db, User, Server, ServerQuery
+from application.DBModels import db, User, Server, ServerQuery
 from application.controllers.utils import mispGetRequest, mispPostRequest, batchRequest
+import application.models.servers as serverModel
+#from application.models.servers import index as sindex
 
 BPserver = Blueprint('server', __name__)
 
@@ -19,7 +21,7 @@ class DictToObject:
 
 @BPserver.route('/servers/index', methods=['GET'])
 def index():
-    servers = Server.query.all()
+    servers = serverModel.index()
     if servers:
         return jsonify([s.to_dict() for s in servers])
     else:
@@ -236,7 +238,9 @@ def getConnection(server_id, connection_id):
 def syncOvertime(server_id):
     server = Server.query.get(server_id)
     if server is not None:
-        syncLogs = mispPostRequest(server, '/logs/admin_search/search', {"Log":{"model":"Server","action":"pull","email":"","org":"","model_id":"","title":"","change":""}})
+        syncLogs = mispPostRequest(server, '/logs/admin_search/search', {"Log":{"model":"Server","action":"pull","email":"","org":"","model_id":"","title":"","change":"", "ip": ""}})
+        if 'error' in syncLogs:
+            return jsonify(syncLogs)
         syncOvertime = parseGetSyncOvertime(syncLogs)
         result = {
             'timestamp': int(time.time()),
@@ -245,6 +249,53 @@ def syncOvertime(server_id):
         return jsonify(result)
     else:
         return jsonify({})
+
+@BPserver.route('/servers/loginOvertime/<int:server_id>', methods=['GET'])
+def loginOvertime(server_id):
+    server = Server.query.get(server_id)
+    if server is not None:
+        loginLogs = mispPostRequest(server, '/logs/admin_search/search', {"Log":{"model":"User","action":["login", "auth_fail"],"email":"","org":"","model_id":"","title":"","change":"", "ip": ""}})
+        if 'error' in loginLogs:
+            return jsonify(loginLogs)
+        loginLogs = parseGetLoginLogs(loginLogs)
+        result = {
+            'timestamp': int(time.time()),
+            'data': loginLogs
+        }
+        return jsonify(result)
+    else:
+        return jsonify({})
+
+@BPserver.route('/servers/restQuery/<int:server_id>', methods=['POST'])
+def restQuery(server_id):
+    queryURL = request.json['url']
+    queryData = request.json['data']
+    queryMethod = request.json['method']
+    server = Server.query.get(server_id)
+    if server is not None:
+        if queryMethod == 'POST':
+            response = mispPostRequest(server, queryURL, queryData, rawResponse=True)
+        else:
+            response = mispGetRequest(server, queryURL, rawResponse=True)
+        responseData = ""
+        try:
+            responseData = response.json()
+        except json.decoder.JSONDecodeError as e:
+            responseData = response.text
+        result = {
+            'timestamp': int(time.time()),
+            'data': responseData,
+            'headers': dict(response.headers),
+            'status_code': response.status_code,
+            'reason': response.reason,
+            'elapsed_time': response.elapsed,
+            'url': response.url,
+        }
+        return jsonify(result)
+    else:
+        return jsonify({})
+
+
 # ===========
 def saveInfo(server, queryResult):
     now = int(time.time())
@@ -453,7 +504,7 @@ def parseGetSyncOvertime(syncLogs, afterTime=None):
     servers = defaultdict(dict)
     for logEntry in syncLogs:
         if title.startsWith('Pull from'):
-            created = dt.fromisoformat(logEntry['Log']['created']).timestamp()
+            created = dt.fromisoformat(logEntry['Log']['created'])
             if created > afterTime:
                 title = logEntry['Log']['title']
                 url = re.search(r'Pull from (?P<url>[\S]+) .*', title).group('url')
@@ -467,6 +518,37 @@ def parseGetSyncOvertime(syncLogs, afterTime=None):
                 }
                 servers[url][created] = syncMetrics
     return servers
+
+def parseGetLoginLogs(loginLogs, afterTime=None):
+    if afterTime is None:
+        afterTime = dt.now() - timedelta(days=7)
+    logins = {
+        'login': [],
+        'auth_fail': []
+    }
+    for logEntry in loginLogs:
+        created = dt.fromisoformat(logEntry['Log']['created'])
+        if created > afterTime:
+            action = logEntry['Log']['action']
+            title = logEntry['Log']['title']
+            ip = logEntry['Log'].get('ip', '')
+            if action == 'login':
+                parsedTitle = re.search(r'User \((?P<userid>[\d]+)\): (?P<email>[\S]+)', title)
+                loginMetrics = {
+                    'userid': int(parsedTitle.group('userid')),
+                    'email': parsedTitle.group('email'),
+                    'ip': ip,
+                    'created': int(created.timestamp())
+                }
+            elif action == 'auth_fail':
+                loginMetrics = {
+                    'userid': None,
+                    'email': None,
+                    'ip': ip,
+                    'created': int(created.timestamp())
+                }
+            logins[action].append(loginMetrics)
+    return logins
 
 
 def countJsonLeaves(json_obj, ignore_empty_string=True):

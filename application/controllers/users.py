@@ -1,7 +1,7 @@
 from flask import Blueprint, request, render_template, make_response, jsonify
 # from flask import current_app as app
 from datetime import datetime as dt
-from application.models import db, User
+from application.DBModels import db, User
 
 
 BPuser = Blueprint('user', __name__)

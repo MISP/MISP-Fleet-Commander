@@ -31,21 +31,21 @@ class User(BaseModel):
         return self.to_json()
 
 
-class UserSettings(BaseModel):
-    __tablename__ == 'user_settings'
-    id = db.Column(db.Integer,
-                    primary_key=True)
-
-    user_id = db.Column(db.Integer,
-                        db.ForeignKey('users.id'),
-                        nullable=False,
-                        index=True)
-
-    user = db.relationship('User',
-        backref=db.backref('user_settings', lazy='joined'))
-
-    def __repr__(self):
-        return self.to_json()
+#class UserSettings(BaseModel):
+#    __tablename__ == 'user_settings'
+#    id = db.Column(db.Integer,
+#                    primary_key=True)
+#
+#    user_id = db.Column(db.Integer,
+#                        db.ForeignKey('users.id'),
+#                        nullable=False,
+#                        index=True)
+#
+#    user = db.relationship('User',
+#        backref=db.backref('user_settings', lazy='joined'))
+#
+#    def __repr__(self):
+#        return self.to_json()
 
 class Server(BaseModel):
     __tablename__ = 'servers'
