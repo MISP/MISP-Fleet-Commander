@@ -82,7 +82,7 @@
                 <timeSinceRefresh
                     :key="table.timeKey"
                     :timestamp="row.value"
-                    type="ddd DD/MM/YYYY hh:mm"
+                    type="ddd DD/MM/YYYY HH:mm"
                     :noicon="true"
                     :noformat="true"
                 ></timeSinceRefresh>

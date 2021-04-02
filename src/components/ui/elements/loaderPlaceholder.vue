@@ -1,7 +1,7 @@
 <template>
     <span>
         <slot v-if="status"/>
-        <cellLoading v-else></cellLoading>
+        <cellLoading v-else :height="height" :width="width" :maxWidth="maxWidth" :style="style"></cellLoading>
     </span>
 </template>
 
@@ -16,11 +16,32 @@ export default {
     props: {
         loading: {
             required: true
-        }
+        },
+        height: {
+            type: String,
+            default: "0.5rem"
+        },
+        width: {
+            type: String,
+            default: ""
+        },
+        maxWidth: {
+            type: String,
+            default: ""
+        },
+        placeholderWidth: {
+            type: String,
+            default: ""
+        },
     },
     computed: {
         status() {
             return this.loading
+        },
+        style() {
+            return {
+                width: this.placeholderWidth
+            }
         }
     }
 }

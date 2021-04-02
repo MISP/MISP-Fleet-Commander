@@ -47,7 +47,7 @@
                      <b-td>
                          <timeSinceRefresh
                             :timestamp=" user.User.date_created"
-                            type="ddd DD/MM/YYYY hh:mm"
+                            type="ddd DD/MM/YYYY HH:mm"
                             :noicon="true"
                             :noformat="true"
                             :small="false"

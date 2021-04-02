@@ -200,8 +200,13 @@
             </template>
 
             <template v-slot:row-details="row">
-                Detail!
-                {{ row }}
+                <RowDetails 
+                    :connection="row.item"
+                    :serverSource="row.item.source"
+                    :serverDestination="row.item.destination"
+                    @actionRefresh="handleRefreshInfo({index: row.index, method: $event})"
+                    @actionClose="toggleServerInfo(row.item, row.index, row)"
+                ></RowDetails>
             </template>
 
             <template v-slot:table-caption>Showing {{ table.totalRows }} out of {{ connectionCount }} Connections</template>
@@ -217,6 +222,7 @@ import iconForScope from "@/components/ui/elements/iconForScope.vue"
 import contextualMenu from "@/components/ui/elements/contextualMenu.vue"
 import loaderPlaceholder from "@/components/ui/elements/loaderPlaceholder.vue"
 import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
+import RowDetails from "@/views/connections/elements/RowDetails.vue"
 import connectionsSummary from "@/views/servers/elements/connectionsSummary.vue"
 import jsonViewer from "@/components/ui/elements/jsonViewer.vue"
 
@@ -229,6 +235,7 @@ export default {
         contextualMenu,
         timeSinceRefresh,
         jsonViewer,
+        RowDetails,
         connectionsSummary
     },
     data: function () {

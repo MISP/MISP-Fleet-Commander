@@ -20,6 +20,10 @@ export default {
         width: {
             type: String,
             default: ""
+        },
+        maxWidth: {
+            type: String,
+            default: "120px"
         }
     },
     computed: {
@@ -27,7 +31,7 @@ export default {
             let style = {
                 height: this.height,
                 width: this.width,
-                "max-width": "120px"
+                "max-width": this.maxWidth
             }
             return style
         }

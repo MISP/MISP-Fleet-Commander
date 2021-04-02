@@ -8,6 +8,7 @@ const urls = {
     add: "http://127.0.0.1:5000/servers/add",
     edit: "http://127.0.0.1:5000/servers/edit",
     delete: "http://127.0.0.1:5000/servers/delete",
+    restQuery: "http://127.0.0.1:5000/servers/restQuery"
 }
   
 export default {
@@ -90,6 +91,18 @@ export default {
             .catch(error => {
                 console.log(error)
                 errorCb(error.data.toJSON())
+            })
+    },
+
+    restQuery(server, payload, cb, errorCb) {
+        const url = `${urls.restQuery}/${server.id}`
+        return axios.post(url, payload)
+            .then((response) => {
+                cb(response.data)
+            })
+            .catch(error => {
+                console.log(error)
+                errorCb(error)
             })
     }
 }

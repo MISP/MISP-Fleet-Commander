@@ -7,7 +7,9 @@
                 :title="scope"
             >
                 <b-card-text>
-                    <component v-bind:is="value.component" :server="server"></component>
+                    <keep-alive>
+                        <component v-bind:is="value.component" :server="server"></component>
+                    </keep-alive>
                 </b-card-text>
             </b-tab>
         </b-tabs>
@@ -18,6 +20,7 @@
 import userAdministration from "@/views/servers/elements/mispRemoteAdministration/userAdministration.vue"
 import orgAdministration from "@/views/servers/elements/mispRemoteAdministration/orgAdministration.vue"
 import settingsAdministration from "@/views/servers/elements/mispRemoteAdministration/settingsAdministration.vue"
+import restAPIAdministration from "@/views/servers/elements/mispRemoteAdministration/restAPIAdministration.vue"
 
 export default {
     name: "MISPRemoteAdministration",
@@ -25,6 +28,7 @@ export default {
         userAdministration,
         orgAdministration,
         settingsAdministration,
+        restAPIAdministration,
     },
     props: {
         server: {
@@ -38,6 +42,7 @@ export default {
                 Users: { component: "userAdministration" },
                 Organisation: { component: "orgAdministration" },
                 "Server Settings": { component: "settingsAdministration" },
+                "REST API": {component: "restAPIAdministration"}
             }
         }
     },

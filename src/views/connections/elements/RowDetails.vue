@@ -1,17 +1,17 @@
 <template>
     <b-card no-body>
-        <template v-if="server._loading">
+        <template v-if="connection._loading">
             <div class="text-center text-danger my-2">
                 <b-spinner class="align-middle"></b-spinner>
                 <strong class="ml-2">Loading...</strong>
             </div>
         </template>
         <template v-else>
-            <template v-if="details.error">
+            <template v-if="connection.error">
                 <div class="mb-2 text-right">
                     <span class="mr-1 text-muted">
                         <i class="far fa-clock mr-1"></i>
-                        <small class="align-middle">{{ details.query_result.timestamp | moment("from") }}</small>
+                        <small class="align-middle">{{ getDetails.query_result.timestamp | moment("from") }}</small>
                     </span>
                     <b-button 
                         size="sm" variant="primary" title="Refresh"
@@ -23,8 +23,8 @@
                     ><b-icon icon="arrow-clockwise"></b-icon></b-button>
                 </div>
                 <b-alert show variant="danger">
-                    Error while accessing diagnostic:
-                    <strong>{{ details }}</strong>
+                    Error while accessing details:
+                    <strong>{{ getDetails }}</strong>
                 </b-alert>
             </template>
             <template v-else>
@@ -35,19 +35,14 @@
                                 <i class="fas fa-tools mr-1"></i><strong>Remote administration</strong>
                             </template>
                             <div class="max-heigth-700">
-                                <keep-alive>
-                                <MISPRemoteAdministration
-                                    :server="server"
-                                ></MISPRemoteAdministration>
-                                </keep-alive>
+                                administration
                             </div>
                         </b-tab>
                         <b-tab title="Diagnostic" class="p-1" active no-body>
-                            <keep-alive>
                             <b-card no-body>
                                 <b-tabs pills card vertical>
                                     <b-tab
-                                        v-for="(value, setting) in getDiagnostic"
+                                        v-for="(value, setting) in getDetails"
                                         v-bind:key="setting"
                                         :title="setting"
                                     >
@@ -90,57 +85,23 @@
                                     </b-tab>
                                 </b-tabs>
                             </b-card>
-                            </keep-alive>
                         </b-tab>
-                        <b-tab title="Usage" no-body>
-                            <keep-alive>
+                        <b-tab title="Activity" no-body>
                             <b-card no-body>
                                 <div class="max-heigth-700">
                                     <jsonViewer
-                                        :item="details.query_result.serverUsage"
+                                        :item="getDetails"
                                         rootKeyName="Usage"
                                         :open="true"
                                     ></jsonViewer>
                                 </div>
-                            </b-card>
-                            </keep-alive>
-                        </b-tab>
-                        <b-tab title="User profile" class="p-1" no-body>
-                            <keep-alive>
-                            <b-card no-body>
-                                <div class="max-heigth-700">
-                                    <jsonViewer
-                                        :item="details.query_result.serverUser"
-                                        rootKeyName="User profile"
-                                        :open="true"
-                                    ></jsonViewer>
-                                </div>
-                            </b-card>
-                            </keep-alive>
-                        </b-tab>
-                        <b-tab title="Connected MISP servers" class="p-1" no-body>
-                            <keep-alive>
-                            <b-card no-body>
-                                <div class="max-heigth-700">
-                                    <jsonViewer
-                                        :item="details.query_result.connectedServers"
-                                        rootKeyName="Connected MISP servers"
-                                        :open="true"
-                                    ></jsonViewer>
-                                </div>
-                            </b-card>
-                            </keep-alive>
-                        </b-tab>
-                        <b-tab title="Content" class="p-1" no-body disabled>
-                            <b-card no-body>
-                                Content
                             </b-card>
                         </b-tab>
 
                         <template v-slot:tabs-end>
                             <b-nav-item href="#" class="ml-auto rightmost-action">
                                 <timeSinceRefresh
-                                    :timestamp="details.timestamp"
+                                    :timestamp="connection.last_refresh"
                                     type="ddd DD/MM/YYYY HH:mm"
                                 ></timeSinceRefresh>
                                 <b-button variant="primary" size="sm" @click="refreshDiagnostic()">
@@ -166,7 +127,6 @@
 import iconButton from "@/components/ui/elements/iconButton.vue"
 import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
 import jsonViewer from "@/components/ui/elements/jsonViewer.vue"
-import MISPRemoteAdministration from "@/views/servers/elements/MISPRemoteAdministration.vue"
 import MISPSchemaDiagnostic from "@/views/servers/elements/MISPSchemaDiagnostic.vue"
 
 export default {
@@ -175,37 +135,33 @@ export default {
         timeSinceRefresh,
         jsonViewer,
         iconButton,
-        MISPRemoteAdministration,
         MISPSchemaDiagnostic,
     },
     props: {
-        details: {
+        connection: {
             type: Object,
             required: true
         },
-        server: {
+        serverSource: {
+            type: Object,
+            required: true
+        },
+        serverDestination: {
             type: Object,
             required: true
         }
     },
     data: function() {
         return {
-            diagnosticTabularView: ["dbDiagnostics", ],
-            diagnosticListView: ["dbSchemaDiagnostic", "moduleStatus", "readableFiles", "redisInfo", "version", "writeableDirs", "writeableFiles"],
+            tabularView: ["", ],
+            listView: ["Organisation", "RemoteOrg", "Server", "User", "connectionTest", "connectionUser"],
         }
     },
     computed: {
-        getDiagnostic() {
+        getDetails() {
             // eslint-disable-next-line no-unused-vars
-            let {finalSettings, ...diagnostic} = this.details.query_result.serverSettings
-            return diagnostic
+            return this.connection.connection
         },
-        getConfig() {
-            return this.details.query_result.serverSettings.finalSettings
-        },
-        getDiagnosticForTabularView() {
-            return this.diagnostic
-        }
     },
     methods: {
         refreshDiagnostic() {
@@ -215,10 +171,10 @@ export default {
             this.$emit("actionClose", "no_cache")
         },
         isTabularView(name) {
-            return this.diagnosticTabularView.includes(name)
+            return this.tabularView.includes(name)
         },
         isListView(name) {
-            return this.diagnosticListView.includes(name)
+            return this.listView.includes(name)
         },
         fieldsFromObject(object) {
             return Object.keys(object).map(key => {

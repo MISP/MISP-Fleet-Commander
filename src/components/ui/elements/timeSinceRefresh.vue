@@ -49,7 +49,7 @@ export default {
             return this.clockNoMargin ? "" : "mr-1"
         },
         timestampDate() {
-            return moment(this.timestamp * 1000).format("ddd DD/MM/YYYY hh:mm")
+            return moment(this.timestamp * 1000).format("ddd DD/MM/YYYY HH:mm")
         },
         timestampFromNow() {
             return moment(this.timestamp * 1000).fromNow()
