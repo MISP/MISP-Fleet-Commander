@@ -1,5 +1,5 @@
 <template>
-     <div class="d-flex flex-nowrap compact" :title="title" :style="tight ? 'line-height: 1.2' : ''">
+     <div class="d-flex flex-nowrap compact" :title="title" :style="rootStyle">
         <span class="text-center">
             <img
                 v-if="useAsset"
@@ -43,6 +43,11 @@ export default {
         tight: {
             type: Boolean,
             default: false
+        }
+    },
+    computed: {
+        rootStyle: function() {
+            return this.style + (this.tight ? " line-height: 1.2" : "")
         }
     }
 }

@@ -7,14 +7,20 @@
     --var-width-sidebar: 160px;
 }
 
+body {
+    background-color: #f8f9fb;
+}
+
 .main {
     display: flex;
     flex-direction: column;
     font-size: 14px;
+    /* background-color: #f6f7f9; */
 }
 
 .application-navbar {
-    background-color: var(--var-color-lapislazuli) !important;
+    /* background-color: var(--var-color-lapislazuli) !important; */
+    /* background-color: var(--var-color-yankeesblue) !important; */
 }
 
 .sidebar {
@@ -50,6 +56,13 @@
     width: 100%;
     margin-top: 1.0em;
     margin-left: 15em;
+    -webkit-transition: margin-left .2s;
+    transition: margin-left .2s;
+    transition-timing-function: cubic-bezier(.23,1,.32,1);
+}
+
+.main-body {
+    margin-left: 50px;
     -webkit-transition: margin-left .2s;
     transition: margin-left .2s;
     transition-timing-function: cubic-bezier(.23,1,.32,1);
