@@ -3,6 +3,8 @@ from datetime import date, datetime, timedelta
 from application import db
 from sqlalchemy.orm.attributes import QueryableAttribute
 from sqlalchemy.sql.expression import not_
+from sqlalchemy.inspection import inspect as sa_inspect
+from sqlalchemy.ext.hybrid import hybrid_property
 
 
 # def json_serial(obj):
@@ -17,7 +19,7 @@ def _default(self, obj):
         return obj.isoformat()
     elif isinstance(obj, (timedelta)):
         return str(obj)
-    return getattr(obj.__class__, "to_json", _default.default)(self, obj)
+    return getattr(obj.__class__, "to_json", _default.default)(obj)
 
 
 _default.default = json.JSONEncoder.default
@@ -56,11 +58,21 @@ class BaseModel(db.Model):
 
         columns = self.__table__.columns.keys()
         relationships = self.__mapper__.relationships.keys()
+        hybrid_properties = [item.__name__ for item in sa_inspect(self.__class__).all_orm_descriptors if isinstance(item, hybrid_property)]
         properties = dir(self)
 
         ret_data = {}
 
         for key in columns:
+            if key.startswith("_"):
+                continue
+            check = "%s.%s" % (_path, key)
+            if check in _hide or key in hidden:
+                continue
+            if check in show or key in default:
+                ret_data[key] = getattr(self, key)
+
+        for key in hybrid_properties:
             if key.startswith("_"):
                 continue
             check = "%s.%s" % (_path, key)

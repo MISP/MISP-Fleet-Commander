@@ -33,9 +33,11 @@ def create_app():
         from . import routes
         from application.controllers.users import BPuser
         from application.controllers.servers import BPserver
+        from application.controllers.serverGroups import BPserverGroup
 
         app.register_blueprint(BPuser)
         app.register_blueprint(BPserver)
+        app.register_blueprint(BPserverGroup)
 
         # Create tables for our models
         db.create_all()
