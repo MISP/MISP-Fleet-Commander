@@ -12,6 +12,9 @@ const state = {
 const getters = {
     serverGroupCount: state => {
         return state.all.length
+    },
+    selectedServerGroup: state => {
+        return state.selected
     }
 }
 

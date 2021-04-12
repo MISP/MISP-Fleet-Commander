@@ -4,10 +4,19 @@ import Home from "./views/home/Home.vue"
 import Servers from "./views/servers/Servers.vue"
 import Connections from "./views/connections/Connections.vue"
 import ServerNetwork from "./views/serverNetwork/ServerNetwork.vue"
+import store from "./store/index"
 
 Vue.use(Router)
 
-export default new Router({
+const serverGroupSelected = (to, from, next) => {
+    if (store.getters["serverGroups/selectedServerGroup"] === null) {
+        next("/home")
+    } else {
+        next()
+    }
+}
+
+let router =  new Router({
     routes: [
         {
             path: "/",
@@ -21,17 +30,37 @@ export default new Router({
         {
             path: "/servers",
             name: "servers",
-            component: Servers
+            component: Servers,
+            meta: {
+                requiresServerGroup: true
+            }
         },
         {
             path: "/connections",
             name: "connections",
-            component: Connections
+            component: Connections,
+            meta: {
+                requiresServerGroup: true
+            }
         },
         {
             path: "/serverNetwork",
             name: "serverNetwork",
-            component: ServerNetwork
+            component: ServerNetwork,
+            meta: {
+                requiresServerGroup: true
+            }
         }
     ]
 })
+
+router.beforeEach((to, from, next) => {
+    if(to.matched.some(record => record.meta.requiresServerGroup)) {
+        serverGroupSelected(to, from, next)
+    } else {
+        next()
+    }
+})
+
+
+export default router

@@ -7,7 +7,9 @@
                 v-bind:key="item.name"
             >
                 <router-link
-                    class="sidebar-link text-decoration-none"
+                    :class="{'sidebar-link text-decoration-none': true, 'inactive': !canBeAccessed(item)}"
+                    v-b-tooltip.hover.right
+                    :title="!canBeAccessed(item) ? 'No server group selected' : ''"
                     :to="item.to"
                 >
                     <span class="icon">
@@ -21,7 +23,7 @@
 </template>
 
 <script>
-import { mapState } from "vuex"
+import { mapGetters } from "vuex"
 import iconForScope from "@/components/ui/elements/iconForScope.vue"
 
 export default {
@@ -58,9 +60,26 @@ export default {
     props: {
     },
     computed: {
+        ...mapGetters({
+            selectedServerGroup: "serverGroups/selectedServerGroup"
+        }),
     },
     methods: {
-    }
+        canBeAccessed(item) {
+            const { route } = this.$router.resolve({
+                name: item.to.name,
+            })
+            if ([route].some(record => record.meta.requiresServerGroup)) {
+                if (this.selectedServerGroup === null) {
+                    return false
+                } else {
+                    return true
+                }
+            } else {
+                return true
+            }
+        }
+    },
 }
 </script>
 
@@ -118,6 +137,11 @@ export default {
     background-color: var(--var-color-charcoal);
 }
 
+.sidebar-link.inactive {
+    filter: brightness(0.5);
+    cursor: not-allowed;
+}
+
 .sidebar-link {
     display: block;
     padding: 10px 0;
@@ -145,9 +169,11 @@ export default {
     display: none;
 }
 
-.sidebar-link:hover {
+.sidebar-link:not(.inactive):hover {
     left: 0.2em;
 }
+
+
 
 .sidebar-link > .icon {
     color: white;
