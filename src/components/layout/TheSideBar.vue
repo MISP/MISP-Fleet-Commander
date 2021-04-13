@@ -169,11 +169,9 @@ export default {
     display: none;
 }
 
-.sidebar-link:not(.inactive):hover {
+.sidebar-item:hover .sidebar-link:not(.inactive) {
     left: 0.2em;
 }
-
-
 
 .sidebar-link > .icon {
     color: white;

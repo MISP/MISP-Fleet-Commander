@@ -38,7 +38,7 @@ export default {
     },
     methods: {
         selectServerGroup(group) {
-            this.$store.commit("serverGroups/selectServerGroup", group)
+            this.$store.dispatch("serverGroups/selectServerGroup", group)
         },
         refreshServerGroupIndex() {
             this.refreshInProgress = true
