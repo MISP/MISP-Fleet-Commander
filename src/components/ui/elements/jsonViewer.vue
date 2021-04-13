@@ -12,8 +12,8 @@
                     <span :class="['font-weight-bold', rootkeyIndexing ? 'text-muted' : '']">
                         {{ rootKey }}
                     </span>
-                    <span :class="['mx-1', hasChild ? 'text-muted' : '']">
-                        <span :class="{'mx-1': true, 'text-muted': hasChild, 'preppend-column': !canBeOpened}">
+                    <span class="mx-1">
+                        <span :class="[{'text-muted': hasChild || (canBeOpened && !hasChild), 'preppend-column': !canBeOpened}, childClass]">
                             {{ childString }}
                         </span>
                     </span>
@@ -31,7 +31,7 @@
                 <template v-else-if="!hasChild && Array.isArray(item)">
                     <small>empty array</small>
                 </template>
-                <template v-else-if="!hasChild && typeof item === 'object'">
+                <template v-else-if="!hasChild && typeof item === 'object' && item !== null">
                     <small>empty object</small>
                 </template>
             </li>
@@ -83,6 +83,8 @@ export default {
         hasChild() {
             if (Array.isArray(this.item)) {
                 return this.item.length > 0
+            } else if (this.item === null) {
+                return false
             } else if (typeof this.item === "object") {
                 return Object.keys(this.item).length > 0
             } else {
@@ -91,12 +93,28 @@ export default {
         },
         childString() {
             if (Array.isArray(this.item)) {
-                return `[${this.item.length}]`
+                return `Array[${this.item.length}]`
+            } else if (this.item === null) {
+                return "null"
             } else if (typeof this.item === "object") {
-                return `{${Object.keys(this.item).length}}`
+                return `Object{${Object.keys(this.item).length}}`
             } else {
-                return this.item === "" ? "\"\"" : this.item
+                if (typeof this.item === "string") {
+                    return `"${this.item}"`
+                } else {
+                    return this.item
+                }
             }
+        },
+        childClass() {
+            if (this.item === null) {
+                return "text-muted"
+            } else if (typeof this.item === "string") {
+                return "text-danger"
+            } else if (typeof this.item === "boolean" || typeof this.item === "number") {
+                return "text-primary"
+            }
+            return ""
         }
     },
     data: function() {
@@ -124,6 +142,7 @@ export default {
     }
     .preppend-column::before {
         content: ':';
-        margin-right: 1rem;
+        margin-right: 1em;
+        color: black;
     }
 </style>
