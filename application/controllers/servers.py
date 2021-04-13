@@ -19,9 +19,9 @@ class DictToObject:
         self.__dict__.update(entries)
 
 
-@BPserver.route('/servers/index', methods=['GET'])
-def index():
-    servers = serverModel.index()
+@BPserver.route('/servers/index/<int:group_id>', methods=['GET'])
+def index(group_id=None):
+    servers = serverModel.index(group_id)
     if servers:
         return jsonify([s.to_dict() for s in servers])
     else:
@@ -37,8 +37,8 @@ def get(server_id):
         return jsonify({})
 
 
-@BPserver.route('/servers/add', methods=['POST'])
-def add():
+@BPserver.route('/servers/add/<int:group_id>', methods=['POST'])
+def add(group_id):
     servers = []
     # TODO: If password provided, fetch the associated API key
     if isinstance(request.json, list):
@@ -46,9 +46,11 @@ def add():
         for server in request.json:
             server = Server(name=server.get('name'),
                         url=server.get('url'),
+                        comment=server.get('comment'),
                         skip_ssl=server.get('skip_ssl', False),
                         authkey=server.get('authkey', None),
                         basicauth=server.get('basicauth', None),
+                        server_group_id=group_id,
                         user_id=1)
             db.session.add(server)
             servers.append(server)
@@ -57,9 +59,11 @@ def add():
     else:
         server = Server(name=request.json.get('name'),
                         url=request.json.get('url'),
+                        comment=request.json.get('comment'),
                         skip_ssl=request.json.get('skip_ssl', False),
                         authkey=request.json.get('authkey', None),
                         basicauth=request.json.get('basicauth', None),
+                        server_group_id=group_id,
                         user_id=1)
         db.session.add(server)
         if request.json.get('recursive_add', False):
@@ -71,7 +75,7 @@ def add():
 
 @BPserver.route('/servers/edit', methods=['POST'])
 def edit():
-    saveFields = ['name', 'description', 'url', 'skip_ssl', 'authkey', 'basicauth']
+    saveFields = ['name', 'comment', 'url', 'skip_ssl', 'authkey', 'basicauth']
     server = Server.query.get(request.json['id'])
     if server is not None:
         for field, value in request.json.items():
@@ -115,9 +119,9 @@ def ping_server(server_id):
     else:
         return jsonify({})
 
-@BPserver.route('/servers/batchTestConnection', methods=['GET'])
-def batch_ping_server():
-    servers = Server.query.all()
+@BPserver.route('/servers/batchTestConnection/<int:group_id>', methods=['GET'])
+def batch_ping_server(group_id=None):
+    servers = serverModel.index(group_id)
     allRequests = []
     if servers:
         for server in servers:
@@ -144,6 +148,15 @@ def queryInfo(server_id, no_cache):
             if server_query_db is None: # No query associated to the server
                 server_query_db = fetchServerInfo(server)
         return jsonify(server_query_db.to_dict())
+    else:
+        return jsonify({'error': 'Unkown server'})
+
+@BPserver.route('/servers/getUsers/<int:server_id>', methods=['GET'])
+def getUsers(server_id):
+    server = Server.query.get(server_id)
+    if server is not None:
+        server_query_users = fetchServerUsers(server)
+        return jsonify(server_query_users)
     else:
         return jsonify({'error': 'Unkown server'})
 
@@ -212,9 +225,9 @@ def discoverConnected():
             test_result.append(server)
     return jsonify(test_result)
 
-@BPserver.route('/servers/network/')
-def network():
-    servers = Server.query.all()
+@BPserver.route('/servers/network/<int:group_id>')
+def network(group_id=None):
+    servers = serverModel.index(group_id)
     network = buildNetwork(servers)
     return jsonify(network)
 
@@ -328,6 +341,12 @@ def fetchServerInfo(server):
     }
     server_query_db = saveInfo(server, server_query)
     return server_query_db
+
+def fetchServerUsers(server):
+    users = mispGetRequest(server, 'admin/users/index')
+    if 'error' in users:
+        return []
+    return users
 
 def attachConnectedServerStatus(server, connectedServers):
     if type(connectedServers) is list:

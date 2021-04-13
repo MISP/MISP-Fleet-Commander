@@ -11,7 +11,6 @@ BPserverGroup = Blueprint('serverGroup', __name__)
 @BPserverGroup.route('/serverGroups/index', methods=['GET'])
 def index():
     sgs = ServerGroup.query.all()
-    print(sgs)
     return jsonify([sg.to_dict() for sg in sgs])
 
 
