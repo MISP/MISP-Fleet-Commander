@@ -129,13 +129,11 @@
                         </b-tab>
                         <b-tab title="Connected MISP servers" class="p-1" no-body lazy>
                             <keep-alive>
-                            <b-card no-body>
-                                <div class="max-heigth-700">
-                                    <jsonViewer
-                                        :item="details.query_result.connectedServers"
-                                        rootKeyName="Connected MISP servers"
-                                        :open="true"
-                                    ></jsonViewer>
+                            <b-card class="border-0" no-body>
+                                <div class="max-heigth-700 p-2">
+                                    <MISPConnectedServers
+                                        :servers="details.query_result.connectedServers"
+                                    ></MISPConnectedServers>
                                 </div>
                             </b-card>
                             </keep-alive>
@@ -177,6 +175,7 @@ import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
 import jsonViewer from "@/components/ui/elements/jsonViewer.vue"
 import MISPRemoteAdministration from "@/views/servers/elements/MISPRemoteAdministration.vue"
 import MISPSchemaDiagnostic from "@/views/servers/elements/MISPSchemaDiagnostic.vue"
+import MISPConnectedServers from "@/views/servers/elements/MISPConnectedServers.vue"
 
 export default {
     name: "RowDetails",
@@ -186,6 +185,7 @@ export default {
         iconButton,
         MISPRemoteAdministration,
         MISPSchemaDiagnostic,
+        MISPConnectedServers,
     },
     props: {
         details: {

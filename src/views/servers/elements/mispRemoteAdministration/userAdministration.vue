@@ -156,7 +156,8 @@ export default {
                 currentPage: 1,
                 perPage: 30,
                 optionsPerPage: [{ text: 30, value: 30 }, { text: 50, value: 50 }, { text: 100, value: 100 }],
-                filterFields: ["email"],
+                filter: null,
+                filterFields: ["email", "orgname"],
                 fields: [
                     {
                         key: "User.email",
@@ -230,6 +231,10 @@ export default {
                 .then(() => {
                     this.table.isBusy = false
                     this.users = this.getUsers()
+                    this.users.forEach(user => { // needed for b-table filters
+                        user.email = user.User.email
+                        user.orgname = user.Organisation.name
+                    })
                 })
                 .catch(error => {
                     this.$bvToast.toast(error, {

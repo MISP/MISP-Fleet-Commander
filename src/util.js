@@ -1,3 +1,5 @@
+import { v4 as uuidv4 } from "uuid"
+
 export default {
     install (Vue) {
         Vue.prototype.$generatePaletteFromString = (str, count, full = false) => {
@@ -9,6 +11,9 @@ export default {
         }
         Vue.prototype.$getTextColor = (hex) => {
             return ColorTool.getTextColor(hex)
+        }
+        Vue.prototype.$uuid = () => {
+            return uuidv4()
         }
     }
 }

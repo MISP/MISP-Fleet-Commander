@@ -5,7 +5,7 @@
                 <span
                     v-for="(connection, index) in connections"
                     v-bind:key="index"
-                    :id="`connection-popover-${row_index}-${index}`"
+                    :id="`connection-popover-${row_index}-${index}-${getUUID(connection)}`"
                     :class="['text-nowrap', `text-${connection.connectionTest.status.color}`]"
                 >
                     <b-icon icon="circle-fill"></b-icon>
@@ -14,7 +14,8 @@
                         href="#" tabindex="0"
                         triggers="hover"
                         placement="top"
-                        :target="`connection-popover-${row_index}-${index}`"
+                        boundary="viewport"
+                        :target="`connection-popover-${row_index}-${index}-${getUUID(connection)}`"
                         :variant="connection.connectionTest.status.color"
                     >
                         <connectionState :connection="connection.connectionTest" :user="connection.connectionUser"></connectionState>
@@ -25,7 +26,7 @@
                 <b-badge
                     v-for="(connection, index) in connections"
                     v-bind:key="index"
-                    :id="`connection-popover-${row_index}-${index}`"
+                    :id="`connection-popover-${row_index}-${index}-${getUUID(connection)}`"
                     :class="getRoundedClass(index)"
                     :variant="connection.connectionTest.status.color"
                 >
@@ -34,7 +35,8 @@
                         href="#" tabindex="0"
                         triggers="hover"
                         placement="top"
-                        :target="`connection-popover-${row_index}-${index}`"
+                        boundary="viewport"
+                        :target="`connection-popover-${row_index}-${index}-${getUUID(connection)}`"
                         :variant="connection.connectionTest.status.color"
                     >
                         <connectionState :connection="connection.connectionTest" :user="connection.connectionUser"></connectionState>
@@ -69,7 +71,9 @@ export default {
         }
     },
     data: function() {
-        return {}
+        return {
+            vidToUUID: {}
+        }
     },
     computed: {
         connectionCount() {
@@ -90,6 +94,12 @@ export default {
         },
         labelText(connection) {
             return this.text_in_badge !== "" ? this.text_in_badge : connection.Server.name
+        },
+        getUUID(connection) {
+            if (this.vidToUUID[connection.vid] === undefined) {
+                this.vidToUUID[connection.vid] = this.$uuid()
+            }
+            return this.vidToUUID[connection.vid]
         }
     }
 }
