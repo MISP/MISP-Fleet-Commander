@@ -34,6 +34,15 @@
                         style="border-radius: 0"
                     ></b-form-input>
                 </b-input-group>
+                <b-button
+                    class="ml-2"
+                    variant="primary"
+                    size="sm"
+                    title="Quick refresh users"
+                    @click="loadUsers()"
+                >
+                    <i :class="['fas fa-sync-alt', {'fa-spin': table.isBusy}]" title="Quick refresh users"></i>
+                </b-button>
             </b-button-toolbar>
         </div>
     </div>
@@ -51,7 +60,7 @@
         :per-page="table.perPage"
         :current-page="table.currentPage"
         :busy.sync="table.isBusy"
-        :items="server.server_data.users" 
+        :items="users" 
         :fields="table.fields"
         :filterIncludedFields="table.filterFields"
         :filter="table.filter"
@@ -80,7 +89,6 @@
 
             <template v-slot:cell(User.date_created)="row">
                 <timeSinceRefresh
-                    :key="table.timeKey"
                     :timestamp="row.value"
                     type="ddd DD/MM/YYYY HH:mm"
                     :noicon="true"
@@ -90,7 +98,6 @@
 
             <template v-slot:cell(User.date_modified)="row">
                 <timeSinceRefresh
-                    :key="table.timeKey"
                     :timestamp="row.value"
                     :noicon="true"
                     :noformat="true"
@@ -99,8 +106,9 @@
 
             <template v-slot:cell(User.last_login)="row">
                 <timeSinceRefresh
-                    :key="table.timeKey"
                     :timestamp="row.value"
+                    :noicon="true"
+                    :noformat="true"
                 ></timeSinceRefresh>
             </template>
 
@@ -115,12 +123,13 @@
         v-if="selectedItem !== null"
         ref="modal-user-administration"
         :user="selectedItem"
-        :server="server"
+        :server="getServer"
     ></UserAdministrationModal>
 </div>
 </template>
 
 <script>
+import { mapState, mapGetters } from "vuex"
 import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
 import UserAdministrationModal from "@/views/servers/elements/mispRemoteAdministration/UserAdministrationModal.vue"
 import userPerms from "@/views/servers/elements/userPerms.vue"
@@ -141,7 +150,6 @@ export default {
     data: function() {
         return {
             table: {
-                timeKey: 0,
                 isBusy: false,
                 filtered: "",
                 totalRows: 0,
@@ -187,13 +195,17 @@ export default {
                     },
                 ],
             },
+            users: [],
             selectedItem: null
         }
     },
     computed: {
-        serverBeautiful: function() {
-            return this.server.server_data.users
-        }
+        ...mapGetters({
+            getServerById: "servers/getServerById"
+        }),
+        getServer: function() {
+            return this.getServerById(this.server.id)
+        },
     },
     methods: {
         onFiltered(filteredItems) {
@@ -208,124 +220,27 @@ export default {
             this.$nextTick(() => {
                 this.$bvModal.show("modal-user-administration")
             })
+        },
+        getUsers: function() {
+            return this.getServer.server_data.users
+        },
+        loadUsers() {
+            this.table.isBusy = true
+            this.$store.dispatch("servers/getUsers", this.server.id)
+                .then(() => {
+                    this.table.isBusy = false
+                    this.users = this.getUsers()
+                })
+                .catch(error => {
+                    this.$bvToast.toast(error, {
+                        title: "Could not fetch server info",
+                        variant: "danger",
+                    })
+                })
         }
     },
     created() {
-        this.server.server_data = {
-            users: [
-                {
-                    "email": "training1@misp.test",
-                    "User": {
-                        "id": "4",
-                        "org_id": "1",
-                        "server_id": "0",
-                        "email": "training1@misp.test",
-                        "autoalert": true,
-                        "authkey": "bRmWyTRizQNjdd9O4WdqpYuFAYHsv7eHnApTeKeZ",
-                        "invited_by": "1",
-                        "gpgkey": "",
-                        "certif_public": "",
-                        "nids_sid": "9083461",
-                        "termsaccepted": true,
-                        "newsread": "1606551823",
-                        "role_id": "1",
-                        "change_pw": "0",
-                        "contactalert": true,
-                        "disabled": false,
-                        "expiration": null,
-                        "current_login": "1609876819",
-                        "last_login": 1609868473,
-                        "force_logout": false,
-                        "date_created": 1542614515,
-                        "date_modified": 1608122661
-                    },
-                    "Role": {
-                        "id": "1",
-                        "name": "admin",
-                        "perm_auth": true,
-                        "perm_site_admin": true
-                    },
-                    "Organisation": {
-                        "id": "1",
-                        "name": "Training"
-                    }
-                },
-                {
-                    "email": "training2@misp.test",
-                    "User": {
-                        "id": "5",
-                        "org_id": "1",
-                        "server_id": "0",
-                        "email": "training2@misp.test",
-                        "autoalert": false,
-                        "authkey": "o2AvaH7P2ywVITTWJKvgvGzsFs3HwEUf2D8qZw8b",
-                        "invited_by": "1",
-                        "gpgkey": "",
-                        "certif_public": "",
-                        "nids_sid": "5904986",
-                        "termsaccepted": true,
-                        "newsread": "1606551299",
-                        "role_id": "1",
-                        "change_pw": "0",
-                        "contactalert": false,
-                        "disabled": false,
-                        "expiration": null,
-                        "current_login": "1606559853",
-                        "last_login": 1606553736,
-                        "force_logout": false,
-                        "date_created": 1542616168,
-                        "date_modified": 1608122662
-                    },
-                    "Role": {
-                        "id": "1",
-                        "name": "admin",
-                        "perm_auth": true,
-                        "perm_site_admin": true
-                    },
-                    "Organisation": {
-                        "id": "1",
-                        "name": "Training"
-                    }
-                },
-                {
-                    "email": "training3@misp.test",
-                    "User": {
-                        "id": "6",
-                        "org_id": "1",
-                        "server_id": "0",
-                        "email": "training3@misp.test",
-                        "autoalert": false,
-                        "authkey": "nrE0swMgeEI8ZYfgECMa9cvi3SAGutacXMbvaBTz",
-                        "invited_by": "1",
-                        "gpgkey": "",
-                        "certif_public": "",
-                        "nids_sid": "2052030",
-                        "termsaccepted": true,
-                        "newsread": "1606558908",
-                        "role_id": "1",
-                        "change_pw": "0",
-                        "contactalert": false,
-                        "disabled": false,
-                        "expiration": null,
-                        "current_login": "1606558997",
-                        "last_login": 1606558996,
-                        "force_logout": false,
-                        "date_created": 1542616180,
-                        "date_modified": 1608122662
-                    },
-                    "Role": {
-                        "id": "1",
-                        "name": "admin",
-                        "perm_auth": true,
-                        "perm_site_admin": true
-                    },
-                    "Organisation": {
-                        "id": "1",
-                        "name": "Training"
-                    }
-                }
-            ]
-        }
+        this.loadUsers()
     }
 }
 </script>

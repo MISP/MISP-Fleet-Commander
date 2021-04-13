@@ -110,7 +110,7 @@ export default {
             if (this.item === null) {
                 return "text-muted"
             } else if (typeof this.item === "string") {
-                return "text-danger"
+                return "text-success"
             } else if (typeof this.item === "boolean" || typeof this.item === "number") {
                 return "text-primary"
             }

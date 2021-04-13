@@ -469,7 +469,8 @@ export default {
     computed: {
         ...mapState({
             getIndex: state => state.servers.all,
-            githubVersion: state => state.servers.githubVersion
+            githubVersion: state => state.servers.githubVersion,
+            selectedServerGroup: state => state.serverGroups.selected,
         }),
         ...mapGetters({
             serverCount: "servers/serverCount"
@@ -713,12 +714,15 @@ export default {
     watch: {
         refreshInProgress: function() {
             this.table.timeKey += 1 // used to force reload of the timeSinceLastRefresh component
+        },
+        selectedServerGroup: function() {
+            this.fullRefresh()
         }
     },
     mounted() {
         this.fullRefresh()
         this.fetchGithubVersion()
-    }
+    },
 }
 </script>
 

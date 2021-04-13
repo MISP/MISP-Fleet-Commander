@@ -7,9 +7,7 @@
                 :title="scope"
             >
                 <b-card-text>
-                    <keep-alive>
-                        <component v-bind:is="value.component" :server="server"></component>
-                    </keep-alive>
+                    <component v-bind:is="value.component" :server="server" lazy></component>
                 </b-card-text>
             </b-tab>
         </b-tabs>

@@ -30,7 +30,7 @@
             <template v-else>
                 <b-card no-body>
                     <b-tabs card>
-                        <b-tab class="p-1" no-body>
+                        <b-tab class="p-1" no-body lazy>
                             <template #title>
                                 <i class="fas fa-tools mr-1"></i><strong>Remote administration</strong>
                             </template>
@@ -42,7 +42,7 @@
                                 </keep-alive>
                             </div>
                         </b-tab>
-                        <b-tab title="Diagnostic" class="p-1" active no-body>
+                        <b-tab title="Diagnostic" class="p-1" active no-body lazy>
                             <keep-alive>
                             <b-card no-body>
                                 <b-tabs pills card vertical>
@@ -92,20 +92,29 @@
                             </b-card>
                             </keep-alive>
                         </b-tab>
-                        <b-tab title="Usage" no-body>
+                        <b-tab title="Usage" no-body lazy>
                             <keep-alive>
                             <b-card no-body>
                                 <div class="max-heigth-700">
-                                    <jsonViewer
-                                        :item="details.query_result.serverUsage"
-                                        rootKeyName="Usage"
-                                        :open="true"
-                                    ></jsonViewer>
+                                    <b-table-simple
+                                        striped small
+                                        class="mb-0"
+                                        :bordered="false"
+                                        :borderless="true"
+                                        :outlined="false"
+                                    >
+                                        <b-tbody>
+                                            <b-tr v-for="(v, k) in details.query_result.serverUsage.stats" v-bind:key="k">
+                                                <b-th>{{ k }}</b-th>
+                                                <b-td>{{ v }}</b-td>
+                                            </b-tr>
+                                        </b-tbody>
+                                    </b-table-simple>
                                 </div>
                             </b-card>
                             </keep-alive>
                         </b-tab>
-                        <b-tab title="User profile" class="p-1" no-body>
+                        <b-tab title="User profile" class="p-1" no-body lazy>
                             <keep-alive>
                             <b-card no-body>
                                 <div class="max-heigth-700">
@@ -118,7 +127,7 @@
                             </b-card>
                             </keep-alive>
                         </b-tab>
-                        <b-tab title="Connected MISP servers" class="p-1" no-body>
+                        <b-tab title="Connected MISP servers" class="p-1" no-body lazy>
                             <keep-alive>
                             <b-card no-body>
                                 <div class="max-heigth-700">
@@ -131,7 +140,7 @@
                             </b-card>
                             </keep-alive>
                         </b-tab>
-                        <b-tab title="Content" class="p-1" no-body disabled>
+                        <b-tab title="Content" class="p-1" no-body disabled lazy>
                             <b-card no-body>
                                 Content
                             </b-card>

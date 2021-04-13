@@ -25,13 +25,13 @@
                 </b-form-group>
 
                 <b-form-group
-                    label="Server Description:"
+                    label="Server Comment:"
                     label-for="input-name"
-                    description="Short server description"
+                    description="Short server comment"
                 >
-                    <ValidationProvider v-slot="validationContext" name="Server Description">
+                    <ValidationProvider v-slot="validationContext" name="Server Comment">
                         <b-form-input
-                            v-model="form.description"
+                            v-model="form.comment"
                             :state="getValidationState(validationContext)"
                             placeholder=""
                         ></b-form-input>
@@ -160,6 +160,7 @@ extend("length", length)
 extend("email", email)
 extend("url", {
     validate: value => {
+        // eslint-disable-next-line no-useless-escape
         const pattern2 = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/
         return pattern2.test(value)
     },
@@ -238,7 +239,7 @@ export default {
         resetModal() {
             delete(this.form.id)
             this.form.name = ""
-            this.form.description = ""
+            this.form.comment = ""
             this.form.url = ""
             this.form.skip_ssl = false
             this.form.authkey = ""
@@ -259,29 +260,22 @@ export default {
             })
         },
         submitForm() {
-            let url = "http://127.0.0.1:5000/servers/"
-            if (this.modalAction == "Add") {
-                url += "add"
-            } else {
-                url += "edit"
-            }
             this.postInProgress = true
-            let that = this
-            axios.post(url, this.form)
+            this.$store.dispatch(`servers/${this.modalAction == "Add" ? "add" : "edit"}`, this.form)
                 .then((response) => {
                     this.$nextTick(() => {
                         this.$refs.observer.reset()
                         this.$bvModal.hide("modal-add")
                     })
                     const toastText = response.data.name + " [" + response.data.url + "]"
-                    that.$bvToast.toast(toastText, {
+                    this.$bvToast.toast(toastText, {
                         title: "Server successfully added",
                         variant: "success",
                     })
                     this.$emit("addition-success", "done")
                 })
                 .catch(error => {
-                    that.$bvToast.toast(error, {
+                    this.$bvToast.toast(error, {
                         title: "Could not save Server",
                         variant: "danger",
                     })

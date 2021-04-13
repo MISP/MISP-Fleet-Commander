@@ -11,6 +11,9 @@ const state = {
 const getters = {
     serverCount: state => {
         return state.all.length
+    },
+    getServerById: (state) => (id) => {
+        return state.all.find(server => server.id === id)
     }
 }
 
@@ -125,6 +128,20 @@ const actions = {
             })
         })
     },
+    getUsers({ commit }, server_id) {
+        return new Promise((resolve, reject) => {
+            api.queryGetUsers(
+                server_id,
+                (users) => {
+                    commit("updateUsers", { server_id: server_id, users: users})
+                    resolve()
+                },
+                (error) => { 
+                    reject(error)
+                }
+            )
+        })
+    },
     fetchGithubVersion({ commit }) {
         return new Promise((resolve, reject) => {
             api.fetchGithubVersion(
@@ -143,6 +160,17 @@ const actions = {
     add(context, payload) {
         return new Promise((resolve, reject) => {
             api.add(
+                payload,
+                () => {
+                    resolve()
+                },
+                (error) => { reject(error) }
+            )
+        })
+    },
+    edit(context, payload) {
+        return new Promise((resolve, reject) => {
+            api.edit(
                 payload,
                 () => {
                     resolve()
@@ -221,6 +249,17 @@ const mutations = {
                 server.server_info.error = info.error
                 server.server_info.error = true
             }
+        }
+    },
+    updateUsers(state, { server_id, users }) {
+        let server = state.idToServer[server_id]
+        if (server.server_data === undefined) {
+            server.server_data = {}
+        }
+        if (server.server_data.users === undefined) {
+            server.server_data.users = users
+        } else {
+            server.server_data.users = users
         }
     },
     setGithubVersion(state, githubReply) {
