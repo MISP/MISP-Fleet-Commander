@@ -14,6 +14,7 @@
 </template>
 
 <script>
+import { mapState, mapGetters } from "vuex"
 
 export default {
     name: "NavbarBreadcrumb",
@@ -37,6 +38,10 @@ export default {
                     let bcItem
                     if (routeEntry.meta.breadcrumbs.textGetter) {
                         bcItem = that.$route.params[routeEntry.meta.breadcrumbs.textGetter]
+                        if (routeEntry.name == "servers.view") {
+                            const server_id = that.$route.params[routeEntry.meta.breadcrumbs.textGetter]
+                            bcItem = `${this.getServerById(server_id).name} [${server_id}]`
+                        }
                     } else {
                         bcItem = routeEntry.meta.breadcrumbs.text
                     }
@@ -49,6 +54,9 @@ export default {
             })
             return items
         },
+        ...mapGetters({
+            getServerById: "servers/getServerById"
+        }),
     },
     methods: {
     }
@@ -56,5 +64,14 @@ export default {
 </script>
 
 <style scoped>
-
+.breadcrumb-item + .breadcrumb-item::before {
+    content: "\f0da";
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    -webkit-font-smoothing: antialiased;
+    display: inline-block;
+    font-style: normal;
+    font-variant: normal;
+    text-rendering: auto;
+}
 </style>
