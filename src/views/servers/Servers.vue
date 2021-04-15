@@ -681,7 +681,6 @@ export default {
         },
         fullRefreshIfNeeded() {
             if (this.getIndex.length === 0) {
-                console.log("full")
                 this.fullRefresh()
             }
         },
