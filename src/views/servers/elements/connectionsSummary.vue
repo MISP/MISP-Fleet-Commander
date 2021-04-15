@@ -3,7 +3,7 @@
         <div :id="`badge-connections-${row_index}`" class="badge-list">
             <template v-if="use_diode">
                 <span
-                    v-for="(connection, index) in connections"
+                    v-for="(connection, index) in getConnections"
                     v-bind:key="index"
                     :id="`connection-popover-${row_index}-${index}-${getUUID(connection)}`"
                     :class="['text-nowrap', `text-${connection.connectionTest.status.color}`]"
@@ -23,8 +23,31 @@
                 </span>
             </template>
             <template v-else>
+
                 <b-badge
-                    v-for="(connection, index) in connections"
+                    v-if="expand_issue_only"
+                    :id="`connection-popover-${row_index}-OK}`"
+                    variant="success"
+                    rounded
+                >
+                    {{ getOkConnectionSummary.text }}
+                    <b-popover
+                        href="#" tabindex="0"
+                        triggers="hover"
+                        placement="top"
+                        boundary="viewport"
+                        :target="`connection-popover-${row_index}-OK}`"
+                        variant="success"
+                    >
+                        <ul class="mb-0" style="padding-inline-start: 20px;">
+                            <li v-for="(name) in getOkConnectionSummary.names" :key="`ok-${name}`">
+                                {{ name }}
+                            </li>
+                        </ul>
+                    </b-popover>
+                </b-badge>
+                <b-badge
+                    v-for="(connection, index) in getConnections"
                     v-bind:key="index"
                     :id="`connection-popover-${row_index}-${index}-${getUUID(connection)}`"
                     :class="getRoundedClass(index)"
@@ -68,6 +91,10 @@ export default {
         use_diode: {
             type: Boolean,
             default: function() { return false }
+        },
+        expand_issue_only: {
+            type: Boolean,
+            default: function() { return true }
         }
     },
     data: function() {
@@ -77,7 +104,34 @@ export default {
     },
     computed: {
         connectionCount() {
-            return this.connections.length
+            return this.getConnections.length
+        },
+        getConnections() {
+            return this.expand_issue_only ? this.getIssueConnections : this.connections
+        },
+        getIssueConnections() {
+            if (Array.isArray(this.connections)) {
+                return this.connections.filter(connection => {
+                    return connection.connectionTest.status.color !== "success"
+                })
+            } else {
+                return this.connections
+            }
+        },
+        getOkConnections() {
+            if (Array.isArray(this.connections)) {
+                return this.connections.filter(connection => {
+                    return connection.connectionTest.status.color === "success"
+                })
+            } else {
+                return this.connections
+            }
+        },
+        getOkConnectionSummary() {
+            return {
+                names: this.getOkConnections.map(connection => connection.Server.name),
+                text: `${this.getOkConnections.length} / ${this.connections.length} OK`
+            }
         }
     },
     methods: {

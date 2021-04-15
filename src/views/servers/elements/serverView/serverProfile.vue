@@ -27,7 +27,7 @@
                 >
                     <b-tbody>
                         <b-tr v-for="(v, k) in statusData" v-bind:key="k">
-                            <b-th class="text-nowrap">{{ k }}</b-th>
+                            <b-th class="text-nowrap text-right pr-3">{{ k }}</b-th>
                             <b-td>
                                 <template v-if="v.text">
                                     {{ v.text }}
@@ -55,7 +55,7 @@
                 >
                     <b-tbody>
                         <b-tr v-for="(v, k) in infoData" v-bind:key="k">
-                            <b-th class="text-nowrap">{{ k }}</b-th>
+                            <b-th class="text-nowrap text-right pr-3">{{ k }}</b-th>
                             <b-td>{{ v }}</b-td>
                         </b-tr>
                     </b-tbody>

@@ -42,7 +42,7 @@
             </div>
             <div class="w-25">
                 <b-button-toolbar class="justify-content-end flex-nowrap">
-                    <b-input-group size="sm" class="px-0 col" style="min-width: 150px;">
+                    <b-input-group size="sm" class="px-0 col" style="min-width: 200px;">
                         <b-form-input
                             v-model="table.filter"
                             type="search"
