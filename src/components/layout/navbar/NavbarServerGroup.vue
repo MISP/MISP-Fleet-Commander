@@ -59,9 +59,9 @@ export default {
                     })
             })
         },
-        mounted() {
-            this.refreshServerGroupIndex()
-        }
+    },
+    mounted() {
+        this.refreshServerGroupIndex()
     }
 }
 </script>

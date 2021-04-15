@@ -41,7 +41,7 @@ export default {
                 },
                 {
                     name: "MISP Servers",
-                    to: { name: "servers" },
+                    to: { name: "servers.index" },
                     scope: "servers"
                 },
                 {

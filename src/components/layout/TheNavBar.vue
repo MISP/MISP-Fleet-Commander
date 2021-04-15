@@ -1,7 +1,7 @@
 <template>
     <div class="navbar-container">
         <b-navbar toggleable="lg" variant="light">
-            <b-navbar-brand href="#/home">[Logo]</b-navbar-brand>
+            <NavbarBreadcrumb></NavbarBreadcrumb>
 
             <b-navbar-nav class="ml-auto">
                 <b-nav-text class="py-0 d-flex align-items-center">
@@ -35,12 +35,14 @@
 import { mapState, mapGetters } from "vuex"
 import iconButton from "@/components/ui/elements/iconButton.vue"
 import NavbarServerGroup from "@/components/layout/navbar/NavbarServerGroup.vue"
+import NavbarBreadcrumb from "@/components/layout/navbar/NavbarBreadcrumb.vue"
 
 export default {
     name: "TheNavBar",
     components: {
         iconButton,
         NavbarServerGroup,
+        NavbarBreadcrumb,
     },
     data: function () {
         return {

@@ -2,7 +2,8 @@ import Vue from "vue"
 import Router from "vue-router"
 import Home from "./views/home/Home.vue"
 import Servers from "./views/servers/Servers.vue"
-import Connections from "./views/connections/Connections.vue"
+import ServerView from "./views/servers/ServerView.vue"
+// import Connections from "./views/connections/Connections.vue"
 import ServerNetwork from "./views/serverNetwork/ServerNetwork.vue"
 import store from "./store/index"
 
@@ -25,22 +26,61 @@ let router =  new Router({
         {
             path: "/home",
             name: "home",
-            component: Home
+            component: Home,
+            meta: {
+                breadcrumbs: {
+                    text: "Home",
+                    to: { name: "home" },
+                    icon: "home"
+                }
+            }
         },
         {
             path: "/servers",
-            name: "servers",
-            component: Servers,
+            component: () => import("./components/layout/layoutWrapper.vue"),
             meta: {
-                requiresServerGroup: true
-            }
+                requiresServerGroup: true,
+                breadcrumbs: {
+                    text: "Servers",
+                    to: { name: "servers.index" },
+                    icon: "server"
+                }
+            },
+            children: [
+                {
+                    path: ":server_id",
+                    name: "servers.view",
+                    component: () => import("./views/servers/ServerView.vue"),
+                    props: true,
+                    meta: {
+                        breadcrumbs: {
+                            textGetter: "server_id",
+                            to: { name: "servers.view" },
+                        }
+                    }
+                },
+                {
+                    path: "",
+                    name: "servers.index",
+                    component: () => import("./views/servers/Servers.vue"),
+                    meta: {
+                        requiresServerGroup: true,
+                    }
+                },
+            ]
         },
         {
             path: "/connections",
             name: "connections",
-            component: Connections,
+            // component: Connections,
+            component: () => import("./views/connections/Connections.vue"),
             meta: {
-                requiresServerGroup: true
+                requiresServerGroup: true,
+                breadcrumbs: {
+                    text: "Connections",
+                    to: { name: "connections" },
+                    icon: "network-wired"
+                }
             }
         },
         {
@@ -48,7 +88,12 @@ let router =  new Router({
             name: "serverNetwork",
             component: ServerNetwork,
             meta: {
-                requiresServerGroup: true
+                requiresServerGroup: true,
+                breadcrumbs: {
+                    text: "Server Networks",
+                    to: { name: "serverNetwork" },
+                    icon: "fa-project-diagram"
+                }
             }
         }
     ]
