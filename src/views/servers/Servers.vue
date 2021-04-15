@@ -1,42 +1,35 @@
 <template>
 <Layout name="LayoutDefault">
     <div>
-        <h3>
-            <iconForScope scope="servers"></iconForScope>
-            Servers
-        </h3>
-        
-        <div class="mb-3">
-            <b-button-group>
-                <b-button
-                    size="sm"
-                    variant="primary"
-                    v-b-modal.modal-add
-                >
-                    <i class="fas fa-plus"></i> Add servers
-                </b-button>
-                <b-dropdown left variant="primary" size="sm" style="border-left: 1px solid #0069d9">
-                    <b-dropdown-item
-                        v-b-modal.modal-batch-add
-                    >
-                       <iconButton
-                            text="Batch mode"
-                            icon="list-ol"
-                        ></iconButton>
-                    </b-dropdown-item>
-                    <b-dropdown-item
-                        v-b-modal.modal-csv-add
-                    >
-                        <iconButton
-                            text="From CSV"
-                            icon="file-csv"
-                        ></iconButton>
-                    </b-dropdown-item>
-                </b-dropdown>
-            </b-button-group>
-        </div>
         <div class="d-flex justify-content-between">
             <div class="d-flex" style="margin-top: -5px">
+                <b-button-group class="text-nowrap mr-2 pb-1">
+                    <b-button
+                        size="sm"
+                        variant="primary"
+                        v-b-modal.modal-add
+                    >
+                        <i class="fas fa-plus"></i> Add servers
+                    </b-button>
+                    <b-dropdown left variant="primary" size="sm" style="border-left: 1px solid #0069d9">
+                        <b-dropdown-item
+                            v-b-modal.modal-batch-add
+                        >
+                        <iconButton
+                                text="Batch mode"
+                                icon="list-ol"
+                            ></iconButton>
+                        </b-dropdown-item>
+                        <b-dropdown-item
+                            v-b-modal.modal-csv-add
+                        >
+                            <iconButton
+                                text="From CSV"
+                                icon="file-csv"
+                            ></iconButton>
+                        </b-dropdown-item>
+                    </b-dropdown>
+                </b-button-group>
                 <b-pagination
                     class="mb-0"
                     v-model="table.currentPage"
@@ -196,6 +189,9 @@
                             >
                                 <i :class="['text-secondary', 'fas', `fa-${row.detailsShowing ? 'compress-alt' : 'expand-alt'}`]"></i>
                             </b-button>
+                            <b-link class="ml-1 btn-xs" variant="link" :to="{ name: 'servers.view', params: { server_id: row.item.id } }">
+                                <i class="fas fa-eye align-middle"></i>
+                            </b-link>
                             <b-button class="ml-1" size="xs" variant="link" @click="openEditModal(row.item)">
                                 <i class="fas fa-edit"></i>
                             </b-button>
@@ -316,7 +312,6 @@
 <script>
 import { mapState, mapGetters } from "vuex"
 import Layout from "@/components/layout/Layout.vue"
-import iconForScope from "@/components/ui/elements/iconForScope.vue"
 import loaderPlaceholder from "@/components/ui/elements/loaderPlaceholder.vue"
 import userPerms from "@/views/servers/elements/userPerms.vue"
 import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
@@ -340,7 +335,6 @@ export default {
     name: "TheServers",
     components: {
         Layout,
-        iconForScope,
         loaderPlaceholder,
         userPerms,
         timeSinceRefresh,
@@ -620,6 +614,11 @@ export default {
                     })
                 })
         },
+        fetchGithubVersionIfNeeded() {
+            if (this.githubVersion.length === 0) {
+                this.fetchGithubVersion()
+            }
+        },
         refreshServerIndex() {
             this.refreshInProgress = true
             return new Promise((resolve, reject) => {
@@ -680,6 +679,12 @@ export default {
                     })
             }
         },
+        fullRefreshIfNeeded() {
+            if (this.getIndex.length === 0) {
+                console.log("full")
+                this.fullRefresh()
+            }
+        },
         tableQuickRefresh() {
             if (this.$refs.serverTable !== undefined) {
                 this.$refs.serverTable.refresh()
@@ -720,8 +725,8 @@ export default {
         }
     },
     mounted() {
-        this.fullRefresh()
-        this.fetchGithubVersion()
+        this.fullRefreshIfNeeded()
+        this.fetchGithubVersionIfNeeded()
     },
 }
 </script>

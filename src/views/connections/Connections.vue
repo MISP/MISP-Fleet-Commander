@@ -1,11 +1,6 @@
 <template>
 <Layout name="LayoutDefault">
     <div class="page-container">
-        <h3>
-            <iconForScope scope="connections"></iconForScope>
-            Connections
-        </h3>
-
         <div class="d-flex justify-content-between">
             <div class="d-flex" style="margin-top: -5px">
                 <b-pagination
@@ -218,7 +213,6 @@
 <script>
 import { mapState, mapGetters } from "vuex"
 import Layout from "@/components/layout/Layout.vue"
-import iconForScope from "@/components/ui/elements/iconForScope.vue"
 import contextualMenu from "@/components/ui/elements/contextualMenu.vue"
 import loaderPlaceholder from "@/components/ui/elements/loaderPlaceholder.vue"
 import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
@@ -230,7 +224,6 @@ export default {
     name: "TheConnections",
     components: {
         Layout,
-        iconForScope,
         loaderPlaceholder,
         contextualMenu,
         timeSinceRefresh,

@@ -1,9 +1,11 @@
 <template>
 <Layout name="LayoutDefault">
     <div class="page-container">
-        <h3><iconForScope scope="home"></iconForScope> Home</h3>
-
         <div class="container">
+            <div class="mt-1 mb-4">
+                <h3>[Application name]</h3>
+                <h5 class="text-muted">Manage your MISP community easily</h5>
+            </div>
             <div class="row">
                 <div class="col">
                     <ServerGroup class="mt-3"></ServerGroup>
@@ -18,14 +20,12 @@
 
 <script>
 import Layout from "@/components/layout/Layout.vue"
-import iconForScope from "@/components/ui/elements/iconForScope.vue"
 import ServerGroup from "@/views/serverGroups/index.vue"
 
 export default {
     name: "TheHome",
     components: {
         Layout,
-        iconForScope,
         ServerGroup
     },
     data: function () {
