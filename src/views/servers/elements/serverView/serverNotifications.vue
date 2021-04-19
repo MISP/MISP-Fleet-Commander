@@ -1,47 +1,118 @@
 <template>
     <div>
-        <b-table-simple class="mb-0" responsive
-        sticky-header
-        >
-            <b-thead head-variant="light">
-                <b-tr>
-                    <b-th>Date</b-th>
-                    <b-th>Severity</b-th>
-                    <b-th>Title</b-th>
-                    <b-th>Action</b-th>
-                </b-tr>
-            </b-thead>
-            <b-tbody>
-                <b-tr v-if="notifications.length == 0">
-                    <b-td colspan="4" class="text-center">There are no notifications for this server</b-td>
-                </b-tr>
-                <b-tr v-for="(notification, index) in notifications" :key="index">
-                    <b-td>{{ notification.date }}</b-td>
-                    <b-td>{{ notification.status }}</b-td>
-                    <b-td>{{ notification.title }}</b-td>
-                    <b-td>
-                        <b-button class="ml-1" size="sm" variant="light" title="Accept">
-                            <i class="fas fa-check"></i>
-                        </b-button>
-                        <b-button class="ml-1" size="sm" variant="light">
-                            <i class="fas fa-cogs"></i>
-                        </b-button>
-                        <b-button class="ml-1" size="sm" variant="outline-danger" title="Delete notification">
-                            <i class="fas fa-trash"></i>
-                        </b-button>
-                    </b-td>
-                </b-tr>
-            </b-tbody>
-        </b-table-simple>
+        <h6 class="card-header px-2 py-1">
+            <div class="d-flex">
+                <span class="my-auto">Notifications Board</span>
+                <b-button
+                    class="ml-auto"
+                    variant="primary"
+                    size="sm"
+                    title="Quick refresh"
+                    @click="quickRefresh()"
+                >
+                    <i :class="{'fas fa-sync-alt': true, 'fa-spin': refreshInProgress}" title="Refresh Servers"></i>
+                </b-button>
+            </div>
+        </h6>
+        <div class="p-1">
+            <div class="d-flex">
+                <div>
+                    <b-pagination
+                        class="mb-0"
+                        v-model="table.currentPage"
+                        size="sm"
+                        :per-page="table.perPage"
+                        :total-rows="table.totalRows"
+                        aria-controls="server-table"
+                    ></b-pagination>
+                </div>
+                <div class="w-50 ml-auto">
+                    <b-button-toolbar class="justify-content-end flex-nowrap">
+                            <b-input-group size="sm" class="px-0 col" style="min-width: 200px;">
+                                <b-form-input
+                                    v-model="table.filter"
+                                    type="search"
+                                    id="filterInput"
+                                    placeholder="Type to Search"
+                                    class="border-bottom-0 rounded-top align-self-end"
+                                    style="border-radius: 0"
+                                ></b-form-input>
+                            </b-input-group>
+                    </b-button-toolbar>
+                </div>
+            </div>
+            <b-table 
+            show-empty small
+            tbody-tr-class="no-outline"
+            thead-tr-class="no-bgcolor"
+            id="notification-table"
+            ref="notificationTable"
+            class="mb-0"
+            :busy.sync="refreshInProgress"
+            :items="notifications" 
+            :fields="table.fields"
+            :filterIncludedFields="table.filterFields"
+            :filter="table.filter"
+            :no-provider-paging="true"
+            :no-provider-sorting="true"
+            :no-provider-filtering="true"
+            :sort-icon-left="true"
+            @filtered="onFiltered"
+            @sort-changed="onSorted"
+            >
+                <template v-slot:table-busy>
+                    <div class="text-center text-danger my-2">
+                        <b-spinner class="align-middle"></b-spinner>
+                        <strong class="ml-2">Loading...</strong>
+                    </div>
+                </template>
+
+                <template v-slot:cell(timestamp)="row">
+                    {{ row.value | moment('MMMM Do YYYY, HH:mm:ss') }}
+                </template>
+
+                <template v-slot:cell(severity)="row">
+                    <b-badge :variant="severity_to_color(row.value)" style="transition: unset;">
+                        {{ row.value | severity_to_text }}
+                    </b-badge>
+                </template>
+
+                <template v-slot:cell(data)="row">
+                    <b-button :id="`popover-${row.index}`" variant="primary" size="xs">View</b-button>
+                    <b-popover :target="`popover-${row.index}`" triggers="click" placement="bottomleft" boundary="viewport">
+                        <jsonViewer
+                            :item="row.value"
+                            :open="true"
+                        ></jsonViewer>
+                    </b-popover>
+                </template>
+
+                <template v-slot:cell(action)="">
+                    <b-button class="ml-1" size="xs" variant="light" title="Accept">
+                        <i class="fas fa-check"></i>
+                    </b-button>
+                    <b-button class="ml-1" size="xs" variant="light">
+                        <i class="fas fa-cogs"></i>
+                    </b-button>
+                    <b-button class="ml-1" size="xs" variant="outline-danger" title="Delete notification">
+                        <i class="fas fa-trash"></i>
+                    </b-button>
+                </template>
+
+                <template v-slot:table-caption>Showing {{ table.totalRows }} out of {{ notifications.length }}</template>
+            </b-table>
+        </div>
     </div>
 </template>
 
 <script>
 import { mapState, mapGetters } from "vuex"
+import jsonViewer from "@/components/ui/elements/jsonViewer.vue"
 
 export default {
     name: "ServerNotifications",
     components: {
+        jsonViewer
     },
     props: {
         server: {
@@ -50,65 +121,118 @@ export default {
         }
     },
     computed: {
+        ...mapState({
+            notifications: state => state.notifications.all
+        }),
     },
     data: function () {
         return {
-            notifications: [
-                // {
-                //     "id": "1",
-                //     "uuid": "2b2b2c71-7ba3-4d99-9d8b-0646aa56e00e",
-                //     "title": "User registration for rateuser@admin.test.",
-                //     "type": "registration",
-                //     "ip": "10.0.2.2",
-                //     "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.82 Safari/537.36",
-                //     "user_agent_sha256": "b31d6571dc54050285bc94819f48de44e81c9b1db2de8b6d4ce1c2c039b0691a",
-                //     "comment": "Hello!",
-                //     "deleted": false,
-                //     "timestamp": "1615453743",
-                //     "store_as_file": false,
-                //     "data": {
-                //         "email": "rateuser@admin.test",
-                //         "org_name": "cases",
-                //         "org_uuid": "9e7e987e-b45a-4860-9ab4-b53034fe3a20",
-                //         "message": "Hello!",
-                //         "custom_perms": "1",
-                //         "perm_sync": "1",
-                //         "perm_publish": "1",
-                //         "perm_admin": "1"
-                //     }
-                // },
-                // {
-                //     "id": "1",
-                //     "uuid": "2b2b2c71-7ba3-4d99-9d8b-0646aa56e00e",
-                //     "title": "User registration for rateuser@admin.test.",
-                //     "type": "registration",
-                //     "ip": "10.0.2.2",
-                //     "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.82 Safari/537.36",
-                //     "user_agent_sha256": "b31d6571dc54050285bc94819f48de44e81c9b1db2de8b6d4ce1c2c039b0691a",
-                //     "comment": "Hello!",
-                //     "deleted": false,
-                //     "timestamp": "1615453743",
-                //     "store_as_file": false,
-                //     "data": {
-                //         "email": "rateuser@admin.test",
-                //         "org_name": "cases",
-                //         "org_uuid": "9e7e987e-b45a-4860-9ab4-b53034fe3a20",
-                //         "message": "Hello!",
-                //         "custom_perms": "1",
-                //         "perm_sync": "1",
-                //         "perm_publish": "1",
-                //         "perm_admin": "1"
-                //     }
-                // },
-            ]
+            refreshInProgress: false,
+            table: {
+                filtered: "",
+                totalRows: 0,
+                currentPage: 1,
+                perPage: 30,
+                filterFields: [""],
+                fields: [
+                    {
+                        key: "timestamp",
+                        label: "Date",
+                        sortable: true,
+                        tdClass: "text-nowrap"
+                    },
+                    {
+                        key: "origin",
+                        label: "Origin",
+                        sortable: true
+                    },
+                    {
+                        key: "severity",
+                        label: "Severity",
+                        sortable: true
+                    },
+                    {
+                        key: "title",
+                        label: "Title",
+                        sortable: true,
+                    },
+                    {
+                        key: "data",
+                        label: "Data",
+                        tdClass: "text-nowrap"
+                    },
+                    {
+                        key: "action",
+                        label: "Action",
+                        tdClass: "text-nowrap"
+                    },
+                ],
+            },
         }
+    },
+    filters: {
+        severity_to_text: (severity_level) => {
+            if (severity_level == 1) {
+                return "Low"
+            } else if (severity_level == 2) {
+                return "Medium"
+            } else if (severity_level == 3) {
+                return "High"
+            } else {
+                return "N/A"
+            }
+        }
+    },
+    methods: {
+        severity_to_color: (severity_level) => {
+            if (severity_level == 1) {
+                return "primary"
+            } else if (severity_level == 2) {
+                return "warning"
+            } else if (severity_level == 3) {
+                return "danger"
+            } else {
+                return "secondary"
+            }
+        },
+        refreshNotifications() {
+            this.refreshInProgress = true
+            return new Promise((resolve, reject) => {
+                this.$store.dispatch("notifications/getNotifications", this.server.id)
+                    .then(() => {
+                        resolve()
+                    })
+                    .catch(error => {
+                        this.$bvToast.toast(error, {
+                            title: "Could not fetch server notifications",
+                            variant: "danger",
+                        })
+                        reject()
+                    })
+                    .finally(() => {
+                        this.refreshInProgress = false
+                    })
+            })
+        },
+        quickRefresh() {
+            this.refreshNotifications()
+        },
+        onFiltered(filteredItems) {
+            this.table.totalRows = filteredItems.length
+            this.table.currentPage = 1
+        },
+        onSorted() {
+            this.table.currentPage = 1
+        },
+    },
+    mounted() {
+        this.refreshNotifications()
     }
 }
 </script>
 
 <style scoped>
 thead tr th {
-    background-color: teal;
     border-top: 0;
 }
 </style>

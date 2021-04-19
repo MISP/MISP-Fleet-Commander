@@ -1,9 +1,9 @@
 <template>
     <span
-        v-if="status !== ''"
-        :class="printable === true ? 'text-success' : 'text-danger'"
+        v-if="status !== '' && status !== undefined"
+        :class="statusOk ? 'text-success' : 'text-danger'"
     >
-        <span :class="['fas', printable === true ? 'fa-check' : 'fa-times']"></span>
+        <span :class="['fas', statusOk ? 'fa-check' : 'fa-times']"></span>
         {{ printable === true ? '' : printable }}
     </span>    
 </template>
@@ -16,6 +16,9 @@ export default {
     },
     computed: {
         printable() {
+            return this.status !== ""
+        },
+        statusOk () {
             return this.status !== ""
         }
     },

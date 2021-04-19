@@ -1,6 +1,6 @@
 <template>
     <span
-        v-if="proxy !== ''"
+        v-if="proxy !== '' && proxy !== undefined"
         :class="printable === true ? 'text-success' : 'text-danger'"
     >
         <span :class="['fas', printable === true ? 'fa-check' : 'fa-times']"></span>

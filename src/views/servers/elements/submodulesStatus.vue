@@ -1,9 +1,9 @@
 <template>
     <span
-        v-if="submodules !== ''"
-        :class="allValids === true ? 'text-success' : 'text-danger'"
+        v-if="submodules !== '' && submodules !== undefined"
+        :class="allValids ? 'text-success' : 'text-danger'"
     >
-        <span :class="['fas', allValids === true ? 'fa-check' : 'fa-times']"></span>
+        <span :class="['fas', allValids ? 'fa-check' : 'fa-times']"></span>
         {{ invalidModuleNames }}
     </span>
 </template>

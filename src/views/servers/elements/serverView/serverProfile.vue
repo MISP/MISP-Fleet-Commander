@@ -9,15 +9,28 @@
             <b-img fuild src="https://iglocska.eu/img/misp-logo.png" :alt="server.name" class="mb-2" height="150"></b-img>
             <span class="text-muted">{{ server.comment }}</span>
         </b-card-body>
-            <hr class="my-0" />
-            <b-card-body class="px-3 py-2" role="tab">
-                <h5 class="mb-2 d-flex ">
-                    Server Status
-                    <span :class="['text-nowrap', 'ml-auto', 'h6', {'text-danger': server.status.error, 'text-success': !server.status.error}]">
+        <hr class="my-0" />
+        <b-card-body class="px-3 py-2" role="tab">
+            <h5 class="mb-2 d-flex ">
+                Server Status
+                <span class="ml-auto">
+                    <span :class="['text-nowrap', 'my-auto', 'h6', {'text-danger': server.status.error, 'text-success': !server.status.error}]">
                         <b-icon v-if="server.status.data !== undefined" icon="circle-fill" class=""></b-icon>
                         {{ serverStatusText }}
                     </span>
-                </h5>
+                    <b-button
+                        class="ml-auto p-0"
+                        variant="link"
+                        size="sm"
+                        title="Quick refresh"
+                        @click="fullRefresh()"
+                    >
+                        <i :class="{'fas fa-sync-alt': true}" title="Refresh Servers"></i>
+                    </b-button>
+                </span>
+            </h5>
+
+            <template v-if="isOnline">
                 <b-table-simple
                 small
                 class="mb-0"
@@ -39,28 +52,29 @@
                         </b-tr>
                     </b-tbody>
                 </b-table-simple>
-            </b-card-body>
-            <hr class="my-0" />
+            </template>
+        </b-card-body>
+        <hr v-if="isOnline" class="my-0" />
 
-            <b-card-body class="p-0 pb-2" role="tab">
-                <h5 class="card-title mb-0 mx-3 my-2">
-                    Server Info
-                </h5>
-                <b-table-simple
-                striped small
-                class="mb-0"
-                :bordered="false"
-                :borderless="true"
-                :outlined="false"
-                >
-                    <b-tbody>
-                        <b-tr v-for="(v, k) in infoData" v-bind:key="k">
-                            <b-th class="text-nowrap text-right pr-3">{{ k }}</b-th>
-                            <b-td>{{ v }}</b-td>
-                        </b-tr>
-                    </b-tbody>
-                </b-table-simple>
-            </b-card-body>
+        <b-card-body v-if="isOnline" class="p-0 pb-2" role="tab">
+            <h5 class="card-title mb-0 mx-3 my-2">
+                Server Info
+            </h5>
+            <b-table-simple
+            striped small
+            class="mb-0"
+            :bordered="false"
+            :borderless="true"
+            :outlined="false"
+            >
+                <b-tbody>
+                    <b-tr v-for="(v, k) in infoData" v-bind:key="k">
+                        <b-th class="text-nowrap text-right pr-3">{{ k }}</b-th>
+                        <b-td>{{ v }}</b-td>
+                    </b-tr>
+                </b-tbody>
+            </b-table-simple>
+        </b-card-body>
     </b-card>
 </template>
 
@@ -84,8 +98,11 @@ export default {
         }
     },
     computed: {
+        isOnline: function() {
+            return !this.server.status.error
+        },
         serverStatusText: function() {
-            return !this.server.status.error ? "Online" : "Offline"
+            return this.isOnline ? "Online" : "Offline"
         },
         statusData: function() {
             let status = {
@@ -137,14 +154,24 @@ export default {
         },
         infoData: function() {
             let info = {
-                "Version": this.server.status.data,
-                "MISP UUID": this.server.server_info.query_result.serverSettings.finalSettings.filter((item) => { return item.setting === "MISP.uuid"})[0].value
+                "Version": "",
+                "MISP UUID": "",
             }
+            if (this.server.server_info.query_result.serverSettings.error !== undefined) {
+                return info
+            }
+            info["Version"] = this.server.status.data
+            info["MISP UUID"] = this.server.server_info.query_result.serverSettings.finalSettings.filter((item) => { return item.setting === "MISP.uuid"})[0].value
             return info
         }
     },
     data: function () {
         return {
+        }
+    },
+    methods: {
+        fullRefresh() {
+            this.$emit("fullRefresh")
         }
     }
 }

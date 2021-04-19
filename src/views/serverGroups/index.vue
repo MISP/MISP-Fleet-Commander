@@ -1,7 +1,7 @@
 <template>
     <div>
         <div class="d-flex align-items-center pb-1">
-            <h4>Server group</h4>
+            <h4>Server Groups</h4>
             <b-button
                 class="ml-auto"
                 size="sm"

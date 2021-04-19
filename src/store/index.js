@@ -5,6 +5,7 @@ import config from "./modules/config"
 import servers from "./modules/servers"
 import connections from "./modules/connections"
 import serverGroups from "./modules/serverGroups"
+import notifications from "./modules/notifications"
 
 Vue.use(Vuex)
 
@@ -17,6 +18,7 @@ export default new Vuex.Store({
         servers,
         connections,
         serverGroups,
+        notifications,
     },
     strict: debug,
 })
