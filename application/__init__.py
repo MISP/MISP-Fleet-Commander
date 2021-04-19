@@ -3,6 +3,7 @@ from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import MetaData
 from flask_migrate import Migrate
+from application.server_notifications import loadAvailableHelpers
 
 
 # naming_convention = {
@@ -14,6 +15,7 @@ from flask_migrate import Migrate
 # }
 # db = SQLAlchemy(metadata=MetaData(naming_convention=naming_convention))
 db = SQLAlchemy()
+notification_helpers = loadAvailableHelpers()
 
 
 def create_app():

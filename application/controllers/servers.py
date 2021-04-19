@@ -7,6 +7,8 @@ import json
 import re
 from collections import Mapping, MutableSequence, defaultdict
 from sqlalchemy.orm import with_parent
+# from application import notification_helpers
+from application.server_notifications.NotificationManager import NotificationManager
 from application.DBModels import db, User, Server, ServerQuery
 from application.controllers.utils import mispGetRequest, mispPostRequest, batchRequest
 import application.models.servers as serverModel
@@ -157,6 +159,16 @@ def getUsers(server_id):
     if server is not None:
         server_query_users = fetchServerUsers(server)
         return jsonify(server_query_users)
+    else:
+        return jsonify({'error': 'Unkown server'})
+
+@BPserver.route('/servers/getNotifications/<int:server_id>', methods=['GET'])
+def getNotifications(server_id):
+    server = Server.query.get(server_id)
+    if server is not None:
+        NM = NotificationManager(server)
+        results = NM.queryAll()
+        return jsonify(results)
     else:
         return jsonify({'error': 'Unkown server'})
 
