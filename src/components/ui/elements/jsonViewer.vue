@@ -8,15 +8,17 @@
                     :class="['p-0', canBeOpened && hasChild ? 'useCursorPointer' : '']"
                     @click="toggleOpen"
                 >
-                    <i v-if="canBeOpened && hasChild" :class="['fas', isOpen ? 'fa-caret-down' : 'fa-caret-right']"></i>
-                    <span :class="['font-weight-bold', rootkeyIndexing ? 'text-muted' : '']">
-                        {{ rootKey }}
-                    </span>
-                    <span class="mx-1">
-                        <span :class="[{'text-muted': hasChild || (canBeOpened && !hasChild), 'preppend-column': !canBeOpened}, childClass]">
-                            {{ childString }}
+                    <div :class="canBeOpened ? 'text-nowrap' : ''">
+                        <i v-if="canBeOpened && hasChild" :class="['fas', isOpen ? 'fa-caret-down' : 'fa-caret-right']"></i>
+                        <span :class="['font-weight-bold', rootkeyIndexing ? 'text-muted' : '']">
+                            {{ rootKey }}
                         </span>
-                    </span>
+                        <span class="mx-1">
+                            <span :class="[{'text-muted': hasChild || (canBeOpened && !hasChild), 'preppend-column': !canBeOpened}, childClass]">
+                                {{ childString }}
+                            </span>
+                        </span>
+                    </div>
                 </span>
                 <template v-if="canBeOpened && isOpen">
                     <jsonViewer
