@@ -258,12 +258,22 @@ export default {
         syncWithStore() {
             this.d3data.nodes = JSON.parse(JSON.stringify(this.getServers))
             this.d3data.links = JSON.parse(JSON.stringify(this.getConnections))
-            this.d3data.links.forEach(link => { // remap source -> origin
+            this.d3data.links.forEach((link, index) => { // remap source -> origin
                 link.origin = link.source
                 link.source = parseInt(link.origin.id)
                 link.target = parseInt(link.destination.Server.id)
                 link.id = `${link.source}-${link.target}`
+                let found = false
+                this.getServers.forEach(s => {
+                    if (s.id == link.target) {
+                        found = true
+                    }
+                })
+                if (!found) {
+                    link.toRemove = true
+                }
             })
+            this.d3data.links = this.d3data.links.filter(l => !l.toRemove)
         }
     },
     mounted() {

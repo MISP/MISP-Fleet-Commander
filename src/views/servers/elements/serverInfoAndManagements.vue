@@ -45,7 +45,13 @@
                                     <b-tbody>
                                         <b-tr v-for="(v, k) in value" v-bind:key="k">
                                             <b-th>{{ k }}</b-th>
-                                            <b-td>{{ v }}</b-td>
+                                            <b-td v-if="isJson(v)">
+                                                <jsonViewer
+                                                    :item="v"
+                                                    :open="true"
+                                                ></jsonViewer>
+                                            </b-td>
+                                            <b-td v-else>{{ v }}</b-td>
                                         </b-tr>
                                     </b-tbody>
                                 </b-table-simple>
@@ -171,8 +177,8 @@ export default {
     },
     data: function() {
         return {
-            diagnosticTabularView: ["dbDiagnostics", ],
-            diagnosticListView: ["dbSchemaDiagnostic", "moduleStatus", "readableFiles", "redisInfo", "version", "writeableDirs", "writeableFiles"],
+            diagnosticTabularView: [],
+            diagnosticListView: ["dbDiagnostics", "dbSchemaDiagnostic", "moduleStatus", "readableFiles", "redisInfo", "version", "writeableDirs", "writeableFiles"],
             initDone: false,
         }
     },
@@ -218,6 +224,9 @@ export default {
                     sortable: true
                 }
             })
+        },
+        isJson(value) {
+            return typeof value === "object"
         },
         handleTabChange(tabIndex) {
             if (this.initDone) {
