@@ -434,14 +434,14 @@ export default {
                         sortable: true,
                         class: "align-middle d-none d-md-table-cell",
                     },
-                    {
-                        key: "auth_method",
-                        sortable: false,
-                        class: "d-none d-xl-table-cell text-nowrap",
-                        formatter: (value) => {
-                            return Array.isArray(value) ? value.join(", ") : ""
-                        }
-                    },
+                    //{
+                    //    key: "auth_method",
+                    //    sortable: false,
+                    //    class: "d-none d-xl-table-cell text-nowrap",
+                    //    formatter: (value) => {
+                    //        return Array.isArray(value) ? value.join(", ") : ""
+                    //    }
+                    //},
                     {
                         key: "last_refresh",
                         sortable: true,

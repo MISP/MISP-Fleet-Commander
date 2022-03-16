@@ -2,11 +2,11 @@
     <b-card no-body>
         <b-card-body class="d-flex flex-column align-items-center p-3">
                 <h4 class="mb-0">{{ server.name }}</h4>
-            <b-link :href="server.name" target="_blank" class="text-nowrap mb-2">
+            <b-link :href="server.url" target="_blank" class="text-nowrap mb-2">
                 {{ server.url }}
                 <sup class="fa fa-external-link-alt"></sup>
             </b-link>
-            <b-img fuild src="https://iglocska.eu/img/misp-logo.png" :alt="server.name" class="mb-2" height="150"></b-img>
+            <b-img fuild :src="welcomePicture" :alt="server.name" class="mb-2" height="150" width="200"></b-img>
             <span class="text-muted">{{ server.comment }}</span>
         </b-card-body>
         <hr class="my-0" />
@@ -103,6 +103,12 @@ export default {
         },
         serverStatusText: function() {
             return this.isOnline ? "Online" : "Offline"
+        },
+        welcomePicture: function() {
+            return this.MISPMainLogo ? `${this.server.url}/img/custom/${this.MISPMainLogo}` : `${this.server.url}/img/misp-logo.png`
+        },
+        MISPMainLogo: function() {
+            return this.server.server_info.query_result.serverSettings.finalSettings.filter(settingObj => settingObj.setting === "MISP.main_logo")[0]["value"]
         },
         statusData: function() {
             let status = {
