@@ -1,7 +1,8 @@
+import { baseurl } from "./apiConfig"
 import axios from "axios"
 
 const urls = {
-    get: "http://127.0.0.1:5000/servers/getNotifications",
+    get: `${baseurl}/servers/getNotifications`,
 }
   
 export default {

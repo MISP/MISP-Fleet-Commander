@@ -1,9 +1,10 @@
+import { baseurl } from "./apiConfig"
 import axios from "axios"
 import store from "@/store/index"
 
 const urls = {
-    index: "http://127.0.0.1:5000/servers/network",
-    get: "http://127.0.0.1:5000/servers/getConnection",
+    index: `${baseurl}/servers/network`,
+    get: `${baseurl}/servers/getConnection`
 }
 
 const appendGroupIDIfDefined = (url) => {

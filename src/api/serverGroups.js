@@ -1,11 +1,12 @@
+import { baseurl } from "./apiConfig"
 import axios from "axios"
 
 const urls = {
-    index: "http://127.0.0.1:5000/serverGroups/index",
-    get: "http://127.0.0.1:5000/serverGroups/get",
-    add: "http://127.0.0.1:5000/serverGroups/add",
-    edit: "http://127.0.0.1:5000/serverGroups/edit",
-    delete: "http://127.0.0.1:5000/serverGroups/delete",
+    index: `${baseurl}/serverGroups/index`,
+    get: `${baseurl}/serverGroups/get`,
+    add: `${baseurl}/serverGroups/add`,
+    edit: `${baseurl}/serverGroups/edit`,
+    delete: `${baseurl}/serverGroups/delete`,
 }
   
 export default {

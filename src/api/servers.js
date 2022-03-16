@@ -1,16 +1,17 @@
+import { baseurl } from "./apiConfig"
 import axios from "axios"
 import store from "@/store/index"
 
 const urls = {
-    testConnection: "http://127.0.0.1:5000/servers/testConnection",
-    batchTestConnection: "http://127.0.0.1:5000/servers/batchTestConnection",
-    queryInfo: "http://127.0.0.1:5000/servers/queryInfo",
-    index: "http://127.0.0.1:5000/servers/index",
-    add: "http://127.0.0.1:5000/servers/add",
-    edit: "http://127.0.0.1:5000/servers/edit",
-    delete: "http://127.0.0.1:5000/servers/delete",
-    restQuery: "http://127.0.0.1:5000/servers/restQuery",
-    getUsers: "http://127.0.0.1:5000/servers/getUsers"
+    testConnection: `${baseurl}/servers/testConnection`,
+    batchTestConnection: `${baseurl}/servers/batchTestConnection`,
+    queryInfo: `${baseurl}/servers/queryInfo`,
+    index: `${baseurl}/servers/index`,
+    add: `${baseurl}/servers/add`,
+    edit: `${baseurl}/servers/edit`,
+    delete: `${baseurl}/servers/delete`,
+    restQuery: `${baseurl}/servers/restQuery`,
+    getUsers: `${baseurl}/servers/getUser`
 }
 
 const appendGroupIDIfDefined = (url) => {

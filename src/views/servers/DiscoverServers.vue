@@ -15,12 +15,12 @@
                 <b-input-group class="w-50">
                     <b-input
                         placeholder="URL"
-                        v-model="rootServer.url"
+                        :value="rootServer.url"
                         disabled
                     ></b-input>
                     <template v-slot:append>
                         <b-input-group-text>
-                            <b-form-checkbox v-model="rootServer.skip_ssl" class="force-custom-va" disabled switch>
+                            <b-form-checkbox :value="rootServer.skip_ssl" class="force-custom-va" disabled switch>
                                 <small>Skip SSL</small>
                             </b-form-checkbox>
                         </b-input-group-text>
@@ -29,7 +29,7 @@
                 <b-input
                     class="w-50 ml-2"
                     placeholder="AuthKey"
-                    v-model="rootServer.authkey"
+                    :value="rootServer.authkey"
                     disabled
                 ></b-input>
             </div>
@@ -133,7 +133,7 @@ export default {
                 })
         },
         discoverServer() {
-            const url = "http://127.0.0.1:5000/servers/discoverConnected"
+            const url = "http://10.250.138.14:5000/servers/discoverConnected"
             this.table.busy = true
             this.refreshInProgress = true
             let server = {
