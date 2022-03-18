@@ -18,11 +18,19 @@ def mispGetRequest(server, url, data={}, rawResponse=False):
         error = handleStatusCode(response)
         if error is not None:
             return error
+        if rawResponse:
+            return reponse
+        else:
+            jsonResponse = response.json()
+            jsonResponse['_latency'] = response.elapsed.total_seconds()
+            return jsonResponse
         return response.json() if not rawResponse else response
-    except requests.exceptions.SSLError:
+    except requests.exceptions.SSLError as e:
         return { "error": "SSL error" }
     except requests.exceptions.ConnectionError:
         return { "error": "Server unreachable" }
+    except JSONDecodeError as e:
+        return { "error": "JSONDecodeError " + str(e) }
 
 
 def mispPostRequest(server, url, data={}, rawResponse=False):
@@ -37,11 +45,18 @@ def mispPostRequest(server, url, data={}, rawResponse=False):
         error = handleStatusCode(response)
         if error is not None:
             return error
-        return response.json() if not rawResponse else response
+        if rawResponse:
+            return reponse
+        else:
+            jsonResponse = response.json()
+            jsonResponse['_latency'] = response.elapsed.total_seconds()
+            return jsonResponse
     except requests.exceptions.SSLError:
         return { "error": "SSL Error" }
     except requests.exceptions.ConnectionError:
         return { "error": "Server unreachable" }
+    except JSONDecodeError as e:
+        return { "error": "JSONDecodeError " + str(e) }
 
 def handleStatusCode(response):
     if response.status_code == 403:
@@ -55,8 +70,9 @@ def handleStatusCode(response):
 
 def batchRequest(batch_request):
     result = []
-    with concurrent.futures.ThreadPoolExecutor() as executor:
+    with concurrent.futures.ThreadPoolExecutor(35) as executor:
         future_to_serverid = {executor.submit(req['fn'], req['server'], req['path'], req.get('data', {})): req['server'].id for req in batch_request}
+        starttimer = time.time()
         for future in concurrent.futures.as_completed(future_to_serverid):
             server_id = future_to_serverid[future]
             try:

@@ -324,7 +324,7 @@ def restQuery(server_id):
 # ===========
 def saveInfo(server, queryResult):
     now = int(time.time())
-    server_query = ServerQuery.query.get(server.id)
+    server_query = ServerQuery.query.filter_by(server_id=server.id).first()
     if server_query is not None:
         server_query.query_result = queryResult
         server_query.timestamp = now

@@ -29,9 +29,11 @@ class ProductionConfig(Config):
 class DevelopmentConfig(Config):
     FLASK_DEBUG = True
     FLASK_ENV = 'development'
+    FLASK_HOST = '0.0.0.0'
     SECRET_KEY = 'secret'
 
     # Database
     # SQLALCHEMY_DATABASE_URI = 'sqlite:///database3.db'
     SQLALCHEMY_DATABASE_URI = 'sqlite:///' + osPath.join(basedir, 'app.db')
+    #SQLALCHEMY_DATABASE_URI = 'sqlite:///' + osPath.join('/home/sami/', 'app.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = True
