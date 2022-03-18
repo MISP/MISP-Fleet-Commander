@@ -229,9 +229,9 @@ const mutations = {
         connectionsState.forEach(connection => {
             let server = state.all.find(server => server.id == connection.server_id)
             if (connection.version !== undefined) {
-                server.status = { _loading: false, data: connection.version, error: false, timestamp: connection.timestamp }
+                server.status = { _loading: false, data: connection.version, error: false, timestamp: connection.timestamp, latency: connection._latency }
             } else {
-                server.status = { _loading: false, data: connection.error, error: true, timestamp: connection.timestamp }
+                server.status = { _loading: false, data: connection.error, error: true, timestamp: connection.timestamp, latency: connection._latency }
             }
         })
         setUpdatableServers(state)

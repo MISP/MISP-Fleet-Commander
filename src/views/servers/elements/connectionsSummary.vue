@@ -23,7 +23,6 @@
                 </span>
             </template>
             <template v-else>
-
                 <b-badge
                     v-if="expand_issue_only"
                     :id="`connection-popover-${row_index}-OK}`"
@@ -67,6 +66,30 @@
                 </b-badge>
             </template>
         </div>
+    </div>
+    <div v-else>
+        <b-badge
+               v-if="expand_issue_only"
+               :id="`connection-popover-${row_index}-OK}`"
+               variant="success"
+               rounded
+           >
+            {{ getOkConnectionSummary.text }}
+            <b-popover
+                href="#" tabindex="0"
+                triggers="hover"
+                placement="top"
+                boundary="viewport"
+                :target="`connection-popover-${row_index}-OK}`"
+                variant="success"
+            >
+                <ul class="mb-0" style="padding-inline-start: 20px;">
+                    <li v-for="(name) in getOkConnectionSummary.names" :key="`ok-${name}`">
+                        {{ name }}
+                    </li>
+                </ul>
+            </b-popover>
+        </b-badge>
     </div>
 </template>
 

@@ -79,6 +79,7 @@
                         :row_index="row.index"
                         :text_in_badge="row.value.status.message"
                         :use_diode="true"
+                        :expand_issue_only="false"
                     ></connectionsSummary>
                 </loaderPlaceholder>
             </template>
