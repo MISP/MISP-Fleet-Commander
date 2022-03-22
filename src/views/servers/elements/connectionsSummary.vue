@@ -26,7 +26,7 @@
                 <b-badge
                     v-if="expand_issue_only"
                     :id="`connection-popover-${row_index}-OK}`"
-                    variant="success"
+                    :variant="getOkConnectionSummary.variant"
                     rounded
                 >
                     {{ getOkConnectionSummary.text }}
@@ -36,7 +36,7 @@
                         placement="top"
                         boundary="viewport"
                         :target="`connection-popover-${row_index}-OK}`"
-                        variant="success"
+                        :variant="getOkConnectionSummary.variant"
                     >
                         <ul class="mb-0" style="padding-inline-start: 20px;">
                             <li v-for="(name) in getOkConnectionSummary.names" :key="`ok-${name}`">
@@ -71,7 +71,7 @@
         <b-badge
                v-if="expand_issue_only"
                :id="`connection-popover-${row_index}-OK}`"
-               variant="success"
+               :variant="getOkConnectionSummary.variant"
                rounded
            >
             {{ getOkConnectionSummary.text }}
@@ -81,7 +81,7 @@
                 placement="top"
                 boundary="viewport"
                 :target="`connection-popover-${row_index}-OK}`"
-                variant="success"
+                :variant="getOkConnectionSummary.variant"
             >
                 <ul class="mb-0" style="padding-inline-start: 20px;">
                     <li v-for="(name) in getOkConnectionSummary.names" :key="`ok-${name}`">
@@ -142,6 +142,9 @@ export default {
             }
         },
         getOkConnections() {
+            if (this.connections.error !== undefined) {
+                return []
+            }
             if (Array.isArray(this.connections)) {
                 return this.connections.filter(connection => {
                     return connection.connectionTest.status.color === "success"
@@ -152,8 +155,9 @@ export default {
         },
         getOkConnectionSummary() {
             return {
-                names: this.getOkConnections.map(connection => connection.Server.name),
-                text: `${this.getOkConnections.length} / ${this.connections.length} OK`
+                names: this.getOkConnections.map(connection => (connection.Server.name != '' ? connection.Server.name : connection.Server.url)),
+                text: `${this.getOkConnections.length} / ${this.connections.length} OK`,
+                variant: (this.getOkConnections.length == 0 && this.connections.length > 0) ? 'danger' : 'success'
             }
         }
     },
@@ -170,7 +174,7 @@ export default {
             }
         },
         labelText(connection) {
-            return this.text_in_badge !== "" ? this.text_in_badge : connection.Server.name
+            return this.text_in_badge !== "" ? this.text_in_badge : (connection.Server.name != '' ? connection.Server.name : connection.Server.url)
         },
         getUUID(connection) {
             if (this.vidToUUID[connection.vid] === undefined) {
