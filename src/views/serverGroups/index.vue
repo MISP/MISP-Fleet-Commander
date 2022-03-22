@@ -43,6 +43,7 @@
 import { mapState, mapGetters } from "vuex"
 import iconButton from "@/components/ui/elements/iconButton.vue"
 import AddModal from "@/views/serverGroups/AddModal.vue"
+import router from "@/router"
 
 export default {
     name: "ServerGroup",
@@ -74,6 +75,7 @@ export default {
     methods: {
         selectServerGroup(group) {
             this.$store.dispatch("serverGroups/selectServerGroup", group)
+            router.push({ path: '/servers/' })
         },
         handleAdd() {
             this.refreshServerGroupIndex()
