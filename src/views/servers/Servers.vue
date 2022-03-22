@@ -158,8 +158,8 @@
                         <b-icon v-if="row.value.data !== undefined" icon="circle-fill"></b-icon>
                         {{ row.value.data }}
                         <small
-                             v-if="row.value.data !== undefined"
-                             :class="{'text-success': row.value.latency < 0.3, 'text-warning': row.value.latency >= 0.3 && row.value.latency < 1, 'text-danger': row.value.latency >= 1}"
+                             v-if="row.value.latency !== undefined"
+                             :class="{'text-success': row.value.latency < 0.3, 'text-warning': row.value.latency >= 0.3 && row.value.latency < 2, 'text-danger': row.value.latency >= 2}"
                         >
                             {{ row.value.latency.toFixed(3) }}ms
                         </small>
