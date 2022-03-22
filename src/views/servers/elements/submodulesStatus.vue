@@ -21,7 +21,7 @@ export default {
             } else {
                 let invalids = []
                 for (const [modulesName, moduleState] of Object.entries(this.submodules)) {
-                    if (moduleState !== 1) {
+                    if (moduleState == 1) {
                         invalids.push(modulesName)
                     }
                 }
