@@ -35,14 +35,14 @@ export default {
         workerDefault() {
             return {
                 jobCount: this.workers.default.jobCount,
-                variant: this.getVariantFromAlive(this.workers.default),
+                variant: this.getVariantFromAliveAndJobCount(this.workers.default),
                 ...this.getAliveNumbers(this.workers.default)
             }
         },
         workerPrio() {
             return {
                 jobCount: this.workers.prio.jobCount,
-                variant: this.getVariantFromAlive(this.workers.prio),
+                variant: this.getVariantFromAliveAndJobCount(this.workers.prio),
                 ...this.getAliveNumbers(this.workers.prio)
             }
         },
@@ -65,6 +65,12 @@ export default {
         return {}
     },
     methods: {
+        getVariantFromAliveAndJobCount(workerType) {
+            const deadCount = this.getAliveNumbers(workerType).dead
+            return deadCount == 0 ? 
+                (workerType.jobCount <= 100 ? "" : (workerType <= 1000 ? "warning" : "danger")) :
+                (deadCount == workerType.workers.length ? "danger" : "warning")
+        },
         getVariantFromAlive(workerType) {
             const deadCount = this.getAliveNumbers(workerType).dead
             return deadCount == 0 ? 
