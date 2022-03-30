@@ -5,6 +5,7 @@ from datetime import timedelta
 import time
 import json
 import re
+import concurrent.futures
 from collections import Mapping, MutableSequence, defaultdict
 from sqlalchemy.orm import with_parent
 # from application import notification_helpers
@@ -360,16 +361,26 @@ def fetchServerUsers(server):
         return []
     return users
 
+def getConnectedServerStatus(server, connectedServer):
+    connectionTest = mispGetRequest(server, f'/servers/testConnection/{connectedServer["Server"]["id"]}')
+    connectionUser = mispGetRequest(server, f'/servers/getRemoteUser/{connectedServer["Server"]["id"]}')
+    connectionTest['timestamp'] = int(time.time())
+    connectedServer['connectionTest'] = parseMISPConnectionOutput(connectionTest)
+    connectedServer['connectionUser'] = parseMISPUserConnectionOutput(connectionUser)
+    connectedServer['vid'] = f"{server.id}-{connectedServer['Server']['id']}"
+    return connectedServer
+
 def attachConnectedServerStatus(server, connectedServers):
     if type(connectedServers) is list:
-        for connectedServer in connectedServers:
-            # test remote connection for the connected server
-            connectionTest = mispGetRequest(server, f'/servers/testConnection/{connectedServer["Server"]["id"]}')
-            connectionUser = mispGetRequest(server, f'/servers/getRemoteUser/{connectedServer["Server"]["id"]}')
-            connectionTest['timestamp'] = int(time.time())
-            connectedServer['connectionTest'] = parseMISPConnectionOutput(connectionTest)
-            connectedServer['connectionUser'] = parseMISPUserConnectionOutput(connectionUser)
-            connectedServer['vid'] = f"{server.id}-{connectedServer['Server']['id']}"
+        with concurrent.futures.ThreadPoolExecutor(max(len(connectedServers), 1)) as executor:
+            future_to_serverid = {executor.submit(getConnectedServerStatus, server, connectedServer): i for i, connectedServer in enumerate(connectedServers)}
+            for future in concurrent.futures.as_completed(future_to_serverid):
+                j = future_to_serverid[future]
+                try:
+                    data = future.result()
+                    connectedServers[j] = data
+                except Exception as exc:
+                    print('%r generated an exception: %s' % (connectedServers[j], exc))
     return connectedServers
 
 def parseMISPUserConnectionOutput(userConnection):

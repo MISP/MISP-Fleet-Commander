@@ -5,7 +5,23 @@ requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 import concurrent.futures
 import time
 from urllib.parse import urljoin
+import functools
 
+
+def timer(func):
+    @functools.wraps(func)
+    def wrapper_timer(*args, **kwargs):
+        start = time.perf_counter()
+        result = func(*args, **kwargs)
+        stop = time.perf_counter()
+        duration = stop-start
+        if duration > 3:
+            print('{}: {} Took {:.2f}sec'.format(args[0].name, args[1], duration))
+        return result
+    return wrapper_timer
+
+
+@timer
 def mispGetRequest(server, url, data={}, rawResponse=False):
     headers = {
         "Authorization": server.authkey,
@@ -19,20 +35,22 @@ def mispGetRequest(server, url, data={}, rawResponse=False):
         if error is not None:
             return error
         if rawResponse:
-            return reponse
+            return response
         else:
             jsonResponse = response.json()
-            jsonResponse['_latency'] = response.elapsed.total_seconds()
+            if type(jsonResponse) == dict:
+                jsonResponse['_latency'] = response.elapsed.total_seconds()
             return jsonResponse
         return response.json() if not rawResponse else response
     except requests.exceptions.SSLError as e:
         return { "error": "SSL error" }
     except requests.exceptions.ConnectionError:
         return { "error": "Server unreachable" }
-    except JSONDecodeError as e:
-        return { "error": "JSONDecodeError " + str(e) }
+    except Exception as e:
+        return { "error": "Unknown Exception " }
 
 
+@timer
 def mispPostRequest(server, url, data={}, rawResponse=False):
     headers = {
         "Authorization": server.authkey,
@@ -46,7 +64,7 @@ def mispPostRequest(server, url, data={}, rawResponse=False):
         if error is not None:
             return error
         if rawResponse:
-            return reponse
+            return response
         else:
             jsonResponse = response.json()
             jsonResponse['_latency'] = response.elapsed.total_seconds()
@@ -55,8 +73,8 @@ def mispPostRequest(server, url, data={}, rawResponse=False):
         return { "error": "SSL Error" }
     except requests.exceptions.ConnectionError:
         return { "error": "Server unreachable" }
-    except JSONDecodeError as e:
-        return { "error": "JSONDecodeError " + str(e) }
+    except Exception as e:
+        return { "error": "Exception " + str(e) }
 
 def handleStatusCode(response):
     if response.status_code == 403:
