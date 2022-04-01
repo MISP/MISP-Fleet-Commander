@@ -40,7 +40,7 @@ export default {
                         bcItem = that.$route.params[routeEntry.meta.breadcrumbs.textGetter]
                         if (routeEntry.name == "servers.view") {
                             const server_id = that.$route.params[routeEntry.meta.breadcrumbs.textGetter]
-                            bcItem = `${this.getServerById(server_id).name} [${server_id}]`
+                            bcItem = `${this.servers[server_id].name} [${server_id}]`
                         }
                     } else {
                         bcItem = routeEntry.meta.breadcrumbs.text
@@ -54,8 +54,8 @@ export default {
             })
             return items
         },
-        ...mapGetters({
-            getServerById: "servers/getServerById"
+        ...mapState({
+            servers: state => state.servers,
         }),
     },
     methods: {

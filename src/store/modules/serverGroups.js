@@ -67,7 +67,7 @@ const actions = {
     },
     selectServerGroup({ commit, dispatch }, group) {
         commit("selectServerGroup", group)
-        dispatch("servers/getAllServers", {init_only: false}, { root: true })
+        dispatch("servers/fetchServers", {force: true})
     },
     addServerGroup({ commit }, payload={}) {
         return new Promise((resolve, reject) => {

@@ -167,8 +167,8 @@
                 </loaderPlaceholder>
             </template>
 
-            <template v-slot:cell(server_info.query_result.serverUser.Role)="row">
-                <loaderPlaceholder :loading="!row.item.server_info._loading">
+            <template v-slot:cell(user_perm)="row">
+                <loaderPlaceholder :loading="!server_query_in_progress[row.item.id]">
                     <userPerms
                         :perms="row.value"
                         :row_id="row.index"
@@ -180,7 +180,7 @@
             <template v-slot:cell(last_refresh)="row">
                 <span class="d-block" style="width: 100px;">
                     <span :class="forcedHidden == row.index ? 'd-none' : 'hide-on-hover'">
-                        <loaderPlaceholder :loading="!row.value._loading">
+                        <loaderPlaceholder :loading="!server_query_in_progress[row.item.id]">
                             <timeSinceRefresh
                                 :key="table.timeKey"
                                 :timestamp="row.value.timestamp"
@@ -228,7 +228,7 @@
             </template>
 
             <template v-slot:cell(notification)="row">
-                <loaderPlaceholder :loading="!row.item.server_info._loading">
+                <loaderPlaceholder :loading="!server_query_in_progress[row.item.id]">
                     <i
                         class="fas fa-arrow-up text-success"
                         title="Update available"
@@ -237,36 +237,36 @@
                 </loaderPlaceholder>
             </template>
 
-            <template v-slot:cell(server_info.query_result.connectedServers)="row">
-                <loaderPlaceholder :loading="!row.item.server_info._loading">
+            <template v-slot:cell(remote_connections)="row">
+                <loaderPlaceholder :loading="!server_query_in_progress[row.item.id]">
                     <connectionsSummary
-                        v-if="typeof row.value !== 'string'"
+                        v-if="(typeof row.value !== 'string')"
                         :connections="row.value"
                         :row_index="row.index"
                     ></connectionsSummary>
                 </loaderPlaceholder>
             </template>
 
-            <template v-slot:cell(server_info.query_result.serverSettings.proxyStatus)="row">
-                <loaderPlaceholder :loading="!row.item.server_info._loading">
+            <template v-slot:cell(proxy)="row">
+                <loaderPlaceholder :loading="!server_query_in_progress[row.item.id]">
                     <proxyStatus :proxy="row.value"></proxyStatus>
                 </loaderPlaceholder>
             </template>
 
-            <template v-slot:cell(server_info.query_result.serverSettings.moduleStatus)="row">
-                <loaderPlaceholder :loading="!row.item.server_info._loading">
+            <template v-slot:cell(submodule)="row">
+                <loaderPlaceholder :loading="!server_query_in_progress[row.item.id]">
                     <submodulesStatus :submodules="row.value"></submodulesStatus>
                 </loaderPlaceholder>
             </template>
 
-            <template v-slot:cell(server_info.query_result.serverSettings.zmqStatus)="row">
-                <loaderPlaceholder :loading="!row.item.server_info._loading">
+            <template v-slot:cell(zeromq)="row">
+                <loaderPlaceholder :loading="!server_query_in_progress[row.item.id]">
                     <zeroMQStatus :status="row.value"></zeroMQStatus>
                 </loaderPlaceholder>
             </template>
 
-            <template v-slot:cell(server_info.query_result.serverSettings.workers)="row">
-                <loaderPlaceholder :loading="!row.item.server_info._loading">
+            <template v-slot:cell(workers)="row">
+                <loaderPlaceholder :loading="!server_query_in_progress[row.item.id]">
                     <workersStatus :workers="row.value" :server_id="row.item.id"></workersStatus>
                 </loaderPlaceholder>
             </template>
@@ -402,58 +402,72 @@ export default {
                         key: "status",
                         label: "Status",
                         sortable: true,
-                        tdClass: "align-middle"
+                        tdClass: "align-middle",
+                        formatter: (value, key, item) => {
+                            return this.status[item.id]
+                        }
                     },
                     {
-                        key: "server_info.query_result.serverUser.Role",
+                        key: "user_perm",
                         label: "User perms",
                         sortable: true,
                         class: "align-middle d-none d-xl-table-cell",
+                        formatter: (value, key, item) => {
+                            return this.user_perms[item.id]
+                        }
                     },
                     {
-                        key: "server_info.query_result.connectedServers",
+                        key: "remote_connections",
                         label: "Remote Connections",
                         sortable: true,
                         class: "align-middle d-none d-xl-table-cell",
+                        formatter: (value, key, item) => {
+                            return this.remote_connections[item.id]
+                        }
                     },
                     {
-                        key: "server_info.query_result.serverSettings.moduleStatus",
+                        key: "submodule",
                         label: "Sub-modules",
                         sortable: true,
                         class: "align-middle d-none d-xxl-table-cell",
+                        formatter: (value, key, item) => {
+                            return this.submodules[item.id]
+                        }
                     },
                     {
-                        key: "server_info.query_result.serverSettings.proxyStatus",
+                        key: "proxy",
                         label: "Proxy",
                         sortable: true,
                         class: "align-middle d-none d-xxl-table-cell",
+                        formatter: (value, key, item) => {
+                            return this.proxy[item.id]
+                        }
                     },
                     {
-                        key: "server_info.query_result.serverSettings.zmqStatus",
+                        key: "zeromq",
                         label: "ZeroMQ",
                         sortable: true,
                         class: "align-middle d-none d-xxl-table-cell",
+                        formatter: (value, key, item) => {
+                            return this.zeromq[item.id]
+                        }
                     },
                     {
-                        key: "server_info.query_result.serverSettings.workers",
+                        key: "workers",
                         label: "Workers",
                         sortable: true,
                         class: "align-middle d-none d-md-table-cell",
+                        formatter: (value, key, item) => {
+                            return this.workers[item.id]
+                        }
                     },
-                    //{
-                    //    key: "auth_method",
-                    //    sortable: false,
-                    //    class: "d-none d-xl-table-cell text-nowrap",
-                    //    formatter: (value) => {
-                    //        return Array.isArray(value) ? value.join(", ") : ""
-                    //    }
-                    //},
                     {
                         key: "last_refresh",
                         sortable: true,
                         class: "align-middle py-0",
                         formatter: (value, key, item) => {
-                            return item.server_info
+                            // return item.server_info
+                            return this.last_refresh[item.id]
                         }
                     },
                     {
@@ -468,12 +482,25 @@ export default {
     },
     computed: {
         ...mapState({
-            getIndex: state => state.servers.all,
             githubVersion: state => state.servers.githubVersion,
             selectedServerGroup: state => state.serverGroups.selected,
+            servers: state => state.servers,
+            status: state => state.servers.status,
+            server_query_in_progress: state => state.servers.server_query_in_progress,
+            server_query_error: state => state.servers.server_query_error,
+            user_perms: state => state.servers.user_perms,
+            remote_connections: state => state.servers.remote_connections,
+            submodules: state => state.servers.submodules,
+            proxy: state => state.servers.proxy,
+            zeromq: state => state.servers.zeromq,
+            workers: state => state.servers.workers,
+            serverUsers: state => state.servers.serverUsers,
+            last_refresh: state => state.servers.last_refresh,
+            diagnostic_full: state => state.servers.diagnostic_full,
         }),
         ...mapGetters({
-            serverCount: "servers/serverCount"
+            serverCount: "servers/serverCount",
+            getIndex: "servers/getServerList",
         }),
         validServerToEdit() {
             return this.serverToEdit.formData
@@ -628,7 +655,7 @@ export default {
         refreshServerIndex() {
             this.refreshInProgress = true
             return new Promise((resolve, reject) => {
-                this.$store.dispatch("servers/getAllServers")
+                this.$store.dispatch("servers/fetchServers")
                     .then(() => {
                         this.table.totalRows = this.serverCount
                         resolve()
@@ -646,14 +673,14 @@ export default {
             })
         },
         refreshSelected() {
-            this.$store.dispatch("servers/refreshSelectedConnectionState", {selection: this.selectedServers})
+            this.$store.dispatch("servers/runSelectedConnectionTest", {selection: this.selectedServers})
                 .catch(error => {
                     this.$bvToast.toast(error, {
                         title: "Could not reach Server",
                         variant: "danger",
                     })
                 })
-            this.$store.dispatch("servers/getSelectedInfo", {no_cache: true, selection: this.selectedServers})
+            this.$store.dispatch("servers/fetchSelectedServerInfo", {no_cache: true, selection: this.selectedServers})
                 .catch(error => {
                     this.$bvToast.toast(error, {
                         title: "Could not fetch server info",
@@ -662,7 +689,7 @@ export default {
                 })
         },
         refreshAllServerOnlineStatus() {
-            this.$store.dispatch("servers/refreshAllConnectionState")
+            this.$store.dispatch("servers/runAllConnectionTest")
                 .catch(error => {
                     this.$bvToast.toast(error, {
                         title: "Could not reach Server",
@@ -686,7 +713,7 @@ export default {
             }
         },
         fullRefreshIfNeeded() {
-            if (this.getIndex.length === 0) {
+            if (this.serverCount === 0) {
                 this.fullRefresh()
             }
         },
@@ -699,11 +726,11 @@ export default {
             const index = data.index
             const method = data.method
             let server = this.getIndex[index]
-            this.$store.dispatch("servers/refreshConnectionState", server)
+            this.$store.dispatch("servers/runConnectionTest", server)
             this.refreshInfo(server, method == "no_cache")
         },
         refreshInfo(server, no_cache=false) {
-            this.$store.dispatch("servers/getInfo", {server: server, no_cache: no_cache})
+            this.$store.dispatch("servers/fetchServerInfo", {server: server, no_cache: no_cache})
                 .catch(error => {
                     this.$bvToast.toast(error, {
                         title: "Could not fetch server info",
@@ -712,7 +739,7 @@ export default {
                 })
         },
         refreshAllInfo(no_cache=false) {
-            this.$store.dispatch("servers/getAllInfo", {no_cache: no_cache})
+            this.$store.dispatch("servers/fetchServerInfo", {no_cache: no_cache})
                 .catch(error => {
                     this.$bvToast.toast(error, {
                         title: "Could not fetch server info",

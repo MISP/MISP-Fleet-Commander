@@ -58,11 +58,11 @@ export default {
         }
     },
     computed: {
-        ...mapGetters({
-            getServerById: "servers/getServerById"
+        ...mapState({
+            servers: state => state.servers,
         }),
         getServer: function() {
-            return this.getServerById(this.server_id)
+            return this.servers[this.server_id]
         },
         isOnline: function() {
             return !this.getServer.status.error
@@ -77,7 +77,7 @@ export default {
     methods: {
         getOnlineStatus() {
             return new Promise((resolve, reject) => {
-                this.$store.dispatch("servers/refreshAllConnectionState")
+                this.$store.dispatch("servers/runAllConnectionTest")
                     .then(() => {
                         resolve()
                     })

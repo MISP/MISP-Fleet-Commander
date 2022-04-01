@@ -201,11 +201,11 @@ export default {
         }
     },
     computed: {
-        ...mapGetters({
-            getServerById: "servers/getServerById"
+        ...mapState({
+            servers: state => state.servers,
         }),
         getServer: function() {
-            return this.getServerById(this.server.id)
+            return this.servers[this.server.id]
         },
     },
     methods: {

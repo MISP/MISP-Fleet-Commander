@@ -198,10 +198,10 @@ export default {
                 this.zoom = network.zoom
             }
         },
-        refreshServers(init_only=false) {
+        refreshServers(force=true) {
             this.refreshInProgress = true
             return new Promise((resolve, reject) => {
-                this.$store.dispatch("servers/getAllServers", {init_only: init_only})
+                this.$store.dispatch("servers/fetchServers", {force: force})
                     .then(() => {
                         resolve()
                     })
@@ -239,7 +239,7 @@ export default {
         refreshAllServerOnlineStatus() {
             this.refreshInProgress = true
             return new Promise((resolve, reject) => {
-                this.$store.dispatch("servers/refreshAllConnectionState")
+                this.$store.dispatch("servers/runAllConnectionTest")
                     .then(() => {
                         resolve()
                     })
@@ -279,7 +279,7 @@ export default {
     mounted() {
         this.svg = this.$refs["networkSVG"]
         Promise.all([
-            this.refreshServers(true),
+            this.refreshServers(false),
             this.refreshConnections(true),
             this.refreshAllServerOnlineStatus()
         ])

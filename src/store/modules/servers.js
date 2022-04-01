@@ -3,8 +3,19 @@ import api from "@/api/servers"
 // initial state
 const state = {
     githubVersion: "",
-    all: [],
-    idToServer: {}
+    severs: {},
+    status: {},
+    server_query_in_progress: {},
+    server_query_error: {},
+    user_perms: {},
+    remote_connections: {},
+    submodules: {},
+    proxy: {},
+    zeromq: {},
+    workers: {},
+    serverUsers: {},
+    last_refresh: {},
+    diagnostic_full: {},
 }
 
 // getters
@@ -12,71 +23,58 @@ const getters = {
     serverCount: state => {
         return state.all.length
     },
-    getServerById: (state) => (id) => {
-        return state.all.find(server => server.id === id)
-    }
+    getServerList: state => {
+        return Object.values(state.servers)
+    },
 }
 
 // actions
 // API Usage: api.[action]({parameters}, callback, errorCallback)
 const actions = {
 
-    /* FETCH */
-    getAllServers({ getters, commit }, payload) {
-        // this function should not fetch data if it has been fetched already
-        return new Promise((resolve, reject) => {
-            if (payload !== undefined && payload.init_only && getters.serverCount > 0) {
-                resolve("Server already loaded")
-            } else {
-                api.index(
-                    servers => {
-                        servers.forEach(server => {
-                            server.status = { _loading: false }
-                            if (server.server_info === null) {
-                                server.server_info = {query_result: {}, error: null, _loading: false}
-                            } else {
-                                server.server_info._loading = false
-                            }
-                            server._showDetails = false
-                            server._loading = false
-                        })
-                        commit("setServers", servers)
-                        resolve()
-                    },
-                    (error) => { reject(error) }
-                )
-            }
-        })
+    fetchServers({ commit }, payload) {
+        if (getters.serverCount == 0 || (payload !== undefined && payload.force)) {
+            api.index(servers => {
+                    commit("setServers", servers)
+                    resolve()
+                },
+                (error) => { reject(error) }
+            )
+        } else {
+            resolve("Server already loaded")
+        }
     },
-    refreshConnectionState({ commit }, server) {
+    runConnectionTest({ commit, state }, server_id) {
         return new Promise((resolve, reject) => {
-            commit("resetConnectionState", { server_id: server.id })
+            commit("resetConnectionState", { server_id: server_id })
             api.testConnection(
-                server,
+                state.servers[server_id],
                 connectionState => {
-                    commit("updateConnectionState", { server_id: server.id, connectionState: connectionState})
+                    commit("setConnectionState", { server_id: server_id, connectionState: connectionState })
                     resolve()
                 },
                 (error) => { reject(error) }
             )
         })
     },
-    refreshAllConnectionState({ commit }) {
+    runAllConnectionTest({ commit }) {
         return new Promise((resolve, reject) => {
             commit("resetConnectionsState")
             api.batchTestConnection(
                 connectionsState => {
-                    commit("updateConnectionsState", { connectionsState: connectionsState})
+                    connectionsState.forEach(connection => {
+                        commit("setConnectionState", { server_id: connection.server_id, connectionState: connection })
+                    })
                     resolve()
                 },
                 (error) => { reject(error) }
             )
         })
     },
-    refreshSelectedConnectionState({ dispatch }, payload) {
+    runSelectedConnectionTest({ dispatch }, payload) {
         return new Promise((resolve, reject) => {
-            payload.selection.forEach(server => {
-                dispatch("refreshConnectionState", server)
+            payload.selection.forEach(server_id => {
+                dispatch("runConnectionTest", server_id)
                     .then(() => {
                         resolve()
                     })
@@ -86,26 +84,28 @@ const actions = {
             })
         })
     },
-    getInfo({ commit }, payload) {
+    fetchServerInfo({ commit }, payload) {
         return new Promise((resolve, reject) => {
-            commit("updateInfo", { server_id: payload.server.id, loading: true }) // try to only change loading and not replace the info field? create a new mutation `updateLoading`
+            commit("updateQueryState", { server_id: payload.server_id, loading: true })
             api.queryInfo(
                 payload,
                 (info) => {
-                    commit("updateInfo", { server_id: payload.server.id, info: info, loading: false})
+                    commit("updateQueryState", { server_id: payload.server_id, info: info, loading: false })
+                    setAllQueryInfo(commit, payload.server_id, info)
                     resolve()
                 },
-                (error) => { 
-                    commit("updateInfo", { server_id: payload.server.id, loading: false })
+                (error) => {
+                    commit("updateQueryState", { server_id: payload.server_id, loading: false })
+                    setAllQueryInfo(commit, payload.server_id)
                     reject(error)
                 }
             )
         })
     },
-    getAllInfo({ state, dispatch }, payload) {
+    fetchAllServerInfo({ getters, commit }) {
         return new Promise((resolve, reject) => {
-            state.all.forEach(server => {
-                dispatch("getInfo", {server: server, no_cache: payload.no_cache})
+            getters.getServerList.forEach(server => {
+                dispatch("fetchServerInfo", { server: server, no_cache: payload.no_cache })
                     .then(() => {
                         resolve()
                     })
@@ -115,10 +115,10 @@ const actions = {
             })
         })
     },
-    getSelectedInfo({ dispatch }, payload) {
+    fetchSelectedServerInfo({ state, dispatch }, payload) {
         return new Promise((resolve, reject) => {
-            payload.selection.forEach(server => {
-                dispatch("getInfo", {server: server, no_cache: payload.no_cache})
+            payload.selection.forEach(server_id => {
+                dispatch("fetchServerInfo", { server: state.servers[server_id], no_cache: payload.no_cache })
                     .then(() => {
                         resolve()
                     })
@@ -157,7 +157,7 @@ const actions = {
     },
 
     /* ADD, EDIT & DELETE */
-    add(context, payload) {
+    add(payload) {
         return new Promise((resolve, reject) => {
             api.add(
                 payload,
@@ -168,7 +168,7 @@ const actions = {
             )
         })
     },
-    edit(context, payload) {
+    edit(payload) {
         return new Promise((resolve, reject) => {
             api.edit(
                 payload,
@@ -179,7 +179,7 @@ const actions = {
             )
         })
     },
-    delete(context, payload) {
+    delete(payload) {
         return new Promise((resolve, reject) => {
             api.delete(
                 payload,
@@ -199,68 +199,106 @@ const mutations = {
         state.all[index]._showDetails = !state.all[index]._showDetails
     },
     setServers (state, servers) {
-        state.all = servers
-        state.idToServer = {}
         servers.forEach(server => {
-            state.idToServer[server.id] = server
+            server._showDetails = false
+            server._loading = false
+            server.canBeUpdated = false
+            server.status = {}
+            state.servers[server.id] = server
+            state.server_query_in_progress[server.id] = false
+            state.server_query_error[server.id] = false
         })
     },
     resetConnectionState(state, payload) {
-        let server = state.idToServer[payload.server_id]
-        server.status = { _loading: true }
+        Vue.set(state.servers[payload.server_id].status, '_loading', true)
     },
     resetConnectionsState(state) {
-        state.all.forEach(server => {
-            server.status = { _loading: true }
+        Object.values(state.servers).forEach(server => {
+            Vue.set(server.status, '_loading', true)
         })
     },
-    updateConnectionState(state, payload) {
-        let server = state.idToServer[payload.server_id]
+    setConnectionState(state, payload) {
+        let server = state.servers[payload.server_id]
         const connection = payload.connectionState
-        if (connection.version !== undefined) {
-            server.status = { _loading: false, data: connection.version, error: false, timestamp: connection.timestamp }
-        } else {
-            server.status = { _loading: false, data: connection.error, error: true, timestamp: connection.timestamp }
+        let newStatus = {
+            _loading: false,
+            timestamp: connection.timestamp,
         }
+        if (connection.version !== undefined) {
+            newStatus.data = connection.version
+            newStatus.error = false
+        } else {
+            newStatus = connection.error
+            newStatus.error = true
+        }
+        server.status = Object.assign({}, server.status, newStatus)
         setUpdatableServers(state)
     },
-    updateConnectionsState(state, payload) {
-        const connectionsState = payload.connectionsState
-        connectionsState.forEach(connection => {
-            let server = state.all.find(server => server.id == connection.server_id)
-            if (connection.version !== undefined) {
-                server.status = { _loading: false, data: connection.version, error: false, timestamp: connection.timestamp, latency: connection._latency }
-            } else {
-                server.status = { _loading: false, data: connection.error, error: true, timestamp: connection.timestamp, latency: connection._latency }
-            }
-        })
-        setUpdatableServers(state)
-    },
-    updateInfo(state, payload) {
-        let server = state.idToServer[payload.server_id]
-        server._loading = payload.loading
-        server.server_info._loading = payload.loading
+    setQueryState(state, payload) {
+        let server = state.servers[payload.server_id]
+        state.server_query_in_progress[payload.server_id] = payload.loading
         const info = payload.info
         if (info !== undefined) {
             if (info.error === undefined) {
-                server.server_info = Object.assign({}, server.server_info, info) // update information keeping the observers
-                server.server_info.error = false
+                server.server_query_error = false
             } else {
-                server.server_info.error = info.error
-                server.server_info.error = true
+                state.server_query_error = info.error ? info.error : true
             }
         }
     },
+    setUserPerms(state, payload) {
+        if (state.user_perms[payload.server_id] === undefined) {
+            Vue.set(state.user_perms, payload.server_id, {})
+        }
+        state.user_perms[payload.server_id] = Object.assign({}, state.user_perms[payload.server_id], payload.perms)
+    },
+    setRemoteConnections(state, payload) {
+        if (state.remote_connections[payload.server_id] === undefined) {
+            Vue.set(state.remote_connections, payload.server_id, {})
+        }
+        state.remote_connections[payload.server_id] = Object.assign({}, state.remote_connections[payload.server_id], payload.connections)
+    },
+    setSubmodules(state, payload) {
+        if (state.submodules[payload.server_id] === undefined) {
+            Vue.set(state.submodules, payload.server_id, {})
+        }
+        state.submodules[payload.server_id] = Object.assign({}, state.submodules[payload.server_id], payload.submodules)
+    },
+    setProxy(state, payload) {
+        if (state.proxy[payload.server_id] === undefined) {
+            Vue.set(state.proxy, payload.server_id, {})
+        }
+        state.proxy[payload.server_id] = Object.assign({}, state.proxy[payload.server_id], payload.proxy)
+    },
+    setZMQ(state, payload) {
+        if (state.zeromq[payload.server_id] === undefined) {
+            Vue.set(state.zeromq, payload.server_id, {})
+        }
+        state.zeromq[payload.server_id] = Object.assign({}, state.zeromq[payload.server_id], payload.zmq)
+    },
+    setWorkers(state, payload) {
+        if (state.workers[payload.server_id] === undefined) {
+            Vue.set(state.workers, payload.server_id, {})
+        }
+        state.workers[payload.server_id] = Object.assign({}, state.workers[payload.server_id], payload.workers)
+    },
+    setLastRefresh(state, payload) {
+        if (state.last_refresh[payload.server_id] === undefined) {
+            Vue.set(state.last_refresh, payload.server_id, {})
+        }
+        state.last_refresh[payload.server_id] = Object.assign({}, state.last_refresh[payload.server_id], payload.last_refresh)
+    },
+    setDiagnosticFull(state, payload) {
+        if (state.diagnostic_full[payload.server_id] === undefined) {
+            Vue.set(state.diagnostic_full, payload.server_id, {})
+        }
+        state.diagnostic_full[payload.server_id] = Object.assign({}, state.diagnostic_full[payload.server_id], payload.diagnostic_full)
+    },
     updateUsers(state, { server_id, users }) {
-        let server = state.idToServer[server_id]
-        if (server.server_data === undefined) {
-            server.server_data = {}
+        if (state.serverUsers[server_id] === undefined) {
+            Vue.set(state.serverUsers, server_id, {})
         }
-        if (server.server_data.users === undefined) {
-            server.server_data.users = users
-        } else {
-            server.server_data.users = users
-        }
+        state.serverUsers[server_id] = Object.assign({}, state.serverUsers[server_id], users)
     },
     setGithubVersion(state, githubReply) {
         const githubVersion = githubReply.tag_name
@@ -269,8 +307,19 @@ const mutations = {
     }
 }
 
+function setAllQueryInfo(commit, server_id, info) {
+    commit("setUserPerms", { server_id: server_id, perms: info["serverUser"] })
+    commit("setRemoteConnections", { server_id: server_id, perms: info["connectedServers"] })
+    commit("setSubmodules", { server_id: server_id, perms: info["serverSettings"]["moduleStatus"] })
+    commit("setProxy", { server_id: server_id, perms: info["serverSettings"]["proxyStatus"] })
+    commit("setZMQ", { server_id: server_id, perms: info["serverSettings"]["zmqStatus"] })
+    commit("setWorkers", { server_id: server_id, perms: info["serverSettings"]["workers"] })
+    commit("setLastRefresh", { server_id: server_id, perms: info["timestamp"] })
+    commit("setDiagnosticFull", { server_id: server_id, perms: info["serverSettings"] })
+}
+
 function setUpdatableServers(state) {
-    state.all.forEach(server => {
+    Object.values(state.servers).forEach(server => {
         server.canBeUpdated = canBeUpdated(state, server)
     })
 }
