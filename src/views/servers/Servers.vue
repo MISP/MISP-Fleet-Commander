@@ -141,7 +141,7 @@
                 ></b-form-checkbox>
             </template>
 
-            <template v-slot:head(status)>
+            <template v-slot:head(server_status)>
                 Status
                 <sup><b-badge class="ml-auto" variant="primary" :title="`Latest MISP version: ${githubVersion}`">{{ githubVersion }}</b-badge></sup>
             </template>
@@ -150,7 +150,7 @@
                 <b-link :href="row.value" target="_blank" class="text-nowrap">{{ row.value }} <sup class="fa fa-external-link-alt"></sup></b-link>
             </template>
 
-            <template v-slot:cell(status)="row">
+            <template v-slot:cell(server_status)="row">
                 <loaderPlaceholder :loading="!row.value._loading">
                     <span
                         :class="{'text-nowrap': true, 'text-danger': row.value.error, 'text-success': !row.value.error}"
@@ -183,7 +183,7 @@
                         <loaderPlaceholder :loading="!server_query_in_progress[row.item.id]">
                             <timeSinceRefresh
                                 :key="table.timeKey"
-                                :timestamp="row.value.timestamp"
+                                :timestamp="row.value"
                             ></timeSinceRefresh>
                         </loaderPlaceholder>
                     </span>
@@ -399,12 +399,12 @@ export default {
                         sortable: false
                     },
                     {
-                        key: "status",
+                        key: "server_status",
                         label: "Status",
                         sortable: true,
                         tdClass: "align-middle",
-                        formatter: (value, key, item) => {
-                            return this.status[item.id]
+                        formatter: (value, key, item, test) => {
+                            return this.server_status[item.id]
                         }
                     },
                     {
@@ -422,7 +422,7 @@ export default {
                         sortable: true,
                         class: "align-middle d-none d-xl-table-cell",
                         formatter: (value, key, item) => {
-                            return this.remote_connections[item.id]
+                            return Object.values(this.remote_connections[item.id])
                         }
                     },
                     {
@@ -466,7 +466,6 @@ export default {
                         sortable: true,
                         class: "align-middle py-0",
                         formatter: (value, key, item) => {
-                            // return item.server_info
                             return this.last_refresh[item.id]
                         }
                     },
@@ -484,8 +483,8 @@ export default {
         ...mapState({
             githubVersion: state => state.servers.githubVersion,
             selectedServerGroup: state => state.serverGroups.selected,
-            servers: state => state.servers,
-            status: state => state.servers.status,
+            servers: state => state.servers.servers,
+            server_status: state => state.servers.server_status,
             server_query_in_progress: state => state.servers.server_query_in_progress,
             server_query_error: state => state.servers.server_query_error,
             user_perms: state => state.servers.user_perms,

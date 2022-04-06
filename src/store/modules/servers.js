@@ -1,27 +1,32 @@
 import api from "@/api/servers"
+import Vue from "vue"
 
 // initial state
-const state = {
-    githubVersion: "",
-    severs: {},
-    status: {},
-    server_query_in_progress: {},
-    server_query_error: {},
-    user_perms: {},
-    remote_connections: {},
-    submodules: {},
-    proxy: {},
-    zeromq: {},
-    workers: {},
-    serverUsers: {},
-    last_refresh: {},
-    diagnostic_full: {},
+const init_state = () => {
+    return {
+        githubVersion: "",
+        servers: {},
+        server_status: {},
+        server_query_in_progress: {},
+        server_query_error: {},
+        user_perms: {},
+        remote_connections: {},
+        submodules: {},
+        proxy: {},
+        zeromq: {},
+        workers: {},
+        serverUsers: {},
+        last_refresh: {},
+        diagnostic_full: {},
+    }
 }
+
+const state = init_state()
 
 // getters
 const getters = {
     serverCount: state => {
-        return state.all.length
+        return state.servers.length
     },
     getServerList: state => {
         return Object.values(state.servers)
@@ -32,17 +37,25 @@ const getters = {
 // API Usage: api.[action]({parameters}, callback, errorCallback)
 const actions = {
 
+    resetState({ commit }, payload) {
+        return new Promise((resolve, reject) => {
+            commit("resetState")
+            resolve()
+	})
+    },
     fetchServers({ commit }, payload) {
-        if (getters.serverCount == 0 || (payload !== undefined && payload.force)) {
-            api.index(servers => {
-                    commit("setServers", servers)
-                    resolve()
-                },
-                (error) => { reject(error) }
-            )
-        } else {
-            resolve("Server already loaded")
-        }
+        return new Promise((resolve, reject) => {
+            if (getters.serverCount == 0 || (payload !== undefined && payload.force)) {
+                api.index(servers => {
+                        commit("setServers", servers)
+                        resolve()
+                    },
+                    (error) => { reject(error) }
+                )
+            } else {
+                resolve("Server already loaded")
+            }
+        })
     },
     runConnectionTest({ commit, state }, server_id) {
         return new Promise((resolve, reject) => {
@@ -91,12 +104,12 @@ const actions = {
                 payload,
                 (info) => {
                     commit("updateQueryState", { server_id: payload.server_id, info: info, loading: false })
-                    setAllQueryInfo(commit, payload.server_id, info)
+                    commitAllQueryInfo(commit, payload.server_id, info)
                     resolve()
                 },
                 (error) => {
                     commit("updateQueryState", { server_id: payload.server_id, loading: false })
-                    setAllQueryInfo(commit, payload.server_id)
+                    commitAllQueryInfo(commit, payload.server_id)
                     reject(error)
                 }
             )
@@ -195,43 +208,51 @@ const actions = {
 
 // mutations
 const mutations = {
+    resetState (state) {
+        Object.assign(state, init_state())
+    },
     toggleShowDetails (state, index) {
-        state.all[index]._showDetails = !state.all[index]._showDetails
+        state.servers[index]._showDetails = !state.servers[index]._showDetails
     },
     setServers (state, servers) {
+	Object.assign(state.servers, {})
         servers.forEach(server => {
             server._showDetails = false
             server._loading = false
             server.canBeUpdated = false
-            server.status = {}
-            state.servers[server.id] = server
-            state.server_query_in_progress[server.id] = false
-            state.server_query_error[server.id] = false
+            Vue.set(state.server_query_in_progress, server.id, false)
+            Vue.set(state.server_query_error, server.id, false)
+            Vue.set(state.server_status, server.id, {})
+            if (server.server_info.query_result !== undefined) {
+                setAllQueryInfo(state, server.id, server.server_info)
+                delete server.server_info.query_result
+            }
+            Vue.set(state.servers, server.id, server)
         })
     },
     resetConnectionState(state, payload) {
-        Vue.set(state.servers[payload.server_id].status, '_loading', true)
+        Vue.set(state.server_status, payload.server_id, {_loading: true})
     },
     resetConnectionsState(state) {
         Object.values(state.servers).forEach(server => {
-            Vue.set(server.status, '_loading', true)
+            Vue.set(state.server_status, server.id, {_loading: true})
         })
     },
     setConnectionState(state, payload) {
-        let server = state.servers[payload.server_id]
-        const connection = payload.connectionState
+        const connectionState = payload.connectionState
         let newStatus = {
             _loading: false,
-            timestamp: connection.timestamp,
+            timestamp: connectionState.timestamp,
+            latency: connectionState._latency,
         }
-        if (connection.version !== undefined) {
-            newStatus.data = connection.version
+        if (connectionState.version !== undefined) {
+            newStatus.data = connectionState.version
             newStatus.error = false
         } else {
-            newStatus = connection.error
+            newStatus = connectionState.error
             newStatus.error = true
         }
-        server.status = Object.assign({}, server.status, newStatus)
+        state.server_status[payload.server_id] = Object.assign({}, state.server_status[payload.server_id], newStatus)
         setUpdatableServers(state)
     },
     setQueryState(state, payload) {
@@ -266,15 +287,15 @@ const mutations = {
     },
     setProxy(state, payload) {
         if (state.proxy[payload.server_id] === undefined) {
-            Vue.set(state.proxy, payload.server_id, {})
+            Vue.set(state.proxy, payload.server_id, "")
         }
-        state.proxy[payload.server_id] = Object.assign({}, state.proxy[payload.server_id], payload.proxy)
+        Vue.set(state.proxy, payload.server_id, payload.proxy)
     },
     setZMQ(state, payload) {
         if (state.zeromq[payload.server_id] === undefined) {
-            Vue.set(state.zeromq, payload.server_id, {})
+            Vue.set(state.zeromq, payload.server_id, "")
         }
-        state.zeromq[payload.server_id] = Object.assign({}, state.zeromq[payload.server_id], payload.zmq)
+        Vue.set(state.zeromq, payload.server_id, payload.zmq)
     },
     setWorkers(state, payload) {
         if (state.workers[payload.server_id] === undefined) {
@@ -284,15 +305,15 @@ const mutations = {
     },
     setLastRefresh(state, payload) {
         if (state.last_refresh[payload.server_id] === undefined) {
-            Vue.set(state.last_refresh, payload.server_id, {})
+            Vue.set(state.last_refresh, payload.server_id, "")
         }
-        state.last_refresh[payload.server_id] = Object.assign({}, state.last_refresh[payload.server_id], payload.last_refresh)
+        Vue.set(state.last_refresh, payload.server_id, payload.last_refresh)
     },
     setDiagnosticFull(state, payload) {
         if (state.diagnostic_full[payload.server_id] === undefined) {
             Vue.set(state.diagnostic_full, payload.server_id, {})
         }
-        state.diagnostic_full[payload.server_id] = Object.assign({}, state.diagnostic_full[payload.server_id], payload.diagnostic_full)
+        //state.diagnostic_full[payload.server_id] = Object.assign({}, state.diagnostic_full[payload.server_id], payload.diagnostic_full)
     },
     updateUsers(state, { server_id, users }) {
         if (state.serverUsers[server_id] === undefined) {
@@ -307,15 +328,27 @@ const mutations = {
     }
 }
 
-function setAllQueryInfo(commit, server_id, info) {
-    commit("setUserPerms", { server_id: server_id, perms: info["serverUser"] })
-    commit("setRemoteConnections", { server_id: server_id, perms: info["connectedServers"] })
-    commit("setSubmodules", { server_id: server_id, perms: info["serverSettings"]["moduleStatus"] })
-    commit("setProxy", { server_id: server_id, perms: info["serverSettings"]["proxyStatus"] })
-    commit("setZMQ", { server_id: server_id, perms: info["serverSettings"]["zmqStatus"] })
-    commit("setWorkers", { server_id: server_id, perms: info["serverSettings"]["workers"] })
-    commit("setLastRefresh", { server_id: server_id, perms: info["timestamp"] })
-    commit("setDiagnosticFull", { server_id: server_id, perms: info["serverSettings"] })
+function setAllQueryInfo(state, server_id, server_info) {
+    const query_info = server_info.query_result
+    mutations.setUserPerms(state, { server_id: server_id, perms: query_info["serverUser"]["Role"] })
+    mutations.setRemoteConnections(state, { server_id: server_id, connections: query_info["connectedServers"] })
+    mutations.setSubmodules(state, { server_id: server_id, submodules: query_info["serverSettings"]["moduleStatus"] })
+    mutations.setProxy(state, { server_id: server_id, proxy: query_info["serverSettings"]["proxyStatus"] })
+    mutations.setZMQ(state, { server_id: server_id, zmq: query_info["serverSettings"]["zmqStatus"] })
+    mutations.setWorkers(state, { server_id: server_id, workers: query_info["serverSettings"]["workers"] })
+    mutations.setLastRefresh(state, { server_id: server_id, last_refresh: server_info["timestamp"] })
+    mutations.setDiagnosticFull(state, { server_id: server_id, diagnostic_full: query_info["serverSettings"] })
+}
+
+function commitAllQueryInfo(commit, server_id, info) {
+    commit("setUserPerms", { server_id: server_id, perms: info["serverUser"]["Role"] })
+    commit("setRemoteConnections", { server_id: server_id, connections: info["connectedServers"] })
+    commit("setSubmodules", { server_id: server_id, submodules: info["serverSettings"]["moduleStatus"] })
+    commit("setProxy", { server_id: server_id, proxy: info["serverSettings"]["proxyStatus"] })
+    commit("setZMQ", { server_id: server_id, zmq: info["serverSettings"]["zmqStatus"] })
+    commit("setWorkers", { server_id: server_id, workers: info["serverSettings"]["workers"] })
+    commit("setLastRefresh", { server_id: server_id, last_refresh: info["timestamp"] })
+    commit("setDiagnosticFull", { server_id: server_id, diagnostic_full: info["serverSettings"] })
 }
 
 function setUpdatableServers(state) {
@@ -327,9 +360,10 @@ function setUpdatableServers(state) {
 function canBeUpdated(state, server) {
     const githubVersion = state.githubVersion
     if (githubVersion !== "" && githubVersion !== undefined) {
-        if (server.status.data !== undefined) {
+        const server_status = state.server_status[server.id]
+        if (server_status !== undefined && server_status.data !== undefined) {
             const parsedGithubVersion = tokenizeMISPVersion(githubVersion)
-            const parsedServerVersion = tokenizeMISPVersion(server.status.data)
+            const parsedServerVersion = tokenizeMISPVersion(server_status.data)
             if (parsedGithubVersion.major !== parsedServerVersion.major) {
                 return false // update for major version should be done manually
             } else if (parsedGithubVersion.minor !== parsedServerVersion.minor) {
