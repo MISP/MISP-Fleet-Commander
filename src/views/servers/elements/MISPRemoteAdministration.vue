@@ -1,13 +1,13 @@
 <template>
     <b-card no-body>
         <b-tabs pills card vertical>
-            <b-tab
+            <b-tab lazy
                 v-for="(value, scope) in administrationAction"
                 v-bind:key="scope"
                 :title="scope"
             >
                 <b-card-text>
-                    <component v-bind:is="value.component" :server="server" lazy></component>
+                    <component v-bind:is="value.component" :server="getServer" lazy></component>
                 </b-card-text>
             </b-tab>
         </b-tabs>
@@ -15,6 +15,7 @@
 </template>
 
 <script>
+import { mapState, mapGetters } from "vuex"
 import userAdministration from "@/views/servers/elements/mispRemoteAdministration/userAdministration.vue"
 import orgAdministration from "@/views/servers/elements/mispRemoteAdministration/orgAdministration.vue"
 import settingsAdministration from "@/views/servers/elements/mispRemoteAdministration/settingsAdministration.vue"
@@ -29,8 +30,8 @@ export default {
         restAPIAdministration,
     },
     props: {
-        server: {
-            type: Object,
+        server_id: {
+            type: Number,
             required: true
         }
     },
@@ -45,6 +46,12 @@ export default {
         }
     },
     computed: {
+        ...mapState({
+            servers: state => state.servers.servers,
+        }),
+        getServer: function() {
+            return this.servers[this.server_id]
+        },
     },
     methods: {
     }

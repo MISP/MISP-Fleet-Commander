@@ -11,7 +11,11 @@ Vue.use(Router)
 
 const serverGroupSelected = (to, from, next) => {
     if (store.getters["serverGroups/selectedServerGroup"] === null) {
-        next("/home")
+        store.dispatch("serverGroups/selectServerGroupFromServerId", to.params.server_id).then(() => {
+            next()
+        }).catch(() => {
+            next("/home")
+        })
     } else {
         next()
     }
@@ -48,10 +52,11 @@ let router =  new Router({
             },
             children: [
                 {
-                    path: ":server_id",
+                    path: ":server_id(\\d+)",
                     name: "servers.view",
                     component: () => import("./views/servers/ServerView.vue"),
-                    props: true,
+                    //props: true,
+                    props: (route) => ({server_id: Number.parseInt(route.params.server_id, 10) || 0}),
                     meta: {
                         breadcrumbs: {
                             textGetter: "server_id",

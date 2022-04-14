@@ -191,7 +191,8 @@
                         <div class="btn-group">
                             <b-button
                                 size="xs" variant ="link"
-                                @click="toggleServerInfo(row.item, row.index, row)"
+                                @Xclick="toggleServerInfo(row.item, row.index, row)"
+                                @click="row.toggleDetails"
                             >
                                 <i :class="['text-secondary', 'fas', `fa-${row.detailsShowing ? 'compress-alt' : 'expand-alt'}`]"></i>
                             </b-button>
@@ -272,9 +273,8 @@
             </template>
 
             <template v-slot:row-details="row">
-                <RowDetails 
-                    :details="row.item.server_info"
-                    :server="row.item"
+                <RowDetails
+                    :server_id="row.item.id"
                     @actionRefresh="handleRefreshInfo({index: row.index, method: $event})"
                     @actionClose="toggleServerInfo(row.item, row.index, row)"
                 ></RowDetails>
@@ -499,8 +499,11 @@ export default {
         }),
         ...mapGetters({
             serverCount: "servers/serverCount",
-            getIndex: "servers/getServerList",
+            getServerList: "servers/getServerList",
         }),
+        getIndex() {
+            return (this.getServerList || []).map(server => ({ ...server }))
+        },
         validServerToEdit() {
             return this.serverToEdit.formData
         },
@@ -517,7 +520,7 @@ export default {
             }
         },
         onRowSelected(items) {
-            this.selectedServers = items
+            this.selectedServers = items.map(server => server.id)
         },
         selectRow(checked, index) {
             if (checked) {
@@ -589,11 +592,11 @@ export default {
             }
             return classes
         },
-        toggleServerInfo(server, row_id) {
-            this.$store.commit("servers/toggleShowDetails", row_id)
-            if (server._showDetails) {
-                this.refreshInfo(server, false)
-            }
+        toggleServerInfo(server, row_id, row) {
+            //this.$store.commit("servers/toggleShowDetails", row_id)
+            //if (server._showDetails) {
+            //    this.refreshInfo(server, false)
+            //}
         },
         forceHidden(row_id) {
             this.forcedHidden = row_id
@@ -652,6 +655,7 @@ export default {
             }
         },
         refreshServerIndex() {
+            this.table.isBusy = true
             this.refreshInProgress = true
             return new Promise((resolve, reject) => {
                 this.$store.dispatch("servers/fetchServers")
@@ -667,6 +671,7 @@ export default {
                         reject()
                     })
                     .finally(() => {
+                        this.table.isBusy = false
                         this.refreshInProgress = false
                     })
             })
@@ -725,11 +730,11 @@ export default {
             const index = data.index
             const method = data.method
             let server = this.getIndex[index]
-            this.$store.dispatch("servers/runConnectionTest", server)
+            this.$store.dispatch("servers/runConnectionTest", server.id)
             this.refreshInfo(server, method == "no_cache")
         },
         refreshInfo(server, no_cache=false) {
-            this.$store.dispatch("servers/fetchServerInfo", {server: server, no_cache: no_cache})
+            this.$store.dispatch("servers/fetchServerInfo", {server_id: server.id, no_cache: no_cache})
                 .catch(error => {
                     this.$bvToast.toast(error, {
                         title: "Could not fetch server info",
@@ -738,7 +743,7 @@ export default {
                 })
         },
         refreshAllInfo(no_cache=false) {
-            this.$store.dispatch("servers/fetchServerInfo", {no_cache: no_cache})
+            this.$store.dispatch("servers/fetchAllServerInfo", {no_cache: no_cache})
                 .catch(error => {
                     this.$bvToast.toast(error, {
                         title: "Could not fetch server info",

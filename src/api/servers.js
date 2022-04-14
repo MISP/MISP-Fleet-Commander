@@ -11,7 +11,7 @@ const urls = {
     edit: `${baseurl}/servers/edit`,
     delete: `${baseurl}/servers/delete`,
     restQuery: `${baseurl}/servers/restQuery`,
-    getUsers: `${baseurl}/servers/getUser`
+    getUsers: `${baseurl}/servers/getUsers`
 }
 
 const appendGroupIDIfDefined = (url) => {
@@ -56,7 +56,7 @@ export default {
     },
 
     queryInfo(payload, cb, errorCb) {
-        let url = `${urls.queryInfo}/${payload.server.id}`
+        let url = `${urls.queryInfo}/${payload.server_id}`
         url += payload.no_cache ? "/1" : ""
         return axios.get(url)
             .then((response) => {
@@ -73,7 +73,11 @@ export default {
                 cb(response.data)
             }).catch(error => {
                 console.log(error)
-                errorCb(error.data.toJSON())
+                if (error.data !== undefined) {
+                    errorCb(error.data.toJSON())
+                } else {
+                    errorCb(error)
+                }
             })
     },
 

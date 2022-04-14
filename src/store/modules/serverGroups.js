@@ -70,6 +70,18 @@ const actions = {
         commit("selectServerGroup", group)
         dispatch("servers/fetchServers", {force: true}, {root: true})
     },
+    selectServerGroupFromServerId({ commit, dispatch }, server_id) {
+	return new Promise((resolve, reject) => {
+            api.getFromServerId(
+                server_id,
+                group => {
+                    dispatch("selectServerGroup", group)
+                    resolve()
+                },
+                (error) => { reject(error) }
+            )
+        })
+    },
     addServerGroup({ commit }, payload={}) {
         return new Promise((resolve, reject) => {
             api.add(

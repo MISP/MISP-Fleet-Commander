@@ -5,30 +5,35 @@
             <div class="container-fuild mb-3">
                 <div class="row">
                     <div class="col col-md-5 col-xl-4">
-                        <ServerViewProfile :server="getServer" @fullRefresh="fullRefresh()"></ServerViewProfile>
+                        <b-overlay :show="statusRefreshInProgress" rounded="sm">
+                            <ServerViewProfile :server_id="server_id" @fullRefresh="fullRefresh()"></ServerViewProfile>
+                        </b-overlay>
                     </div>
                     <div class="col col-md-7 col-xl-8 pl-0">
-                        <b-card no-body>
-                            <ServerNotifications :server="getServer"></ServerNotifications>
-                        </b-card>
+                        <b-overlay :show="infoRefreshInProgress" rounded="sm">
+                            <b-card no-body>
+                                <ServerNotifications :server="getServer"></ServerNotifications>
+                            </b-card>
+                        </b-overlay>
                     </div>
                 </div>
             </div>
 
             <div class="container-fuild mb-3">
                 <b-card no-body>
-                    <serverInfoAndManagements 
-                        :server_info="getServer.server_info"
-                        :server="getServer"
-                        max_content_size="80vh"
-                    ></serverInfoAndManagements>
+                    <b-overlay :show="infoRefreshInProgress" rounded="sm">
+                        <serverInfoAndManagements 
+                            :server_id="server_id"
+                            max_content_size="80vh"
+                        ></serverInfoAndManagements>
+                    </b-overlay>
                 </b-card>
             </div>
         </template>
         <template v-else>
             <div class="row">
                 <div class="col col-md-5 col-xl-4 mx-auto">
-                    <ServerViewProfile :server="getServer"></ServerViewProfile>
+                    <ServerViewProfile :server_id="server_id"></ServerViewProfile>
                 </div>
             </div>
         </template>
@@ -59,13 +64,21 @@ export default {
     },
     computed: {
         ...mapState({
-            servers: state => state.servers,
+            servers: state => state.servers.servers,
+            server_status: state => state.servers.server_status,
+            server_query_in_progress: state => state.servers.server_query_in_progress,
         }),
         getServer: function() {
             return this.servers[this.server_id]
         },
+        getServerStatus: function() {
+            return this.server_status[this.server_id]
+        },
+        getQueryInProgress: function() {
+            return this.server_query_in_progress[this.server_id]
+        },
         isOnline: function() {
-            return !this.getServer.status.error
+            return !this.getServerStatus.error
         },
     },
     data: function () {
@@ -95,7 +108,7 @@ export default {
         fetchServerInfo() {
             this.infoRefreshInProgress = true
             return new Promise((resolve, reject) => {
-                this.$store.dispatch("servers/getInfo", {server: this.getServer, no_cache: true})
+                this.$store.dispatch("servers/fetchServerInfo", {server_id: this.server_id, no_cache: true})
                     .then(() => {
                         resolve()
                     })
@@ -111,13 +124,16 @@ export default {
                     })
             })
         },
+        quickRefresh() {
+            this.getOnlineStatus()
+        },
         fullRefresh() {
             this.getOnlineStatus()
             this.fetchServerInfo()
         }
     },
     mounted() {
-        this.fullRefresh()
+        this.quickRefresh()
     }
 }
 </script>

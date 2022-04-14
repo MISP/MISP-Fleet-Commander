@@ -20,7 +20,7 @@
             table-class="table-auto-hide-action mb-0"
             selected-variant="table-none"
             :fields="fields"
-            :items="settings"
+            :items="getRawFinalSettings"
             :filter="filter"
             @row-clicked="rowClickHandler"
         ></b-table>
@@ -34,6 +34,7 @@
 </template>
 
 <script>
+import { mapState, mapGetters } from "vuex"
 import SettingsAdministrationModal from "@/views/servers/elements/mispRemoteAdministration/SettingsAdministrationModal.vue"
 
 export default {
@@ -57,17 +58,19 @@ export default {
                 {key: "errorMessage", },
             ],
             tabs: [],
-            settings: [],
+            //settings: [],
             selectedItem: null
         }
     },
     computed: {
+        ...mapState({
+            raw_final_settings: state => state.servers.raw_final_settings,
+        }),
+        getRawFinalSettings: function() {
+            return Object.values(this.raw_final_settings[this.server.id])
+        },
     },
     methods: {
-        getSettings() {
-            let settings = this.server.server_info.query_result.serverSettings.finalSettings
-            return settings
-        },
         getVariantFromError(setting) {
             if (setting.error) {
                 return this.getVariantFromLevel(setting.level)
@@ -94,8 +97,7 @@ export default {
         }
     },
     created: function() {
-        this.settings = this.getSettings()
-        this.settings.forEach(setting => {
+        this.getRawFinalSettings.forEach(setting => {
             if (!this.tabs.includes(setting.tab)) {
                 this.tabs.push(setting.tab)
             }

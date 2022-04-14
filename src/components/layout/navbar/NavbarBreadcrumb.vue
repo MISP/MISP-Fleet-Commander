@@ -55,7 +55,7 @@ export default {
             return items
         },
         ...mapState({
-            servers: state => state.servers,
+            servers: state => state.servers.servers,
         }),
     },
     methods: {

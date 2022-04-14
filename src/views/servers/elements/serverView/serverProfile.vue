@@ -1,21 +1,21 @@
 <template>
     <b-card no-body>
         <b-card-body class="d-flex flex-column align-items-center p-3">
-                <h4 class="mb-0">{{ server.name }}</h4>
-            <b-link :href="server.url" target="_blank" class="text-nowrap mb-2">
-                {{ server.url }}
+                <h4 class="mb-0">{{ getServer.name }}</h4>
+            <b-link :href="getServer.url" target="_blank" class="text-nowrap mb-2">
+                {{ getServer.url }}
                 <sup class="fa fa-external-link-alt"></sup>
             </b-link>
-            <b-img fuild :src="welcomePicture" :alt="server.name" class="mb-2" height="150" width="200"></b-img>
-            <span class="text-muted">{{ server.comment }}</span>
+            <b-img fuild :src="welcomePicture" :alt="getServer.name" class="mb-2" height="150" width="200"></b-img>
+            <span class="text-muted">{{ getServer.comment }}</span>
         </b-card-body>
         <hr class="my-0" />
         <b-card-body class="px-3 py-2" role="tab">
             <h5 class="mb-2 d-flex ">
                 Server Status
                 <span class="ml-auto">
-                    <span :class="['text-nowrap', 'my-auto', 'h6', {'text-danger': server.status.error, 'text-success': !server.status.error}]">
-                        <b-icon v-if="server.status.data !== undefined" icon="circle-fill" class=""></b-icon>
+                    <span :class="['text-nowrap', 'my-auto', 'h6', {'text-danger': getServerStatus.error, 'text-success': !getServerStatus.error}]">
+                        <b-icon v-if="getServerStatus.data !== undefined" icon="circle-fill" class=""></b-icon>
                         {{ serverStatusText }}
                     </span>
                     <b-button
@@ -92,52 +92,94 @@ export default {
     components: {
     },
     props: {
-        server: {
+        server_id: {
             required: true,
-            type: Object
+            type: Number,
         }
     },
     computed: {
+        ...mapState({
+            servers: state => state.servers.servers,
+            server_status: state => state.servers.server_status,
+            server_query_in_progress: state => state.servers.server_query_in_progress,
+            server_query_error: state => state.servers.server_query_error,
+            user_perms: state => state.servers.user_perms,
+            remote_connections: state => state.servers.remote_connections,
+            submodules: state => state.servers.submodules,
+            proxy: state => state.servers.proxy,
+            zeromq: state => state.servers.zeromq,
+            workers: state => state.servers.workers,
+            serverUsers: state => state.servers.serverUsers,
+            last_refresh: state => state.servers.last_refresh,
+            final_settings: state => state.servers.final_settings,
+        }),
+        getServer: function() {
+            return this.servers[this.server_id]
+        },
+        getServerStatus: function() {
+            return this.server_status[this.server_id]
+        },
+        getFinalSettings: function() {
+            return this.final_settings[this.server_id]
+        },
+        getProxy: function() {
+            return this.proxy[this.server_id]
+        },
+        getWorkers: function() {
+            return this.workers[this.server_id]
+        },
+        getRemoteConnections: function() {
+            return this.remote_connections[this.server_id]
+        },
+        getSubmodules: function() {
+            return this.submodules[this.server_id]
+        },
+        getZmq: function() {
+            return this.zeromq[this.server_id]
+        },
+        getUserPerms: function() {
+            return this.user_perms[this.server_id]
+        },
         isOnline: function() {
-            return !this.server.status.error
+            return !this.getServerStatus.error
         },
         serverStatusText: function() {
             return this.isOnline ? "Online" : "Offline"
         },
         welcomePicture: function() {
-            return this.MISPMainLogo ? `${this.server.url}/img/custom/${this.MISPMainLogo}` : `${this.server.url}/img/misp-logo.png`
+            return this.MISPMainLogo ? `${this.getServer.url}/img/custom/${this.MISPMainLogo}` : `${this.getServer.url}/img/misp-logo.png`
         },
         MISPMainLogo: function() {
-            return this.server.server_info.query_result.serverSettings.finalSettings.filter(settingObj => settingObj.setting === "MISP.main_logo")[0]["value"]
+            return this.getFinalSettings['MISP.main_logo']
         },
         statusData: function() {
             let status = {
                 "Connection Test": {
-                    text: this.server.status.data,
+                    text: this.getServerStatus.data,
                 },
                 "Proxy": {
                     data: {
-                        proxy: this.server.server_info.query_result.serverSettings.proxyStatus,
+                        proxy: this.getProxy,
                     },
                     component: proxyStatus,
                 },
                 "Workers": {
                     data: {
-                        workers: this.server.server_info.query_result.serverSettings.workers,
-                        server_id: this.server.id,
+                        workers: this.getWorkers,
+                        server_id: this.server_id,
                     },
                     component: workersStatus,
                 },
                 "Remote Connections": {
                     data: {
-                        connections: this.server.server_info.query_result.connectedServers,
+                        connections: this.getRemoteConnections,
                         row_index: 0,
                     },
                     component: connectionsSummary,
                 },
                 "User permissions": {
                     data: {
-                        perms: this.server.server_info.query_result.serverUser.Role,
+                        perms: this.getUserPerms,
                         row_id: 0,
                         context: "serverView"
                     },
@@ -145,13 +187,13 @@ export default {
                 },
                 "Sub-modules": {
                     data: {
-                        submodules: this.server.server_info.query_result.serverSettings.moduleStatus,
+                        submodules: this.getSubmodules,
                     },
                     component: submodulesStatus,
                 },
                 "ZeroMQ": {
                     data: {
-                        status: this.server.server_info.query_result.serverSettings.zmqStatus,
+                        status: this.getZmq,
                     },
                     component: zeroMQStatus,
                 },
@@ -163,11 +205,11 @@ export default {
                 "Version": "",
                 "MISP UUID": "",
             }
-            if (this.server.server_info.query_result.serverSettings.error !== undefined) {
+            if (this.getFinalSettings.error !== undefined) {
                 return info
             }
-            info["Version"] = this.server.status.data
-            info["MISP UUID"] = this.server.server_info.query_result.serverSettings.finalSettings.filter((item) => { return item.setting === "MISP.uuid"})[0].value
+            info["Version"] = this.getServerStatus.data
+            info["MISP UUID"] = this.getFinalSettings['MISP.uuid']
             return info
         }
     },

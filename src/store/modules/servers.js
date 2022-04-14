@@ -16,7 +16,10 @@ const init_state = () => {
         zeromq: {},
         workers: {},
         serverUsers: {},
+        server_usage: {},
         last_refresh: {},
+        final_settings: {},
+        raw_final_settings: {},
         diagnostic_full: {},
     }
 }
@@ -41,7 +44,7 @@ const actions = {
         return new Promise((resolve, reject) => {
             commit("resetState")
             resolve()
-	})
+	    })
     },
     fetchServers({ commit }, payload) {
         return new Promise((resolve, reject) => {
@@ -99,16 +102,16 @@ const actions = {
     },
     fetchServerInfo({ commit }, payload) {
         return new Promise((resolve, reject) => {
-            commit("updateQueryState", { server_id: payload.server_id, loading: true })
+            commit("setQueryState", { server_id: payload.server_id, loading: true })
             api.queryInfo(
                 payload,
                 (info) => {
-                    commit("updateQueryState", { server_id: payload.server_id, info: info, loading: false })
+                    commit("setQueryState", { server_id: payload.server_id, info: info, loading: false })
                     commitAllQueryInfo(commit, payload.server_id, info)
                     resolve()
                 },
                 (error) => {
-                    commit("updateQueryState", { server_id: payload.server_id, loading: false })
+                    commit("setQueryState", { server_id: payload.server_id, loading: false })
                     commitAllQueryInfo(commit, payload.server_id)
                     reject(error)
                 }
@@ -277,6 +280,16 @@ const mutations = {
         if (state.remote_connections[payload.server_id] === undefined) {
             Vue.set(state.remote_connections, payload.server_id, {})
         }
+        if (!Array.isArray(payload.connections)) {
+            payload.connections = [payload.connections]
+        }
+        //const normalizedConnections = payload.connections.map(connection => {
+        //    return connection
+        //})
+        //if (!Array.isArray(payload.connections)) {
+        //    payload.connections = [{connectionTest: {status: {error: payload.connections, color: "danger"}}}]
+        //}
+        //state.remote_connections[payload.server_id] = Object.assign({}, state.remote_connections[payload.server_id], normalizedConnections)
         state.remote_connections[payload.server_id] = Object.assign({}, state.remote_connections[payload.server_id], payload.connections)
     },
     setSubmodules(state, payload) {
@@ -309,11 +322,34 @@ const mutations = {
         }
         Vue.set(state.last_refresh, payload.server_id, payload.last_refresh)
     },
+    setFinalSettings(state, payload) {
+        if (state.raw_final_settings[payload.server_id] === undefined) {
+            Vue.set(state.raw_final_settings, payload.server_id, {})
+        }
+        state.raw_final_settings[payload.server_id] = Object.assign({}, state.raw_final_settings[payload.server_id], payload.final_settings)
+        // create a mapping with setting-name->value
+        if (state.final_settings[payload.server_id] === undefined) {
+            Vue.set(state.final_settings, payload.server_id, {})
+        }
+        let fs = {}
+        if (payload.final_settings.map(finalSetting => { return {setting: finalSetting.setting, value: finalSetting.value} })) {
+            payload.final_settings.forEach(finalSetting => {
+                fs[finalSetting.setting] = finalSetting.value
+            })
+        }
+        state.final_settings[payload.server_id] = Object.assign({}, state.final_settings[payload.server_id], fs)
+    },
+    setServerUsage(state, payload) {
+        if (state.server_usage[payload.server_id] === undefined) {
+            Vue.set(state.server_usage, payload.server_id, {})
+        }
+        state.server_usage[payload.server_id] = Object.assign({}, state.server_usage[payload.server_id], payload.server_usage)
+    },
     setDiagnosticFull(state, payload) {
         if (state.diagnostic_full[payload.server_id] === undefined) {
             Vue.set(state.diagnostic_full, payload.server_id, {})
         }
-        //state.diagnostic_full[payload.server_id] = Object.assign({}, state.diagnostic_full[payload.server_id], payload.diagnostic_full)
+        state.diagnostic_full[payload.server_id] = Object.assign({}, state.diagnostic_full[payload.server_id], payload.diagnostic_full)
     },
     updateUsers(state, { server_id, users }) {
         if (state.serverUsers[server_id] === undefined) {
@@ -337,18 +373,23 @@ function setAllQueryInfo(state, server_id, server_info) {
     mutations.setZMQ(state, { server_id: server_id, zmq: query_info["serverSettings"]["zmqStatus"] })
     mutations.setWorkers(state, { server_id: server_id, workers: query_info["serverSettings"]["workers"] })
     mutations.setLastRefresh(state, { server_id: server_id, last_refresh: server_info["timestamp"] })
+    mutations.setServerUsage(state, { server_id: server_id, server_usage: query_info["serverUsage"] })
+    mutations.setFinalSettings(state, { server_id: server_id, final_settings: query_info["serverSettings"]["finalSettings"] })
     mutations.setDiagnosticFull(state, { server_id: server_id, diagnostic_full: query_info["serverSettings"] })
 }
 
 function commitAllQueryInfo(commit, server_id, info) {
-    commit("setUserPerms", { server_id: server_id, perms: info["serverUser"]["Role"] })
-    commit("setRemoteConnections", { server_id: server_id, connections: info["connectedServers"] })
-    commit("setSubmodules", { server_id: server_id, submodules: info["serverSettings"]["moduleStatus"] })
-    commit("setProxy", { server_id: server_id, proxy: info["serverSettings"]["proxyStatus"] })
-    commit("setZMQ", { server_id: server_id, zmq: info["serverSettings"]["zmqStatus"] })
-    commit("setWorkers", { server_id: server_id, workers: info["serverSettings"]["workers"] })
+    const queryResult = info["query_result"]
+    commit("setUserPerms", { server_id: server_id, perms: queryResult["serverUser"]["Role"] })
+    commit("setRemoteConnections", { server_id: server_id, connections: queryResult["connectedServers"] })
+    commit("setSubmodules", { server_id: server_id, submodules: queryResult["serverSettings"]["moduleStatus"] })
+    commit("setProxy", { server_id: server_id, proxy: queryResult["serverSettings"]["proxyStatus"] })
+    commit("setZMQ", { server_id: server_id, zmq: queryResult["serverSettings"]["zmqStatus"] })
+    commit("setWorkers", { server_id: server_id, workers: queryResult["serverSettings"]["workers"] })
     commit("setLastRefresh", { server_id: server_id, last_refresh: info["timestamp"] })
-    commit("setDiagnosticFull", { server_id: server_id, diagnostic_full: info["serverSettings"] })
+    commit("setServerUsage", { server_id: server_id, server_usage: queryResult["serverUsage"] })
+    commit("setFinalSettings", { server_id: server_id, final_settings: queryResult["serverSettings"]["finalSettings"]})
+    commit("setDiagnosticFull", { server_id: server_id, diagnostic_full: queryResult["serverSettings"] })
 }
 
 function setUpdatableServers(state) {

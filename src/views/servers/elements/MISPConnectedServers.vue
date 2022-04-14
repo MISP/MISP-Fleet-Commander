@@ -11,7 +11,7 @@
         id="connected-servers-table"
         ref="connectedServersTable"
         :busy.sync="table.isBusy"
-        :items="servers" 
+        :items="getIndex" 
         :fields="table.fields"
         :filterIncludedFields="table.filterFields"
         :filter="table.filter"
@@ -53,7 +53,7 @@ export default {
     },
     props: {
         servers: {
-            type: Array,
+            type: Object,
             required: true
         }
     },
@@ -84,6 +84,11 @@ export default {
                         sortable: true,
                     },
                     {
+                        key: "Server.pull",
+                        label: "Pull",
+                        sortable: true,
+                    },
+                    {
                         key: "connectionTest.status",
                         label: "Status",
                         sortable: true,
@@ -94,6 +99,9 @@ export default {
         }
     },
     computed: {
+        getIndex() {
+            return Object.values(this.servers)
+        },
     },
     methods: {
         onFiltered(filteredItems) {

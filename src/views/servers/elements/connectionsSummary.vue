@@ -3,7 +3,7 @@
         <div :id="`badge-connections-${row_index}`" class="badge-list">
             <template v-if="use_diode">
                 <span
-                    v-for="(connection, index) in getConnections"
+                    v-for="(connection, index) in getConnectionList"
                     v-bind:key="index"
                     :id="`connection-popover-${row_index}-${index}-${getUUID(connection)}`"
                     :class="['text-nowrap', `text-${connection.connectionTest.status.color}`]"
@@ -24,7 +24,7 @@
             </template>
             <template v-else>
                 <b-badge
-                    v-if="expand_issue_only"
+                    v-if="expand_issue_only && !hasError"
                     :id="`connection-popover-${row_index}-OK}`"
                     :variant="getOkConnectionSummary.variant"
                     rounded
@@ -45,25 +45,38 @@
                         </ul>
                     </b-popover>
                 </b-badge>
-                <b-badge
-                    v-for="(connection, index) in getConnections"
-                    v-bind:key="index"
-                    :id="`connection-popover-${row_index}-${index}-${getUUID(connection)}`"
-                    :class="getRoundedClass(index)"
-                    :variant="connection.connectionTest.status.color"
+                <template
+                    v-for="(connection, index) in getConnectionList"
                 >
-                    {{ labelText(connection) }}
-                    <b-popover
-                        href="#" tabindex="0"
-                        triggers="hover"
-                        placement="top"
-                        boundary="viewport"
-                        :target="`connection-popover-${row_index}-${index}-${getUUID(connection)}`"
+                    <b-badge
+		                v-if="!connection.error"
+                        v-bind:key="index"
+                        :id="`connection-popover-${row_index}-${index}-${getUUID(connection)}`"
+                        :class="getRoundedClass(index)"
                         :variant="connection.connectionTest.status.color"
                     >
-                        <connectionState :connection="connection.connectionTest" :user="connection.connectionUser"></connectionState>
-                    </b-popover>
-                </b-badge>
+                        {{ labelText(connection) }}
+                        <b-popover
+                            href="#" tabindex="0"
+                            triggers="hover"
+                            placement="top"
+                            boundary="viewport"
+                            :target="`connection-popover-${row_index}-${index}-${getUUID(connection)}`"
+                            :variant="connection.connectionTest.status.color"
+                        >
+                            <connectionState :connection="connection.connectionTest" :user="connection.connectionUser"></connectionState>
+                        </b-popover>
+                    </b-badge>
+                    <b-badge
+                        v-else
+                        v-bind:key="index"
+                        :id="`connection-popover-${row_index}-OK}`"
+                        variant="danger"
+                        rounded
+                    >
+                        {{ connection.error }}
+                    </b-badge>
+                </template>
             </template>
         </div>
     </div>
@@ -122,43 +135,60 @@ export default {
     },
     data: function() {
         return {
-            vidToUUID: {}
+            vidToUUID: {},
         }
     },
     computed: {
         connectionCount() {
-            return this.getConnections.length
+            return this.getConnectionList.length
         },
         getConnections() {
             return this.expand_issue_only ? this.getIssueConnections : this.connections
         },
+        getConnectionList() {
+            return Object.values(this.getConnections)
+        },
+        getAllConnectionsList() {
+            return Object.values(this.connections)
+        },
         getIssueConnections() {
-            if (Array.isArray(this.connections)) {
-                return this.connections.filter(connection => {
-                    return connection.connectionTest.status.color !== "success"
-                })
-            } else {
+            if (this.hasError) {
                 return this.connections
             }
+            return this.getAllConnectionsList.filter(connection => {
+                if (connection.connectionTest !== undefined) {
+                    return connection.connectionTest.status.color !== "success"
+                } else {
+                    return true
+                }
+            })
         },
         getOkConnections() {
-            if (this.connections.error !== undefined) {
+            if (this.hasError) {
                 return []
             }
-            if (Array.isArray(this.connections)) {
-                return this.connections.filter(connection => {
+            return this.getAllConnectionsList.filter(connection => {
+                if (connection.connectionTest !== undefined) {
                     return connection.connectionTest.status.color === "success"
-                })
-            } else {
-                return this.connections
-            }
+                } else {
+                    return false
+                }
+            })
         },
         getOkConnectionSummary() {
-            return {
-                names: this.getOkConnections.map(connection => (connection.Server.name != '' ? connection.Server.name : connection.Server.url)),
-                text: `${this.getOkConnections.length} / ${this.connections.length} OK`,
-                variant: (this.getOkConnections.length == 0 && this.connections.length > 0) ? 'danger' : 'success'
+            let summary = {}
+            if (this.hasError) {
+                return summary
             }
+            summary = {
+                names: this.getOkConnections.map(connection => (connection.Server.name != '' ? connection.Server.name : connection.Server.url)),
+                text: `${this.getOkConnections.length} / ${this.getAllConnectionsList.length} OK`,
+                variant: (this.getOkConnections.length == 0 && this.getAllConnectionsList.length > 0) ? 'danger' : 'success'
+            }
+            return summary
+        },
+        hasError() {
+            return this.getAllConnectionsList.length == 1 && this.getAllConnectionsList[0].error !== undefined
         }
     },
     methods: {

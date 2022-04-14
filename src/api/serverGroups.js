@@ -7,6 +7,7 @@ const urls = {
     add: `${baseurl}/serverGroups/add`,
     edit: `${baseurl}/serverGroups/edit`,
     delete: `${baseurl}/serverGroups/delete`,
+    getFromServerId: `${baseurl}/serverGroups/getFromServerId`,
 }
   
 export default {
@@ -33,6 +34,15 @@ export default {
         // const url = `${url.index}?page=${ctx.currentPage}&size=${ctx.perPage}`
         const url = `${urls.add}`
         return axios.post(url, group)
+            .then((response) => {
+                cb(response.data)
+            }).catch(error => {
+                errorCb(error.toJSON().message)
+            })
+    },
+    getFromServerId(serverId, cb, errorCb) {
+        const url = `${urls.getFromServerId}/${serverId}`
+        return axios.get(url)
             .then((response) => {
                 cb(response.data)
             }).catch(error => {

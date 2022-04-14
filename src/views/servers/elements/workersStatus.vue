@@ -1,16 +1,27 @@
 <template>
-    <div v-if="workerCount > 0">
-        <div :id="`badge-workers-${server_id}`" class="badge-list d-flex flex-nowrap">
-            <b-badge v-b-tooltip.hover.html="getTitle('cache', workerCache)" class="rounded-left flat-right" :variant="workerCache.variant">{{ workerCache.jobCount }}</b-badge>
-            <b-badge v-b-tooltip.hover.html="getTitle('default', workerDefault)" class="rounded-0 border-right" :variant="workerDefault.variant">{{ workerDefault.jobCount }}</b-badge>
-            <b-badge v-b-tooltip.hover.html="getTitle('prio', workerPrio)" class="rounded-0" :variant="workerPrio.variant">{{ workerPrio.jobCount }}</b-badge>
-            <b-badge v-b-tooltip.hover.html="getTitle('update', workerUpdate)" class="rounded-0" :variant="workerUpdate.variant">{{ workerUpdate.jobCount }}</b-badge>
-            <b-badge v-b-tooltip.hover.html="getTitle('mail', workerMail)" class="rounded-right flat-left" :variant="workerMail.variant">{{ workerMail.jobCount }}</b-badge>
+    <div>
+        <div v-if="workerCount > 0 && backgroundJobEnabled">
+            <div :id="`badge-workers-${server_id}`" class="badge-list d-flex flex-nowrap">
+                <b-badge v-b-tooltip.hover.html="getTitle('cache', workerCache)" class="rounded-left flat-right" :variant="workerCache.variant">{{ workerCache.jobCount }}</b-badge>
+                <b-badge v-b-tooltip.hover.html="getTitle('default', workerDefault)" class="rounded-0 border-right" :variant="workerDefault.variant">{{ workerDefault.jobCount }}</b-badge>
+                <b-badge v-b-tooltip.hover.html="getTitle('prio', workerPrio)" class="rounded-0" :variant="workerPrio.variant">{{ workerPrio.jobCount }}</b-badge>
+                <b-badge v-b-tooltip.hover.html="getTitle('update', workerUpdate)" class="rounded-0" :variant="workerUpdate.variant">{{ workerUpdate.jobCount }}</b-badge>
+                <b-badge v-b-tooltip.hover.html="getTitle('mail', workerMail)" class="rounded-right flat-left" :variant="workerMail.variant">{{ workerMail.jobCount }}</b-badge>
+            </div>
         </div>
+        <b-badge
+            v-else
+            variant="danger"
+            rounded
+        >
+            Background job disabled
+        </b-badge>
     </div>
 </template>
 
 <script>
+import { mapState } from "vuex"
+
 export default {
     name: "workersStatus",
     props: {
@@ -22,6 +33,12 @@ export default {
         }
     },
     computed: {
+        ...mapState({
+            final_settings: state => state.servers.final_settings,
+        }),
+        backgroundJobEnabled() {
+            return this.final_settings[this.server_id]['MISP.background_jobs']
+        },
         workerCount() {
             return Object.keys(this.workers).length
         },

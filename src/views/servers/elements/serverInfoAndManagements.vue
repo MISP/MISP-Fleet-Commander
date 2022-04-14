@@ -7,7 +7,7 @@
             <div :style="getMaxHeight">
                 <keep-alive>
                 <MISPRemoteAdministration
-                    :server="server"
+                    :server_id="server_id"
                 ></MISPRemoteAdministration>
                 </keep-alive>
             </div>
@@ -20,6 +20,7 @@
                         v-for="(value, setting) in getDiagnostic"
                         v-bind:key="setting"
                         :title="setting"
+                        lazy
                     >
                         <b-card-text>
                             <div :style="getMaxHeight">
@@ -80,7 +81,7 @@
                         :outlined="false"
                     >
                         <b-tbody>
-                            <b-tr v-for="(v, k) in server_info.query_result.serverUsage.stats" v-bind:key="k">
+                            <b-tr v-for="(v, k) in getServerUsage.stats" v-bind:key="k">
                                 <b-th>{{ k }}</b-th>
                                 <b-td>{{ v }}</b-td>
                             </b-tr>
@@ -95,7 +96,7 @@
             <b-card no-body>
                 <div :style="getMaxHeight">
                     <jsonViewer
-                        :item="server_info.query_result.serverUser"
+                        :item="getServerUsers"
                         rootKeyName="User profile"
                         :open="true"
                     ></jsonViewer>
@@ -108,7 +109,7 @@
             <b-card class="border-0" no-body>
                 <div class="p-2" :style="getMaxHeight">
                     <MISPConnectedServers
-                        :servers="server_info.query_result.connectedServers"
+                        :servers="getRemoteConnections"
                     ></MISPConnectedServers>
                 </div>
             </b-card>
@@ -123,7 +124,7 @@
         <template v-slot:tabs-end>
             <b-nav-item href="#" class="ml-auto rightmost-action" link-classes="no-pointer">
                 <timeSinceRefresh
-                    :timestamp="server_info.timestamp"
+                    :timestamp="getLastRefresh"
                     type="ddd DD/MM/YYYY HH:mm"
                 ></timeSinceRefresh>
                 <template v-if="inServerIndex">
@@ -144,6 +145,7 @@
 </template>
 
 <script>
+import { mapState, mapGetters } from "vuex"
 import iconButton from "@/components/ui/elements/iconButton.vue"
 import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
 import jsonViewer from "@/components/ui/elements/jsonViewer.vue"
@@ -162,13 +164,9 @@ export default {
         MISPConnectedServers,
     },
     props: {
-        server: {
+        server_id: {
             required: true,
-            type: Object
-        },
-        server_info: {
-            required: true,
-            type: Object
+            type: Number,
         },
         max_content_size: {
             type: String,
@@ -183,16 +181,39 @@ export default {
         }
     },
     computed: {
+        ...mapState({
+            servers: state => state.servers.servers,
+            server_status: state => state.servers.server_status,
+            server_query_in_progress: state => state.servers.server_query_in_progress,
+            remote_connections: state => state.servers.remote_connections,
+            server_usage: state => state.servers.server_usage,
+            serverUsers: state => state.servers.serverUsers,
+            final_settings: state => state.servers.final_settings,
+            last_refresh: state => state.servers.last_refresh,
+            diagnostic_full: state => state.servers.diagnostic_full,
+        }),
+        getServer: function() {
+            return this.servers[this.server_id]
+        },
+        getRemoteConnections: function() {
+            return this.remote_connections[this.server_id]
+        },
+        getQueryInProgress: function() {
+            return this.server_query_in_progress[this.server_id]
+        },
         getDiagnostic() {
-            // eslint-disable-next-line no-unused-vars
-            let {finalSettings, ...diagnostic} = this.server_info.query_result.serverSettings
+            const diagnostic = Object.assign({}, this.diagnostic_full[this.server_id])
+            delete diagnostic._latency
             return diagnostic
         },
-        getConfig() {
-            return this.server_info.query_result.serverSettings.finalSettings
+        getServerUsage: function() {
+            return this.server_usage[this.server_id]
         },
-        getDiagnosticForTabularView() {
-            return this.diagnostic
+        getServerUsers: function() {
+            return this.serverUsers[this.server_id]
+        },
+        getLastRefresh: function() {
+            return this.last_refresh[this.server_id]
         },
         inServerIndex() {
             return this.$route.name === "servers.index"
