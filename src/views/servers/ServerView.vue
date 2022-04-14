@@ -1,6 +1,7 @@
 <template>
 <Layout name="LayoutDefault">
-    <div class="page-container">
+    <div v-if="!getServer" class="d-flex justify-content-center mb-3"><b-spinner label="Loading..."></b-spinner></div>
+    <div v-else class="page-container">
         <template v-if="isOnline">
             <div class="container-fuild mb-3">
                 <div class="row">
@@ -43,6 +44,7 @@
 
 <script>
 import { mapState, mapGetters } from "vuex"
+import store from "@/store/index"
 import Layout from "@/components/layout/Layout.vue"
 import ServerViewProfile from "@/views/servers/elements/serverView/serverProfile.vue"
 import ServerNotifications from "@/views/servers/elements/serverView/serverNotifications.vue"
@@ -69,7 +71,7 @@ export default {
             server_query_in_progress: state => state.servers.server_query_in_progress,
         }),
         getServer: function() {
-            return this.servers[this.server_id]
+            return this.servers[this.server_id] || null
         },
         getServerStatus: function() {
             return this.server_status[this.server_id]
@@ -134,7 +136,18 @@ export default {
     },
     mounted() {
         this.quickRefresh()
-    }
+    },
+    beforeRouteEnter(to, from, next) {
+        if (store.getters["serverGroups/selectedServerGroup"] === null) {
+            store.dispatch("serverGroups/selectServerGroupFromServerId", to.params.server_id).then(() => {
+                next()
+            }).catch(() => {
+                next("/home")
+            })
+        } else {
+            next()
+        }
+    },
 }
 </script>
 

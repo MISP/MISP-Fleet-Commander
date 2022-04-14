@@ -316,6 +316,7 @@
 </template>
 
 <script>
+import store from "@/store/index"
 import { mapState, mapGetters } from "vuex"
 import Layout from "@/components/layout/Layout.vue"
 import loaderPlaceholder from "@/components/ui/elements/loaderPlaceholder.vue"

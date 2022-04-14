@@ -40,7 +40,11 @@ export default {
                         bcItem = that.$route.params[routeEntry.meta.breadcrumbs.textGetter]
                         if (routeEntry.name == "servers.view") {
                             const server_id = that.$route.params[routeEntry.meta.breadcrumbs.textGetter]
-                            bcItem = `${this.servers[server_id].name} [${server_id}]`
+                            if (this.getServers[server_id]) {
+                                bcItem = `${this.getServers[server_id].name} [${server_id}]`
+                            } else {
+                                bcItem = '?'
+                            }
                         }
                     } else {
                         bcItem = routeEntry.meta.breadcrumbs.text
@@ -57,6 +61,9 @@ export default {
         ...mapState({
             servers: state => state.servers.servers,
         }),
+        getServers: function() {
+            return this.servers || []
+        },
     },
     methods: {
     }

@@ -11,15 +11,19 @@ Vue.use(Router)
 
 const serverGroupSelected = (to, from, next) => {
     if (store.getters["serverGroups/selectedServerGroup"] === null) {
-        store.dispatch("serverGroups/selectServerGroupFromServerId", to.params.server_id).then(() => {
+        if (noServerGroupPassThrough.includes(to.name)) {
             next()
-        }).catch(() => {
-            next("/home")
-        })
+        } else {
+            next('home')
+        }
     } else {
         next()
     }
 }
+
+const noServerGroupPassThrough = [
+    "servers.view",
+]
 
 let router =  new Router({
     routes: [
