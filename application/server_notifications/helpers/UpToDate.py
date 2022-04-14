@@ -11,7 +11,12 @@ class UpToDate(baseNotificationHelper):
         if 'error' in testConnection:
             return []
         current_version = testConnection['version']
-        github_version = requests.get(self.githubURL).json()['tag_name']
+        #github_version = requests.get(self.githubURL).json()['tag_name']
+        github_version_r= requests.get(self.githubURL)
+        if github_version_r == 200:
+            github_version = github_version_r.json()['tag_name']
+        else:
+            github_version = '?'
         parsed_current_version = UpToDate._tokenizeMISPVersion(current_version)
         parsed_github_version = UpToDate._tokenizeMISPVersion(github_version)
         data = {
@@ -56,12 +61,19 @@ class UpToDate(baseNotificationHelper):
 
     def _tokenizeMISPVersion(versionString):
         version = {}
-        if versionString.startswith("v"):
-            versionString = versionString[1:]
-        arr = versionString.split(".")
-        version = {
-            "major": arr[0],
-            "minor": arr[1],
-            "patch": arr[2]
-        }
+        if versionString == '?':
+            version = {
+                "major": '?',
+                "minor": '?',
+                "patch": '?',
+            }
+        else:
+            if versionString.startswith("v"):
+                versionString = versionString[1:]
+            arr = versionString.split(".")
+            version = {
+                "major": arr[0],
+                "minor": arr[1],
+                "patch": arr[2]
+            }
         return version

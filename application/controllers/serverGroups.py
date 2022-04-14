@@ -58,3 +58,13 @@ def delete():
         db.session.add(new_user)  # Adds new User record to database
         db.session.commit()  # Commits all changes
     return make_response(f"{new_user} successfully created!")
+
+@BPserverGroup.route('/serverGroups/getFromServerId/<int:server_id>', methods=['GET'])
+def getFromServerId(server_id):
+    server = Server.query.get(server_id)
+    if server is not None:
+        group = ServerGroup.query.get(server.server_group_id)
+        return jsonify(group.to_dict())
+    else:
+        return jsonify({})
+
