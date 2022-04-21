@@ -17,6 +17,12 @@
                     <span :class="['text-nowrap', 'my-auto', 'h6', {'text-danger': getServerStatus.error, 'text-success': !getServerStatus.error}]">
                         <b-icon v-if="getServerStatus.data !== undefined" icon="circle-fill" class=""></b-icon>
                         {{ serverStatusText }}
+                        <small
+                             v-if="getServerStatus.latency !== undefined"
+                             :class="{'text-success': getServerStatus.latency < 0.3, 'text-warning': getServerStatus.latency >= 0.3 && getServerStatus.latency < 2, 'text-danger': getServerStatus.latency >= 2}"
+                        >
+                            ({{ getServerStatus.latency.toFixed(3) }}ms)
+                        </small>
                     </span>
                     <b-button
                         class="ml-auto p-0"

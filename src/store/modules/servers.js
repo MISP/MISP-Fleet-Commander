@@ -4,6 +4,7 @@ import Vue from "vue"
 // initial state
 const init_state = () => {
     return {
+        fetching_servers_in_progress: false,
         githubVersion: "",
         servers: {},
         server_status: {},
@@ -44,17 +45,19 @@ const actions = {
         return new Promise((resolve, reject) => {
             commit("resetState")
             resolve()
-	    })
+        })
     },
     fetchServers({ commit }, payload) {
         return new Promise((resolve, reject) => {
             if (getters.serverCount == 0 || (payload !== undefined && payload.force)) {
+                commit('setFetchingServersInProgress', true)
                 api.index(servers => {
                         commit("setServers", servers)
                         resolve()
                     },
                     (error) => { reject(error) }
                 )
+                commit('setFetchingServersInProgress', false)
             } else {
                 resolve("Server already loaded")
             }
@@ -64,7 +67,7 @@ const actions = {
         return new Promise((resolve, reject) => {
             commit("resetConnectionState", { server_id: server_id })
             api.testConnection(
-                state.servers[server_id],
+                server_id,
                 connectionState => {
                     commit("setConnectionState", { server_id: server_id, connectionState: connectionState })
                     resolve()
@@ -118,10 +121,10 @@ const actions = {
             )
         })
     },
-    fetchAllServerInfo({ getters, commit }) {
+    fetchAllServerInfo({ getters, commit, dispatch }, payload) {
         return new Promise((resolve, reject) => {
             getters.getServerList.forEach(server => {
-                dispatch("fetchServerInfo", { server: server, no_cache: payload.no_cache })
+                dispatch("fetchServerInfo", { server_id: server.id, no_cache: payload.no_cache })
                     .then(() => {
                         resolve()
                     })
@@ -134,7 +137,7 @@ const actions = {
     fetchSelectedServerInfo({ state, dispatch }, payload) {
         return new Promise((resolve, reject) => {
             payload.selection.forEach(server_id => {
-                dispatch("fetchServerInfo", { server: state.servers[server_id], no_cache: payload.no_cache })
+                dispatch("fetchServerInfo", { server_id: server_id, no_cache: payload.no_cache })
                     .then(() => {
                         resolve()
                     })
@@ -173,34 +176,43 @@ const actions = {
     },
 
     /* ADD, EDIT & DELETE */
-    add(payload) {
+    add({ dispatch }, payload) {
         return new Promise((resolve, reject) => {
             api.add(
                 payload,
-                () => {
-                    resolve()
+                (response) => {
+                    dispatch("fetchServers", {force: true})
+                    .then(() => {
+                        resolve(response)
+                    })
                 },
                 (error) => { reject(error) }
             )
         })
     },
-    edit(payload) {
+    edit({ dispatch }, payload) {
         return new Promise((resolve, reject) => {
             api.edit(
                 payload,
-                () => {
-                    resolve()
+                (response) => {
+                    dispatch("fetchServers", {force: true})
+                    .then(() => {
+                        resolve(response)
+                    })
                 },
                 (error) => { reject(error) }
             )
         })
     },
-    delete(payload) {
+    delete({ dispatch }, payload) {
         return new Promise((resolve, reject) => {
             api.delete(
                 payload,
-                () => {
-                    resolve()
+                (response) => {
+                    dispatch("fetchServers", {force: true})
+                    .then(() => {
+                        resolve(response)
+                    })
                 },
                 (error) => { reject(error) }
             )
@@ -214,11 +226,14 @@ const mutations = {
     resetState (state) {
         Object.assign(state, init_state())
     },
+    setFetchingServersInProgress(state, flag) {
+        state.fetching_servers_in_progress = flag
+    },
     toggleShowDetails (state, index) {
         state.servers[index]._showDetails = !state.servers[index]._showDetails
     },
     setServers (state, servers) {
-	Object.assign(state.servers, {})
+        Vue.set(state, 'servers', {})
         servers.forEach(server => {
             server._showDetails = false
             server._loading = false
@@ -226,7 +241,7 @@ const mutations = {
             Vue.set(state.server_query_in_progress, server.id, false)
             Vue.set(state.server_query_error, server.id, false)
             Vue.set(state.server_status, server.id, {})
-            if (server.server_info.query_result !== undefined) {
+            if (server.server_info && server.server_info.query_result !== undefined) {
                 setAllQueryInfo(state, server.id, server.server_info)
                 delete server.server_info.query_result
             }
@@ -252,11 +267,11 @@ const mutations = {
             newStatus.data = connectionState.version
             newStatus.error = false
         } else {
-            newStatus = connectionState.error
+            newStatus.data = connectionState.error
             newStatus.error = true
         }
         state.server_status[payload.server_id] = Object.assign({}, state.server_status[payload.server_id], newStatus)
-        setUpdatableServers(state)
+        //setUpdatableServers(state)
     },
     setQueryState(state, payload) {
         let server = state.servers[payload.server_id]
@@ -323,6 +338,9 @@ const mutations = {
         Vue.set(state.last_refresh, payload.server_id, payload.last_refresh)
     },
     setFinalSettings(state, payload) {
+        if (payload.final_settings === undefined) {
+            payload.final_settings = []
+        }
         if (state.raw_final_settings[payload.server_id] === undefined) {
             Vue.set(state.raw_final_settings, payload.server_id, {})
         }

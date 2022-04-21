@@ -53,11 +53,9 @@
                             ></b-form-input>
                             <template v-slot:append>
                                 <b-input-group-text>
-                                    <ValidationProvider v-slot="">
-                                        <b-form-checkbox v-model="form.skip_ssl" switch>
-                                            <small>Skip SSL validation</small>
-                                        </b-form-checkbox>
-                                    </ValidationProvider>
+                                    <b-form-checkbox v-model="form.skip_ssl" switch>
+                                        <small>Skip SSL validation</small>
+                                    </b-form-checkbox>
                                 </b-input-group-text>
                             </template>
                          </b-input-group>

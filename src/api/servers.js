@@ -34,8 +34,8 @@ export default {
             })
     },
 
-    testConnection(server, cb, errorCb) {
-        const url = `${urls.testConnection}/${server.id}`
+    testConnection(server_id, cb, errorCb) {
+        const url = `${urls.testConnection}/${server_id}`
         return axios.get(url)
             .then((response) => {
                 cb(response.data)
@@ -85,7 +85,7 @@ export default {
         const url = appendGroupIDIfDefined(urls.add)
         return axios.post(url, payload)
             .then((response) => {
-                cb(response.data)
+                cb(response)
             })
             .catch(error => {
                 console.log(error)
@@ -97,7 +97,7 @@ export default {
         const url = `${urls.edit}`
         return axios.post(url, payload)
             .then((response) => {
-                cb(response.data)
+                cb(response)
             })
             .catch(error => {
                 errorCb(error.data.toJSON())
@@ -108,7 +108,7 @@ export default {
         const url = `${urls.delete}`
         return axios.post(url, payload)
             .then((response) => {
-                cb(response.data)
+                cb(response)
             })
             .catch(error => {
                 errorCb(error.data.toJSON())

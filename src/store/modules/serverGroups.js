@@ -66,9 +66,13 @@ const actions = {
         })
     },
     selectServerGroup({ commit, dispatch }, group) {
-        dispatch("servers/resetState", undefined, {root: true})
-        commit("selectServerGroup", group)
-        dispatch("servers/fetchServers", {force: true}, {root: true})
+        return new Promise((resolve, reject) => {
+        	dispatch("servers/resetState", undefined, {root: true})
+        	commit("selectServerGroup", group)
+        	dispatch("servers/fetchServers", {force: true}, {root: true}).then(() => {
+                resolve()
+            })
+        })
     },
     selectServerGroupFromServerId({ commit, dispatch }, server_id) {
 	return new Promise((resolve, reject) => {

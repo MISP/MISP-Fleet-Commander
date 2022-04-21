@@ -9,7 +9,8 @@ import notifications from "./modules/notifications"
 
 Vue.use(Vuex)
 
-const debug = "production"
+//const debug = process.env.NODE_ENV !== 'production'
+const debug = false
 
 export default new Vuex.Store({
     modules: {

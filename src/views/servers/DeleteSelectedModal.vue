@@ -8,6 +8,7 @@
     >
         <b-table-lite
             small 
+            :fields="getServerFields"
             :items="getServers"
         >
         </b-table-lite>
@@ -42,19 +43,11 @@ export default {
     },
     computed: {
         getServers() {
-            let simplifiedServers = []
-            this.servers.forEach(server => {
-                simplifiedServers.push({
-                    id: server.id,
-                    name: server.name,
-                    comment: server.comment,
-                    url: server.url,
-                    auth_method: server.auth_method,
-                    authkey: server.authkey
-                })
-            })
-            return simplifiedServers
-        }
+            return JSON.parse(JSON.stringify(this.servers))
+        },
+        getServerFields() {
+            return ['id', 'name', 'url', 'skip_ssl', 'comment']
+        },
     },
     methods: {
         handleSubmission() {

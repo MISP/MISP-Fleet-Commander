@@ -57,15 +57,15 @@ export default {
     },
     methods: {
         deleteServer() {
-            const url = "http://127.0.0.1:5000/servers/delete"
-            this.postInProgress = true
             let that = this
-            axios.post(url, this.serverToDelete)
+            this.postInProgress = true
+            this.$store.dispatch('servers/delete', this.serverToDelete)
                 .then(() => {
                     that.$bvToast.toast("", {
                         title: "Server successfully delete",
                         variant: "success",
                     })
+                    this.$emit("actionDelete", "done")
                 })
                 .catch(error => {
                     that.$bvToast.toast(error, {
@@ -78,7 +78,6 @@ export default {
                         this.$bvModal.hide("modal-delete")
                     })
                     this.postInProgress = false
-                    this.$emit("actionDelete", "done")
                 })
         },
     }

@@ -60,9 +60,12 @@
                             title="Quick refresh"
                             @click="fullRefresh()"
                         >
-                            <i :class="{'fas fa-sync-alt': true, 'fa-spin': refreshInProgress}" title="Refresh Servers"></i>
+                            <i :class="{'fas fa-sync-alt': true, 'fa-spin': fetching_servers_in_progress}" title="Refresh Servers"></i>
                         </b-button>
-                        <b-dropdown right text="Actions" variant="primary" size="sm" style="border-left: 1px solid #0069d9">
+                        <b-dropdown right variant="primary" size="sm" style="border-left: 1px solid #0069d9">
+                            <template v-slot:button-content>
+                                <i class="fas fa-list-ul"></i> Actions
+                            </template>
                             <b-dropdown-item-button
                                 @click="fullRefresh(false)"
                             >
@@ -268,7 +271,7 @@
 
             <template v-slot:cell(workers)="row">
                 <loaderPlaceholder :loading="!server_query_in_progress[row.item.id]">
-                    <workersStatus :workers="row.value" :server_id="row.item.id"></workersStatus>
+                    <workersStatus v-if="typeof row.value === 'object'" :workers="row.value" :server_id="row.item.id"></workersStatus>
                 </loaderPlaceholder>
             </template>
 
@@ -365,7 +368,6 @@ export default {
             postInProgress: {
                 modal: false,
             },
-            refreshInProgress: false,
             modalAddAction: "Add",
             serverToDelete: {},
             serverToEdit: { formData: {}}, // nested cheat to keep it reactive
@@ -405,7 +407,7 @@ export default {
                         sortable: true,
                         tdClass: "align-middle",
                         formatter: (value, key, item, test) => {
-                            return this.server_status[item.id]
+                            return this.server_status[item.id] || null
                         }
                     },
                     {
@@ -414,7 +416,7 @@ export default {
                         sortable: true,
                         class: "align-middle d-none d-xl-table-cell",
                         formatter: (value, key, item) => {
-                            return this.user_perms[item.id]
+                            return this.user_perms[item.id] || null
                         }
                     },
                     {
@@ -423,7 +425,7 @@ export default {
                         sortable: true,
                         class: "align-middle d-none d-xl-table-cell",
                         formatter: (value, key, item) => {
-                            return Object.values(this.remote_connections[item.id])
+                            return this.remote_connections[item.id] ? Object.values(this.remote_connections[item.id]) : null
                         }
                     },
                     {
@@ -432,7 +434,7 @@ export default {
                         sortable: true,
                         class: "align-middle d-none d-xxl-table-cell",
                         formatter: (value, key, item) => {
-                            return this.submodules[item.id]
+                            return this.submodules[item.id] || null
                         }
                     },
                     {
@@ -441,7 +443,7 @@ export default {
                         sortable: true,
                         class: "align-middle d-none d-xxl-table-cell",
                         formatter: (value, key, item) => {
-                            return this.proxy[item.id]
+                            return this.proxy[item.id] || null
                         }
                     },
                     {
@@ -450,7 +452,7 @@ export default {
                         sortable: true,
                         class: "align-middle d-none d-xxl-table-cell",
                         formatter: (value, key, item) => {
-                            return this.zeromq[item.id]
+                            return this.zeromq[item.id] || null
                         }
                     },
                     {
@@ -459,7 +461,7 @@ export default {
                         sortable: true,
                         class: "align-middle d-none d-md-table-cell",
                         formatter: (value, key, item) => {
-                            return this.workers[item.id]
+                            return this.workers[item.id] || null
                         }
                     },
                     {
@@ -467,7 +469,7 @@ export default {
                         sortable: true,
                         class: "align-middle py-0",
                         formatter: (value, key, item) => {
-                            return this.last_refresh[item.id]
+                            return this.last_refresh[item.id] || null
                         }
                     },
                     {
@@ -482,6 +484,7 @@ export default {
     },
     computed: {
         ...mapState({
+            fetching_servers_in_progress: state => state.servers.fetching_servers_in_progress,
             githubVersion: state => state.servers.githubVersion,
             selectedServerGroup: state => state.serverGroups.selected,
             servers: state => state.servers.servers,
@@ -521,7 +524,7 @@ export default {
             }
         },
         onRowSelected(items) {
-            this.selectedServers = items.map(server => server.id)
+            this.selectedServers = items.map(server => server)
         },
         selectRow(checked, index) {
             if (checked) {
@@ -655,11 +658,10 @@ export default {
                 this.fetchGithubVersion()
             }
         },
-        refreshServerIndex() {
+        refreshServerIndex(full=false) {
             this.table.isBusy = true
-            this.refreshInProgress = true
             return new Promise((resolve, reject) => {
-                this.$store.dispatch("servers/fetchServers")
+                this.$store.dispatch("servers/fetchServers", {force: full})
                     .then(() => {
                         this.table.totalRows = this.serverCount
                         resolve()
@@ -673,7 +675,6 @@ export default {
                     })
                     .finally(() => {
                         this.table.isBusy = false
-                        this.refreshInProgress = false
                     })
             })
         },
@@ -704,13 +705,13 @@ export default {
         },
         fullRefresh(quick=true) {
             if (quick) {
-                this.refreshServerIndex()
+                this.refreshServerIndex(true)
                     .then(() => {
                         this.refreshAllServerOnlineStatus()
                         this.tableQuickRefresh()
                     })
             } else {
-                this.refreshServerIndex()
+                this.refreshServerIndex(true)
                     .then(() => {
                         this.refreshAllServerOnlineStatus()
                         this.refreshAllInfo(true)
@@ -754,7 +755,7 @@ export default {
         },
     },
     watch: {
-        refreshInProgress: function() {
+        fetching_servers_in_progress: function() {
             this.table.timeKey += 1 // used to force reload of the timeSinceLastRefresh component
         },
         selectedServerGroup: function() {

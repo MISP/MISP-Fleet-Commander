@@ -92,7 +92,7 @@ export default {
     methods: {
         getOnlineStatus() {
             return new Promise((resolve, reject) => {
-                this.$store.dispatch("servers/runAllConnectionTest")
+                this.$store.dispatch("servers/runConnectionTest", this.server_id)
                     .then(() => {
                         resolve()
                     })
@@ -131,7 +131,9 @@ export default {
         },
         fullRefresh() {
             this.getOnlineStatus()
-            this.fetchServerInfo()
+            if (!this.infoRefreshInProgress) {
+                this.fetchServerInfo()
+            }
         }
     },
     mounted() {
