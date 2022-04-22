@@ -10,6 +10,7 @@ from collections import Mapping, MutableSequence, defaultdict
 from sqlalchemy.orm import with_parent
 # from application import notification_helpers
 from application.server_notifications.NotificationManager import NotificationManager
+from application.plugins.server_administration.AdministrationManager import AdministrationManager
 from application.DBModels import db, User, Server, ServerQuery
 from application.controllers.utils import mispGetRequest, mispPostRequest, batchRequest
 import application.models.servers as serverModel
