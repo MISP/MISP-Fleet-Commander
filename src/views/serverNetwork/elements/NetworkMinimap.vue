@@ -5,7 +5,7 @@
                 <g v-for="(node, index) in network.nodes" :key="index" :redrawCount="redrawCount">
                     <rect
                         v-bind="getRelativeNodePosition(node)"
-                        :fill="node.status.error === undefined ? 'grey' : (node.status.error ? 'red' : 'green')"
+                        :fill="server_status[node.id].error === undefined ? 'grey' : (server_status[node.id].error ? 'red' : 'green')"
                         :class="['server', selectedNode.id == node.id ? 'selected' : '']"
                     ></rect>
                 </g>
@@ -15,6 +15,7 @@
 </template>
 
 <script>
+import { mapState, mapGetters } from "vuex"
 import * as d3 from "d3"
 
 export default {
@@ -66,6 +67,13 @@ export default {
         }
     },
     computed: {
+        ...mapState({
+            servers: state => state.servers.servers,
+            connections: state => state.connections.all,
+            server_status: state => state.servers.server_status,
+            server_usage: state => state.servers.server_usage,
+            remote_connections: state => state.servers.remote_connections,
+        }),
     },
     methods: {
         extractNumberFromPixel(str) {

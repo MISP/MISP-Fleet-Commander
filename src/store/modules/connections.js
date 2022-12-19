@@ -10,7 +10,10 @@ const state = {
 const getters = {
     connectionCount: state => {
         return state.all.length
-    }
+    },
+    getConnectionList: state => {
+        return state.all
+    },
 }
 
 // actions

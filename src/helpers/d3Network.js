@@ -25,10 +25,10 @@ export default {
 
         const zoom = d3.zoom()
             .scaleExtent([.08, 4])
-            .on("zoom", function() { container.attr("transform", d3.event.transform) })
-            .on("end", function() {
+            .on("zoom", function (event) { container.attr("transform", event.transform) })
+            .on("end", function (event) {
                 eventHandlers.refreshMinimap()
-                eventHandlers.updateScale(d3.event.transform)
+                eventHandlers.updateScale(event.transform)
             })
         svg.call(zoom)
 
@@ -93,32 +93,32 @@ export default {
         }
 
         function drag(simulation) {
-            function dragstarted(d) {
-                if (d3.event.sourceEvent.button === 2) { // ignore right click
-                    dragended(d)
+            function dragstarted(event, d) {
+                if (event.sourceEvent.button === 2) { // ignore right click
+                    dragended(event, d)
                     return
                 }
-                if (!d3.event.active) simulation.alphaTarget(0.3).restart()
-                d.fx = d.x
-                d.fy = d.y
+                if (!event.active) simulation.alphaTarget(0.3).restart()
+                d.fx = event.x
+                d.fy = event.y
             }
             
-            function dragged(d) {
-                d.fx = d3.event.x
-                d.fy = d3.event.y
+            function dragged(event, d) {
+                d.fx = event.x
+                d.fy = event.y
             }
             
-            function dragended(d) {
-                if (!d3.event.active) simulation.alphaTarget(0)
+            function dragended(event, d) {
+                if (!event.active) simulation.alphaTarget(0)
                 d.fx = null
                 d.fy = null
             }
 
             // Add support of the drag handle
-            function dragfilter() {
+            function dragfilter(event) {
                 const handleClass = "top-header"
                 const maxDepth = 5
-                let cElement = d3.event.target
+                let cElement = event.target
                 for (let index = 0; index < maxDepth; index++) {
                     if (cElement.classList !== undefined) {
                         if (cElement.classList.contains(handleClass)) {

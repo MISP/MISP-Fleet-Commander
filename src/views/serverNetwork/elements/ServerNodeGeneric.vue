@@ -15,7 +15,7 @@
         <ServerNode
             v-else
             :scale="scale"
-            :server="server"
+            :server_id="server_id"
             :d3Node="d3Node"
             :d3SVGNode="d3SVGNode"
         ></ServerNode>
@@ -39,8 +39,8 @@ export default {
             type: Object,
             required: true
         },
-        server: {
-            type: Object,
+        server_id: {
+            type: Number,
             required: true
         },
         d3Node: {

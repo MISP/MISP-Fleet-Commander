@@ -113,9 +113,17 @@ export default {
     },
     computed: {
         ...mapState({
-            getServers: state => state.servers.all,
-            getConnections: state => state.connections.all
-        })
+            servers: state => state.servers.servers,
+            connections: state => state.connections.all,
+            server_status: state => state.servers.server_status,
+            server_usage: state => state.servers.server_usage,
+            remote_connections: state => state.servers.remote_connections,
+        }),
+        ...mapGetters({
+            serverCount: "servers/serverCount",
+            getServerList: "servers/getServerList",
+            getConnectionList: "connections/getConnectionList",
+        }),
     },
     methods: {
         toggleInfoSideBar(show) {
@@ -139,7 +147,7 @@ export default {
                 parent: this,
                 propsData: {
                     scaleInfo: this.scaleInfo,
-                    server: node,
+                    server_id: node.id,
                     d3Node: d3Node,
                     d3SVGNode: d3SVGNode
                 }
@@ -256,21 +264,15 @@ export default {
             })
         },
         syncWithStore() {
-            this.d3data.nodes = JSON.parse(JSON.stringify(this.getServers))
-            this.d3data.links = JSON.parse(JSON.stringify(this.getConnections))
+            this.d3data.nodes = JSON.parse(JSON.stringify(this.getServerList))
+            this.d3data.links = JSON.parse(JSON.stringify(this.getConnectionList))
             this.d3data.links.forEach((link, index) => { // remap source -> origin
                 link.origin = link.source
                 link.source = parseInt(link.origin.id)
                 link.target = parseInt(link.destination.Server.id)
                 link.id = `${link.source}-${link.target}`
-                let found = false
-                this.getServers.forEach(s => {
-                    if (s.id == link.target) {
-                        found = true
-                    }
-                })
-                if (!found) {
-                    link.toRemove = true
+                if(this.servers[link.target]) {
+                    link.toRemove = false
                 }
             })
             this.d3data.links = this.d3data.links.filter(l => !l.toRemove)

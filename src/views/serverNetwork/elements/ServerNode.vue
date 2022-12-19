@@ -8,27 +8,27 @@
                             <span class="server-name mr-1">
                                 <i class="fa fa-server"></i>
                                 <span class="text-monospace">
-                                    {{ server.name }}
+                                    {{ getServer.name }}
                                 </span>
                             </span>
                             <span class="server-url">
                                 <a href="#" class="text-muted font-weight-light text-wrap">
-                                    {{ server.url }}
+                                    {{ getServer.url }}
                                     <sup class="fa fa-external-link-alt text-muted"></sup>
                                 </a>
                             </span>
                         </div>
                         <div class="ml-auto">
-                            <span :class="['badge', server.status.error ? 'badge-danger' : 'badge-success']">{{ server.status.data }}</span>
+                            <span :class="['badge', getServerStatus.error ? 'badge-danger' : 'badge-success']">{{ getServerStatus.data }}</span>
                         </div>
                     </div>
                 </template>
                 <b-tabs card nav-class="card-header-tabs" @input="tabChanged">
                     <b-tab title="Info" active>
-                        <ServerNodeInfo :server="server"></ServerNodeInfo>
+                        <ServerNodeInfo :server="getServer"></ServerNodeInfo>
                     </b-tab>
                     <b-tab title="Usage">
-                        <ServerNodeUsage :usage="server.server_info.query_result.serverUsage" :server="server"></ServerNodeUsage>
+                        <ServerNodeUsage :usage="getServerUsage" :server="getServer"></ServerNodeUsage>
                     </b-tab>
                     <b-tab title="Synchronization">
                         <ServerNodeSync :sync="{}"></ServerNodeSync>
@@ -38,7 +38,7 @@
                     </b-tab>
                     <template v-slot:tabs-end>
                         <a class="nav-link disabled ml-auto border-0" href="#" style="pointer-events: auto;">
-                            <timeSinceRefresh :timestamp="server.server_info.timestamp" :clockNoMargin="true"></timeSinceRefresh>
+                            <timeSinceRefresh :timestamp="getServer.server_info.timestamp" :clockNoMargin="true"></timeSinceRefresh>
                             <button type="button btn-sm" class="btn btn-link sync-btn p-0">
                                 <i class="fas fa-sync"></i>
                             </button>
@@ -51,6 +51,7 @@
 </template>
 
 <script>
+import { mapState, mapGetters } from "vuex"
 /* eslint-disable vue/no-unused-components */
 import * as d3 from "d3"
 import loaderPlaceholder from "@/components/ui/elements/loaderPlaceholder.vue"
@@ -77,6 +78,28 @@ export default {
         }
     },
     computed: {
+        ...mapState({
+            servers: state => state.servers.servers,
+            connections: state => state.connections.all,
+            server_status: state => state.servers.server_status,
+            server_usage: state => state.servers.server_usage,
+            remote_connections: state => state.servers.remote_connections,
+        }),
+        getServer: function() {
+            return this.servers[this.server_id] || null
+        },
+        getServerStatus: function() {
+            return this.server_status[this.server_id]
+        },
+        getServerUsage: function() {
+            return this.server_usage[this.server_id]
+        },
+        getQueryInProgress: function() {
+            return this.server_query_in_progress[this.server_id]
+        },
+        isOnline: function() {
+            return !this.getServerStatus.error
+        },
     },
     methods: {
         tabChanged() {
@@ -94,8 +117,8 @@ export default {
         }
     },
     props: {
-        server: {
-            type: Object,
+        server_id: {
+            type: Number,
             required: true
         },
         d3Node: {
