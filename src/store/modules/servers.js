@@ -30,7 +30,7 @@ const state = init_state()
 // getters
 const getters = {
     serverCount: state => {
-        return state.servers.length
+        return Object.keys(state.servers).length
     },
     getServerList: state => {
         return Object.values(state.servers)
