@@ -1,3 +1,3 @@
-const baseurl = "http://10.250.138.14:5000"
+const baseurl = "http://127.0.0.1:5000"
 
 export { baseurl }

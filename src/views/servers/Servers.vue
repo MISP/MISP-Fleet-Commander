@@ -42,13 +42,13 @@
             </div>
             <div class="w-25">
                 <b-button-toolbar class="justify-content-end flex-nowrap">
-                    <b-input-group size="sm" class="px-0 col" style="min-width: 200px;">
+                    <b-input-group size="sm" class="px-0 col">
                         <b-form-input
                             v-model="table.filter"
                             type="search"
                             id="filterInput"
                             placeholder="Type to Search"
-                            class="border-bottom-0 rounded-top align-self-end"
+                            class="table-search-box border-bottom-0 rounded-top align-self-end"
                             style="border-radius: 0"
                         ></b-form-input>
                     </b-input-group>
@@ -297,7 +297,8 @@
         ></DeleteSelectedModal>
 
         <AddModal
-            :modalAction.sync="modalAddAction"
+            :modalActionX.sync="modalAddAction"
+            :modalAction="modalAddAction"
             :serverForm="validServerToEdit"
             @addition-success="handleAdd"
         ></AddModal>

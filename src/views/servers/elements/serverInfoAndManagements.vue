@@ -12,6 +12,18 @@
                 </keep-alive>
             </div>
         </b-tab>
+        <b-tab class="p-1" no-body lazy>
+            <template #title>
+                <i class="fas fa-plug mr-1"></i><strong>Plugins</strong>
+            </template>
+            <div :style="getMaxHeight">
+                <keep-alive>
+                <MISPPlugins
+                    :server_id="server_id"
+                ></MISPPlugins>
+                </keep-alive>
+            </div>
+        </b-tab>
         <b-tab title="Diagnostic" class="p-1" active no-body lazy>
             <keep-alive>
             <b-card no-body>

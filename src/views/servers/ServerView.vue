@@ -20,7 +20,7 @@
                 </div>
             </div>
 
-            <div class="container-fuild mb-3">
+            <div class="container-fuild mb-3 server-extra">
                 <b-card no-body>
                     <b-overlay :show="infoRefreshInProgress" rounded="sm">
                         <serverInfoAndManagements 
@@ -161,5 +161,9 @@ export default {
 
 .accordion *:focus {
     outline: 0 !important;
+}
+
+.server-extra {
+    min-height: 500px;
 }
 </style>

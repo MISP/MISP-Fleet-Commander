@@ -59,7 +59,6 @@ let router =  new Router({
                     path: ":server_id(\\d+)",
                     name: "servers.view",
                     component: () => import("./views/servers/ServerView.vue"),
-                    //props: true,
                     props: (route) => ({server_id: Number.parseInt(route.params.server_id, 10) || 0}),
                     meta: {
                         breadcrumbs: {

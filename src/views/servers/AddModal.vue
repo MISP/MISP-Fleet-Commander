@@ -51,13 +51,15 @@
                                 placeholder="https://misp.test"
                                 type="url"
                             ></b-form-input>
-                            <template v-slot:append>
-                                <b-input-group-text>
-                                    <b-form-checkbox v-model="form.skip_ssl" switch>
-                                        <small>Skip SSL validation</small>
-                                    </b-form-checkbox>
-                                </b-input-group-text>
-                            </template>
+                                <b-input-group-append>
+                                    <b-input-group-text>
+                                        <ValidationProvider v-slot="validationContext" name="Skip SSL">
+                                            <b-form-checkbox v-model="form.skip_ssl" switch>
+                                                <small>Skip SSL validation</small>
+                                            </b-form-checkbox>
+                                        </ValidationProvider>
+                                    </b-input-group-text>
+                                </b-input-group-append>
                          </b-input-group>
 
                         <b-form-invalid-feedback v-for="(error, index) in validationContext.errors" v-bind:key="index">{{ error }}</b-form-invalid-feedback>
@@ -157,12 +159,12 @@ extend("min", min)
 extend("length", length)
 extend("email", email)
 extend("url", {
-    validate: value => {
-        // eslint-disable-next-line no-useless-escape
-        const pattern2 = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/
-        return pattern2.test(value)
-    },
-    message: "This field must be a valid URL"
+   validate: value => {
+       // eslint-disable-next-line no-useless-escape
+       const pattern2 = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/
+       return pattern2.test(value)
+   },
+   message: "This field must be a valid URL"
 })
 
 export default {
@@ -221,6 +223,7 @@ export default {
                 email: "",
                 password: ""
             },
+            skip_ssl: false,
             form: this.serverForm,
             postInProgress: false,
             localAuthMethodSelected: "api",

@@ -182,3 +182,12 @@ tr.no-bgcolor {
 table.table-no-select tbody, table.table-no-select thead > tr {
     cursor: auto;
 }
+
+.table-search-box {
+    min-width: 200px !important;
+    transition: min-width 0.3s;
+}
+
+.table-search-box:focus {
+    min-width: 300px !important;
+}
