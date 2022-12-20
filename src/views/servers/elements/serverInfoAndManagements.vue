@@ -108,7 +108,7 @@
             <b-card no-body>
                 <div :style="getMaxHeight">
                     <jsonViewer
-                        :item="getServerUsers"
+                        :item="getServerUser"
                         rootKeyName="User profile"
                         :open="true"
                     ></jsonViewer>
@@ -199,7 +199,8 @@ export default {
             server_query_in_progress: state => state.servers.server_query_in_progress,
             remote_connections: state => state.servers.remote_connections,
             server_usage: state => state.servers.server_usage,
-            serverUsers: state => state.servers.serverUsers,
+            server_user: state => state.servers.server_user,
+            server_users: state => state.servers.server_users,
             final_settings: state => state.servers.final_settings,
             last_refresh: state => state.servers.last_refresh,
             diagnostic_full: state => state.servers.diagnostic_full,
@@ -221,8 +222,11 @@ export default {
         getServerUsage: function() {
             return this.server_usage[this.server_id]
         },
+        getServerUser: function() {
+            return this.server_user[this.server_id]
+        },
         getServerUsers: function() {
-            return this.serverUsers[this.server_id]
+            return this.server_users[this.server_id]
         },
         getLastRefresh: function() {
             return this.last_refresh[this.server_id]

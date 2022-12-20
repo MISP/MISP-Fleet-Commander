@@ -48,6 +48,9 @@ export default {
             } else if (this.perms.perm_add) {
                 remote_user.state = "danger"
                 remote_user.text = "user"
+            } else if (this.perms.perm_auth) {
+                remote_user.state = "danger"
+                remote_user.text = "perm_auth"
             }
             return remote_user
         },

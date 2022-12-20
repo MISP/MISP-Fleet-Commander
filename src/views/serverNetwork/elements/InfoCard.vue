@@ -36,9 +36,9 @@
 
         <template v-slot:footer>
             <timeSinceRefresh
-                v-if="server.status"
-                :key="server.id"
-                :timestamp="server.status.timestamp"
+                v-if="getServer && getServer.status"
+                :key="getServer.id"
+                :timestamp="getServerStatus.timestamp"
             ></timeSinceRefresh>
             <!-- <timeSinceRefresh
                 :timestamp="server.server_info.query_result.timestamp"
@@ -48,6 +48,7 @@
 </template>
 
 <script>
+import { mapState, mapGetters } from "vuex"
 import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
 
 export default {
@@ -56,8 +57,8 @@ export default {
         timeSinceRefresh
     },
     props: {
-        server: {
-            type: Object,
+        server_id: {
+            type: Number,
             required: true
         },
         open: {
@@ -74,41 +75,70 @@ export default {
         }
     },
     computed: {
+        ...mapState({
+            servers: state => state.servers.servers,
+            connections: state => state.connections.all,
+            server_status: state => state.servers.server_status,
+            server_usage: state => state.servers.server_usage,
+            server_user: state => state.servers.server_user,
+            remote_connections: state => state.servers.remote_connections,
+        }),
+        getServer: function() {
+            return this.servers[this.server_id] || null
+        },
+        getServerStatus: function() {
+            return this.server_status[this.server_id] || null
+        },
+        getServerUsage: function() {
+            return this.server_usage[this.server_id] || null
+        },
+        getQueryInProgress: function() {
+            return this.server_query_in_progress[this.server_id] || null
+        },
+        getServerUser: function() {
+            return this.server_user[this.server_id] || null
+        },
+        isOnline: function() {
+            return !this.getServerStatus.error
+        },
         hasSelection() {
-            return Object.keys(this.server).length > 0
+            return Object.keys(this.getServer).length > 0
         },
         serverInfoTable() {
             let items = []
+            if (!this.getServer) {
+                return items
+            }
             items = items.concat([
                 {
                     property: "Name",
-                    value: this.server.name
+                    value: this.getServer.name
                 },
                 {
                     property: "URL",
-                    value: this.server.url
+                    value: this.getServer.url
                 },
                 {
                     property: "Auth key",
-                    value: this.server.authkey
+                    value: this.getServer.authkey
                 }
             ])
             if (
-                this.server.server_info !== undefined &&
-                this.server.server_info.query_result.serverUser.Organisation !== undefined
+                this.getServer.server_info !== undefined &&
+                this.getServerUser.Organisation !== undefined
             ) {
                 items = items.concat([
                     {
                         property: "Org. name",
-                        value: this.server.server_info.query_result.serverUser.Organisation.name
+                        value: this.getServerUser.Organisation.name
                     },
                     {
                         property: "Org. uuid",
-                        value: this.server.server_info.query_result.serverUser.Organisation.uuid
+                        value: this.getServerUser.Organisation.uuid
                     },
                     {
                         property: "Org. type",
-                        value: this.server.server_info.query_result.serverUser.Organisation.type
+                        value: this.getServerUser.Organisation.type
                     }
                 ])
             } else {

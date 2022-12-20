@@ -10,13 +10,13 @@ const init_state = () => {
         server_status: {},
         server_query_in_progress: {},
         server_query_error: {},
-        user_perms: {},
+        server_user: {},
         remote_connections: {},
         submodules: {},
         proxy: {},
         zeromq: {},
         workers: {},
-        serverUsers: {},
+        server_users: {},
         server_usage: {},
         last_refresh: {},
         final_settings: {},
@@ -285,11 +285,11 @@ const mutations = {
             }
         }
     },
-    setUserPerms(state, payload) {
-        if (state.user_perms[payload.server_id] === undefined) {
-            Vue.set(state.user_perms, payload.server_id, {})
+    setServerUser(state, payload) {
+        if (state.server_user[payload.server_id] === undefined) {
+            Vue.set(state.server_user, payload.server_id, {})
         }
-        state.user_perms[payload.server_id] = Object.assign({}, state.user_perms[payload.server_id], payload.perms)
+        state.server_user[payload.server_id] = Object.assign({}, state.server_user[payload.server_id], payload.perms)
     },
     setRemoteConnections(state, payload) {
         if (state.remote_connections[payload.server_id] === undefined) {
@@ -370,10 +370,10 @@ const mutations = {
         state.diagnostic_full[payload.server_id] = Object.assign({}, state.diagnostic_full[payload.server_id], payload.diagnostic_full)
     },
     updateUsers(state, { server_id, users }) {
-        if (state.serverUsers[server_id] === undefined) {
-            Vue.set(state.serverUsers, server_id, {})
+        if (state.server_users[server_id] === undefined) {
+            Vue.set(state.server_users, server_id, {})
         }
-        state.serverUsers[server_id] = Object.assign({}, state.serverUsers[server_id], users)
+        state.server_users[server_id] = Object.assign({}, state.server_users[server_id], users)
     },
     setGithubVersion(state, githubReply) {
         const githubVersion = githubReply.tag_name
@@ -384,7 +384,7 @@ const mutations = {
 
 function setAllQueryInfo(state, server_id, server_info) {
     const query_info = server_info.query_result
-    mutations.setUserPerms(state, { server_id: server_id, perms: query_info["serverUser"]["Role"] })
+    mutations.setServerUser(state, { server_id: server_id, perms: query_info["serverUser"] })
     mutations.setRemoteConnections(state, { server_id: server_id, connections: query_info["connectedServers"] })
     mutations.setSubmodules(state, { server_id: server_id, submodules: query_info["serverSettings"]["moduleStatus"] })
     mutations.setProxy(state, { server_id: server_id, proxy: query_info["serverSettings"]["proxyStatus"] })
@@ -398,7 +398,7 @@ function setAllQueryInfo(state, server_id, server_info) {
 
 function commitAllQueryInfo(commit, server_id, info) {
     const queryResult = info["query_result"]
-    commit("setUserPerms", { server_id: server_id, perms: queryResult["serverUser"]["Role"] })
+    commit("setServerUser", { server_id: server_id, perms: queryResult["serverUser"] })
     commit("setRemoteConnections", { server_id: server_id, connections: queryResult["connectedServers"] })
     commit("setSubmodules", { server_id: server_id, submodules: queryResult["serverSettings"]["moduleStatus"] })
     commit("setProxy", { server_id: server_id, proxy: queryResult["serverSettings"]["proxyStatus"] })

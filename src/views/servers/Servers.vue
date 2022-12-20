@@ -417,7 +417,7 @@ export default {
                         sortable: true,
                         class: "align-middle d-none d-xl-table-cell",
                         formatter: (value, key, item) => {
-                            return this.user_perms[item.id] || null
+                            return this.server_user[item.id]['Role'] || null
                         }
                     },
                     {
@@ -492,13 +492,13 @@ export default {
             server_status: state => state.servers.server_status,
             server_query_in_progress: state => state.servers.server_query_in_progress,
             server_query_error: state => state.servers.server_query_error,
-            user_perms: state => state.servers.user_perms,
+            server_user: state => state.servers.server_user,
             remote_connections: state => state.servers.remote_connections,
             submodules: state => state.servers.submodules,
             proxy: state => state.servers.proxy,
             zeromq: state => state.servers.zeromq,
             workers: state => state.servers.workers,
-            serverUsers: state => state.servers.serverUsers,
+            server_users: state => state.servers.server_users,
             last_refresh: state => state.servers.last_refresh,
             diagnostic_full: state => state.servers.diagnostic_full,
         }),

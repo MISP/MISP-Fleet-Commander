@@ -130,9 +130,9 @@ export default {
     queryGetUsers(server_id, cb, errorCb) {
         const url = `${urls.getUsers}/${server_id}`
         return axios.get(url)
-            .then((response) => {
-                cb(response.data)
-            }).catch(error => {
+        .then((response) => {
+            cb(response.data)
+        }).catch(error => {
                 errorCb(error.data.toJSON())
             })
     }

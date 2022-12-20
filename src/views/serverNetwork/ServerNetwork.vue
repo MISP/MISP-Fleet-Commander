@@ -39,7 +39,8 @@
             handleClass=".card-header"
         >
             <TheInfoCard
-                :server="selectedNode"
+                v-if="selectedNodeID"
+                :server_id="selectedNodeID"
                 :open.sync="infoCard.show"
             ></TheInfoCard>
         </DraggableComponent>
@@ -95,6 +96,7 @@ export default {
                 position: {top: "4em", left: "unset", right: "1em"}
             },
             selectedNode: {},
+            selectedNodeID: null,
             availableScopes: [
                 { text: "Administration", value: "administration" },
                 { text: "Realtime Sharing Simulation", value: "simulation" }
@@ -158,6 +160,7 @@ export default {
         },
         selectNode(node) {
             this.selectedNode = node
+            this.selectedNodeID = node.server_info.server_id
         },
         constructNetwork() {
             const vm = this
@@ -192,7 +195,7 @@ export default {
             }
             if (this.$refs["networkContainer"] !== undefined) {
                 let callbacks = {
-                    simulationDone: () => { console.log("simu done") }
+                    simulationDone: () => { console.info("simu done") }
                 }
                 const network = d3Network.constructNetwork(
                     this.$refs["networkSVG"],

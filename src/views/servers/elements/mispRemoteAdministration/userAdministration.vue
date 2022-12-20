@@ -203,9 +203,16 @@ export default {
     computed: {
         ...mapState({
             servers: state => state.servers,
+            server_users: state => state.servers.server_users,
         }),
+        getServerId: function() {
+            return this.server.id
+        },
         getServer: function() {
-            return this.servers[this.server.id]
+            return this.server
+        },
+        getServerUsers: function() {
+            return this.server_users[this.getServerId]
         },
     },
     methods: {
@@ -222,23 +229,21 @@ export default {
                 this.$bvModal.show("modal-user-administration")
             })
         },
-        getUsers: function() {
-            return this.getServer.server_data.users
-        },
         loadUsers() {
             this.table.isBusy = true
             this.$store.dispatch("servers/getUsers", this.server.id)
                 .then(() => {
                     this.table.isBusy = false
-                    this.users = this.getUsers()
+                    this.users = Object.values(this.getServerUsers)
                     this.users.forEach(user => { // needed for b-table filters
                         user.email = user.User.email
                         user.orgname = user.Organisation.name
                     })
                 })
                 .catch(error => {
-                    this.$bvToast.toast(error, {
+                    this.$bvToast.toast(error.message, {
                         title: "Could not fetch server info",
+                        
                         variant: "danger",
                     })
                 })

@@ -2,20 +2,20 @@
     <div class="nodeContainer">
         <div class="nodeServer nodeServerMini p-2">
             <h2 class="text-monospace top-header">
-                {{ server.name }}
+                {{ getServer.name }}
             </h2>
             <h5 class="server-url">
                 <a href="#" class="text-muted font-weight-light text-wrap">
-                    {{ server.url }}
+                    {{ getServer.url }}
                     <sup class="fa fa-external-link-alt text-muted"></sup>
                 </a>
             </h5>
             <div class="d-flex justify-content-between align-items-center">
-                <span :class="['badge', 'big-badge', server.status.error ? 'badge-danger' : 'badge-success']">
-                    {{ server.status.data }}
+                <span :class="['badge', 'big-badge', getServerStatus.error ? 'badge-danger' : 'badge-success']">
+                    {{ getServerStatus.data }}
                 </span>
                 <span class="ml-2 border-0" href="#" style="pointer-events: auto; font-size: 1.3rem;">
-                    <timeSinceRefresh :timestamp="server.server_info.timestamp" :clockNoMargin="true"></timeSinceRefresh>
+                    <timeSinceRefresh :timestamp="getServer.server_info.timestamp" :clockNoMargin="true"></timeSinceRefresh>
                     <button type="button btn-sm" class="btn btn-link sync-btn p-0">
                         <i class="fas fa-sync"></i>
                     </button>
@@ -26,6 +26,7 @@
 </template>
 
 <script>
+import { mapState, mapGetters } from "vuex"
 /* eslint-disable vue/no-unused-components */
 import * as d3 from "d3"
 import loaderPlaceholder from "@/components/ui/elements/loaderPlaceholder.vue"
@@ -38,8 +39,8 @@ export default {
         timeSinceRefresh,
     },
     props: {
-        server: {
-            type: Object,
+        server_id: {
+            type: Number,
             required: true
         },
         d3Node: {
@@ -56,6 +57,28 @@ export default {
         }
     },
     computed: {
+        ...mapState({
+            servers: state => state.servers.servers,
+            connections: state => state.connections.all,
+            server_status: state => state.servers.server_status,
+            server_usage: state => state.servers.server_usage,
+            remote_connections: state => state.servers.remote_connections,
+        }),
+        getServer: function() {
+            return this.servers[this.server_id] || null
+        },
+        getServerStatus: function() {
+            return this.server_status[this.server_id]
+        },
+        getServerUsage: function() {
+            return this.server_usage[this.server_id]
+        },
+        getQueryInProgress: function() {
+            return this.server_query_in_progress[this.server_id]
+        },
+        isOnline: function() {
+            return !this.getServerStatus.error
+        },
     },
     methods: {
         tabChanged() {

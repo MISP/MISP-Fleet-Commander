@@ -109,13 +109,13 @@ export default {
             server_status: state => state.servers.server_status,
             server_query_in_progress: state => state.servers.server_query_in_progress,
             server_query_error: state => state.servers.server_query_error,
-            user_perms: state => state.servers.user_perms,
+            server_user: state => state.servers.server_user,
             remote_connections: state => state.servers.remote_connections,
             submodules: state => state.servers.submodules,
             proxy: state => state.servers.proxy,
             zeromq: state => state.servers.zeromq,
             workers: state => state.servers.workers,
-            serverUsers: state => state.servers.serverUsers,
+            server_users: state => state.servers.server_users,
             last_refresh: state => state.servers.last_refresh,
             final_settings: state => state.servers.final_settings,
         }),
@@ -143,8 +143,8 @@ export default {
         getZmq: function() {
             return this.zeromq[this.server_id]
         },
-        getUserPerms: function() {
-            return this.user_perms[this.server_id]
+        getServerUser: function() {
+            return this.server_user[this.server_id]
         },
         isOnline: function() {
             return !this.getServerStatus.error
@@ -185,7 +185,7 @@ export default {
                 },
                 "User permissions": {
                     data: {
-                        perms: this.getUserPerms,
+                        perms: this.getServerUser['Role'],
                         row_id: 0,
                         context: "serverView"
                     },

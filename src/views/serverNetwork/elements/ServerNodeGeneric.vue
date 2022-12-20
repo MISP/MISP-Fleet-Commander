@@ -2,13 +2,13 @@
     <div>
         <ServerNodeMicro
             v-if="scale < 0.2"
-            :server="server"
+            :server_id="server_id"
             :d3Node="d3Node"
             :d3SVGNode="d3SVGNode"
         ></ServerNodeMicro>
         <ServerNodeMini
             v-else-if="scale < 0.6"
-            :server="server"
+            :server_id="server_id"
             :d3Node="d3Node"
             :d3SVGNode="d3SVGNode"
         ></ServerNodeMini>

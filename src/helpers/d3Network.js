@@ -48,7 +48,7 @@ export default {
             .data(d3data.nodes)
             .enter().append("g")
             // eslint-disable-next-line no-unused-vars
-            .on("click", function(node, index, nodes) {
+            .on("click", function(event, node) {
                 eventHandlers.nodeClick(node)
             })
             .call(drag(simulation))
