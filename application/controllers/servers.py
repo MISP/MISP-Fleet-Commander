@@ -392,16 +392,21 @@ def parseMISPUserConnectionOutput(userConnection):
         'sync_flag': "",
         'message': ""
     }
-    parsed['email'] = userConnection.get('Email', "")
+    parsed['email'] = userConnection.get('User', "")
     parsed['role_name'] = userConnection.get('Role name', "")
-    parsed['sync_flag'] = userConnection.get('Sync flag', "")
+    parsed['sync_flag'] = True if userConnection.get('Sync flag', False) == 'Yes' else False
     parsed['message'] = userConnection.get('message', "")
     if parsed['role_name'] == "admin":
-        parsed['role_color'] = "success"
+        parsed['role_color'] = "danger"
     elif parsed['role_name'] == "User":
-        parsed['role_color'] = "danger"
+        parsed['role_color'] = "warning"
+    elif parsed['role_name'] == "Sync user":
+        parsed['role_color'] = "success"
     else:
-        parsed['role_color'] = "danger"
+        parsed['role_color'] = "warning"
+
+    if parsed['sync_flag'] and parsed['role_color'] == 'warning':
+        parsed['role_color'] = "success"
     return parsed
 
 def parseMISPConnectionOutput(connection):
