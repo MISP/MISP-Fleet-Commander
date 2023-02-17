@@ -39,17 +39,33 @@
                 ></connectionsSummary>
             </template>
 
+            <template v-slot:cell(connectionUser)="row">
+                <syncUserSummary
+                    :user="row.value"
+                ></syncUserSummary>
+            </template>
+
+            <template v-slot:cell(Server.push)="row">
+                <i :class="['fa', row.value ? 'fa-check text-success' : 'fa-times']"></i>
+            </template>
+
+            <template v-slot:cell(Server.pull)="row">
+                <i :class="['fa', row.value ? 'fa-check text-success' : 'fa-times']"></i>
+            </template>
+
         </b-table>
     </div>
 </template>
 
 <script>
 import connectionsSummary from "@/views/servers/elements/connectionsSummary.vue"
+import syncUserSummary from "@/views/servers/elements/syncUserSummary.vue"
 
 export default {
     name: "MISPConnectedServers",
     components: {
-        connectionsSummary
+        connectionsSummary,
+        syncUserSummary,
     },
     props: {
         servers: {
@@ -79,6 +95,17 @@ export default {
                         sortable: true
                     },
                     {
+                        key: "connectionTest.status",
+                        label: "Status",
+                        sortable: true,
+                        tdClass: "align-middle"
+                    },
+                    {
+                        key: "connectionUser",
+                        label: "User",
+                        sortable: true,
+                    },
+                    {
                         key: "Server.push",
                         label: "Push",
                         sortable: true,
@@ -87,12 +114,6 @@ export default {
                         key: "Server.pull",
                         label: "Pull",
                         sortable: true,
-                    },
-                    {
-                        key: "connectionTest.status",
-                        label: "Status",
-                        sortable: true,
-                        tdClass: "align-middle"
                     },
                 ],
             },

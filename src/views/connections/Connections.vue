@@ -84,6 +84,14 @@
                 </loaderPlaceholder>
             </template>
 
+            <template v-slot:cell(destination.connectionUser)="row">
+                <loaderPlaceholder :loading="!row.value._loading">
+                    <syncUserSummary
+                        :user="row.value"
+                    ></syncUserSummary>
+                </loaderPlaceholder>
+            </template>
+
             <template v-slot:cell(pull)="row">
                 <loaderPlaceholder :loading="!row.value._loading">
                     <b-button :id="`pull-rule-${row.index}`" variant="link" size="xs" class="m-0 text-dark" href="#" tabindex="0">
@@ -201,7 +209,7 @@
                     :serverSource="row.item.source"
                     :serverDestination="row.item.destination"
                     @actionRefresh="handleRefreshInfo({index: row.index, method: $event})"
-                    @actionClose="toggleServerInfo(row.item, row.index, row)"
+                    @actionClose="row.toggleDetails"
                 ></RowDetails>
             </template>
 
@@ -219,6 +227,7 @@ import loaderPlaceholder from "@/components/ui/elements/loaderPlaceholder.vue"
 import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
 import RowDetails from "@/views/connections/elements/RowDetails.vue"
 import connectionsSummary from "@/views/servers/elements/connectionsSummary.vue"
+import syncUserSummary from "@/views/servers/elements/syncUserSummary.vue"
 import jsonViewer from "@/components/ui/elements/jsonViewer.vue"
 
 export default {
@@ -230,7 +239,8 @@ export default {
         timeSinceRefresh,
         jsonViewer,
         RowDetails,
-        connectionsSummary
+        connectionsSummary,
+        syncUserSummary,
     },
     data: function () {
         return {
@@ -258,6 +268,11 @@ export default {
                         label: "Status",
                         sortable: true,
                         tdClass: "align-middle"
+                    },
+                    {
+                        key: "destination.connectionUser",
+                        label: "User",
+                        sortable: true,
                     },
                     {
                         key: "pull",

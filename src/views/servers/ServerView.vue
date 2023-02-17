@@ -7,7 +7,7 @@
                 <div class="row">
                     <div class="col col-md-5 col-xl-4">
                         <b-overlay :show="statusRefreshInProgress" rounded="sm">
-                            <ServerViewProfile :server_id="server_id" @fullRefresh="fullRefresh()"></ServerViewProfile>
+                            <ServerViewProfile :server_id="server_id" @fullRefresh="fullRefresh()" :info_refresh_in_progress="infoRefreshInProgress"></ServerViewProfile>
                         </b-overlay>
                     </div>
                     <div class="col col-md-7 col-xl-8 pl-0">

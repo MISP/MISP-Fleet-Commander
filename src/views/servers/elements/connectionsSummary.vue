@@ -180,9 +180,10 @@ export default {
             if (this.hasError) {
                 return summary
             }
+            const summaryText = this.getOkConnections.length == 1 ? 'OK' : `${this.getOkConnections.length} / ${this.getAllConnectionsList.length} OK`
             summary = {
                 names: this.getOkConnections.map(connection => (connection.Server.name != '' ? connection.Server.name : connection.Server.url)),
-                text: `${this.getOkConnections.length} / ${this.getAllConnectionsList.length} OK`,
+                text: summaryText,
                 variant: (this.getOkConnections.length == 0 && this.getAllConnectionsList.length > 0) ? 'danger' : 'success'
             }
             return summary

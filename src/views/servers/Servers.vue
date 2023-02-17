@@ -194,7 +194,6 @@
                         <div class="btn-group">
                             <b-button
                                 size="xs" variant ="link"
-                                @Xclick="toggleServerInfo(row.item, row.index, row)"
                                 @click="row.toggleDetails"
                             >
                                 <i :class="['text-secondary', 'fas', `fa-${row.detailsShowing ? 'compress-alt' : 'expand-alt'}`]"></i>
@@ -213,11 +212,11 @@
                                 <template v-slot:button-content>
                                     <i 
                                         class="fas fa-ellipsis-v"
-                                        @click="forceHidden(row.index)"
+                                        @click="forceHidden(row.item.id)"
                                     ></i>
                                 </template>
                                 <contextualMenu
-                                    :menu="genContextualMenu(row.index)"
+                                    :menu="genContextualMenu(row.item.id)"
                                     @handle-refresh-info="handleRefreshInfo"
                                     @view-connections="viewConnections"
                                     @view-in-network="viewInNetwork"
@@ -278,8 +277,8 @@
             <template v-slot:row-details="row">
                 <RowDetails
                     :server_id="row.item.id"
-                    @actionRefresh="handleRefreshInfo({index: row.index, method: $event})"
-                    @actionClose="toggleServerInfo(row.item, row.index, row)"
+                    @actionRefresh="handleRefreshInfo({server_id: row.item.id, method: $event})"
+                    @actionClose="row.toggleDetails"
                 ></RowDetails>
             </template>
 
@@ -417,7 +416,7 @@ export default {
                         sortable: true,
                         class: "align-middle d-none d-xl-table-cell",
                         formatter: (value, key, item) => {
-                            return this.server_user[item.id]['Role'] || null
+                            return this.server_user[item.id] ? (this.server_user[item.id]['Role'] || null) : null
                         }
                     },
                     {
@@ -541,28 +540,28 @@ export default {
         onSorted() {
             this.table.currentPage = 1
         },
-        genContextualMenu(index) {
+        genContextualMenu(server_id) {
             return [
                 {
                     variant: "",
                     text: "Refresh",
                     icon: "sync-alt",
                     eventName: "handle-refresh-info",
-                    callbackData: {index: index, method: "no_cache"}
+                    callbackData: {server_id: server_id, method: "no_cache"}
                 },
                 {
                     variant: "",
                     text: "View connections",
                     icon: "network-wired",
                     eventName: "view-connections",
-                    callbackData: {index: index}
+                    callbackData: {server_id: server_id}
                 },
                 {
                     variant: "",
                     text: "View network",
                     icon: "project-diagram",
                     eventName: "view-in-network",
-                    callbackData: {index: index}
+                    callbackData: {server_id: server_id}
                 },
                 {
                     variant: "",
@@ -571,22 +570,22 @@ export default {
                     icon: "radar",
                     useAsset: true,
                     eventName: "handle-discover-servers-add",
-                    callbackData: {index: index}
+                    callbackData: {server_id: server_id}
                 },
                 {
                     variant: "outline-primary",
-                    disabled: !this.getIndex[index].canBeUpdated,
+                    disabled: !this.servers[server_id].canBeUpdated,
                     text: "Run updates",
                     icon: "arrow-up",
                     eventName: "run-updates",
-                    callbackData: {index: index}
+                    callbackData: {server_id: server_id}
                 },
                 {
                     variant: "outline-danger",
                     text: "Delete server",
                     icon: "trash",
                     eventName: "open-deletion-modal",
-                    callbackData: {index: index}
+                    callbackData: {server_id: server_id}
                 },
             ]
         },
@@ -596,12 +595,6 @@ export default {
                 classes.push("table-primary-background")
             }
             return classes
-        },
-        toggleServerInfo(server, row_id, row) {
-            //this.$store.commit("servers/toggleShowDetails", row_id)
-            //if (server._showDetails) {
-            //    this.refreshInfo(server, false)
-            //}
         },
         forceHidden(row_id) {
             this.forcedHidden = row_id
@@ -730,9 +723,9 @@ export default {
             }
         },
         handleRefreshInfo(data) {
-            const index = data.index
+            const server_id = data.server_id
             const method = data.method
-            let server = this.getIndex[index]
+            let server = this.servers[server_id]
             this.$store.dispatch("servers/runConnectionTest", server.id)
             this.refreshInfo(server, method == "no_cache")
         },

@@ -36,29 +36,31 @@
                 </span>
             </h5>
 
-            <template v-if="isOnline">
-                <b-table-simple
-                small
-                class="mb-0"
-                :bordered="false"
-                :borderless="true"
-                :outlined="false"
-                >
-                    <b-tbody>
-                        <b-tr v-for="(v, k) in statusData" v-bind:key="k">
-                            <b-th class="text-nowrap text-right pr-3">{{ k }}</b-th>
-                            <b-td>
-                                <template v-if="v.text">
-                                    {{ v.text }}
-                                </template>
-                                <template v-if="v.component">
-                                    <component :is="v.component" v-bind="v.data"></component>
-                                </template>
-                            </b-td>
-                        </b-tr>
-                    </b-tbody>
-                </b-table-simple>
-            </template>
+            <b-overlay :show="info_refresh_in_progress" rounded="sm">
+                <template v-if="isOnline">
+                    <b-table-simple
+                    small
+                    class="mb-0"
+                    :bordered="false"
+                    :borderless="true"
+                    :outlined="false"
+                    >
+                        <b-tbody>
+                            <b-tr v-for="(v, k) in statusData" v-bind:key="k">
+                                <b-th class="text-nowrap text-right pr-3">{{ k }}</b-th>
+                                <b-td>
+                                    <template v-if="v.text">
+                                        {{ v.text }}
+                                    </template>
+                                    <template v-if="v.component">
+                                        <component :is="v.component" v-bind="v.data"></component>
+                                    </template>
+                                </b-td>
+                            </b-tr>
+                        </b-tbody>
+                    </b-table-simple>
+                </template>
+            </b-overlay>
         </b-card-body>
         <hr v-if="isOnline" class="my-0" />
 
@@ -66,20 +68,22 @@
             <h5 class="card-title mb-0 mx-3 my-2">
                 Server Info
             </h5>
-            <b-table-simple
-            striped small
-            class="mb-0"
-            :bordered="false"
-            :borderless="true"
-            :outlined="false"
-            >
-                <b-tbody>
-                    <b-tr v-for="(v, k) in infoData" v-bind:key="k">
-                        <b-th class="text-nowrap text-right pr-3">{{ k }}</b-th>
-                        <b-td>{{ v }}</b-td>
-                    </b-tr>
-                </b-tbody>
-            </b-table-simple>
+            <b-overlay :show="info_refresh_in_progress" rounded="sm">
+                <b-table-simple
+                striped small
+                class="mb-0"
+                :bordered="false"
+                :borderless="true"
+                :outlined="false"
+                >
+                    <b-tbody>
+                        <b-tr v-for="(v, k) in infoData" v-bind:key="k">
+                            <b-th class="text-nowrap text-right pr-3">{{ k }}</b-th>
+                            <b-td>{{ v }}</b-td>
+                        </b-tr>
+                    </b-tbody>
+                </b-table-simple>
+            </b-overlay>
         </b-card-body>
     </b-card>
 </template>
@@ -101,6 +105,10 @@ export default {
         server_id: {
             required: true,
             type: Number,
+        },
+        info_refresh_in_progress: {
+            required: true,
+            type: Boolean,
         }
     },
     computed: {
