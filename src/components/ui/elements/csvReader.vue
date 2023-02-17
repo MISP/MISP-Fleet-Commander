@@ -75,7 +75,19 @@
                 v-for="item in getSelectableFieldList"
                 v-slot:[`cell(${item.key})`]="row"
             >
-                <div :key="`cell-row-${row.rowIndex}-${item.key}`">{{ row.value }}</div>
+                <div :key="`cell-row-${row.rowIndex}-${item.key}`">
+                    <span
+                        v-if="!checkFieldValidity(item, row.value)"
+                        class="text-danger"
+                        style="text-decoration: line-through"
+                        :title="`This value doesn't pass the validation: ${item.regex}`"
+                    >
+                        {{ row.value }}
+                    </span>
+                    <span v-else>
+                        {{ row.value }}
+                    </span>
+                </div>
             </template>
         </b-table>
     </div>
@@ -102,9 +114,9 @@ export default {
             mappedFields: {
                 name: {label: "Name", csvIndex: null, required: true},
                 description: {label: "Description", csvIndex: null, required: false},
-                url: {label: "URL", csvIndex: null, required: true},
+                url: {label: "URL", csvIndex: null, required: true, regex:/^(ftp|http|https):\/\/[^ "]+$/},
                 skip_ssl: {label: "Skip SSL", csvIndex: null, required: false},
-                authkey: {label: "Authkey", csvIndex: null, required: true},
+                authkey: {label: "Authkey", csvIndex: null, required: true, regex:/^[a-zA-Z0-9]{40}$/},
                 auth_method: {label: "Basic auth", csvIndex: null, required: false},
             },
             csvHeader:"",
@@ -114,7 +126,10 @@ export default {
     },
     computed: {
         getHeaderOptions() {
-            const header = this.csvHeader.split(this.delimiter)
+            let header = this.csvHeader.split(this.delimiter)
+            header = header.map((str) => {
+                return str.startsWith('"') && str.endsWith('"') ? str.slice(1, -1) : str
+            })
             let headerOptions = header.map((field, index) => {
                 return {value: index, text: field}
             })
@@ -230,16 +245,36 @@ export default {
             } else {
                 this.csvHeader = csvLines[0]
             }
-            this.speratedCSV = []
+            let tmpCsv = []
             csvLines.forEach(line => {
-                this.speratedCSV.push(line.split(this.delimiter))
+                let list = line.split(this.delimiter)
+                list = list.map((str) => {
+                    return str.startsWith('"') && str.endsWith('"') ? str.slice(1, -1) : str
+                })
+                tmpCsv.push(list)
             })
+            this.speratedCSV = tmpCsv
             this.autoPickMapping()
+        },
+        checkFieldValidity(fieldConfig, value) {
+            return fieldConfig.regex ? fieldConfig.regex.test(value) : true
         },
         handleSelectableFieldChange() {
             const allRequiredFields = Object.entries(this.mappedFields)
                 // eslint-disable-next-line no-unused-vars
                 .filter(([fieldName, field]) => { return field.required && field.csvIndex === null })
+                .filter(([fieldName, field]) => { 
+                    if (!field.regex) {
+                        return true
+                    }
+                    for (let i = 0; i < this.mappedCSV.length; i++) {
+                        const value = this.mappedCSV[i];
+                        if (!this.checkFieldValidity(field, value)) {
+                            return false
+                        }
+                    }
+                    return true
+                })
             this.$emit("update:allRequiredFieldsPicked", allRequiredFields.length == 0 )
         }
     },
