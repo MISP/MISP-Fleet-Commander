@@ -84,13 +84,16 @@ class Server(BaseModel):
     user = db.relationship('User',
         backref=db.backref('servers', lazy='joined'))
 
-    server_group = db.relationship('ServerGroup',
-        backref=db.backref('servers', lazy='joined', uselist=True))
+    # server_group = db.relationship('ServerGroup',
+    #     backref=db.backref('server_group', lazy='joined', uselist=True))
+    server_group = db.relationship('ServerGroup', back_populates='servers')
     
     server_info = db.relationship('ServerQuery',
-        backref=db.backref('hostServer', lazy='joined', uselist=False))
+        # backref=db.backref('hostServer', lazy='joined', uselist=False))
+        backref=db.backref('hostServer', lazy=True, uselist=False))
 
-    _default_fields = ['id', 'name', 'comment', 'url', 'skip_ssl', 'user', 'auth_method', 'server_info', 'authkey', 'basicauth']
+    # _default_fields = ['id', 'name', 'comment', 'url', 'skip_ssl', 'user', 'auth_method', 'server_info', 'authkey', 'basicauth']
+    _default_fields = ['id', 'name', 'comment', 'url', 'skip_ssl', 'user', 'auth_method', 'authkey', 'basicauth']
     _hidden_fields = []
     # _hidden_fields = ['authkey', 'basicauth']
     _readonly_fields = ['user_id']
@@ -147,6 +150,12 @@ class ServerGroup(BaseModel):
                         nullable=False,
                         index=True)
 
+    servers = db.relationship('Server', back_populates='server_group', cascade='all, delete-orphan')
+    # servers = db.relationship('Server',
+    #     backref=db.backref('server_group', lazy=True, uselist=True, nullable=False),
+    #     cascade='all, delete-orphan')
+    # servers = db.relationship('Server', back_populates="server_group", lazy="joined", uselist=True, cascade="all, delete-orphan")
+
     @hybrid_property
     def server_count(self):
         result = db.session.query(Server.server_group_id, func.count(Server.id)) \
@@ -158,7 +167,8 @@ class ServerGroup(BaseModel):
             server_group_id, the_count = result
         return the_count
 
-    _default_fields = ['id', 'name', 'description', 'timestamp', 'server_count']
+    # _default_fields = ['id', 'name', 'description', 'timestamp', 'server_count', 'servers']
+    _default_fields = ['id', 'name', 'description', 'timestamp', 'server_count',]
     _hidden_fields = []
     _readonly_fields = ['user_id']
 

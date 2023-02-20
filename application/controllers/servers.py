@@ -27,7 +27,7 @@ class DictToObject:
 def index(group_id=None):
     servers = serverModel.index(group_id)
     if servers:
-        return jsonify([s.to_dict() for s in servers])
+        return jsonify([s.to_dict(['server_info']) for s in servers])
     else:
         return jsonify([])
 
