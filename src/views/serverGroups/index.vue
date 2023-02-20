@@ -24,7 +24,19 @@
                     <h5 class="mb-1">{{ group.name }}</h5>
                     <small>{{ group.server_count }} {{ group.server_count > 1 ? "servers" : "server"}}</small>
                 </div>
-                <p class="mb-1">{{ group.description }}</p>
+                <div class="d-flex">
+                    <span>{{ group.description }}</span>
+                    <span class="ml-auto">
+                        <b-button
+                            class="ml-auto fa fa-trash reveal-on-parent-hover"
+                            size="sm"
+                            variant="outline-danger"
+                            v-b-modal.modal-delete-selected
+                            @click.stop="selectGroupForDeletion(group.id)"
+                        >
+                        </b-button>
+                    </span>
+                </div>
             </b-list-group-item>
         </b-list-group>
 
@@ -36,6 +48,10 @@
             :groupForm="groupData"
             @addition-success="handleAdd"
         ></AddModal>
+        <DeleteModal
+            :group_id="group_id_to_delete"
+            @deletion-success="handleDelete"
+        ></DeleteModal>
     </div>
 </template>
 
@@ -43,18 +59,21 @@
 import { mapState, mapGetters } from "vuex"
 import iconButton from "@/components/ui/elements/iconButton.vue"
 import AddModal from "@/views/serverGroups/AddModal.vue"
+import DeleteModal from "@/views/serverGroups/DeleteModal.vue"
 import router from "@/router"
 
 export default {
     name: "ServerGroup",
     components: {
         iconButton,
-        AddModal
+        AddModal,
+        DeleteModal,
     },
     data: function () {
         return {
             refreshInProgress: false,
-            groupData: {}
+            groupData: {},
+            group_id_to_delete: -1,
         }
     },
     computed: {
@@ -77,8 +96,13 @@ export default {
             this.$store.dispatch("serverGroups/selectServerGroup", group)
             router.push({ path: '/servers/' })
         },
+        selectGroupForDeletion(group_id) {
+            this.group_id_to_delete = group_id
+        },
         handleAdd() {
             this.refreshServerGroupIndex()
+        },
+        handleDelete() {
         },
         refreshServerGroupIndex() {
             this.refreshInProgress = true
@@ -107,4 +131,11 @@ export default {
 </script>
 
 <style scoped>
+button.reveal-on-parent-hover {
+    visibility: hidden;
+}
+
+.list-group-item:hover .reveal-on-parent-hover {
+    visibility: visible;
+}
 </style>

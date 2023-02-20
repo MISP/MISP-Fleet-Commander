@@ -40,6 +40,15 @@ export default {
                 errorCb(error.toJSON().message)
             })
     },
+    delete(group, cb, errorCb) {
+        const url = `${urls.delete}/${group.id}`
+        return axios.delete(url, group)
+            .then((response) => {
+                cb(response.data)
+            }).catch(error => {
+                errorCb(error.toJSON().message)
+            })
+    },
     getFromServerId(serverId, cb, errorCb) {
         const url = `${urls.getFromServerId}/${serverId}`
         return axios.get(url)

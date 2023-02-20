@@ -97,7 +97,21 @@ const actions = {
                 (error) => { reject(error) }
             )
         }) 
-    }
+    },
+    deleteServerGroup({ dispatch }, payload={}) {
+        return new Promise((resolve, reject) => {
+            api.delete(
+                payload,
+                (response) => {
+                    dispatch("getServerGroups")
+                    .then(() => {
+                        resolve(response)
+                    })
+                },
+                (error) => { reject(error) }
+            )
+        }) 
+    },
 }
 
 // mutations
@@ -109,7 +123,10 @@ const mutations = {
         state.init_done = true
     },
     setServerGroups(state, groups) {
-        state.all = groups
+        Vue.set(state, 'all', {})
+        groups.forEach(group => {
+            Vue.set(state.all, group.id, group)
+        })
     },
     setServerGroup(state, group) {
         for (let i = 0; i < state.all.length; i++) {
