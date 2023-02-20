@@ -47,17 +47,16 @@ def edit():
     return make_response(f"{new_user} successfully created!")
 
 
-@BPserverGroup.route('/serverGroups/delete', methods=['POST'])
-def delete():
-    """Create a user."""
-    email = request.args.get('email')
-    if email:
-        new_user = User(email=email,
-                        created=dt.now(),
-                        password="Password1234")
-        db.session.add(new_user)  # Adds new User record to database
-        db.session.commit()  # Commits all changes
-    return make_response(f"{new_user} successfully created!")
+@BPserverGroup.route('/serverGroups/delete/<int:group_id>', methods=['DELETE', 'POST'])
+def delete(group_id):
+    """Delete a group and it's associated servers"""
+    group = ServerGroup.query.get(group_id)
+    if group is not None:
+        db.session.delete(group)
+        db.session.commit()
+        return jsonify([group_id])
+    else:
+        return jsonify({})
 
 @BPserverGroup.route('/serverGroups/getFromServerId/<int:server_id>', methods=['GET'])
 def getFromServerId(server_id):

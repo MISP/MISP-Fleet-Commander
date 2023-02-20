@@ -92,7 +92,7 @@ def edit():
     return jsonify(server.to_dict())
 
 
-@BPserver.route('/servers/delete', methods=['POST'])
+@BPserver.route('/servers/delete', methods=['DELETE', 'POST'])
 def delete():
     if isinstance(request.json, list):
         deletedServers = []
