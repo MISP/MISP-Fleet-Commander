@@ -41,8 +41,10 @@
 
             <template v-slot:cell(connectionUser)="row">
                 <syncUserSummary
+                    v-if="row.value.email"
                     :user="row.value"
                 ></syncUserSummary>
+                <span v-else>N/A</span>
             </template>
 
             <template v-slot:cell(Server.push)="row">
