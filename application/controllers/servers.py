@@ -317,6 +317,7 @@ def restQuery(server_id):
             'reason': response.reason,
             'elapsed_time': response.elapsed,
             'url': response.url,
+            'server_id': server_id,
         }
         return jsonify(result)
     else:
