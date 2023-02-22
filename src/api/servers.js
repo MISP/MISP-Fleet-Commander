@@ -127,14 +127,24 @@ export default {
             })
     },
 
+    batchRestQuery(server_ids, payload) {
+        let allPromises = []
+        server_ids.forEach(server_id => {
+            const url = `${urls.restQuery}/${server_id}`
+            const query = axios.post(url, payload)
+            allPromises.push(query)
+        });
+        return Promise.all(allPromises)
+    },
+
     queryGetUsers(server_id, cb, errorCb) {
         const url = `${urls.getUsers}/${server_id}`
         return axios.get(url)
         .then((response) => {
             cb(response.data)
         }).catch(error => {
-                errorCb(error.data.toJSON())
-            })
+            errorCb(error.data.toJSON())
+        })
     }
 
 }

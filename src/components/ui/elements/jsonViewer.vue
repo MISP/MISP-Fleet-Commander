@@ -40,7 +40,7 @@
         </ul>
     </span>
     <span v-else>
-        <pre>{{ item }}</pre>
+        <pre class="code-container">{{ item }}</pre>
     </span>
     </div>
 </template>
@@ -146,5 +146,11 @@ export default {
         content: ':';
         margin-right: 1em;
         color: black;
+    }
+    .code-container {
+        background-color: #f8f9fa;
+        box-shadow: 0 .125rem .25rem rgba(0,0,0,.075);
+        border-radius: 3px;
+        padding: 0.5rem;
     }
 </style>

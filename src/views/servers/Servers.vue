@@ -88,6 +88,15 @@
                                 ></iconButton>
                             </b-dropdown-item-button>
                             <b-dropdown-item-button
+                                @click="openBatchAPISelectedModal"
+                            >
+                                <iconButton
+                                    text="Batch API"
+                                    title="Batch API call on selected servers"
+                                    icon="terminal"
+                                ></iconButton>
+                            </b-dropdown-item-button>
+                            <b-dropdown-item-button
                                 @click="openDeleteSelectedModal"
                                 class="outline-danger"
                             >
@@ -314,6 +323,10 @@
             :rootServer="discoverServersRoot"
             @addition-success="handleBatchAdd"
         ></DiscoverServers>
+
+        <BatchAPI
+            :server_ids="selectedServerIDs"
+        ></BatchAPI>
     </div>
 </Layout>
 </template>
@@ -333,6 +346,7 @@ import connectionsSummary from "@/views/servers/elements/connectionsSummary.vue"
 import contextualMenu from "@/components/ui/elements/contextualMenu.vue"
 import RowDetails from "@/views/servers/elements/RowDetails.vue"
 import DeleteModal from "@/views/servers/DeleteModal.vue"
+import BatchAPI from "@/views/servers/BatchAPI.vue"
 import DeleteSelectedModal from "@/views/servers/DeleteSelectedModal.vue"
 import AddModal from "@/views/servers/AddModal.vue"
 import BatchAddModal from "@/views/servers/BatchAddModal.vue"
@@ -361,7 +375,8 @@ export default {
         CSVAddModal,
         DeleteSelectedModal,
         DiscoverServers,
-        iconButton
+        iconButton,
+        BatchAPI,
     },
     data: function() {
         return {
@@ -479,7 +494,8 @@ export default {
                 ],
             },
             tableItems: [],
-            selectedServers: []
+            selectedServers: [],
+            selectedServerIDs: [],
         }
     },
     computed: {
@@ -525,6 +541,7 @@ export default {
         },
         onRowSelected(items) {
             this.selectedServers = items.map(server => server)
+            this.selectedServerIDs = items.map(server => server.id)
         },
         selectRow(checked, index) {
             if (checked) {
@@ -628,6 +645,9 @@ export default {
         },
         openDeleteSelectedModal() {
             this.$bvModal.show("modal-delete-selected")
+        },
+        openBatchAPISelectedModal() {
+            this.$bvModal.show("modal-batch-api-selected")
         },
         viewConnections(data) {
             return data
