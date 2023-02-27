@@ -43,7 +43,7 @@ export default {
         refreshServerGroupIndex() {
             this.refreshInProgress = true
             return new Promise((resolve, reject) => {
-                this.$store.dispatch("serverGroups/initFetch")
+                this.$store.dispatch("serverGroups/initFetch", {use_cache: true})
                     .then(() => {
                         resolve()
                     })
@@ -61,7 +61,7 @@ export default {
         },
     },
     mounted() {
-        this.refreshServerGroupIndex()
+        // this.refreshServerGroupIndex()
     }
 }
 </script>

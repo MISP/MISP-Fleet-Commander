@@ -3,7 +3,6 @@ import Vue from "vue"
 
 // initial state
 const state = {
-    init_done: false,
     all: [],
     selected: null
 }
@@ -20,22 +19,24 @@ const getters = {
 
 // actions
 const actions = {
-    initFetch({ commit, state }) {
+    initFetch({ commit, getters }, payload) {
         return new Promise((resolve, reject) => {
-            if (state.init_done) {
-                resolve("Init already done")
-            } else {
+            if (
+                payload === undefined ||
+                (!payload.use_cache || getters.serverGroupCount == 0)
+            ) {
                 api.index(
                     groups => {
                         groups.forEach(group => {
                             group._loading = false
                         })
                         commit("setServerGroups", groups)
-                        commit("setInitDone")
                         resolve()
                     },
                     (error) => { reject(error) }
                 )
+            } else {
+                resolve("Server groups already loaded")
             }
         })
     },
@@ -69,9 +70,6 @@ const actions = {
         return new Promise((resolve, reject) => {
         	dispatch("servers/resetState", undefined, {root: true})
         	commit("selectServerGroup", group)
-        	dispatch("servers/fetchServers", {force: true}, {root: true}).then(() => {
-                resolve()
-            })
         })
     },
     selectServerGroupFromServerId({ commit, dispatch }, server_id) {
@@ -118,9 +116,6 @@ const actions = {
 const mutations = {
     selectServerGroup: function (state, group) {
         state.selected = group
-    },
-    setInitDone(state) {
-        state.init_done = true
     },
     setServerGroups(state, groups) {
         Vue.set(state, 'all', {})

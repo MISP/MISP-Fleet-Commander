@@ -675,7 +675,7 @@ export default {
         refreshServerIndex(full=false) {
             this.table.isBusy = true
             return new Promise((resolve, reject) => {
-                this.$store.dispatch("servers/fetchServers", {force: full})
+                this.$store.dispatch("servers/fetchServers", {force: true})
                     .then(() => {
                         this.table.totalRows = this.serverCount
                         resolve()
