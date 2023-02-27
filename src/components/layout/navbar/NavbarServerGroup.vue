@@ -33,7 +33,7 @@ export default {
             getServerGroups: state => state.serverGroups.all
         }),
         hasValidServerGroups() {
-            return this.getServerGroups.length > 0
+            return Object.values(this.getServerGroups).length > 0
         }
     },
     methods: {
