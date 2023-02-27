@@ -31,6 +31,7 @@
                 >
                     {{ getOkConnectionSummary.text }}
                     <b-popover
+                        v-if="getOkConnectionSummary.names.length > 0"
                         href="#" tabindex="0"
                         triggers="hover"
                         placement="top"
