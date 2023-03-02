@@ -1,13 +1,18 @@
 <template>
     <div>
-        <b-breadcrumb class="mb-0 p-0 bg-transparent">
+        <b-breadcrumb class="mb-0 p-0 bg-transparent d-flex align-items-center">
             <b-breadcrumb-item
                 v-for="(item, index) in breadcrumbItems" :key="index"
                 :to="item.to"
                 :active="index === breadcrumbItems.length-1"
             >
-                <i v-if="item.icon" :class="`fa fa-${item.icon}`"></i>
-                {{ item.text }}
+                <img v-if="item.image_path"
+                    :src="item.image_path"
+                    :alt="item.alt"
+                    class="icon-navbar"
+                >
+                <i v-else-if="item.icon" :class="`fa fa-${item.icon} mr-1`"></i>
+                <span>{{ item.text }}</span>
             </b-breadcrumb-item>
         </b-breadcrumb>
     </div>
@@ -30,7 +35,8 @@ export default {
             const that = this
             let items = []
             items.push({
-                text: "[Logo]",
+                alt: "Application icon",
+                image_path: require("@/assets/icon.png"),
                 to: { name: "home" }
             })
             this.$route.matched.forEach(routeEntry => {
@@ -80,5 +86,10 @@ export default {
     font-style: normal;
     font-variant: normal;
     text-rendering: auto;
+}
+
+.breadcrumb-item .icon-navbar {
+    height: auto;
+    width: 37px;
 }
 </style>

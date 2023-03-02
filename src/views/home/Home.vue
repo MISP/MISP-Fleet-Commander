@@ -3,8 +3,8 @@
     <div class="page-container">
         <div class="container">
             <div class="mt-1 mb-4">
-                <h3>[Application name]</h3>
-                <h5 class="text-muted">Manage your MISP community easily</h5>
+                <img src="@/assets/logo.png" class="logo mb-3" alt="MISP Fleet Commander logo">
+                <h5 class="text-muted fw-light">Manage your MISP communities easily</h5>
             </div>
             <div class="row">
                 <div class="col">
@@ -39,4 +39,8 @@ export default {
 </script>
 
 <style scoped>
+    .logo {
+        height: auto;
+        max-width: 400px;
+    }
 </style>
