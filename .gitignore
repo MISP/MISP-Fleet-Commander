@@ -3,4 +3,4 @@
 *.pyc
 *.swp
 venv
-.db
+*.db
