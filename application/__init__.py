@@ -38,11 +38,13 @@ def create_app():
         from application.controllers.servers import BPserver
         from application.controllers.serverGroups import BPserverGroup
         from application.controllers.plugins import BPplugins
+        from application.controllers.instance import BPinstance
 
         app.register_blueprint(BPuser)
         app.register_blueprint(BPserver)
         app.register_blueprint(BPserverGroup)
         app.register_blueprint(BPplugins)
+        app.register_blueprint(BPinstance)
 
         # Create tables for our models
         db.create_all()

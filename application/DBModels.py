@@ -93,7 +93,7 @@ class Server(BaseModel):
         backref=db.backref('hostServer', lazy=True, uselist=False))
 
     # _default_fields = ['id', 'name', 'comment', 'url', 'skip_ssl', 'user', 'auth_method', 'server_info', 'authkey', 'basicauth']
-    _default_fields = ['id', 'name', 'comment', 'url', 'skip_ssl', 'user', 'auth_method', 'authkey', 'basicauth']
+    _default_fields = ['id', 'name', 'comment', 'url', 'skip_ssl', 'user', 'auth_method', 'authkey', 'basicauth', 'server_group']
     _hidden_fields = []
     # _hidden_fields = ['authkey', 'basicauth']
     _readonly_fields = ['user_id']
