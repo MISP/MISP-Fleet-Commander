@@ -1,4 +1,5 @@
-import { baseurl, appendGroupIDIfDefined } from "./apiConfig"
+import { baseurl } from "./apiConfig"
+import common from "./common"
 import axios from "axios"
 
 const urls = {
@@ -17,7 +18,7 @@ export default {
             })
     },
     getIndexValues(cb, errorCb) {
-        const url = appendGroupIDIfDefined(`${urls.getIndexValues}`)
+        const url = common.appendGroupIDIfDefined(`${urls.getIndexValues}`)
         return axios.get(url)
             .then((response) => {
                 cb(response.data)

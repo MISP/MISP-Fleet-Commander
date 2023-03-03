@@ -1,4 +1,5 @@
-import { baseurl, appendGroupIDIfDefined } from "./apiConfig"
+import { baseurl } from "./apiConfig"
+import common from "./common"
 import axios from "axios"
 import store from "@/store/index"
 
@@ -17,7 +18,7 @@ const urls = {
 export default {
     index(cb, errorCb) {
         // const url = `${url.index}?page=${ctx.currentPage}&size=${ctx.perPage}`
-        const url = appendGroupIDIfDefined(`${urls.index}`)
+        const url = common.appendGroupIDIfDefined(`${urls.index}`)
         return axios.get(url)
             .then((response) => {
                 cb(response.data)
@@ -37,7 +38,7 @@ export default {
     },
 
     batchTestConnection(cb, errorCb) {
-        const url = appendGroupIDIfDefined(`${urls.batchTestConnection}`)
+        const url = common.appendGroupIDIfDefined(`${urls.batchTestConnection}`)
         return axios.get(url)
             .then((response) => {
                 cb(response.data)
@@ -74,7 +75,7 @@ export default {
     },
 
     add(payload, cb, errorCb) {
-        const url = appendGroupIDIfDefined(urls.add)
+        const url = common.appendGroupIDIfDefined(urls.add)
         return axios.post(url, payload)
             .then((response) => {
                 cb(response)
