@@ -124,7 +124,6 @@ class BasePlugin:
 def getAllIndexValue(loadedPlugins: list, servers: List[Server]) -> list:
     indexValues = defaultdict(dict)
     for plugin in loadedPlugins:
-        print(plugin['id'])
         for server in servers:
             indexValues[server.id][plugin['id']] = getIndexValue(server, plugin)
     return indexValues
