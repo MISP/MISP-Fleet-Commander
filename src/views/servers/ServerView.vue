@@ -142,6 +142,7 @@ export default {
     beforeRouteEnter(to, from, next) {
         if (store.getters["serverGroups/selectedServerGroup"] === null) {
             store.dispatch("serverGroups/selectServerGroupFromServerId", to.params.server_id).then(() => {
+                store.dispatch("servers/fetchServers", {force: true})
                 next()
             }).catch(() => {
                 next("/home")

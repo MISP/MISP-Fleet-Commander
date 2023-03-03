@@ -68,12 +68,13 @@ const actions = {
     },
     selectServerGroup({ commit, dispatch }, group) {
         return new Promise((resolve, reject) => {
-        	dispatch("servers/resetState", undefined, {root: true})
-        	commit("selectServerGroup", group)
+            dispatch("servers/resetState", undefined, {root: true})
+            commit("selectServerGroup", group)
         })
     },
     selectServerGroupFromServerId({ commit, dispatch }, server_id) {
-	return new Promise((resolve, reject) => {
+        return new Promise((resolve, reject) => {
+            dispatch("initFetch", { use_cache: false })
             api.getFromServerId(
                 server_id,
                 group => {
