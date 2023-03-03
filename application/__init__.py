@@ -3,7 +3,8 @@ from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import MetaData
 from flask_migrate import Migrate
-from application.server_notifications import loadAvailableHelpers
+
+from application.plugins import loadAvailablePlugins
 
 
 # naming_convention = {
@@ -15,7 +16,7 @@ from application.server_notifications import loadAvailableHelpers
 # }
 # db = SQLAlchemy(metadata=MetaData(naming_convention=naming_convention))
 db = SQLAlchemy()
-notification_helpers = loadAvailableHelpers()
+loadedPlugins = loadAvailablePlugins()
 
 
 def create_app():
@@ -36,10 +37,12 @@ def create_app():
         from application.controllers.users import BPuser
         from application.controllers.servers import BPserver
         from application.controllers.serverGroups import BPserverGroup
+        from application.controllers.plugins import BPplugins
 
         app.register_blueprint(BPuser)
         app.register_blueprint(BPserver)
         app.register_blueprint(BPserverGroup)
+        app.register_blueprint(BPplugins)
 
         # Create tables for our models
         db.create_all()

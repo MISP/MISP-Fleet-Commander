@@ -9,7 +9,7 @@ import concurrent.futures
 from collections import Mapping, MutableSequence, defaultdict
 from sqlalchemy.orm import with_parent
 # from application import notification_helpers
-from application.server_notifications.NotificationManager import NotificationManager
+# from application.server_notifications.NotificationManager import NotificationManager
 from application.plugins.server_administration.AdministrationManager import AdministrationManager
 from application.DBModels import db, User, Server, ServerQuery
 from application.controllers.utils import mispGetRequest, mispPostRequest, batchRequest
@@ -168,8 +168,9 @@ def getUsers(server_id):
 def getNotifications(server_id):
     server = Server.query.get(server_id)
     if server is not None:
-        NM = NotificationManager(server)
-        results = NM.queryAll()
+        # NM = NotificationManager(server)
+        # results = NM.queryAll()
+        results = []
         return jsonify(results)
     else:
         return jsonify({'error': 'Unkown server'})
