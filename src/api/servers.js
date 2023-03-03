@@ -1,4 +1,4 @@
-import { baseurl } from "./apiConfig"
+import { baseurl, appendGroupIDIfDefined } from "./apiConfig"
 import axios from "axios"
 import store from "@/store/index"
 
@@ -14,14 +14,6 @@ const urls = {
     getUsers: `${baseurl}/servers/getUsers`
 }
 
-const appendGroupIDIfDefined = (url) => {
-    if (store.getters["serverGroups/selectedServerGroup"] !== null) {
-        const groupID = store.getters["serverGroups/selectedServerGroup"].id
-        url += `/${groupID}`
-    }
-    return url
-}
-  
 export default {
     index(cb, errorCb) {
         // const url = `${url.index}?page=${ctx.currentPage}&size=${ctx.perPage}`

@@ -11,7 +11,7 @@
                     <ServerGroup class="mt-3"></ServerGroup>
                 </div>
                 <div class="col">
-                    <NotificationHelpers class="mt-3"></NotificationHelpers>
+                    <PluginIndex class="mt-3"></PluginIndex>
                 </div>
             </div>
         </div>
@@ -22,14 +22,14 @@
 <script>
 import Layout from "@/components/layout/Layout.vue"
 import ServerGroup from "@/views/serverGroups/index.vue"
-import NotificationHelpers from "@/views/notificationHelpers/index.vue"
+import PluginIndex from "@/views/plugins/PluginIndex.vue"
 
 export default {
     name: "TheHome",
     components: {
         Layout,
         ServerGroup,
-        NotificationHelpers
+        PluginIndex
     },
     data: function () {
         return {

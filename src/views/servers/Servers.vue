@@ -283,6 +283,16 @@
                 </loaderPlaceholder>
             </template>
 
+            <template v-for="field in pluginFields" v-slot:[`cell(${field.key})`]="row">
+                <loaderPlaceholder :loading="!server_query_in_progress[row.item.id]" :key="field.key">
+                    <pluginIndexColumn
+                        v-if="row.value !== undefined"
+                        :server_id="row.item.id"
+                        :plugin_response="row.value" 
+                    ></pluginIndexColumn>
+                </loaderPlaceholder>
+            </template>
+
             <template v-slot:row-details="row">
                 <RowDetails
                     :server_id="row.item.id"
@@ -342,6 +352,7 @@ import proxyStatus from "@/views/servers/elements/proxyStatus.vue"
 import workersStatus from "@/views/servers/elements/workersStatus.vue"
 import submodulesStatus from "@/views/servers/elements/submodulesStatus.vue"
 import zeroMQStatus from "@/views/servers/elements/zeroMQStatus.vue"
+import pluginIndexColumn from "@/views/servers/elements/pluginIndexColumn.vue"
 import connectionsSummary from "@/views/servers/elements/connectionsSummary.vue"
 import contextualMenu from "@/components/ui/elements/contextualMenu.vue"
 import RowDetails from "@/views/servers/elements/RowDetails.vue"
@@ -365,6 +376,7 @@ export default {
         proxyStatus,
         submodulesStatus,
         zeroMQStatus,
+        pluginIndexColumn,
         connectionsSummary,
         contextualMenu,
         workersStatus,
@@ -493,6 +505,7 @@ export default {
                     }
                 ],
             },
+            pluginFields: [],
             tableItems: [],
             selectedServers: [],
             selectedServerIDs: [],
@@ -513,6 +526,7 @@ export default {
             proxy: state => state.servers.proxy,
             zeromq: state => state.servers.zeromq,
             workers: state => state.servers.workers,
+            pluginValues: state => state.plugins.pluginIndexValues,
             server_users: state => state.servers.server_users,
             last_refresh: state => state.servers.last_refresh,
             diagnostic_full: state => state.servers.diagnostic_full,
@@ -520,6 +534,7 @@ export default {
         ...mapGetters({
             serverCount: "servers/serverCount",
             getServerList: "servers/getServerList",
+            indexPlugins: "plugins/indexPlugins",
         }),
         getIndex() {
             return (this.getServerList || []).map(server => ({ ...server }))
@@ -722,12 +737,14 @@ export default {
                 this.refreshServerIndex(true)
                     .then(() => {
                         this.refreshAllServerOnlineStatus()
+                        this.refreshPluginIndexValues()
                         this.tableQuickRefresh()
                     })
             } else {
                 this.refreshServerIndex(true)
                     .then(() => {
                         this.refreshAllServerOnlineStatus()
+                        this.refreshPluginIndexValues(true)
                         this.refreshAllInfo(true)
                     })
             }
@@ -767,6 +784,32 @@ export default {
                     })
                 })
         },
+        refreshPluginIndexValues(no_cache=false) {
+            this.$store.dispatch("plugins/fetchIndexValues", {no_cache: no_cache})
+                .catch(error => {
+                    this.$bvToast.toast(error, {
+                        title: "Could not fetch plugin values",
+                        variant: "danger",
+                    })
+                })
+        },
+        populatePluginFields() {
+            const lastRefreshPosition = this.table.fields.indexOf('last_refresh')
+            this.indexPlugins.forEach(plugin => {
+                const field = {
+                    key: plugin.id,
+                    label: plugin.name,
+                    formatter: (value, key, item) => {
+                        return this.pluginValues[item.id][plugin.id] || null
+                    },
+                    headerTitle: plugin.description,
+                    sortable: true,
+                    sortByFormatted: true,
+                }
+                this.pluginFields.push(field)
+                this.table.fields.splice(lastRefreshPosition, 0, field)
+            })
+        },
     },
     watch: {
         fetching_servers_in_progress: function() {
@@ -779,6 +822,7 @@ export default {
     mounted() {
         this.fullRefreshIfNeeded()
         this.fetchGithubVersionIfNeeded()
+        this.populatePluginFields()
     },
 }
 </script>
