@@ -807,7 +807,7 @@ export default {
                     sortByFormatted: true,
                 }
                 this.pluginFields.push(field)
-                this.table.fields.splice(lastRefreshPosition, 0, field)
+                this.table.fields.splice(lastRefreshPosition - 1, 0, field)
             })
         },
     },
