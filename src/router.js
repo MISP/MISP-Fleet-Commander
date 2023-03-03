@@ -4,7 +4,7 @@ import Home from "./views/home/Home.vue"
 import Servers from "./views/servers/Servers.vue"
 import ServerView from "./views/servers/ServerView.vue"
 // import Connections from "./views/connections/Connections.vue"
-import ServerNetwork from "./views/serverNetwork/ServerNetwork.vue"
+import StrategicView from "./views/strategicView/StrategicView.vue"
 import store from "./store/index"
 
 Vue.use(Router)
@@ -80,7 +80,6 @@ let router =  new Router({
         {
             path: "/connections",
             name: "connections",
-            // component: Connections,
             component: () => import("./views/connections/Connections.vue"),
             meta: {
                 requiresServerGroup: true,
@@ -92,15 +91,15 @@ let router =  new Router({
             }
         },
         {
-            path: "/serverNetwork",
-            name: "serverNetwork",
-            component: ServerNetwork,
+            path: "/strategicView",
+            name: "strategicView",
+            component: StrategicView,
             meta: {
                 requiresServerGroup: true,
                 breadcrumbs: {
-                    text: "Server Networks",
-                    to: { name: "serverNetwork" },
-                    icon: "fa-project-diagram"
+                    text: "Strategic View",
+                    to: { name: "strategicView" },
+                    icon: "fa-satellite-dish"
                 }
             }
         }

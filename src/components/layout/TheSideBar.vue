@@ -50,9 +50,9 @@ export default {
                     scope: "connections"
                 },
                 {
-                    name: "MISP Network",
-                    to: { name: "serverNetwork" },
-                    scope: "serverNetwork"
+                    name: "Strategic View",
+                    to: { name: "strategicView" },
+                    scope: "strategicView"
                 }
             ]
         }

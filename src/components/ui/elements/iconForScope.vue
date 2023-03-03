@@ -12,8 +12,8 @@
         :class="['fas', 'fa-network-wired']"
     ></i>
     <i
-        v-else-if="scope === 'serverNetwork'"
-        :class="['fa', 'fa-project-diagram']"
+        v-else-if="scope === 'strategicView'"
+        :class="['fas', 'fa-satellite-dish']"
     ></i>
      <i
         v-else
@@ -29,7 +29,7 @@ export default {
             type: String,
             required: true,
             validator: function (value) {
-                return ["", "home", "servers", "connections", "serverNetwork"].indexOf(value) !== -1
+                return ["", "home", "servers", "connections", "strategicView"].indexOf(value) !== -1
             }
         },
         forceBlack: {

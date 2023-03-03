@@ -57,10 +57,10 @@ import * as d3 from "d3"
 import loaderPlaceholder from "@/components/ui/elements/loaderPlaceholder.vue"
 import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
 import iconButton from "@/components/ui/elements/iconButton.vue"
-import ServerNodeInfo from "@/views/serverNetwork/elements/nodeElements/ServerNodeInfo.vue"
-import ServerNodeUsage from "@/views/serverNetwork/elements/nodeElements/ServerNodeUsage.vue"
-import ServerNodeSync from "@/views/serverNetwork/elements/nodeElements/ServerNodeSync.vue"
-import ServerNodeContent from "@/views/serverNetwork/elements/nodeElements/ServerNodeContent.vue"
+import ServerNodeInfo from "@/views/strategicView/elements/nodeElements/ServerNodeInfo.vue"
+import ServerNodeUsage from "@/views/strategicView/elements/nodeElements/ServerNodeUsage.vue"
+import ServerNodeSync from "@/views/strategicView/elements/nodeElements/ServerNodeSync.vue"
+import ServerNodeContent from "@/views/strategicView/elements/nodeElements/ServerNodeContent.vue"
 
 export default {
     name: "ServerNode",

@@ -23,9 +23,9 @@
 </template>
 
 <script>
-import ServerNode from "@/views/serverNetwork/elements/ServerNode.vue"
-import ServerNodeMini from "@/views/serverNetwork/elements/ServerNodeMini.vue"
-import ServerNodeMicro from "@/views/serverNetwork/elements/ServerNodeMicro.vue"
+import ServerNode from "@/views/strategicView/elements/ServerNode.vue"
+import ServerNodeMini from "@/views/strategicView/elements/ServerNodeMini.vue"
+import ServerNodeMicro from "@/views/strategicView/elements/ServerNodeMicro.vue"
 
 export default {
     name: "ServerNodeGeneric",

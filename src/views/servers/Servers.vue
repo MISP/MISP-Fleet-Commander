@@ -800,7 +800,7 @@ export default {
                     key: plugin.id,
                     label: plugin.name,
                     formatter: (value, key, item) => {
-                        return this.pluginValues[item.id][plugin.id] || null
+                        return this.pluginValues[item.id] ? (this.pluginValues[item.id][plugin.id] || null) : null
                     },
                     headerTitle: plugin.description,
                     sortable: true,
@@ -821,7 +821,7 @@ export default {
     },
     mounted() {
         this.fullRefreshIfNeeded()
-        this.fetchGithubVersionIfNeeded()
+        // this.fetchGithubVersionIfNeeded()
         this.populatePluginFields()
     },
 }

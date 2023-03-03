@@ -69,17 +69,17 @@ import Vue from "vue"
 import { mapState, mapGetters } from "vuex"
 import Layout from "@/components/layout/Layout.vue"
 import iconButton from "@/components/ui/elements/iconButton.vue"
-import ServerNodeGeneric from "@/views/serverNetwork/elements/ServerNodeGeneric.vue"
-import ServerNode from "@/views/serverNetwork/elements/ServerNode.vue"
-import ServerNodeMini from "@/views/serverNetwork/elements/ServerNodeMini.vue"
-import ServerNodeMicro from "@/views/serverNetwork/elements/ServerNodeMicro.vue"
-import NetworkMinimap from "@/views/serverNetwork/elements/NetworkMinimap.vue"
-import TheInfoCard from "@/views/serverNetwork/elements/InfoCard.vue"
+import ServerNodeGeneric from "@/views/strategicView/elements/ServerNodeGeneric.vue"
+import ServerNode from "@/views/strategicView/elements/ServerNode.vue"
+import ServerNodeMini from "@/views/strategicView/elements/ServerNodeMini.vue"
+import ServerNodeMicro from "@/views/strategicView/elements/ServerNodeMicro.vue"
+import NetworkMinimap from "@/views/strategicView/elements/NetworkMinimap.vue"
+import TheInfoCard from "@/views/strategicView/elements/InfoCard.vue"
 import DraggableComponent from "@/components/ui/DraggableComponent.vue"
 import d3Network from "@/helpers/d3Network.js"
 
 export default {
-    name: "TheServerNetwork",
+    name: "TheStrategicView",
     components: {
         Layout,
         iconButton,

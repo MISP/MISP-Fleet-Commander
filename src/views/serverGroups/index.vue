@@ -1,14 +1,14 @@
 <template>
     <div>
         <div class="d-flex align-items-center pb-1">
-            <h4><i class="fas fa-layer-group mr-2"></i>Server Groups</h4>
+            <h4><i class="fas fa-layer-group mr-2"></i>Fleets</h4>
             <b-button
                 class="ml-auto"
                 size="sm"
                 variant="primary"
                 v-b-modal.modal-add
             >
-                <iconButton text="New group" icon="plus"></iconButton>
+                <iconButton text="New fleet" icon="plus"></iconButton>
             </b-button>
         </div>
 

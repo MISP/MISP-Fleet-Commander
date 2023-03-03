@@ -2,7 +2,7 @@
 <Layout name="LayoutDefault">
     <div class="page-container">
         <div class="container">
-            <div class="mt-1 mb-4">
+            <div class="mt-1 mb-4 text-center">
                 <img src="@/assets/logo.png" class="logo mb-3" alt="MISP Fleet Commander logo">
                 <h5 class="text-muted fw-light">Manage your MISP communities easily</h5>
             </div>
