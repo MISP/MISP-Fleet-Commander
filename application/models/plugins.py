@@ -130,7 +130,12 @@ def getAllIndexValue(loadedPlugins: list, servers: List[Server]) -> list:
 
 def getIndexValue(server: Server, plugin):
     pluginInstance = plugin['instance']
-    return pluginInstance.index(server)
+    try:
+        indexValue = pluginInstance.index(server)
+    except Exception as e:
+        indexValue = FailPluginResponse({}, [str(e)])
+    return indexValue
+
 
 # class baseAdministrationHelper:
 #     name = 'base'
