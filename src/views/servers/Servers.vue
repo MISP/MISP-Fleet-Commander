@@ -288,6 +288,7 @@
                     <pluginIndexColumn
                         v-if="row.value !== undefined"
                         :server_id="row.item.id"
+                        :plugin_name="field.key" 
                         :plugin_response="row.value" 
                     ></pluginIndexColumn>
                 </loaderPlaceholder>
@@ -805,6 +806,7 @@ export default {
                     headerTitle: plugin.description,
                     sortable: true,
                     sortByFormatted: true,
+                    tdClass: "align-middle",
                 }
                 this.pluginFields.push(field)
                 this.table.fields.splice(lastRefreshPosition - 1, 0, field)

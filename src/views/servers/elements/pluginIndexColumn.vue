@@ -1,10 +1,27 @@
 <template>
     <component
+        v-if="!errors"
         v-bind:is="requestedComponent ? requestedComponent : defaultComponent"
         :status="status"
         :data="data"
         :errors="errors"
     ></component>
+    <span v-else>
+        <i
+            :id="`plugin-popover-${plugin_name}-${server_id}`"
+            class="fa fa-exclamation-triangle text-danger"
+        ></i>
+        <b-popover
+            href="#" tabindex="0"
+            triggers="hover"
+            boundary="viewport"
+            :target="`plugin-popover-${plugin_name}-${server_id}`"
+            variant="danger"
+            title="Error while fetching plugin data"
+        >
+            {{ printableErrors }}
+        </b-popover>
+    </span>
 </template>
 
 <script>
@@ -24,9 +41,13 @@ export default {
             type: Number,
             required: true
         },
+        plugin_name: {
+            type: String,
+            required: true
+        },
         plugin_response: {
             required: true
-        }
+        },
     },
     data: function() {
         return {
@@ -45,6 +66,9 @@ export default {
         },
         errors() {
             return this.plugin_response.errors || null
+        },
+        printableErrors() {
+            return this.errors.length == 1 ? this.errors[0] : JSON.stringify(this.errors)
         },
     },
     methods: {
