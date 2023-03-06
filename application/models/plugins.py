@@ -33,11 +33,20 @@ class PluginResponse:
 
         return response
 
-    def genActionParameter(key: str, type: str, label: Optional[str], options: Optional[dict]) -> dict:
+    def genActionParameter(
+        key: str,
+        type: str,
+        label: Optional[str],
+        description: Optional[str] = '',
+        placeholder: Optional[str] = '',
+        options: Optional[dict] = {}
+    ) -> dict:
         return {
             'key': key,
             'type': type,
             'label': label if label is not None else key,
+            'description': description,
+            'placeholder': placeholder,
             'options': options,
         }
 
@@ -121,14 +130,17 @@ class BasePlugin:
         return self.__str__()
 
 
-def getAllIndexValues(loadedPlugins: list, servers: List[Server]) -> list:
+def getPluginFromID(loadedPlugins: list, pluginID: str):
+    return next((plugin for plugin in loadedPlugins if plugin['id'] == pluginID), None)
+
+def getAllIndexValues(loadedPlugins: list, servers: List[Server]) -> dict:
     indexValues = defaultdict(dict)
     for plugin in loadedPlugins:
         for server in servers:
             indexValues[server.id][plugin['id']] = getIndexValue(server, plugin)
     return indexValues
 
-def getIndexValue(server: Server, plugin):
+def getIndexValue(server: Server, plugin) -> PluginResponse:
     pluginInstance = plugin['instance']
     try:
         indexValue = pluginInstance.index(server)
@@ -136,19 +148,27 @@ def getIndexValue(server: Server, plugin):
         indexValue = FailPluginResponse({}, [str(e)])
     return indexValue
 
-def getAllViewValues(loadedPlugins: list, server: Server) -> list:
+def getAllViewValues(loadedPlugins: list, server: Server) -> dict:
     viewValues = defaultdict(dict)
     for plugin in loadedPlugins:
         viewValues[plugin['id']] = getViewValue(server, plugin)
     return viewValues
 
-def getViewValue(server: Server, plugin):
+def getViewValue(server: Server, plugin) -> PluginResponse:
     pluginInstance = plugin['instance']
     try:
         viewValue = pluginInstance.view(server)
     except Exception as e:
         viewValue = FailPluginResponse({}, [str(e)])
     return viewValue
+
+def doAction(server: Server, plugin, data: Optional[dict]) -> PluginResponse:
+    pluginInstance = plugin['instance']
+    try:
+        actionResult = pluginInstance.action(server, data)
+    except Exception as e:
+        actionResult = FailPluginResponse({}, [str(e)])
+    return actionResult
 
 
 # class baseAdministrationHelper:

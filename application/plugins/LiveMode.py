@@ -9,7 +9,10 @@ class LiveMode(BasePlugin):
     description = 'Display and manage the status of MISP.live'
     icon = 'fas fa-toggle-off'
     action_parameters = [
-        PluginResponse.genActionParameter('live', 'checkbox', 'Live Mode Status', {0: 'Off', 1: 'On'}),
+        PluginResponse.genActionParameter('enabled', 'select', 'Live Mode Status', 'Live Mode OFF prevent non-site-admin users to access the instance', None, [
+            {'text': 'OFF', 'value': '0'},
+            {'text': 'ON', 'value': '1'},
+        ]),
     ]
 
     def view(self, server: Server, data: Optional[dict] = {}) -> PluginResponse:
@@ -20,10 +23,9 @@ class LiveMode(BasePlugin):
     def index(self, server: Server, data: Optional[dict] = {}) -> PluginResponse:
         return self.view(server, data)
 
-    def action(self, servers: List[Server], data: Optional[dict] = {}) -> Union[PluginResponse, List[PluginResponse]]:
-        return [
-            LiveMode.toggleLiveMode(server, data.enabled) for server in servers
-        ]
+    def action(self, server: Server, data: Optional[dict] = {}) -> Union[PluginResponse, List[PluginResponse]]:
+        selectedState = bool(data.get('enabled', True))
+        return LiveMode.toggleLiveMode(server, selectedState)
 
 
     @classmethod
@@ -41,6 +43,5 @@ class LiveMode(BasePlugin):
             actionResponse = FailPluginResponse(result, [result['error']])
         else:
             actionResponse = SuccessPluginResponse(result)
-            
 
         return actionResponse

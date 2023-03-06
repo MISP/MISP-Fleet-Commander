@@ -40,6 +40,7 @@ def loadAvailablePlugins():
                     'name': instantiatedPlugin.name,
                     'description': instantiatedPlugin.description,
                     'icon': instantiatedPlugin.icon,
+                    'action_parameters': instantiatedPlugin.action_parameters,
                     'filename': name,
                     'features': instantiatedPlugin.introspection(),
                     'instance': instantiatedPlugin

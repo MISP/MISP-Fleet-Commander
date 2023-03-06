@@ -47,6 +47,17 @@ def viewValues(server_id):
     else:
         return jsonify([])
 
+@BPplugins.route('/plugins/doAction/<int:server_id>/<plugin_id>', methods=['POST'])
+def doAction(server_id, plugin_id):
+    server = Server.query.get(server_id)
+    if server:
+        plugin = pluginsModel.getPluginFromID(loadedPlugins, plugin_id)
+        actionData = request.json.get(plugin_id, {})
+        actionResult = pluginsModel.doAction(server, plugin, actionData)
+        return jsonify(actionResult.to_dict())
+    else:
+        return jsonify([])
+
 
 # @BPplugins.route('/plugins/administration/view/<str:pluginName>/<int:server_id>', methods=['GET'])
 # def add(pluginName, server_id):
