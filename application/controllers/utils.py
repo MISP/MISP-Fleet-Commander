@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
+from datetime import timedelta
 import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+from requests_cache import CachedSession
 import concurrent.futures
 import time
 from urllib.parse import urljoin
 import functools
 
+requestMISPSession = CachedSession(cache_name='misp_cache', expire_after=timedelta(minutes=1))
 
 def timer(func):
     @functools.wraps(func)
@@ -30,7 +33,7 @@ def mispGetRequest(server, url, data={}, rawResponse=False):
     }
     full_url = urljoin(server.url, url)
     try:
-        response = requests.get(full_url, data=data, headers=headers, verify=(not getattr(server, 'skip_ssl', True)))
+        response = requestMISPSession.get(full_url, data=data, headers=headers, verify=(not getattr(server, 'skip_ssl', True)))
         error = handleStatusCode(response)
         if error is not None:
             return error
@@ -59,7 +62,7 @@ def mispPostRequest(server, url, data={}, rawResponse=False):
     }
     full_url = urljoin(server.url, url)
     try:
-        response = requests.post(full_url, json=data, headers=headers, verify=(not getattr(server, 'skip_ssl', True)))
+        response = requestMISPSession.post(full_url, json=data, headers=headers, verify=(not getattr(server, 'skip_ssl', True)))
         error = handleStatusCode(response)
         if error is not None:
             return error

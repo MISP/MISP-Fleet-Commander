@@ -1,9 +1,13 @@
+from datetime import timedelta
 from typing import Optional
+from requests_cache import CachedSession
 from application.DBModels import Server
 from application.controllers.utils import mispGetRequest
 from application.models.plugins import BasePlugin, PluginResponse, SuccessPluginResponse, FailPluginResponse
 import requests
 
+
+requestGithubSession = CachedSession(cache_name='github_cache', expire_after=timedelta(minutes=10))
 
 class UpToDate(BasePlugin):
     name = 'Up-To-Date'
@@ -35,7 +39,7 @@ class UpToDate(BasePlugin):
 
     @classmethod
     def queryGithub(cls) -> dict:
-        github_version_r= requests.get(cls.githubURL)
+        github_version_r= requestGithubSession.get(cls.githubURL)
         if github_version_r == 200:
             github_version = github_version_r.json()['tag_name']
         else:
