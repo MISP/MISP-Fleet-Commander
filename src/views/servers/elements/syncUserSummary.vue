@@ -1,5 +1,5 @@
 <template>
-    <span>
+    <span v-if="user.email.length > 0">
         <b-badge
             :id="`user-badge-${randomid}`"
             ref="userbadge"
