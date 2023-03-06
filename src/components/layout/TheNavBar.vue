@@ -8,7 +8,7 @@
                     <b-form-input 
                     v-model="searchText"
                     @input="search"
-                    @blur.native="revealSearch = false"
+                    @blur.native="handleSearchInputBlur"
                     @focus.native="revealSearch = true"
                     type="search"
                     size="sm" class="m-0" placeholder="Search servers…"
@@ -93,15 +93,12 @@ export default {
                 if (this.searchText.length > 0) {
                     this.doSearch()
                         .then(results => {
-                            console.log(results);
                             this.searchResults = results
                         })
                         .catch(error => {
-                            // this.searchResults = []
                             this.searchResults.splice(0, this.searchResults.length);
                         })
                 } else {
-                    // this.searchResults = []
                     this.searchResults.splice(0, this.searchResults.length);
                 }
             }, 200
@@ -117,6 +114,16 @@ export default {
                     })
                 }
             )
+        },
+
+        handleSearchInputBlur(evt) {
+            if (evt.relatedTarget?.classList.contains('list-group-item-action')) {
+                setTimeout(() => { // hack to figure out a way to trigger the redirect before the list-group gets closed - or to switch to typeahead.
+                    this.revealSearch = false
+                }, 200);
+            } else {
+                this.revealSearch = false
+            }
         },
     },
 }
