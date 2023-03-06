@@ -15,7 +15,7 @@
                     <div class="text-muted mb-3 ml-4" style="font-size: 0.875">{{ plugin.description }}</div>
                     <pluginActionForm
                         :plugin="plugin"
-                        @pluginActionFormSubmit="handlePluginActionSubmit"
+                        :submit_function="handlePluginActionSubmit"
                     ></pluginActionForm>
                 </div>
             </b-tab>
@@ -52,7 +52,7 @@ export default {
     },
     methods: {
         handlePluginActionSubmit: function ({plugin_id, form_data}) {
-            pluginAPI.submitAction(this.server_id, plugin_id, form_data)
+            return pluginAPI.submitAction(this.server_id, plugin_id, form_data)
                 .then((response) => {
                     const successMessage = response.data.data.message
                     this.$bvToast.toast(successMessage, {

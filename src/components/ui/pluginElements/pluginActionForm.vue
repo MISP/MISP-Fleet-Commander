@@ -43,7 +43,14 @@
 
         </b-form-group>
 
-        <b-button type="submit" variant="primary">Submit</b-button>
+        <b-button variant="primary" type="submit" :disabled="postInProgress">
+            <b-spinner 
+                small
+                v-if="postInProgress"
+            ></b-spinner>
+            <span class="sr-only">Submitting...</span>
+            <span v-if="!postInProgress">Submit</span>
+        </b-button>
     </b-form>
 </template>
 
@@ -60,10 +67,14 @@ export default {
             type: Object,
             required: true
         },
+        submit_function: {
+            type: Function,
+        }
     },
     data: function() {
         return {
             formData: {},
+            postInProgress: false
         }
     },
     computed: {
@@ -77,7 +88,11 @@ export default {
                 plugin_id: this.plugin.id,
                 form_data: { ...this.formData }
             }
-            this.$emit("pluginActionFormSubmit", finalData)
+            this.postInProgress = true
+            this.submit_function(finalData)
+                .finally(() => {
+                    this.postInProgress = false
+                })
         }
     },
     created() {
