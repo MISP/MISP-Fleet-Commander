@@ -6,6 +6,7 @@
             v-for="(group, index) in getServerGroups"
             v-bind:key="index"
             @click="selectServerGroup(group)"
+            :active="getSelectedServerGroup && getSelectedServerGroup.id == group.id"
             >{{ group.name }}</b-dropdown-item>
         </template>
         <template v-else>
