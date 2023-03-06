@@ -48,11 +48,14 @@ const actions = {
             commit('setFetchingServersIndexInProgress', true)
             api.getIndexValues(indexValues => {
                 commit("setPluginIndexValues", indexValues)
+                commit('setFetchingServersIndexInProgress', false)
                 resolve()
             },
-                (error) => { reject(error) }
+                (error) => { 
+                    commit('setFetchingServersIndexInProgress', false)
+                    reject(error)
+                }
             )
-            commit('setFetchingServersIndexInProgress', false)
         })
     },
     fetchViewValues({ commit }, { no_cache, serverID }) {
@@ -60,11 +63,14 @@ const actions = {
             commit('setFetchingServerViewInProgress', true)
             api.getViewValues(serverID, viewValues => {
                 commit("setPluginViewValues", { serverID: serverID, viewValues: viewValues})
+                commit('setFetchingServerViewInProgress', false)
                 resolve()
             },
-                (error) => { reject(error) }
+                (error) => { 
+                    reject(error)
+                    commit('setFetchingServerViewInProgress', false)
+                }
             )
-            commit('setFetchingServerViewInProgress', false)
         })
     },
 }

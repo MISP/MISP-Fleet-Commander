@@ -283,9 +283,9 @@
             </template>
 
             <template v-for="field in pluginFields" v-slot:[`cell(${field.key})`]="row">
-                <loaderPlaceholder :loading="!server_query_in_progress[row.item.id]" :key="field.key">
+                <loaderPlaceholder :loading="!fetching_plugin_index_in_progress" :key="field.key">
                     <pluginValueRenderer
-                        v-if="row.value !== undefined"
+                        v-if="row.value"
                         :server_id="row.item.id"
                         :plugin_name="field.key" 
                         :plugin_response="row.value" 
@@ -514,6 +514,7 @@ export default {
     computed: {
         ...mapState({
             fetching_servers_in_progress: state => state.servers.fetching_servers_in_progress,
+            fetching_plugin_index_in_progress: state => state.plugins.fetching_index_in_progress,
             selectedServerGroup: state => state.serverGroups.selected,
             servers: state => state.servers.servers,
             server_status: state => state.servers.server_status,
