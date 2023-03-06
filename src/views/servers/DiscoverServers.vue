@@ -124,7 +124,7 @@ export default {
                 })
                 .catch(error => {
                     this.$bvToast.toast(error, {
-                        title: "Could not fetch latest version from GitHub",
+                        title: "Could not add server",
                         variant: "danger",
                     })
                 })

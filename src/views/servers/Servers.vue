@@ -155,7 +155,6 @@
 
             <template v-slot:head(server_status)>
                 Status
-                <sup><b-badge class="ml-auto" variant="primary" :title="`Latest MISP version: ${githubVersion}`">{{ githubVersion }}</b-badge></sup>
             </template>
 
             <template v-slot:cell(url)="row">
@@ -515,7 +514,6 @@ export default {
     computed: {
         ...mapState({
             fetching_servers_in_progress: state => state.servers.fetching_servers_in_progress,
-            githubVersion: state => state.servers.githubVersion,
             selectedServerGroup: state => state.serverGroups.selected,
             servers: state => state.servers.servers,
             server_status: state => state.servers.server_status,
@@ -674,20 +672,6 @@ export default {
         runUpdates(data) {
             return data
         },
-        fetchGithubVersion() {
-            this.$store.dispatch("servers/fetchGithubVersion")
-                .catch(error => {
-                    this.$bvToast.toast(error, {
-                        title: "Could not fetch latest version from GitHub",
-                        variant: "danger",
-                    })
-                })
-        },
-        fetchGithubVersionIfNeeded() {
-            if (this.githubVersion.length === 0) {
-                this.fetchGithubVersion()
-            }
-        },
         refreshServerIndex(full=false) {
             this.table.isBusy = true
             return new Promise((resolve, reject) => {
@@ -823,7 +807,6 @@ export default {
     },
     mounted() {
         this.fullRefreshIfNeeded()
-        // this.fetchGithubVersionIfNeeded()
         this.populatePluginFields()
     },
 }

@@ -5,7 +5,6 @@ import Vue from "vue"
 const init_state = () => {
     return {
         fetching_servers_in_progress: false,
-        githubVersion: "",
         servers: {},
         server_status: {},
         server_query_in_progress: {},
@@ -153,19 +152,6 @@ const actions = {
                 server_id,
                 (users) => {
                     commit("updateUsers", { server_id: server_id, users: users})
-                    resolve()
-                },
-                (error) => { 
-                    reject(error)
-                }
-            )
-        })
-    },
-    fetchGithubVersion({ commit }) {
-        return new Promise((resolve, reject) => {
-            api.fetchGithubVersion(
-                (githubReply) => {
-                    commit("setGithubVersion", githubReply)
                     resolve()
                 },
                 (error) => { 
@@ -375,11 +361,6 @@ const mutations = {
         }
         state.server_users[server_id] = Object.assign({}, state.server_users[server_id], users)
     },
-    setGithubVersion(state, githubReply) {
-        const githubVersion = githubReply.tag_name
-        state.githubVersion = githubVersion
-        setUpdatableServers(state)
-    }
 }
 
 function setAllQueryInfo(state, server_id, server_info) {
@@ -408,44 +389,6 @@ function commitAllQueryInfo(commit, server_id, info) {
     commit("setServerUsage", { server_id: server_id, server_usage: queryResult["serverUsage"] })
     commit("setFinalSettings", { server_id: server_id, final_settings: queryResult["serverSettings"]["finalSettings"]})
     commit("setDiagnosticFull", { server_id: server_id, diagnostic_full: queryResult["serverSettings"] })
-}
-
-function setUpdatableServers(state) {
-    Object.values(state.servers).forEach(server => {
-        server.canBeUpdated = canBeUpdated(state, server)
-    })
-}
-
-function canBeUpdated(state, server) {
-    const githubVersion = state.githubVersion
-    if (githubVersion !== "" && githubVersion !== undefined) {
-        const server_status = state.server_status[server.id]
-        if (server_status !== undefined && server_status.data !== undefined) {
-            const parsedGithubVersion = tokenizeMISPVersion(githubVersion)
-            const parsedServerVersion = tokenizeMISPVersion(server_status.data)
-            if (parsedGithubVersion.major !== parsedServerVersion.major) {
-                return false // update for major version should be done manually
-            } else if (parsedGithubVersion.minor !== parsedServerVersion.minor) {
-                return false // update for major version should be done manually
-            } else if (parsedGithubVersion.patch > parsedServerVersion.patch) {
-                return true
-            } else {
-                return false
-            }
-        }
-    }
-    return false
-}
-function tokenizeMISPVersion(versionString) {
-    let version = {}
-    if (versionString !== "" && versionString !== undefined) {
-        if (versionString.startsWith("v")) {
-            versionString = versionString.slice(1)
-        }
-        let arr = versionString.split(".")
-        version = {major: arr[0], minor: arr[1], patch: arr[2]}
-    }
-    return version
 }
 
 export default {

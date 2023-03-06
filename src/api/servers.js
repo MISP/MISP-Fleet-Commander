@@ -12,7 +12,7 @@ const urls = {
     edit: `${baseurl}/servers/edit`,
     delete: `${baseurl}/servers/delete`,
     restQuery: `${baseurl}/servers/restQuery`,
-    getUsers: `${baseurl}/servers/getUsers`
+    getUsers: `${baseurl}/servers/getUsers`,
 }
 
 export default {
@@ -56,21 +56,6 @@ export default {
                 cb(response.data)
             }).catch(error => {
                 errorCb(error.toJSON().message)
-            })
-    },
-
-    fetchGithubVersion(cb, errorCb) {
-        const url = "https://api.github.com/repos/MISP/MISP/releases/latest"
-        return axios.get(url)
-            .then((response) => {
-                cb(response.data)
-            }).catch(error => {
-                console.log(error)
-                if (error.data !== undefined) {
-                    errorCb(error.data.toJSON())
-                } else {
-                    errorCb(error)
-                }
             })
     },
 
