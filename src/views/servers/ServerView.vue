@@ -128,16 +128,28 @@ export default {
         },
         quickRefresh() {
             this.getOnlineStatus()
+            this.refreshPluginViewValues()
         },
         fullRefresh() {
             this.getOnlineStatus()
+            this.refreshPluginViewValues()
             if (!this.infoRefreshInProgress) {
                 this.fetchServerInfo()
             }
-        }
+        },
+        refreshPluginViewValues(no_cache=false) {
+            this.$store.dispatch("plugins/fetchViewValues", {no_cache: no_cache, serverID: this.server_id})
+                .catch(error => {
+                    this.$bvToast.toast(error, {
+                        title: "Could not fetch plugin values",
+                        variant: "danger",
+                    })
+                })
+        },
     },
     mounted() {
         this.quickRefresh()
+        this.$store.dispatch("plugins/getPlugins", {use_cache: true})
     },
     beforeRouteEnter(to, from, next) {
         if (store.getters["serverGroups/selectedServerGroup"] === null) {

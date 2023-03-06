@@ -285,12 +285,12 @@
 
             <template v-for="field in pluginFields" v-slot:[`cell(${field.key})`]="row">
                 <loaderPlaceholder :loading="!server_query_in_progress[row.item.id]" :key="field.key">
-                    <pluginIndexColumn
+                    <pluginValueRenderer
                         v-if="row.value !== undefined"
                         :server_id="row.item.id"
                         :plugin_name="field.key" 
                         :plugin_response="row.value" 
-                    ></pluginIndexColumn>
+                    ></pluginValueRenderer>
                 </loaderPlaceholder>
             </template>
 
@@ -353,7 +353,7 @@ import proxyStatus from "@/views/servers/elements/proxyStatus.vue"
 import workersStatus from "@/views/servers/elements/workersStatus.vue"
 import submodulesStatus from "@/views/servers/elements/submodulesStatus.vue"
 import zeroMQStatus from "@/views/servers/elements/zeroMQStatus.vue"
-import pluginIndexColumn from "@/views/servers/elements/pluginIndexColumn.vue"
+import pluginValueRenderer from "@/views/servers/elements/pluginValueRenderer.vue"
 import connectionsSummary from "@/views/servers/elements/connectionsSummary.vue"
 import contextualMenu from "@/components/ui/elements/contextualMenu.vue"
 import RowDetails from "@/views/servers/elements/RowDetails.vue"
@@ -377,7 +377,7 @@ export default {
         proxyStatus,
         submodulesStatus,
         zeroMQStatus,
-        pluginIndexColumn,
+        pluginValueRenderer,
         connectionsSummary,
         contextualMenu,
         workersStatus,

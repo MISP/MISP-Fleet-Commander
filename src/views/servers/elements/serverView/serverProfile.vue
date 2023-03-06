@@ -64,11 +64,11 @@
         </b-card-body>
         <hr v-if="isOnline" class="my-0" />
 
-        <b-card-body v-if="isOnline" class="p-0 pb-2" role="tab">
+        <b-card-body v-if="isOnline" class="p-0" role="tab">
             <h5 class="card-title mb-0 mx-3 my-2">
                 Server Info
             </h5>
-            <b-overlay :show="info_refresh_in_progress" rounded="sm">
+            <b-overlay :show="info_refresh_in_progress" rounded="sm" class="table-server-info">
                 <b-table-simple
                 striped small
                 class="mb-0"
@@ -79,7 +79,17 @@
                     <b-tbody>
                         <b-tr v-for="(v, k) in infoData" v-bind:key="k">
                             <b-th class="text-nowrap text-right pr-3">{{ k }}</b-th>
-                            <b-td>{{ v }}</b-td>
+                            <b-td>
+                                <template v-if="Object.keys(defaultInfoData).includes(k)">{{ v }}</template>
+                                <template v-else>
+                                    <pluginValueRenderer
+                                        v-if="v !== undefined"
+                                        :server_id="server_id"
+                                        :plugin_name="k" 
+                                        :plugin_response="v" 
+                                    ></pluginValueRenderer>
+                                </template>
+                            </b-td>
                         </b-tr>
                     </b-tbody>
                 </b-table-simple>
@@ -96,10 +106,12 @@ import workersStatus from "@/views/servers/elements/workersStatus.vue"
 import submodulesStatus from "@/views/servers/elements/submodulesStatus.vue"
 import zeroMQStatus from "@/views/servers/elements/zeroMQStatus.vue"
 import connectionsSummary from "@/views/servers/elements/connectionsSummary.vue"
+import pluginValueRenderer from "@/views/servers/elements/pluginValueRenderer.vue"
 
 export default {
     name: "ServerViewProfile",
     components: {
+        pluginValueRenderer,
     },
     props: {
         server_id: {
@@ -109,6 +121,13 @@ export default {
         info_refresh_in_progress: {
             required: true,
             type: Boolean,
+        }
+    },
+    data: function () {
+        return {
+            defaultInfoData: {
+                "MISP UUID": "",
+            }
         }
     },
     computed: {
@@ -126,7 +145,14 @@ export default {
             server_users: state => state.servers.server_users,
             last_refresh: state => state.servers.last_refresh,
             final_settings: state => state.servers.final_settings,
+            allPluginValues: state => state.plugins.pluginViewValues,
         }),
+        ...mapGetters({
+            viewPlugins: "plugins/viewPlugins",
+        }),
+        pluginValuesForServer: function() {
+            return this.allPluginValues[this.server_id]
+        },
         getServer: function() {
             return this.servers[this.server_id]
         },
@@ -215,20 +241,15 @@ export default {
             return status
         },
         infoData: function() {
-            let info = {
-                "Version": "",
-                "MISP UUID": "",
-            }
+            let info = Object.assign({}, this.defaultInfoData)
             if (this.getFinalSettings.error !== undefined) {
                 return info
             }
-            info["Version"] = this.getServerStatus.data
             info["MISP UUID"] = this.getFinalSettings['MISP.uuid']
+            this.viewPlugins.forEach(plugin => {
+                info[plugin.name] = this.pluginValuesForServer ? (this.pluginValuesForServer[plugin.id] || {}) : {}
+            })
             return info
-        }
-    },
-    data: function () {
-        return {
         }
     },
     methods: {
@@ -240,4 +261,8 @@ export default {
 </script>
 
 <style scoped>
+    .table-server-info {
+        max-height: 20rem;
+        overflow: auto;
+    }
 </style>

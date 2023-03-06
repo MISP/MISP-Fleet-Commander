@@ -27,7 +27,7 @@ const getters = {
 const actions = {
     getPlugins({ commit }, {use_cache}) {
         return new Promise((resolve, reject) => {
-            if (getters.pluginCount == 0 || (use_cache !== undefined && use_cache == false)) {
+            if (state.all.length == 0 || (use_cache !== undefined && use_cache == false)) {
                 api.index(
                     plugins => {
                         commit("setPlugins", plugins)
@@ -42,14 +42,26 @@ const actions = {
     },
     fetchIndexValues({ commit }, { no_cache }) {
         return new Promise((resolve, reject) => {
-            commit('setFetchingServersInProgress', true)
+            commit('setFetchingServersIndexInProgress', true)
             api.getIndexValues(indexValues => {
                 commit("setPluginIndexValues", indexValues)
                 resolve()
             },
                 (error) => { reject(error) }
             )
-            commit('setFetchingServersInProgress', false)
+            commit('setFetchingServersIndexInProgress', false)
+        })
+    },
+    fetchViewValues({ commit }, { no_cache, serverID }) {
+        return new Promise((resolve, reject) => {
+            commit('setFetchingServerViewInProgress', true)
+            api.getViewValues(serverID, viewValues => {
+                commit("setPluginViewValues", { serverID: serverID, viewValues: viewValues})
+                resolve()
+            },
+                (error) => { reject(error) }
+            )
+            commit('setFetchingServerViewInProgress', false)
         })
     },
 }
@@ -60,8 +72,12 @@ const mutations = {
         state.all = plugins
     },
 
-    setFetchingServersInProgress(state, flag) {
+    setFetchingServersIndexInProgress(state, flag) {
         state.fetching_index_in_progress = flag
+    },
+
+    setFetchingServerViewInProgress(state, flag) {
+        state.fetching_view_in_progress = flag
     },
 
     setPluginIndexValues(state, indexValues) {
@@ -71,6 +87,13 @@ const mutations = {
             }
             state.pluginIndexValues[serverID] = Object.assign({}, state.pluginIndexValues[serverID], indexValue)
         }
+    },
+
+    setPluginViewValues(state, {serverID, viewValues}) {
+        if (state.pluginViewValues[serverID] === undefined) {
+            Vue.set(state.pluginViewValues, serverID, {})
+        }
+        state.pluginViewValues[serverID] = Object.assign({}, state.pluginViewValues[serverID], viewValues)
     },
 }
 

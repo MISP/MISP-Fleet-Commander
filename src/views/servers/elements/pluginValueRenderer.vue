@@ -30,7 +30,7 @@ import boolean from "@/components/ui/pluginElements/boolean.vue";
 import textVariant from "@/components/ui/pluginElements/textVariant.vue";
 
 export default {
-    name: "pluginIndexColumn",
+    name: "pluginValueRenderer",
     components: {
         generic,
         boolean,
