@@ -25,11 +25,23 @@ def index():
 def indexValues(group_id=None):
     servers = serverModel.index(group_id)
     if servers:
-        allIndexValues = pluginsModel.getAllIndexValue(loadedPlugins, servers)
+        allIndexValues = pluginsModel.getAllIndexValues(loadedPlugins, servers)
         response = {
             serverID: {
                 pluginID: indexValue.to_dict() for pluginID, indexValue in pluginValues.items()
             } for serverID, pluginValues in allIndexValues.items()
+        }
+        return jsonify(response)
+    else:
+        return jsonify([])
+
+@BPplugins.route('/plugins/viewValues/<int:server_id>', methods=['GET'])
+def viewValues(server_id):
+    server = Server.query.get(server_id)
+    if server:
+        allViewValues = pluginsModel.getAllViewValues(loadedPlugins, server)
+        response = {
+            pluginID: viewValue.to_dict() for pluginID, viewValue in allViewValues.items()
         }
         return jsonify(response)
     else:

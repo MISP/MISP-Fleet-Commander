@@ -121,7 +121,7 @@ class BasePlugin:
         return self.__str__()
 
 
-def getAllIndexValue(loadedPlugins: list, servers: List[Server]) -> list:
+def getAllIndexValues(loadedPlugins: list, servers: List[Server]) -> list:
     indexValues = defaultdict(dict)
     for plugin in loadedPlugins:
         for server in servers:
@@ -135,6 +135,20 @@ def getIndexValue(server: Server, plugin):
     except Exception as e:
         indexValue = FailPluginResponse({}, [str(e)])
     return indexValue
+
+def getAllViewValues(loadedPlugins: list, server: Server) -> list:
+    viewValues = defaultdict(dict)
+    for plugin in loadedPlugins:
+        viewValues[plugin['id']] = getViewValue(server, plugin)
+    return viewValues
+
+def getViewValue(server: Server, plugin):
+    pluginInstance = plugin['instance']
+    try:
+        viewValue = pluginInstance.view(server)
+    except Exception as e:
+        viewValue = FailPluginResponse({}, [str(e)])
+    return viewValue
 
 
 # class baseAdministrationHelper:
