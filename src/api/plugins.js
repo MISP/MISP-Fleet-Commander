@@ -6,6 +6,7 @@ const urls = {
     index: `${baseurl}/plugins/index`,
     getIndexValues: `${baseurl}/plugins/indexValues`,
     getViewValues: `${baseurl}/plugins/viewValues`,
+    submitAction: `${baseurl}/plugins/doAction`,
 }
   
 export default {
@@ -36,4 +37,8 @@ export default {
                 errorCb(error.toJSON().message)
             })
     },
+    submitAction(serverID, pluginID, data) {
+        const url = `${urls.submitAction}/${serverID}/${pluginID}`
+        return axios.post(url, data)
+    }
 }

@@ -21,6 +21,9 @@ const getters = {
     viewPlugins: state => {
         return state.all.filter(plugin => plugin.features.view)
     },
+    actionPlugins: state => {
+        return state.all.filter(plugin => plugin.features.action)
+    },
 }
 
 // actions

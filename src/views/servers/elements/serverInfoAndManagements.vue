@@ -18,9 +18,9 @@
             </template>
             <div :style="getMaxHeight">
                 <keep-alive>
-                <MISPPlugins
-                    :server_id="server_id"
-                ></MISPPlugins>
+                    <pluginAction
+                        :server_id="server_id"
+                    ></pluginAction>
                 </keep-alive>
             </div>
         </b-tab>
@@ -164,6 +164,7 @@ import jsonViewer from "@/components/ui/elements/jsonViewer.vue"
 import MISPRemoteAdministration from "@/views/servers/elements/MISPRemoteAdministration.vue"
 import MISPSchemaDiagnostic from "@/views/servers/elements/MISPSchemaDiagnostic.vue"
 import MISPConnectedServers from "@/views/servers/elements/MISPConnectedServers.vue"
+import pluginAction from "@/views/servers/elements/pluginAction.vue"
 
 export default {
     name: "serverInfoAndManagements",
@@ -174,6 +175,7 @@ export default {
         MISPRemoteAdministration,
         MISPSchemaDiagnostic,
         MISPConnectedServers,
+        pluginAction,
     },
     props: {
         server_id: {
