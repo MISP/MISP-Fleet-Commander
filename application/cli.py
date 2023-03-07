@@ -28,8 +28,21 @@ def queryInfo(server_id, cache=True):
 
 @server_cli.command('query-group')
 @click.argument('group_id')
-@click.argument('delay_second', required=False, default=10)
-def queryGroup(group_id: int, delay_second: int = 10):
+@click.option('--delay_second', required=False, default=10)
+def queryGroup(group_id: int, delay_second: int):
+    doQueryGroup(group_id, delay_second)
+
+@server_cli.command('watch-group')
+@click.argument('group_id')
+@click.option('--minute', required=False, default=5)
+@click.option('--delay_second', required=False, default=10)
+def watchGroup(group_id: int, minute: int = 5, delay_second: int = 10):
+    while True:
+        doQueryGroup(group_id, delay_second)
+        print(f'Sleeping {minute*60}')
+        time.sleep(minute*60)
+
+def doQueryGroup(group_id: int, delay_second: int = 10):
     server_group = serverGroupModel.get(group_id)
     if server_group is not None:
         print(f'Querying all {len(server_group.servers)} servers from group {server_group.name} ({server_group.id})')
@@ -41,14 +54,3 @@ def queryGroup(group_id: int, delay_second: int = 10):
             print(f'\t Took {time.time() - timer1:.2f}')
     else:
         print('No server group with that ID')
-
-
-@server_cli.command('watch-group')
-@click.argument('group_id')
-@click.argument('minute', required=False, default=5)
-@click.argument('delay_second', required=False, default=10)
-def watchGroup(group_id: int, minute: int = 5, delay_second: int = 10):
-    while True:
-        queryGroup(group_id, delay_second)
-        print(f'Sleeping {minute*60}')
-        time.sleep(minute*60)
