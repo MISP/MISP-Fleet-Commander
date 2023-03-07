@@ -1,0 +1,144 @@
+import * as d3 from "d3"
+
+export default {
+    constructNetwork(svgNode, containerBoundingRect, d3data, componentGenerator, eventHandlers, callbacks) {
+        const boundingRect = containerBoundingRect
+        const nodeHeight = 300
+        const nodeWidth = 350
+        const width = boundingRect.width
+        const height = boundingRect.height
+
+        const svg = d3.select(svgNode)
+            .attr("width", width)
+            .attr("height", height)
+        const container = svg.append("g").attr("class", "zoomContainer")
+
+        const simulation = d3.forceSimulation(d3data.nodes)
+            .alphaDecay(0.35)
+            // .alphaDecay(0.15)
+            // .force("link", d3.forceLink(this.d3data.links).id(function(d) { return d.id }))
+            .force("link", d3.forceLink(d3data.links).id(function(d) { return d.id }).distance(nodeWidth/2).strength(0.5))
+            // .force("charge", d3.forceManyBody())
+            // .force("charge", d3.forceManyBody().strength(-5000))
+            .force("collide", d3.forceCollide(nodeWidth))
+            .force("center", d3.forceCenter(width / 2, height / 2))
+
+        const zoom = d3.zoom()
+            .scaleExtent([.08, 4])
+            .on("zoom", function (event) { container.attr("transform", event.transform) })
+            .on("end", function (event) {
+                eventHandlers.refreshMinimap()
+                eventHandlers.updateScale(event.transform)
+            })
+        svg.call(zoom)
+
+        const link = container.append("g")
+            .attr("class", "links")
+            .selectAll("line")
+            .data(d3data.links)
+            .enter().append("line")
+            .attr("class", "link")
+            .attr("stroke", "#999")
+            .attr("stroke-opacity", 0.6)
+            .style("stroke-width", function(d) { return Math.sqrt(d.weight ? d.weight : 1) })
+
+        const node = container.append("g")
+            .attr("class", "nodes")
+            .selectAll("div")
+            .data(d3data.nodes)
+            .enter().append("g")
+            // eslint-disable-next-line no-unused-vars
+            .on("click", function(event, node) {
+                eventHandlers.nodeClick(node)
+            })
+            .call(drag(simulation))
+
+        node.append("foreignObject")
+            .attr("id", d => `node-${d.id}`)
+            .attr("height", nodeHeight)
+            .attr("width", nodeWidth)
+            .classed("nodeFO", true)
+            .append("xhtml:div")
+            .attr("data-vue-component", (selection, index, htmlNodes) => {
+                const d3Node = d3.select(`#node-${selection.id}`)
+                const d3SVGNode = svg.node()
+                const htmlNode = htmlNodes[index]
+                componentGenerator.genericNodeComponent(selection, htmlNode, d3Node, d3SVGNode)
+            })
+
+        simulation
+            .nodes(d3data.nodes)
+            .on("tick", () => {
+                link
+                    .attr("x1", d => d.source.x + getNodeHalfDimension(d3.select(`#node-${d.source.id}`).node(), "width"))
+                    .attr("y1", d => d.source.y + getNodeHalfDimension(d3.select(`#node-${d.source.id}`).node(), "height"))
+                    .attr("x2", d => d.target.x + getNodeHalfDimension(d3.select(`#node-${d.target.id}`).node(), "width"))
+                    .attr("y2", d => d.target.y + getNodeHalfDimension(d3.select(`#node-${d.target.id}`).node(), "height"))
+
+                node.attr("transform", d => "translate(" + d.x + "," + d.y + ")")
+            })
+            .on("end", () => {
+                eventHandlers.refreshMinimap()
+            })
+            .on("end.init_simulation", () => {
+                eventHandlers.zoomFit()
+                simulation.on("end.init_simulation", null)
+                callbacks.simulationDone()
+            })
+
+        return {
+            svgSelection: svg,
+            simulation: simulation,
+            zoom: zoom
+        }
+
+        function drag(simulation) {
+            function dragstarted(event, d) {
+                if (event.sourceEvent.button === 2) { // ignore right click
+                    dragended(event, d)
+                    return
+                }
+                if (!event.active) simulation.alphaTarget(0.3).restart()
+                d.fx = event.x
+                d.fy = event.y
+            }
+            
+            function dragged(event, d) {
+                d.fx = event.x
+                d.fy = event.y
+            }
+            
+            function dragended(event, d) {
+                if (!event.active) simulation.alphaTarget(0)
+                d.fx = null
+                d.fy = null
+            }
+
+            // Add support of the drag handle
+            function dragfilter(event) {
+                const handleClass = "top-header"
+                const maxDepth = 5
+                let cElement = event.target
+                for (let index = 0; index < maxDepth; index++) {
+                    if (cElement.classList !== undefined) {
+                        if (cElement.classList.contains(handleClass)) {
+                            return true
+                        }
+                    }
+                    cElement = cElement.parentElement
+                }
+                return false
+            }
+            
+            return d3.drag()
+                .filter(dragfilter)
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended)
+        }
+
+        function getNodeHalfDimension(node, dimension) {
+            return node.getBBox()[dimension] / 2
+        }
+    }
+}
