@@ -17,11 +17,6 @@ class UpToDate(BasePlugin):
 
     def view(self, server: Server, data: Optional[dict] = {}) -> PluginResponse:
         upToDateStatus = UpToDate.getStatus(server)
-        # data = {
-        #     'text': upToDateStatus['current'],
-        #     'variant': 'success' if upToDateStatus['up_to_date'] else 'warning'
-        # }
-        # return SuccessPluginResponse(data, None, 'textVariant')
         upToDate = upToDateStatus['up_to_date']
         return SuccessPluginResponse(upToDate, None, 'boolean')
 
