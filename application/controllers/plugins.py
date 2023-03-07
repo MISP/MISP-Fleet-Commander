@@ -9,7 +9,6 @@ import application.models.plugins as pluginsModel
 
 
 BPplugins = Blueprint('plugins', __name__)
-# AM = AdministrationManager()
 
 
 @BPplugins.route('/plugins/index', methods=['GET'])

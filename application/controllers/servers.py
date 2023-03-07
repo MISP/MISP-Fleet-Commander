@@ -1,20 +1,18 @@
-from flask import Blueprint, request, render_template, make_response, jsonify, abort, Response
-# from flask import current_app as app
-from datetime import datetime as dt
-from datetime import timedelta
+#!/usr/bin/env python3
+
 import time
 import json
 import re
 import concurrent.futures
+from datetime import datetime as dt, timedelta
 from collections import Mapping, MutableSequence, defaultdict
+from flask import Blueprint, request, render_template, make_response, jsonify, abort, Response
 from sqlalchemy.orm import with_parent
-# from application import notification_helpers
-# from application.server_notifications.NotificationManager import NotificationManager
-from application.plugins.server_administration.AdministrationManager import AdministrationManager
+
 from application.DBModels import db, User, Server, ServerQuery
 from application.controllers.utils import mispGetRequest, mispPostRequest, batchRequest
 import application.models.servers as serverModel
-#from application.models.servers import index as sindex
+
 
 BPserver = Blueprint('server', __name__)
 
@@ -115,11 +113,9 @@ def delete():
 
 @BPserver.route('/servers/testConnection/<int:server_id>', methods=['GET'])
 def ping_server(server_id):
-    server = Server.query.get(server_id)
-    if server is not None:
-        testConnection = mispGetRequest(server, '/servers/getVersion')
-        testConnection['timestamp'] = int(time.time())
-        return jsonify(testConnection)
+    result = serverModel.testConnection(server_id)
+    if result is not None:
+        return jsonify(result)
     else:
         return jsonify({})
 
@@ -161,17 +157,6 @@ def getUsers(server_id):
     if server is not None:
         server_query_users = fetchServerUsers(server)
         return jsonify(server_query_users)
-    else:
-        return jsonify({'error': 'Unkown server'})
-
-@BPserver.route('/servers/getNotifications/<int:server_id>', methods=['GET'])
-def getNotifications(server_id):
-    server = Server.query.get(server_id)
-    if server is not None:
-        # NM = NotificationManager(server)
-        # results = NM.queryAll()
-        results = []
-        return jsonify(results)
     else:
         return jsonify({'error': 'Unkown server'})
 

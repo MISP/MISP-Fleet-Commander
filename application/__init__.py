@@ -4,8 +4,6 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import MetaData
 from flask_migrate import Migrate
 
-from application.plugins import loadAvailablePlugins
-
 
 # naming_convention = {
 #     "ix": 'ix_%(column_0_label)s',
@@ -16,17 +14,21 @@ from application.plugins import loadAvailablePlugins
 # }
 # db = SQLAlchemy(metadata=MetaData(naming_convention=naming_convention))
 db = SQLAlchemy()
-loadedPlugins = loadAvailablePlugins()
+loadedPlugins = None
+app = None
 
 
 def create_app():
     """Construct the core application."""
+    global loadedPlugins, app
     app = Flask(__name__, instance_relative_config=False)
     app.config.from_object('config.DevelopmentConfig')
     CORS(app)
     migrate = Migrate(app, db)
     migrate.init_app(app, db, render_as_batch=True)
     db.init_app(app)
+    from application.plugins import loadAvailablePlugins
+    loadedPlugins = loadAvailablePlugins()
 
     # app.config.from_object('config.Config')
     # app.config.from_object('config.DevelopmentConfig')
@@ -45,6 +47,11 @@ def create_app():
         app.register_blueprint(BPserverGroup)
         app.register_blueprint(BPplugins)
         app.register_blueprint(BPinstance)
+
+        # Add CLI commands
+        from application.cli import server_cli
+
+        app.cli.add_command(server_cli)
 
         # Create tables for our models
         db.create_all()
