@@ -17,5 +17,5 @@ def searchAll(text: str) -> List:
         (Server.url.ilike(search)) |
         (Server.comment.ilike(search))
     )
-    servers = query.limit(15).all()
+    servers = query.limit(10).all()
     return servers
