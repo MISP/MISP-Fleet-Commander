@@ -6,6 +6,7 @@ const urls = {
     index: `${baseurl}/plugins/index`,
     getIndexValues: `${baseurl}/plugins/indexValues`,
     getViewValues: `${baseurl}/plugins/viewValues`,
+    notifications: `${baseurl}/plugins/notifications`,
     submitAction: `${baseurl}/plugins/doAction`,
 }
   
@@ -40,5 +41,14 @@ export default {
     submitAction(serverID, pluginID, data) {
         const url = `${urls.submitAction}/${serverID}/${pluginID}`
         return axios.post(url, data)
-    }
+    },
+    getNotifications(serverID, cb, errorCb) {
+        const url = `${urls.notifications}/${serverID}`
+        return axios.get(url)
+            .then((response) => {
+                cb(response.data)
+            }).catch(error => {
+                errorCb(error.toJSON().message)
+            })
+    },
 }

@@ -6,8 +6,10 @@ const state = {
     all: [],
     fetching_index_in_progress: false,
     fetching_view_in_progress: false,
+    fetching_notifications_in_progress: false,
     pluginIndexValues: {},
     pluginViewValues: {},
+    pluginNotifications: {},
 }
 
 // getters
@@ -24,6 +26,12 @@ const getters = {
     actionPlugins: state => {
         return state.all.filter(plugin => plugin.features.action)
     },
+    notificationPlugins: state => {
+        return state.all.filter(plugin => plugin.features.notifications)
+    },
+    pluginNotificationFor: (state) => (server_id, plugin_id) => {
+        return state.pluginNotifications[server_id] ? (state.pluginNotifications[server_id][plugin_id] ? state.pluginNotifications[server_id][plugin_id] : []) : []
+    }
 }
 
 // actions
@@ -73,6 +81,21 @@ const actions = {
             )
         })
     },
+    fetchNotifications({ commit }, { no_cache, serverID }) {
+        return new Promise((resolve, reject) => {
+            commit('setFetchingServerNotificationInProgress', true)
+            api.getNotifications(serverID, notifications => {
+                commit("setPluginNotifications", { serverID: serverID, notifications: notifications })
+                commit('setFetchingServerNotificationInProgress', false)
+                resolve()
+            },
+                (error) => { 
+                    reject(error)
+                    commit('setFetchingServerNotificationInProgress', false)
+                }
+            )
+        })
+    },
 }
 
 // mutations
@@ -84,9 +107,11 @@ const mutations = {
     setFetchingServersIndexInProgress(state, flag) {
         state.fetching_index_in_progress = flag
     },
-
     setFetchingServerViewInProgress(state, flag) {
         state.fetching_view_in_progress = flag
+    },
+    setFetchingServerNotificationInProgress(state, flag) {
+        state.fetching_notifications_in_progress = flag
     },
 
     setPluginIndexValues(state, indexValues) {
@@ -103,6 +128,13 @@ const mutations = {
             Vue.set(state.pluginViewValues, serverID, {})
         }
         state.pluginViewValues[serverID] = Object.assign({}, state.pluginViewValues[serverID], viewValues)
+    },
+
+    setPluginNotifications(state, { serverID, notifications }) {
+        if (state.pluginNotifications[serverID] === undefined) {
+            Vue.set(state.pluginNotifications, serverID, {})
+        }
+        state.pluginNotifications[serverID] = Object.assign({}, state.pluginNotifications[serverID], notifications)
     },
 }
 

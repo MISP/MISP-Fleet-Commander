@@ -1,6 +1,6 @@
 <template>
     <b-tabs @input="handleTabChange" ref="tabs" card>
-        <b-tab class="p-1" no-body lazy>
+        <b-tab class="p-1" no-body lazy active>
             <template #title>
                 <i class="fas fa-tools mr-1"></i><strong>Remote administration</strong>
             </template>
@@ -24,7 +24,7 @@
                 </keep-alive>
             </div>
         </b-tab>
-        <b-tab title="Diagnostic" class="p-1" active no-body lazy>
+        <b-tab title="Diagnostic" class="p-1" no-body lazy>
             <keep-alive>
             <b-card no-body>
                 <b-tabs pills card vertical>
