@@ -7,7 +7,8 @@
 #     return method
 
 from collections import defaultdict
-from typing import List, Optional
+import time
+from typing import List, Optional, Union
 import json
 from application.DBModels import db, User, Server, ServerQuery
 # from application import loadedPlugins
@@ -79,6 +80,44 @@ class ErrorPluginResponse(PluginResponse):
         super().__init__('error', data, errors, component)
 
 
+class PluginNotification:
+
+    class Severity:
+        NA = 0
+        LOW = 1
+        MEDIUM = 2
+        HIGH = 3
+
+    def __init__(
+        self,
+        title: str,
+        severity: Optional[Union[int, None]] = 0,
+        timestamp: Optional[Union[int, None]] = None,
+        origin: Optional[str] = '',
+        data: Optional[dict] = {}
+    ) -> List[dict]:
+        self.title = title
+        self.severity = severity if severity is not None else PluginNotification.Severity.NA
+        self.timestamp = timestamp if timestamp is not None else int(time.time())
+        self.origin = origin
+        self.data = data
+
+    def __iter__(self):
+        yield from self.__dict__.items()
+
+    def to_dict(self):
+        return self.__dict__
+
+    def __str__(self):
+        return json.dumps(dict(self), ensure_ascii=False)
+
+    def __repr__(self):
+        return self.__str__()
+    
+    def to_json(self):
+        return self.__str__()
+
+
 class BasePlugin:
     id = 'unamed-plugin'
     name = 'Unamed plugin'
@@ -136,8 +175,9 @@ def getPluginFromID(loadedPlugins: list, pluginID: str):
 def getAllIndexValues(loadedPlugins: list, servers: List[Server]) -> dict:
     indexValues = defaultdict(dict)
     for plugin in loadedPlugins:
-        for server in servers:
-            indexValues[server.id][plugin['id']] = getIndexValue(server, plugin)
+        if plugin['features']['index']:
+            for server in servers:
+                indexValues[server.id][plugin['id']] = getIndexValue(server, plugin)
     return indexValues
 
 def getIndexValue(server: Server, plugin) -> PluginResponse:
@@ -151,7 +191,8 @@ def getIndexValue(server: Server, plugin) -> PluginResponse:
 def getAllViewValues(loadedPlugins: list, server: Server) -> dict:
     viewValues = defaultdict(dict)
     for plugin in loadedPlugins:
-        viewValues[plugin['id']] = getViewValue(server, plugin)
+        if plugin['features']['view']:
+            viewValues[plugin['id']] = getViewValue(server, plugin)
     return viewValues
 
 def getViewValue(server: Server, plugin) -> PluginResponse:
@@ -170,6 +211,21 @@ def doAction(server: Server, plugin, data: Optional[dict]) -> PluginResponse:
         actionResult = FailPluginResponse({}, [str(e)])
     return actionResult
 
+def getNotificationForPlugin(server: Server, plugin) -> PluginResponse:
+    pluginInstance = plugin['instance']
+    try:
+        notifications = pluginInstance.notifications(server)
+        notifications.data = [notificationData.to_dict() for notificationData in notifications.data]
+    except Exception as e:
+        notifications = FailPluginResponse({}, [str(e)])
+    return notifications
+
+def getAllNotifications(loadedPlugins: list, server: Server) -> dict:
+    allNotifications = defaultdict(dict)
+    for plugin in loadedPlugins:
+        if plugin['features']['notifications']:
+            allNotifications[plugin['id']] = getNotificationForPlugin(server, plugin)
+    return allNotifications
 
 # class baseAdministrationHelper:
 #     name = 'base'

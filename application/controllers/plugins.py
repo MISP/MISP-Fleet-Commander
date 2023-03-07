@@ -58,6 +58,18 @@ def doAction(server_id, plugin_id):
     else:
         return jsonify([])
 
+@BPplugins.route('/plugins/notifications/<int:server_id>', methods=['GET'])
+def notifications(server_id):
+    server = Server.query.get(server_id)
+    if server:
+        allNotifications = pluginsModel.getAllNotifications(loadedPlugins, server)
+        response = {
+            pluginID: notification.to_dict() for pluginID, notification in allNotifications.items()
+        }
+        return jsonify(response)
+    else:
+        return jsonify([])
+
 
 # @BPplugins.route('/plugins/administration/view/<str:pluginName>/<int:server_id>', methods=['GET'])
 # def add(pluginName, server_id):
