@@ -560,6 +560,12 @@ export default {
         haveSelectedServers() {
             return this.selectedServers.length > 0
         },
+        getSelectedServer() {
+            return Array.from(this.selectedServers)
+        },
+        getSelectedServerIDs() {
+            return Array.from(this.selectedServerIDs)
+        },
     },
     methods: {
         setCheckOnServers(checked) {
@@ -712,14 +718,14 @@ export default {
             })
         },
         refreshSelected() {
-            this.$store.dispatch("servers/runSelectedConnectionTest", {selection: this.selectedServers})
+            this.$store.dispatch("servers/runSelectedConnectionTest", {selection: this.getSelectedServerIDs})
                 .catch(error => {
                     this.$bvToast.toast(error, {
                         title: "Could not reach Server",
                         variant: "danger",
                     })
                 })
-            this.$store.dispatch("servers/fetchSelectedServerInfo", {no_cache: true, selection: this.selectedServers})
+            this.$store.dispatch("servers/fetchSelectedServerInfo", {no_cache: true, selection: this.getSelectedServerIDs})
                 .catch(error => {
                     this.$bvToast.toast(error, {
                         title: "Could not fetch server info",
