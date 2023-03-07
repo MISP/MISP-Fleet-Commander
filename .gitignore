@@ -19,3 +19,10 @@ yarn-error.log*
 *.njsproj
 *.sln
 *.sw?
+
+*/__pycache__/*
+*.pyc
+*.swp
+venv
+*.db
+*.sqlite
