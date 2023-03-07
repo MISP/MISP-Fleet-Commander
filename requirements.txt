@@ -1,5 +1,0 @@
-flask_cors
-flask_sqlalchemy
-flask_migrate
-requests
-requests-cache
