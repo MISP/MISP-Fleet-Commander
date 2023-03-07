@@ -20,7 +20,7 @@
                 </div>
             </b-tab>
         </b-tabs>
-  </b-card>
+    </b-card>
 </template>
 
 <script>
@@ -42,7 +42,6 @@ export default {
     },
     data: function() {
         return {
-            formData: {},
         }
     },
     computed: {
@@ -69,14 +68,6 @@ export default {
                 })
         },
     },
-    created() {
-        this.actionPlugins.forEach(plugin => {
-            Vue.set(this.formData, plugin.id, {})
-            plugin.action_parameters.forEach(param => {
-                Vue.set(this.formData[plugin.id], param.key, null)
-            })
-        });
-    }
 }
 </script>
 

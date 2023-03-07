@@ -21,6 +21,9 @@
 </template>
 
 <script>
+import moment from "moment"
+import Duration from "moment"
+
 export default {
     name: "RequestResponseResult",
     props: {
@@ -48,27 +51,20 @@ export default {
         },
         elapsed_time_printable() {
             let text = ""
-            if (this.serverResponse.elapsed_time !== "") {
-                let [h, m, s] = this.serverResponse.elapsed_time.split(":")
-                if (h !== "0") {
-                    text += h + "h "
-                }
-                if (m !== "00") {
-                    text += h + "m "
-                }
-                let ms = s.split(".")
-                s = ms[0]
-                ms = ms[1]
-                if (s !== "00") {
-                    text += s + "s "
-                }
-                text += String(parseInt(ms)/1000) + "ms"
+            let serverReponseDuration
+            if (Duration.isDuration(this.serverResponse.elapsed_time)) {
+                serverReponseDuration = this.serverResponse.elapsed_time
+            } else if (typeof this.serverResponse.elapsed_time === 'string' && this.serverResponse.elapsed_time !== "") {
+                serverReponseDuration = moment.duration(moment(this.serverResponse.elapsed_time, 'H:mm:ss.SSSSSS').diff(moment(0, "HH")))
+            } else {
+                return text
             }
+            text = `${serverReponseDuration.asMilliseconds()}ms`
             return text
         },
         content_length_printable() {
             let text = ""
-            if (this.serverResponse.headers['Content-Length'] !== undefined) {
+            if (this.serverResponse.headers && this.serverResponse.headers['Content-Length'] !== undefined) {
                 text = this.serverResponse.headers['Content-Length'] + " B"
                 if (this.serverResponse.headers['Content-Length'] / (1024*1024) < 1) {
                     text = (this.serverResponse.headers['Content-Length'] / 1024).toFixed(2) + " kB"
@@ -76,7 +72,7 @@ export default {
                     text = (this.serverResponse.headers['Content-Length'] / (1024*1024)).toFixed(2) + " MB"
                 }
             } else {
-                text = "0 B"
+                text = ""
             }
             return text
         }

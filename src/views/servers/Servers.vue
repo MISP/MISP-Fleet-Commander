@@ -97,6 +97,15 @@
                                 ></iconButton>
                             </b-dropdown-item-button>
                             <b-dropdown-item-button
+                                @click="openBatchPluginActionSelectedModal"
+                            >
+                                <iconButton
+                                    text="Batch Plugin Action"
+                                    title="Batch Plugin Action on selected servers"
+                                    icon="plug"
+                                ></iconButton>
+                            </b-dropdown-item-button>
+                            <b-dropdown-item-button
                                 @click="openDeleteSelectedModal"
                                 class="outline-danger"
                             >
@@ -337,6 +346,10 @@
         <BatchAPI
             :server_ids="selectedServerIDs"
         ></BatchAPI>
+
+        <BatchPluginAction
+            :server_ids="selectedServerIDs"
+        ></BatchPluginAction>
     </div>
 </Layout>
 </template>
@@ -361,6 +374,7 @@ import BatchAPI from "@/views/servers/BatchAPI.vue"
 import DeleteSelectedModal from "@/views/servers/DeleteSelectedModal.vue"
 import AddModal from "@/views/servers/AddModal.vue"
 import BatchAddModal from "@/views/servers/BatchAddModal.vue"
+import BatchPluginAction from "@/views/servers/BatchPluginAction.vue"
 import CSVAddModal from "@/views/servers/CSVAddModal.vue"
 import DiscoverServers from "@/views/servers/DiscoverServers.vue"
 import iconButton from "@/components/ui/elements/iconButton.vue"
@@ -389,6 +403,7 @@ export default {
         DiscoverServers,
         iconButton,
         BatchAPI,
+        BatchPluginAction,
     },
     data: function() {
         return {
@@ -663,6 +678,9 @@ export default {
         },
         openBatchAPISelectedModal() {
             this.$bvModal.show("modal-batch-api-selected")
+        },
+        openBatchPluginActionSelectedModal() {
+            this.$bvModal.show("modal-batch-plugin-action-selected")
         },
         viewConnections(data) {
             return data

@@ -227,7 +227,6 @@ export default {
         },
     },
     beforeUpdate: function () {
-        const that = this
         this.server_ids.forEach((server_id) => {
             this.$set(this.requestInProgress, server_id, false)
             this.$set(this.serverResponse, server_id, {})
