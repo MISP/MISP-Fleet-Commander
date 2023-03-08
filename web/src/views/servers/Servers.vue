@@ -181,7 +181,7 @@
                              v-if="row.value.latency !== undefined"
                              :class="{'text-success': row.value.latency < 0.3, 'text-warning': row.value.latency >= 0.3 && row.value.latency < 2, 'text-danger': row.value.latency >= 2}"
                         >
-                            {{ row.value.latency.toFixed(3) }}ms
+                            {{ parseInt(row.value.latency*1000) }}ms
                         </small>
                     </span>
                 </loaderPlaceholder>
