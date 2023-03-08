@@ -1,21 +1,21 @@
 <template>
     <b-modal 
         id="modal-delete-selected"
-        title="Delete selected group"
+        title="Delete selected fleet"
         size="xl"
         scrollable
         @ok.prevent="handleSubmission"
     >
 
-        <b-table-simple small bordered="false" :bordered="false" :borderless="true">
+        <b-table-simple small :bordered="false" :borderless="true">
             <b-tbody>
                 <b-tr>
-                    <b-th>Group name</b-th>
-                    <b-td>{{ getGroup.name }}</b-td>
+                    <b-th>Fleet name</b-th>
+                    <b-td class="font-mono">{{ getGroup.name }}</b-td>
                 </b-tr>
                 <b-tr>
                     <b-th>Description</b-th>
-                    <b-td>{{ getGroup.description || '-- None --' }}</b-td>
+                    <b-td class="text-muted">{{ getGroup.description || '-- None --' }}</b-td>
                 </b-tr>
                 <b-tr>
                     <b-th>Server count</b-th>
@@ -24,12 +24,19 @@
             </b-tbody>
         </b-table-simple>
 
-        <b-table-lite
-            small 
-            :fields="getServerFields"
-            :items="getGroup.servers"
-        >
-        </b-table-lite>
+        <template v-if="getGroup.server_count > 0">
+            <b-table-lite
+                small 
+                :fields="getServerFields"
+                :items="getGroup.servers"
+            >
+            </b-table-lite>
+        </template>
+        <template v-else>
+            <b-alert variant="primary" show>
+                This fleet has no server
+            </b-alert>
+        </template>
 
         <template v-slot:modal-footer="{ ok, cancel }">
             <b-button variant="danger" @click="ok()" :disabled="postInProgress">
@@ -38,7 +45,7 @@
                     v-if="postInProgress"
                 ></b-spinner>
                 <span class="sr-only">Deleting...</span>
-                <span v-if="!postInProgress">Delete</span>
+                <span v-if="!postInProgress">Delete fleet</span>
             </b-button>
             <b-button variant="secondary" @click="cancel()">Cancel</b-button>
         </template>

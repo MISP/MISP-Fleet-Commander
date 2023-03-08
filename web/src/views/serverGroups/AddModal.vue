@@ -1,7 +1,7 @@
 <template>
     <b-modal 
         id="modal-add"
-        title="Add Server Group"
+        title="Add a new fleet"
         size="lg"
         scrollable
         @hidden="resetModal"
@@ -11,11 +11,11 @@
             <b-form ref="modalForm" @submit.prevent="submitForm">
 
                 <b-form-group
-                    label="Server Group Name:"
+                    label="Fleet name"
                     label-for="input-name"
-                    description="The name of the server group"
+                    description="The name of the fleet acting as a group of servers"
                 >
-                    <ValidationProvider v-slot="validationContext" rules="required|min:3" name="Server Group Name">
+                    <ValidationProvider v-slot="validationContext" rules="required|min:3" name="Fleet name">
                         <b-form-input
                             v-model="form.name"
                             :state="getValidationState(validationContext)"
@@ -25,11 +25,11 @@
                 </b-form-group>
 
                 <b-form-group
-                    label="Server Group Description:"
+                    label="Fleet description:"
                     label-for="input-name"
-                    description="Concise description of the server group"
+                    description="Concise description of the fleet"
                 >
-                    <ValidationProvider v-slot="validationContext" rules="max:2048" name="Server Group Description">
+                    <ValidationProvider v-slot="validationContext" rules="max:2048" name="Fleet description">
                         <b-form-input
                             v-model="form.description"
                             :state="getValidationState(validationContext)"
