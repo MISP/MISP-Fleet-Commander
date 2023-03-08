@@ -41,7 +41,7 @@
         </b-list-group>
 
         <b-alert :show="serverGroupEmpty" variant="primary">
-            There are no server group available. Create one to get started!
+            <strong>No fleet available.</strong> Create one to get started!
         </b-alert>
 
         <AddModal
