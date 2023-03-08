@@ -3,14 +3,14 @@ import Vue from "vue"
 
 // initial state
 const state = {
-    all: [],
+    all: {},
     selected: null
 }
 
 // getters
 const getters = {
     serverGroupCount: state => {
-        return state.all.length
+        return Object.values(state.all).length
     },
     selectedServerGroup: state => {
         return state.selected
