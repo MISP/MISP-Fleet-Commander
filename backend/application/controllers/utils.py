@@ -25,7 +25,7 @@ def timer(func):
 
 
 @timer
-def mispGetRequest(server, url, data={}, rawResponse=False):
+def mispGetRequest(server, url, data={}, rawResponse=False, nocache=False):
     headers = {
         "Authorization": server.authkey,
         "Accept": "application/json",
@@ -33,7 +33,10 @@ def mispGetRequest(server, url, data={}, rawResponse=False):
     }
     full_url = urljoin(server.url, url)
     try:
-        response = requestMISPSession.get(full_url, data=data, headers=headers, verify=(not getattr(server, 'skip_ssl', True)))
+        if nocache:
+            response = requests.get(full_url, data=data, headers=headers, verify=(not getattr(server, 'skip_ssl', True)))
+        else:
+            response = requestMISPSession.get(full_url, data=data, headers=headers, verify=(not getattr(server, 'skip_ssl', True)))
         error = handleStatusCode(response)
         if error is not None:
             return error
@@ -54,7 +57,7 @@ def mispGetRequest(server, url, data={}, rawResponse=False):
 
 
 @timer
-def mispPostRequest(server, url, data={}, rawResponse=False):
+def mispPostRequest(server, url, data={}, rawResponse=False, nocache=True):
     headers = {
         "Authorization": server.authkey,
         "Accept": "application/json",
@@ -62,7 +65,10 @@ def mispPostRequest(server, url, data={}, rawResponse=False):
     }
     full_url = urljoin(server.url, url)
     try:
-        response = requestMISPSession.post(full_url, json=data, headers=headers, verify=(not getattr(server, 'skip_ssl', True)))
+        if nocache:
+            response = requests.post(full_url, json=data, headers=headers, verify=(not getattr(server, 'skip_ssl', True)))
+        else:
+            response = requestMISPSession.post(full_url, json=data, headers=headers, verify=(not getattr(server, 'skip_ssl', True)))
         error = handleStatusCode(response)
         if error is not None:
             return error
