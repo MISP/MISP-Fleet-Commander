@@ -9,8 +9,9 @@
                 buttons
                 button-variant="outline-primary"
                 size="sm"
+                class="mr-1"
             ></b-form-radio-group>
-             <b-dropdown variant="primary" size="sm" text="Layout">
+            <b-dropdown variant="primary" size="sm" text="Layout">
                 <b-dropdown-item
                     @click="resetPositions"
                 >
@@ -99,7 +100,6 @@ export default {
             selectedNodeID: null,
             availableScopes: [
                 { text: "Administration", value: "administration" },
-                { text: "Realtime Sharing Simulation", value: "simulation" }
             ],
             d3data: {
                 nodes: [],
@@ -272,7 +272,7 @@ export default {
             this.d3data.links.forEach((link, index) => { // remap source -> origin
                 link.origin = link.source
                 link.source = parseInt(link.origin.id)
-                link.target = parseInt(link.destination.Server.id)
+                link.target = parseInt(link.destination.Server.id) // FIXME: Not working. Server.id will certainly not be the same ID as saved in the backend
                 link.id = `${link.source}-${link.target}`
                 if(this.servers[link.target]) {
                     link.toRemove = false
