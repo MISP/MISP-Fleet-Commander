@@ -301,7 +301,7 @@ def restQuery(server_id):
             'headers': dict(response.headers),
             'status_code': response.status_code,
             'reason': response.reason,
-            'elapsed_time': response.elapsed,
+            'elapsed_time': str(response.elapsed),
             'url': response.url,
             'server_id': server_id,
         }
