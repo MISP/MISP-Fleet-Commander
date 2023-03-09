@@ -28,9 +28,6 @@ class User(BaseModel):
     _hidden_fields = ['password']
     _readonly_fields = ['created']
 
-    def __repr__(self):
-        return self.to_json()
-
 
 #class UserSettings(BaseModel):
 #    __tablename__ == 'user_settings'
@@ -45,8 +42,7 @@ class User(BaseModel):
 #    user = db.relationship('User',
 #        backref=db.backref('user_settings', lazy='joined'))
 #
-#    def __repr__(self):
-#        return self.to_json()
+
 
 class Server(BaseModel):
     __tablename__ = 'servers'
@@ -107,9 +103,6 @@ class Server(BaseModel):
             methods.append("Basic Auth")
         return methods
 
-    def __repr__(self):
-        return self.to_json()
-
 
 class ServerQuery(BaseModel):
     __tablename__ = 'server_queries'
@@ -127,9 +120,6 @@ class ServerQuery(BaseModel):
     _default_fields = ['server_id', 'timestamp', 'query_result']
     _hidden_fields = []
     _readonly_fields = []
-
-    def __repr__(self):
-        return self.to_json()
 
 
 class ServerGroup(BaseModel):
@@ -171,6 +161,3 @@ class ServerGroup(BaseModel):
     _default_fields = ['id', 'name', 'description', 'timestamp', 'server_count',]
     _hidden_fields = []
     _readonly_fields = ['user_id']
-
-    def __repr__(self):
-        return self.to_json()

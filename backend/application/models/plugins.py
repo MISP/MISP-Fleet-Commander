@@ -2,15 +2,11 @@
 # import time
 # from abc import ABC, abstractmethod
 
-# def feature_enabled(method):
-#     method.feature_enabled = False
-#     return method
-
 from collections import defaultdict
 import time
 from typing import List, Optional, Union
 import json
-from application.DBModels import db, User, Server, ServerQuery
+from application.DBModels import Server
 # from application import loadedPlugins
 
 
@@ -180,13 +176,13 @@ def getAllIndexValues(loadedPlugins: list, servers: List[Server]) -> dict:
                 indexValues[server.id][plugin['id']] = getIndexValue(server, plugin)
     return indexValues
 
-def getIndexValue(server: Server, plugin) -> PluginResponse:
+def getIndexValue(server: Server, plugin) -> dict:
     pluginInstance = plugin['instance']
     try:
         indexValue = pluginInstance.index(server)
     except Exception as e:
         indexValue = FailPluginResponse({}, [str(e)])
-    return indexValue
+    return indexValue.response()
 
 def getAllViewValues(loadedPlugins: list, server: Server) -> dict:
     viewValues = defaultdict(dict)
@@ -195,30 +191,30 @@ def getAllViewValues(loadedPlugins: list, server: Server) -> dict:
             viewValues[plugin['id']] = getViewValue(server, plugin)
     return viewValues
 
-def getViewValue(server: Server, plugin) -> PluginResponse:
+def getViewValue(server: Server, plugin) -> dict:
     pluginInstance = plugin['instance']
     try:
         viewValue = pluginInstance.view(server)
     except Exception as e:
         viewValue = FailPluginResponse({}, [str(e)])
-    return viewValue
+    return viewValue.response()
 
-def doAction(server: Server, plugin, data: Optional[dict]) -> PluginResponse:
+def doAction(server: Server, plugin, data: Optional[dict]) -> dict:
     pluginInstance = plugin['instance']
     try:
         actionResult = pluginInstance.action(server, data)
     except Exception as e:
         actionResult = FailPluginResponse({}, [str(e)])
-    return actionResult
+    return actionResult.response()
 
-def getNotificationForPlugin(server: Server, plugin) -> PluginResponse:
+def getNotificationForPlugin(server: Server, plugin) -> list:
     pluginInstance = plugin['instance']
     try:
         notifications = pluginInstance.notifications(server)
         notifications.data = [notificationData.to_dict() for notificationData in notifications.data]
     except Exception as e:
         notifications = FailPluginResponse({}, [str(e)])
-    return notifications
+    return notifications.response()
 
 def getAllNotifications(loadedPlugins: list, server: Server) -> dict:
     allNotifications = defaultdict(dict)
@@ -226,92 +222,3 @@ def getAllNotifications(loadedPlugins: list, server: Server) -> dict:
         if plugin['features']['notifications']:
             allNotifications[plugin['id']] = getNotificationForPlugin(server, plugin)
     return allNotifications
-
-# class baseAdministrationHelper:
-#     name = 'base'
-#     def __init__(self):
-#         self.server = None
-
-#     def setServer(self, server):
-#         self.server = server
-
-#     @classmethod
-#     @feature_enabled
-#     def getView(self, server, data={}):
-#         pass
-    
-#     @classmethod
-#     @feature_enabled
-#     def execPlugin(self, server, data={}):
-#         pass
-    
-#     def introspection(self):
-#         return {
-#             'view': getattr(self.run, 'feature_enabled', True),
-#             'exec': getattr(self.run, 'feature_enabled', True),
-#         }
-
-
-# class Severity:
-#     NA = 0
-#     LOW = 1
-#     MEDIUM = 2
-#     HIGH = 3
-
-
-# class baseNotificationHelper:
-#     name = 'base'
-#     def __init__(self):
-#         self.server = None
-
-#     def setServer(self, server):
-#         self.server = server
-
-#     @classmethod
-#     @feature_enabled
-#     def query(self):
-#         pass
-    
-#     @classmethod
-#     @feature_enabled
-#     def accept(self):
-#         pass
-
-#     @classmethod
-#     @feature_enabled
-#     def process(self):
-#         pass
-
-#     @classmethod
-#     @feature_enabled
-#     def delete(self):
-#         pass
-
-#     def queryHelper(self):
-#         queryResult = self.query()
-#         results = []
-#         if type(queryResult) != list:
-#             queryResult = [queryResult]
-#         for qr in queryResult:
-#             if qr is None:
-#                 continue
-#             data = qr['data'] if 'data' in qr else qr
-#             severity = qr['severity'] if 'severity' in qr else Severity.NA
-#             title = qr['title'] if 'title' in qr else ''
-#             results.append({
-#                 "timestamp": int(time.time()),
-#                 "origin": self.name,
-#                 "severity": severity,
-#                 "title": title,
-#                 "data": data
-#             })
-#         return results
-
-
-#     def introspection(self):
-#         return {
-#             'query': getattr(self.query, 'feature_enabled', True),
-#             'accept': getattr(self.accept, 'feature_enabled', True),
-#             'process': getattr(self.process, 'feature_enabled', True),
-#             'delete': getattr(self.delete, 'feature_enabled', True),
-#         }

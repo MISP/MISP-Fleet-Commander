@@ -3,3 +3,4 @@ flask_sqlalchemy
 flask_migrate
 requests
 requests-cache
+marshmallow_sqlalchemy

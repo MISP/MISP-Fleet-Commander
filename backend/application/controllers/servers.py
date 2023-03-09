@@ -6,11 +6,11 @@ import re
 import concurrent.futures
 from datetime import datetime as dt, timedelta
 from collections import Mapping, MutableSequence, defaultdict
-from flask import Blueprint, request, render_template, make_response, jsonify, abort, Response
-from sqlalchemy.orm import with_parent
+from flask import Blueprint, request, jsonify, abort, Response
 
 from application.DBModels import db, User, Server, ServerQuery
 from application.controllers.utils import mispGetRequest, mispPostRequest, batchRequest
+from application.marshmallowSchemas import ServerQuerySchema, serverSchema, serversSchema
 import application.models.servers as serverModel
 
 
@@ -25,7 +25,7 @@ class DictToObject:
 def index(group_id=None):
     servers = serverModel.index(group_id)
     if servers:
-        return jsonify([s.to_dict(['server_info']) for s in servers])
+        return serversSchema.dump(servers)
     else:
         return jsonify([])
 
@@ -34,7 +34,7 @@ def index(group_id=None):
 def get(server_id):
     server = Server.query.get(server_id)
     if server is not None:
-        return jsonify(server.to_dict())
+        return serverSchema.dump(server)
     else:
         return jsonify({})
 
@@ -57,7 +57,7 @@ def add(group_id):
             db.session.add(server)
             servers.append(server)
         db.session.commit()
-        return jsonify([s.to_dict() for s in servers])
+        return serversSchema.dump(servers)
     else:
         server = Server(name=request.json.get('name'),
                         url=request.json.get('url'),
@@ -72,7 +72,7 @@ def add(group_id):
             # recursively add servers
             pass
         db.session.commit()
-        return jsonify(server.to_dict())
+        return serversSchema.dump(server)
 
 
 @BPserver.route('/servers/edit', methods=['POST'])
@@ -87,7 +87,7 @@ def edit():
         # recursively add servers
         pass
     db.session.commit()
-    return jsonify(server.to_dict())
+    return serverSchema.dump(server)
 
 
 @BPserver.route('/servers/delete', methods=['DELETE', 'POST'])
@@ -100,7 +100,7 @@ def delete():
                 db.session.delete(server)
                 deletedServers.append(server.id)
         db.session.commit()
-        return jsonify(deletedServers)
+        return serversSchema.dump(deletedServers)
     else:
         server = Server.query.get(request.json['id'])
         if server is not None:
@@ -147,7 +147,7 @@ def queryInfo(server_id, no_cache):
             server_query_db = ServerQuery.query.filter_by(server_id=server_id).first()
             if server_query_db is None: # No query associated to the server
                 server_query_db = fetchServerInfo(server)
-        return jsonify(server_query_db.to_dict())
+        return ServerQuerySchema.dump(server_query_db)
     else:
         return jsonify({'error': 'Unkown server'})
 

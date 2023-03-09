@@ -34,6 +34,10 @@ def create_app():
     # app.config.from_object('config.DevelopmentConfig')
 
     with app.app_context():
+
+        # from application.marshmallowSchemas import setupListener
+        # setupListener()
+
         # Imports
         from . import routes
         from application.controllers.users import BPuser
