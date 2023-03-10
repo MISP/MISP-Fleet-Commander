@@ -24,10 +24,6 @@ class User(BaseModel):
                       unique=False,
                       nullable=False)
 
-    _default_fields = ['email', 'created']
-    _hidden_fields = ['password']
-    _readonly_fields = ['created']
-
 
 #class UserSettings(BaseModel):
 #    __tablename__ == 'user_settings'
@@ -88,11 +84,6 @@ class Server(BaseModel):
         # backref=db.backref('hostServer', lazy='joined', uselist=False))
         backref=db.backref('hostServer', lazy=True, uselist=False))
 
-    # _default_fields = ['id', 'name', 'comment', 'url', 'skip_ssl', 'user', 'auth_method', 'server_info', 'authkey', 'basicauth']
-    _default_fields = ['id', 'name', 'comment', 'url', 'skip_ssl', 'user', 'auth_method', 'authkey', 'basicauth', 'server_group']
-    _hidden_fields = []
-    # _hidden_fields = ['authkey', 'basicauth']
-    _readonly_fields = ['user_id']
 
     @hybrid_property
     def auth_method(self):
@@ -102,6 +93,10 @@ class Server(BaseModel):
         if self.basicauth:
             methods.append("Basic Auth")
         return methods
+
+    @auth_method.setter
+    def auth_method(self, method):
+        self._auth_method = method
 
 
 class ServerQuery(BaseModel):
@@ -117,9 +112,6 @@ class ServerQuery(BaseModel):
                     index=True)
     query_result = db.Column(db.JSON, nullable=False)
 
-    _default_fields = ['server_id', 'timestamp', 'query_result']
-    _hidden_fields = []
-    _readonly_fields = []
 
 
 class ServerGroup(BaseModel):
@@ -156,8 +148,3 @@ class ServerGroup(BaseModel):
         else:
             server_group_id, the_count = result
         return the_count
-
-    # _default_fields = ['id', 'name', 'description', 'timestamp', 'server_count', 'servers']
-    _default_fields = ['id', 'name', 'description', 'timestamp', 'server_count',]
-    _hidden_fields = []
-    _readonly_fields = ['user_id']
