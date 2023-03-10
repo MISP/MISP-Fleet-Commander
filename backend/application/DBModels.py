@@ -79,10 +79,6 @@ class Server(BaseModel):
     # server_group = db.relationship('ServerGroup',
     #     backref=db.backref('server_group', lazy='joined', uselist=True))
     server_group = db.relationship('ServerGroup', back_populates='servers')
-    
-    server_info = db.relationship('ServerQuery',
-        # backref=db.backref('hostServer', lazy='joined', uselist=False))
-        backref=db.backref('hostServer', lazy=True, uselist=False))
 
 
     @hybrid_property
@@ -98,19 +94,14 @@ class Server(BaseModel):
     def auth_method(self, method):
         self._auth_method = method
 
+    @hybrid_property
+    def server_info(self):
+        import application.models.servers as serverModel
+        return serverModel.getServerInfo(self.id, True)
 
-class ServerQuery(BaseModel):
-    __tablename__ = 'server_queries'
-    id = db.Column(db.Integer,
-                   primary_key=True)
-    server_id = db.Column(db.Integer,
-                     nullable=False,
-                     unique=True,
-                     index=True)
-    timestamp = db.Column(db.Integer,
-                    nullable=False,
-                    index=True)
-    query_result = db.Column(db.JSON, nullable=False)
+    @server_info.setter
+    def server_info(self, info):
+        self._server_info = info
 
 
 

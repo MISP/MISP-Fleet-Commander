@@ -19,7 +19,7 @@ def index():
 def get(group_id):
     group = ServerGroup.query.get(group_id)
     if group is not None:
-        return serverGroupSchema(group)
+        return serverGroupSchema.dump(group)
     else:
         return jsonify({})
 
@@ -32,7 +32,7 @@ def add():
                     user_id=1)
     db.session.add(group)
     db.session.commit()
-    return serverGroupSchema(group)
+    return serverGroupSchema.dump(group)
 
 
 @BPserverGroup.route('/serverGroups/delete/<int:group_id>', methods=['DELETE', 'POST'])
@@ -51,7 +51,7 @@ def getFromServerId(server_id):
     server = Server.query.get(server_id)
     if server is not None:
         group = ServerGroup.query.get(server.server_group_id)
-        return serverGroupSchema(group)
+        return serverGroupSchema.dump(group)
     else:
         return jsonify({})
 

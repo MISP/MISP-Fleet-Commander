@@ -30,7 +30,7 @@ class LiveMode(BasePlugin):
 
     @classmethod
     def getLiveModeFromServer(cls, server: Server) -> bool:
-        finalSettings = server.server_info.query_result['serverSettings']['finalSettings']
+        finalSettings = server.server_info['query_result']['serverSettings']['finalSettings']
         liveModeSetting = [setting for setting in finalSettings if setting['setting'] == 'MISP.live'][0]
         liveMode = liveModeSetting['value']
         return liveMode

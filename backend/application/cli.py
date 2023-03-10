@@ -21,8 +21,8 @@ def testConnection(server_id):
 @server_cli.command('query')
 @click.argument('server_id')
 @click.argument('cache', required=False, default=False)
-def queryInfo(server_id, cache=True):
-    result = serverModel.queryInfo(server_id, cache)
+def getServerInfo(server_id, cache=True):
+    result = serverModel.getServerInfo(server_id, cache)
     pprint(result)
 
 

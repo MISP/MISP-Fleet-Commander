@@ -7,7 +7,7 @@ from sqlalchemy import event
 from sqlalchemy.orm import mapper
 
 from application import db
-from application.DBModels import Server, ServerGroup, ServerQuery, User
+from application.DBModels import Server, ServerGroup, User
 from application.baseModel import BaseModel
 
 
@@ -37,7 +37,8 @@ class ServerGroupSchema(BaseSchema):
 class ServerSchema(BaseSchema):
 
     server_group = mafields.Nested(lambda: ServerGroupSchema(exclude=('servers', )), many=False)
-    server_info = mafields.Nested(lambda: ServerQuerySchema, many=False)
+    # server_info = mafields.Nested(lambda: ServerQuerySchema, many=False)
+    server_info = fields.Nested(lambda: ServerQuerySchema)
 
     auth_method = fields.Str(dump_only=True)
 
@@ -46,9 +47,9 @@ class ServerSchema(BaseSchema):
         unknown = INCLUDE
 
 
-class ServerQuerySchema(BaseSchema):
-    class Meta(BaseSchema.Meta):
-        model = ServerQuery
+class ServerQuerySchema(Schema):
+    timestamp = fields.Integer()
+    query_result = fields.Dict()
 
 
 class PluginSchema(Schema):

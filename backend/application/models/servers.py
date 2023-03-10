@@ -4,8 +4,10 @@ import time
 from typing import List, Union
 import concurrent.futures
 
-from application.DBModels import db, User, Server, ServerQuery
+from application import redisClient, redisModel
+from application.DBModels import db, User, Server
 from application.controllers.utils import mispGetRequest
+from application.marshmallowSchemas import serverQuerySchema
 
 
 def index(group_id=None):
@@ -34,16 +36,17 @@ def testConnection(server_id: int) -> Union[dict, None]:
     else:
         return None
 
-def queryInfo(server_id, cache=True) -> Union[dict, None]:
+
+def getServerInfo(server_id, cache=True) -> Union[dict, None]:
     server = Server.query.get(server_id)
     if server is not None:
         if not cache:
             server_query_db = fetchServerInfo(server)
         else:
-            server_query_db = ServerQuery.query.filter_by(server_id=server_id).first()
+            server_query_db = redisModel.getServerInfo(server_id)
             if server_query_db is None: # No query associated to the server
                 server_query_db = fetchServerInfo(server)
-        return server_query_db.to_dict()
+        return serverQuerySchema.load(server_query_db)
     else:
         return None
 
@@ -62,8 +65,12 @@ def fetchServerInfo(server):
         'connectedServers': connectedServers,
         'serverContent': serverContent
     }
-    server_query_db = saveInfo(server, server_query)
-    return server_query_db
+    fullQuery = {
+        'timestamp': int(time.time()),
+        'query_result': server_query,
+    }
+    saveInfo(server, fullQuery)
+    return fullQuery
 
 def attachConnectedServerStatus(server, connectedServers):
     if type(connectedServers) is list:
@@ -78,20 +85,10 @@ def attachConnectedServerStatus(server, connectedServers):
                     print('%r generated an exception: %s' % (connectedServers[j], exc))
     return connectedServers
 
-def saveInfo(server, queryResult):
-    now = int(time.time())
-    server_query = ServerQuery.query.filter_by(server_id=server.id).first()
-    if server_query is not None:
-        server_query.query_result = queryResult
-        server_query.timestamp = now
-    else:
-        server_query = ServerQuery(server_id=server.id,
-                        timestamp=now,
-                        query_result=queryResult)
-    server.server_info = server_query
-    db.session.add(server)
-    db.session.commit()
-    return server_query
+
+def saveInfo(server, fullQuery: dict) -> bool:
+    return redisModel.saveServerInfo(server.id, fullQuery)
+
 
 def getConnectedServerStatus(server, connectedServer):
     connectionTest = mispGetRequest(server, f'/servers/testConnection/{connectedServer["Server"]["id"]}')

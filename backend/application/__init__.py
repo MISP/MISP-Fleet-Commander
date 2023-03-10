@@ -3,6 +3,7 @@ from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import MetaData
 from flask_migrate import Migrate
+import redis
 
 
 # naming_convention = {
@@ -16,6 +17,7 @@ from flask_migrate import Migrate
 db = SQLAlchemy()
 loadedPlugins = None
 app = None
+redisClient = redis.Redis(host='localhost', port=6379, db=1)
 
 
 def create_app():

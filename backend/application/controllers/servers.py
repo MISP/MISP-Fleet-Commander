@@ -9,10 +9,12 @@ from collections import Mapping, MutableSequence, defaultdict
 from flask import Blueprint, request, jsonify, abort, Response
 from marshmallow import ValidationError
 
-from application.DBModels import db, User, Server, ServerQuery
+from application.DBModels import db, User, Server
 from application.controllers.utils import mispGetRequest, mispPostRequest, batchRequest
-from application.marshmallowSchemas import ServerGroupSchema, ServerQuerySchema, ServerSchema, TaskSchema, serverSchema, serversSchema
+from application.marshmallowSchemas import ServerSchema, serverGroupSchema, serverQuerySchema, serverSchema, taskSchema, serverSchema, serversSchema
 import application.models.servers as serverModel
+from application.workers.tasks import fetchServerInfoTask, add as addCel
+from pprint import pprint
 
 
 BPserver = Blueprint('server', __name__)
@@ -139,18 +141,25 @@ def batch_ping_server(group_id=None):
 @BPserver.route('/servers/queryInfo/<int:server_id>', defaults={'no_cache': False}, methods=['GET'])
 @BPserver.route('/servers/queryInfo/<int:server_id>/<int:no_cache>', methods=['GET'])
 def queryInfo(server_id, no_cache):
-    no_cache = True if no_cache == 1 else False
-    server = Server.query.get(server_id)
-    if server is not None:
-        if no_cache:
-            server_query_db = fetchServerInfo(server)
-        else:
-            server_query_db = ServerQuery.query.filter_by(server_id=server_id).first()
-            if server_query_db is None: # No query associated to the server
-                server_query_db = fetchServerInfo(server)
-        return ServerQuerySchema.dump(server_query_db)
+    info = serverModel.getServerInfo(server_id, not no_cache)
+    if info:
+        return serverQuerySchema.dump(info)
     else:
         return jsonify({'error': 'Unkown server'})
+
+# @BPserver.route('/servers/queryInfoWS/<int:server_id>', methods=['GET'])
+# def queryInfoWS(server_id,):
+#     server = Server.query.get(server_id)
+#     if server is not None:
+#             server_query_task = fetchServerInfoTask.delay(serverSchema.dump(server))
+#             # server_query_task = addCel.delay(4,4)
+#             return TaskSchema().dump({
+#                 'id': server_query_task.id,
+#                 'status': server_query_task.status,
+#                 'message': f"Queued Server({server_id}).queryInfo",
+#             })
+#     else:
+#         return jsonify({'error': 'Unkown server'})
 
 @BPserver.route('/servers/getUsers/<int:server_id>', methods=['GET'])
 def getUsers(server_id):
@@ -236,7 +245,7 @@ def network(group_id=None):
 def getConnection(server_id, connection_id):
     server = Server.query.get(server_id)
     if server is not None:
-        destinations = server.server_info.query_result['connectedServers']
+        destinations = server.server_info['query_result']['connectedServers']
         connection = [ d for d in destinations if int(d['Server']['id']) == connection_id]
         if len(connection) > 0:
             connection = connection[0]
@@ -311,39 +320,6 @@ def restQuery(server_id):
         return jsonify({})
 
 
-# ===========
-def saveInfo(server, queryResult):
-    now = int(time.time())
-    server_query = ServerQuery.query.filter_by(server_id=server.id).first()
-    if server_query is not None:
-        server_query.query_result = queryResult
-        server_query.timestamp = now
-    else:
-        server_query = ServerQuery(server_id=server.id,
-                        timestamp=now,
-                        query_result=queryResult)
-    server.server_info = server_query
-    db.session.add(server)
-    db.session.commit()
-    return server_query
-
-def fetchServerInfo(server):
-    serverSettings = mispGetRequest(server, '/servers/serverSettings/diagnostics/light:1')
-    serverUsage = mispGetRequest(server, '/users/statistics')
-    serverUser = mispGetRequest(server, '/users/view/me')
-    connectedServers = mispGetRequest(server, '/servers/index')
-    connectedServers = attachConnectedServerStatus(server, connectedServers)
-    serverContent = []
-    server_query = {
-        'serverSettings': serverSettings,
-        'serverUsage': serverUsage,
-        'serverUser': serverUser,
-        'connectedServers': connectedServers,
-        'serverContent': serverContent
-    }
-    server_query_db = saveInfo(server, server_query)
-    return server_query_db
-
 def fetchServerUsers(server):
     users = mispGetRequest(server, 'admin/users/index')
     if 'error' in users:
@@ -359,18 +335,6 @@ def getConnectedServerStatus(server, connectedServer):
     connectedServer['vid'] = f"{server.id}-{connectedServer['Server']['id']}"
     return connectedServer
 
-def attachConnectedServerStatus(server, connectedServers):
-    if type(connectedServers) is list:
-        with concurrent.futures.ThreadPoolExecutor(max(len(connectedServers), 1)) as executor:
-            future_to_serverid = {executor.submit(getConnectedServerStatus, server, connectedServer): i for i, connectedServer in enumerate(connectedServers)}
-            for future in concurrent.futures.as_completed(future_to_serverid):
-                j = future_to_serverid[future]
-                try:
-                    data = future.result()
-                    connectedServers[j] = data
-                except Exception as exc:
-                    print('%r generated an exception: %s' % (connectedServers[j], exc))
-    return connectedServers
 
 def parseMISPUserConnectionOutput(userConnection):
     parsed = {
@@ -508,13 +472,13 @@ def buildNetwork(servers):
     network = []
     for server in servers:
         if server.server_info is not None:
-            destinations = server.server_info.query_result['connectedServers']
+            destinations = server.server_info['query_result']['connectedServers']
             link = {}
             if isinstance(destinations, list):
                 for connectedServer in destinations:
                     link = {
-                        'source': {k: getattr(server, k) for k in server.to_dict() if k != 'server_info'},
-                        'last_refresh': server.server_info.timestamp,
+                        'source': ServerSchema(exclude=('server_info', )).dump(server),
+                        'last_refresh': server.server_info['timestamp'],
                     }
                     link['destination'] = connectedServer
                     link['vid'] = f"{link['source']['id']}-{connectedServer['Server']['id']}"
