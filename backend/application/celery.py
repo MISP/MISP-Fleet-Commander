@@ -1,14 +1,8 @@
-#!/usr/bin/env python3
-
-from celery import Celery
+# #!/usr/bin/env python3
 
 
-app = Celery('MFC',
-            broker_url = 'redis://localhost',
-            result_backend = 'redis://localhost',
-            enable_utc = True,
-            include=['application.workers.tasks'])
 
+from application import create_app
 
-if __name__ == '__main__':
-    app.start()
+flaskApp = create_app()
+celery_app = flaskApp.extensions["celery"]

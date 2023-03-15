@@ -13,7 +13,7 @@ from application.DBModels import db, User, Server
 from application.controllers.utils import mispGetRequest, mispPostRequest, batchRequest
 from application.marshmallowSchemas import ServerSchema, serverGroupSchema, serverQuerySchema, serverSchema, taskSchema, serverSchema, serversSchema
 import application.models.servers as serverModel
-from application.workers.tasks import fetchServerInfoTask, add as addCel
+from application.workers.tasks import fetchServerInfoTask
 from pprint import pprint
 
 
@@ -147,19 +147,18 @@ def queryInfo(server_id, no_cache):
     else:
         return jsonify({'error': 'Unkown server'})
 
-# @BPserver.route('/servers/queryInfoWS/<int:server_id>', methods=['GET'])
-# def queryInfoWS(server_id,):
-#     server = Server.query.get(server_id)
-#     if server is not None:
-#             server_query_task = fetchServerInfoTask.delay(serverSchema.dump(server))
-#             # server_query_task = addCel.delay(4,4)
-#             return TaskSchema().dump({
-#                 'id': server_query_task.id,
-#                 'status': server_query_task.status,
-#                 'message': f"Queued Server({server_id}).queryInfo",
-#             })
-#     else:
-#         return jsonify({'error': 'Unkown server'})
+@BPserver.route('/servers/queryInfoWS/<int:server_id>', methods=['GET'])
+def queryInfoWS(server_id,):
+    server = Server.query.get(server_id)
+    if server is not None:
+            server_query_task = fetchServerInfoTask.delay(serverSchema.dump(server))
+            return taskSchema.dump({
+                'id': server_query_task.id,
+                'status': server_query_task.status,
+                'message': f"Queued Server({server_id}).queryInfo",
+            })
+    else:
+        return jsonify({'error': 'Unkown server'})
 
 @BPserver.route('/servers/getUsers/<int:server_id>', methods=['GET'])
 def getUsers(server_id):

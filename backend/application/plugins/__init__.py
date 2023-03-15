@@ -2,7 +2,7 @@ import os
 import fnmatch
 import inspect
 import importlib
-from application import app
+from application import flaskApp
 
 def loadPlugins():
     phandlers = {}
@@ -21,10 +21,10 @@ def loadPlugins():
             try:
                 phandlers[modulename] = importlib.import_module('application.plugins.' + modulename)
             except Exception as e:
-                app.logger.warning('Plugin {0} failed due to {1}'.format(modulename, e))
+                flaskApp.logger.warning('Plugin {0} failed due to {1}'.format(modulename, e))
                 continue
             plugins.append(modulename)
-            app.logger.debug('Plugin {0} imported'.format(modulename))
+            flaskApp.logger.debug('Plugin {0} imported'.format(modulename))
     os.chdir(cwd)
     return phandlers, plugins
 

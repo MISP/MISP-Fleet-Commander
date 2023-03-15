@@ -4,6 +4,27 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import MetaData
 from flask_migrate import Migrate
 import redis
+from celery import Celery, Task
+from flask_socketio import SocketIO
+import socketio
+
+
+def celery_init_app(app: Flask) -> Celery:
+    class FlaskTask(Task):
+        def __call__(self, *args: object, **kwargs: object) -> object:
+            with app.app_context():
+                return self.run(*args, **kwargs)
+
+    celery_app = Celery(app.name, task_cls=FlaskTask,
+            broker_url = 'redis://localhost',
+            result_backend = 'redis://localhost',
+            enable_utc = True,
+            include=['application.workers.tasks']
+    )
+    # celery_app.config_from_object(app.config["CELERY"])
+    celery_app.set_default()
+    app.extensions["celery"] = celery_app
+    return celery_app
 
 
 # naming_convention = {
@@ -16,19 +37,22 @@ import redis
 # db = SQLAlchemy(metadata=MetaData(naming_convention=naming_convention))
 db = SQLAlchemy()
 loadedPlugins = None
-app = None
+flaskApp = None
 redisClient = redis.Redis(host='localhost', port=6379, db=1)
+celery_app = None
+socketioApp = None
 
 
 def create_app():
     """Construct the core application."""
-    global loadedPlugins, app
-    app = Flask(__name__, instance_relative_config=False)
-    app.config.from_object('config.DevelopmentConfig')
-    CORS(app)
-    migrate = Migrate(app, db)
-    migrate.init_app(app, db, render_as_batch=True)
-    db.init_app(app)
+    global loadedPlugins, flaskApp, celery_app, socketioApp
+    flaskApp = Flask(__name__, instance_relative_config=False)
+    flaskApp.config.from_object('config.DevelopmentConfig')
+    CORS(flaskApp)
+    migrate = Migrate(flaskApp, db)
+    migrate.init_app(flaskApp, db, render_as_batch=True)
+    db.init_app(flaskApp)
+    celery_app = celery_init_app(flaskApp)
 
     from application.plugins import loadAvailablePlugins
     loadedPlugins = loadAvailablePlugins()
@@ -36,10 +60,9 @@ def create_app():
     # app.config.from_object('config.Config')
     # app.config.from_object('config.DevelopmentConfig')
 
-    with app.app_context():
+    with flaskApp.app_context():
 
-        # from application.marshmallowSchemas import setupListener
-        # setupListener()
+        socketioApp = SocketIO(flaskApp, cors_allowed_origins='*', message_queue='redis://localhost:6379/3')
 
         # Imports
         from . import routes
@@ -48,19 +71,21 @@ def create_app():
         from application.controllers.serverGroups import BPserverGroup
         from application.controllers.plugins import BPplugins
         from application.controllers.instance import BPinstance
+        from application.controllers.websocket import registerListeners as registerWSListeners
 
-        app.register_blueprint(BPuser)
-        app.register_blueprint(BPserver)
-        app.register_blueprint(BPserverGroup)
-        app.register_blueprint(BPplugins)
-        app.register_blueprint(BPinstance)
+        flaskApp.register_blueprint(BPuser)
+        flaskApp.register_blueprint(BPserver)
+        flaskApp.register_blueprint(BPserverGroup)
+        flaskApp.register_blueprint(BPplugins)
+        flaskApp.register_blueprint(BPinstance)
+        registerWSListeners()
 
         # Add CLI commands
         from application.cli import server_cli
 
-        app.cli.add_command(server_cli)
+        flaskApp.cli.add_command(server_cli)
 
         # Create tables for our models
         db.create_all()
 
-        return app
+        return flaskApp
