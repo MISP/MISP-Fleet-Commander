@@ -16,6 +16,24 @@ Vue.use(VueMoment)
 import App from "./App.vue"
 import router from "./router"
 import store from "./store/index"
+import SocketIO from 'socket.io-client'
+import VueSocketIO from 'vue-socket.io'
+
+import { baseurl } from "@/api/apiConfig"
+
+const socket = SocketIO(baseurl)
+export const socketInstance = new VueSocketIO({
+    debug: true,
+    connection: socket,
+    vuex: {
+        store,
+        actionPrefix: 'SOCKET_',
+        mutationPrefix: 'SOCKET_'
+    },
+    // options: { path: "/my-app/" } //Optional options
+});
+
+Vue.use(socketInstance)
 
 // Importing the global css file
 import "@/assets/global.css"

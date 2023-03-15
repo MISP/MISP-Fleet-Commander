@@ -51,6 +51,16 @@
                     </template>
                     <NavbarServerGroup></NavbarServerGroup>
                 </b-nav-item-dropdown>
+
+                <template v-if="!wsConnected">
+                    <div title="Trying to connect websocket" class="d-flex align-items-center justify-content-center">
+                        <img src="@/assets/websocket.svg" alt="Websocket icon" class="position-absolute" width="20" height="20">
+                        <span>
+                            <i class="fas fa-circle-notch fa-fw fa-spin text-muted" style="font-size: 32px;"></i>
+                        </span>
+                    </div>
+                </template>
+
             </b-navbar-nav>
         </b-navbar>
     </div>
@@ -82,6 +92,9 @@ export default {
     computed: {
         ...mapState({
             getSelectedServerGroup: state => state.serverGroups.selected,
+        }),
+        ...mapGetters({
+            wsConnected: "websocket/wsConnected"
         }),
         serverGroupText() {
             return this.getSelectedServerGroup !== null ? this.getSelectedServerGroup.name : "-no server group selected-"

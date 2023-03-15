@@ -62,6 +62,15 @@
                         >
                             <i :class="{'fas fa-sync-alt': true, 'fa-spin': fetching_servers_in_progress}" title="Refresh Servers"></i>
                         </b-button>
+                        <b-button
+                            class=""
+                            variant="warning"
+                            size="sm"
+                            title="Quick refresh"
+                            @click="refreshWS()"
+                        >
+                            <i class="fas fa-plug" title="Refresh Servers"></i>
+                        </b-button>
                         <b-dropdown right variant="primary" size="sm" style="border-left: 1px solid #0069d9">
                             <template v-slot:button-content>
                                 <i class="fas fa-list-ul"></i> Actions
@@ -356,6 +365,7 @@
 
 <script>
 import store from "@/store/index"
+import { websocketMixin } from "@/helpers/websocketMixin"
 import { mapState, mapGetters } from "vuex"
 import Layout from "@/components/layout/Layout.vue"
 import loaderPlaceholder from "@/components/ui/elements/loaderPlaceholder.vue"
@@ -382,6 +392,7 @@ import iconButton from "@/components/ui/elements/iconButton.vue"
 
 export default {
     name: "TheServers",
+    mixins: [websocketMixin],
     components: {
         Layout,
         loaderPlaceholder,
@@ -741,6 +752,11 @@ export default {
                         variant: "danger",
                     })
                 })
+        },
+        refreshWS() {
+            const server_id = this.getIndex[0].id
+            this.serverRefresh(server_id)
+            // this.$socket.emit('xname', 'fooo')
         },
         fullRefresh(quick=true) {
             if (quick) {

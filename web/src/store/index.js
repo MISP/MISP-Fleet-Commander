@@ -7,6 +7,7 @@ import connections from "./modules/connections"
 import serverGroups from "./modules/serverGroups"
 import plugins from "./modules/plugins"
 import notifications from "./modules/notifications"
+import websocket from "./modules/websocket"
 
 Vue.use(Vuex)
 
@@ -22,6 +23,7 @@ export default new Vuex.Store({
         serverGroups,
         notifications,
         plugins,
+        websocket,
     },
     strict: debug,
 })
