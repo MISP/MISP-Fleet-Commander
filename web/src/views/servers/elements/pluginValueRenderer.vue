@@ -28,6 +28,7 @@
 import generic from "@/components/ui/pluginElements/generic.vue";
 import boolean from "@/components/ui/pluginElements/boolean.vue";
 import textVariant from "@/components/ui/pluginElements/textVariant.vue";
+import bootstrapElement from "@/components/ui/pluginElements/bootstrapElement.vue";
 
 export default {
     name: "pluginValueRenderer",
@@ -35,6 +36,7 @@ export default {
         generic,
         boolean,
         textVariant,
+        bootstrapElement,
     },
     props: {
         server_id: {

@@ -7,9 +7,9 @@
     >
 
         <b-card
-            header="Selected servers"
+            :header="`${serverAmount} selected servers`"
             class="text-center mb-3"
-            body-class="p-0"
+            body-class="p-0 server-list-container"
         >
             <b-table-lite
                 small striped borderless
@@ -137,6 +137,9 @@ export default {
         getServersForTable() {
             return this.getServers
         },
+        serverAmount() {
+            return this.getServers.length
+        },
     },
     methods: {
         toggleRulesTreeMode() {
@@ -224,4 +227,8 @@ export default {
 </script>
 
 <style scoped>
+.server-list-container {
+    max-height: 100px;
+    overflow: auto;
+}
 </style>

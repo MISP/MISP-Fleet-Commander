@@ -1,8 +1,8 @@
 from application import socketioApp
 from application.DBModels import Server
 from application.marshmallowSchemas import serverSchema
+import application.models.servers as serverModel
 from flask_socketio import SocketIO
-
 
 
 def registerListeners():
@@ -15,7 +15,9 @@ def registerListeners():
 
     @socketioApp.on('refresh_fleet')
     def refresh_fleet(fleedID):
-        pass
+        servers = serverModel.index(fleedID)
+        for server in servers:
+            fetchServerInfoTask.delay(serverSchema.dump(server))
 
     @socketioApp.on('ping_server')
     def ping_server(serverID):
@@ -35,4 +37,8 @@ class SocketioEmitter:
         self.socketio.emit('UPDATE_SERVER', data)
 
     def udpate_fleet(self, fleet):
-        pass
+        self.socketio.emit('UPDATE_FLEET', data)
+
+    def server_updating(self, serverID):
+        self.socketio.emit('SERVER_UPDATING', serverID)
+

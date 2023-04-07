@@ -75,7 +75,7 @@ def add(group_id):
             # recursively add servers
             pass
         db.session.commit()
-        return serversSchema.dump(server)
+        return serverSchema.dump(server)
 
 
 @BPserver.route('/servers/edit', methods=['POST'])

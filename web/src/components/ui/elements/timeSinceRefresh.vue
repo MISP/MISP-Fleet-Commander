@@ -6,7 +6,7 @@
             :is="small ? 'small' : 'span'"
             class="align-middle"
         >
-            {{ validTimestamp | moment(type) }}
+            {{ timestampDynamicText }}
         </component>
         <component
             v-else
@@ -46,6 +46,12 @@ export default {
             default: true
         }
     },
+    data() {
+        return {
+            interval: null,
+            timestampDynamicText: '',
+        }
+    },
     computed: {
         integerTimestamp() {
             const timestampValue = Number.parseInt(this.timestamp)
@@ -69,6 +75,20 @@ export default {
         timestampTitle() {
             return this.type == "from" ? this.timestampDate : this.timestampFromNow
         }
+    },
+    methods: {
+        genFromNow() {
+            return moment(this.integerTimestamp * 1000).fromNow() 
+        },
+    },
+    mounted() {
+        this.timestampDynamicText = this.genFromNow()
+        this.interval = setInterval(() => {
+            this.timestampDynamicText = this.genFromNow();
+        }, 3000)
+    },
+    unmounted() {
+        clearInterval(this.interval)
     }
 }
 </script>

@@ -25,18 +25,35 @@
                         </small>
                     </span>
                     <b-button
-                        class="ml-auto p-0"
+                        class="ml-auto mr-1 p-0"
                         variant="link"
                         size="sm"
-                        title="Quick refresh"
+                        title="Inline full refresh"
                         @click="fullRefresh()"
                     >
-                        <i :class="{'fas fa-sync-alt': true}" title="Refresh Servers"></i>
+                        <i class="fas fa-sync-alt"></i>
+                    </b-button>
+                    <b-button
+                        :variant="getRefreshEnqueued ? 'dark' : 'primary'"
+                        :disabled="getRefreshEnqueued"
+                        size="sm"
+                        title="Enqueue full refresh"
+                        href="#"
+                        @click="wsRefresh()"
+                    >
+                        <span v-if="getRefreshEnqueued">
+                            <i class="fas fa-sync-alt fa-spin"></i>
+                            Refresh in progress
+                        </span>
+                        <span v-else>
+                            <i class="fas fa-clock"></i>
+                            Enqueue refresh
+                        </span>
                     </b-button>
                 </span>
             </h5>
 
-            <b-overlay :show="info_refresh_in_progress" rounded="sm">
+            <b-overlay :show="getQueryInProgress" rounded="sm">
                 <template v-if="isOnline">
                     <b-table-simple
                     small
@@ -68,7 +85,7 @@
             <h5 class="card-title mb-0 mx-3 my-2">
                 Server Info
             </h5>
-            <b-overlay :show="info_refresh_in_progress" rounded="sm" class="table-server-info">
+            <b-overlay :show="getQueryInProgress" rounded="sm" class="table-server-info">
                 <b-table-simple
                 striped small
                 class="mb-0"
@@ -107,6 +124,7 @@ import submodulesStatus from "@/views/servers/elements/submodulesStatus.vue"
 import zeroMQStatus from "@/views/servers/elements/zeroMQStatus.vue"
 import connectionsSummary from "@/views/servers/elements/connectionsSummary.vue"
 import pluginValueRenderer from "@/views/servers/elements/pluginValueRenderer.vue"
+import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
 
 export default {
     name: "ServerViewProfile",
@@ -118,10 +136,10 @@ export default {
             required: true,
             type: Number,
         },
-        info_refresh_in_progress: {
-            required: true,
-            type: Boolean,
-        }
+        // info_refresh_in_progress: {
+        //     required: true,
+        //     type: Boolean,
+        // }
     },
     data: function () {
         return {
@@ -136,6 +154,7 @@ export default {
             server_status: state => state.servers.server_status,
             server_query_in_progress: state => state.servers.server_query_in_progress,
             server_query_error: state => state.servers.server_query_error,
+            server_refresh_enqueued: state => state.servers.server_refresh_enqueued,
             server_user: state => state.servers.server_user,
             remote_connections: state => state.servers.remote_connections,
             submodules: state => state.servers.submodules,
@@ -155,6 +174,12 @@ export default {
         },
         getServer: function() {
             return this.servers[this.server_id]
+        },
+        getQueryInProgress: function() {
+            return this.server_query_in_progress[this.server_id]
+        },
+        getRefreshEnqueued: function() {
+            return this.server_refresh_enqueued[this.server_id]
         },
         getServerStatus: function() {
             return this.server_status[this.server_id]
@@ -194,6 +219,13 @@ export default {
         },
         statusData: function() {
             let status = {
+                "Last refresh": {
+                    data: {
+                        timestamp: this.last_refresh[this.server_id],
+                        type: "ddd DD/MM/YYYY HH:mm",
+                    },
+                    component: timeSinceRefresh,
+                },
                 "Connection Test": {
                     text: this.getServerStatus.data,
                 },
@@ -255,6 +287,9 @@ export default {
     methods: {
         fullRefresh() {
             this.$emit("fullRefresh")
+        },
+        wsRefresh() {
+            this.$emit("wsRefresh")
         }
     }
 }

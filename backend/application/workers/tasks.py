@@ -13,6 +13,8 @@ socketioEmitter = SocketioEmitter()
 @celery_app.task(name="fetchServerInfoTask")
 def fetchServerInfoTask(serverDict):
     server = serverSchema.load(serverDict)
+    socketioEmitter.server_updating(server.id)
     serverInfo = serverModel.fetchServerInfo(server)
+    serverInfo['server'] = serverDict
     socketioEmitter.udpate_server(serverInfo)
 

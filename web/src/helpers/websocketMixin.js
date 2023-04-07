@@ -7,21 +7,21 @@ export const websocketMixin = {
     sockets: {
     },
     methods: {
-        serverRefresh: function (serverID) {
+        wsServerRefresh: function (serverID) {
             this.$socket.emit('refresh_server', serverID);
         },
-        fleetRefresh: function (fleetID) {
+        wsFleetRefresh: function (fleetID) {
             this.$socket.emit("refresh_fleet", fleetID);
         },
-        serverPing: function (serverID) {
+        wsServerPing: function (serverID) {
             this.$socket.emit('ping_server', serverID);
         },
-        fleetPing: function (fleetID) {
+        wsFleetPing: function (fleetID) {
             this.$socket.emit("ping_fleet", fleetID);
         },
 
         // emit with ack
-        serverPingWithAck: async function (serverID, callback) {
+        wsServerPingWithAck: async function (serverID, callback) {
             try {
                 const response = await socket.timeout(this.socket_ack_timeout).emitWithAck('ping_server', serverID);
                 this.handleSuccess(response)
@@ -32,7 +32,7 @@ export const websocketMixin = {
                 this.handleError(err)
             }
         },
-        fleetPingWithAck: async function (fleetID, callback) {
+        wsFleetPingWithAck: async function (fleetID, callback) {
             try {
                 const response = await socket.timeout(this.socket_ack_timeout).emitWithAck('ping_fleet', fleetID);
                 this.handleSuccess(response)
@@ -43,7 +43,7 @@ export const websocketMixin = {
                 this.handleError(err)
             }
         },
-        serverRefreshWithAck: async function (serverID, callback) {
+        wsServerRefreshWithAck: async function (serverID, callback) {
             try {
                 const response = await socket.timeout(this.socket_ack_timeout).emitWithAck('refresh_server', serverID);
                 this.handleSuccess(response)
@@ -54,7 +54,7 @@ export const websocketMixin = {
                 this.handleError(err)
             }
         },
-        fleetRefreshWithAck: async function (fleetID, callback) {
+        wsFleetRefreshWithAck: async function (fleetID, callback) {
             try {
                 const response = await socket.timeout(this.socket_ack_timeout).emitWithAck('refresh_fleet', fleetID);
                 this.handleSuccess(response)

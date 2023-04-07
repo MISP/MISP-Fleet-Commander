@@ -68,10 +68,10 @@ class Server(BaseModel):
                         db.ForeignKey('server_groups.id'),
                         nullable=False,
                         index=True)
-    server_query_id = db.Column(db.Integer,
-                        db.ForeignKey('server_queries.id'),
-                        nullable=True,
-                        index=True)
+    # server_query_id = db.Column(db.Integer,
+    #                     db.ForeignKey('server_queries.id'),
+    #                     nullable=True,
+    #                     index=True)
 
     user = db.relationship('User',
         backref=db.backref('servers', lazy='joined'))

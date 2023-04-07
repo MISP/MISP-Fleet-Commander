@@ -8,6 +8,7 @@ const init_state = () => {
         servers: {},
         server_status: {},
         server_query_in_progress: {},
+        server_refresh_enqueued: {},
         server_query_error: {},
         server_user: {},
         remote_connections: {},
@@ -160,6 +161,14 @@ const actions = {
             )
         })
     },
+    commitAllQueryInfo({ commit }, payload) {
+        return new Promise((resolve, reject) => {
+            const serverID = payload.server.id
+            commit("setServerRefreshEnqueued", {server_id: serverID, is_enqueued: false})
+            commitAllQueryInfo(commit, serverID, payload);
+            resolve()
+        })
+    },
 
     /* ADD, EDIT & DELETE */
     add({ dispatch }, payload) {
@@ -225,6 +234,7 @@ const mutations = {
             server._loading = false
             server.canBeUpdated = false
             Vue.set(state.server_query_in_progress, server.id, false)
+            Vue.set(state.server_refresh_enqueued, server.id, false)
             Vue.set(state.server_query_error, server.id, false)
             Vue.set(state.server_status, server.id, {})
             if (server.server_info && server.server_info.query_result !== undefined) {
@@ -270,6 +280,11 @@ const mutations = {
                 state.server_query_error = info.error ? info.error : true
             }
         }
+    },
+    setServerRefreshEnqueued(state, payload) {
+        const server_id = payload.server_id
+        const is_enqueued = payload.is_enqueued
+        state.server_refresh_enqueued[server_id] = is_enqueued
     },
     setServerUser(state, payload) {
         if (state.server_user[payload.server_id] === undefined) {

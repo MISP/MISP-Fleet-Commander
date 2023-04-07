@@ -18,7 +18,13 @@ class UpToDate(BasePlugin):
     def view(self, server: Server, data: Optional[dict] = {}) -> PluginResponse:
         upToDateStatus = UpToDate.getStatus(server)
         upToDate = upToDateStatus['up_to_date']
-        return SuccessPluginResponse(upToDate, None, 'boolean')
+        data = {
+            "component": "badge",
+            "variant": "danger",
+            "text": upToDateStatus['current'],
+            "title": f"Latest release {upToDateStatus['github']}"
+        }
+        return SuccessPluginResponse(data, None, 'bootstrapElement')
 
     def index(self, server: Server, data: Optional[dict] = {}) -> PluginResponse:
         return self.view(server, data)
@@ -34,10 +40,14 @@ class UpToDate(BasePlugin):
 
     @classmethod
     def queryGithub(cls) -> dict:
-        github_version_r= requestGithubSession.get(cls.githubURL)
-        if github_version_r == 200:
+        github_version_r = requestGithubSession.get(cls.githubURL)
+        # if github_version_r == 200:
+        #     github_version = github_version_r.json()['tag_name']
+        # else:
+        #     github_version = '?'
+        try:
             github_version = github_version_r.json()['tag_name']
-        else:
+        except:
             github_version = '?'
         return github_version
 

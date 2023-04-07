@@ -57,29 +57,28 @@
                             class="ml-2"
                             variant="primary"
                             size="sm"
-                            title="Quick refresh"
+                            title="Quick refresh - Refresh table, online status and plugin values"
                             @click="fullRefresh()"
                         >
                             <i :class="{'fas fa-sync-alt': true, 'fa-spin': fetching_servers_in_progress}" title="Refresh Servers"></i>
-                        </b-button>
-                        <b-button
-                            class=""
-                            variant="warning"
-                            size="sm"
-                            title="Quick refresh"
-                            @click="refreshWS()"
-                        >
-                            <i class="fas fa-plug" title="Refresh Servers"></i>
                         </b-button>
                         <b-dropdown right variant="primary" size="sm" style="border-left: 1px solid #0069d9">
                             <template v-slot:button-content>
                                 <i class="fas fa-list-ul"></i> Actions
                             </template>
                             <b-dropdown-item-button
+                                @click="wsRefresh()"
+                            >
+                                <iconButton
+                                    text="Enqueue full refresh"
+                                    icon="clock"
+                                ></iconButton>
+                            </b-dropdown-item-button>
+                            <b-dropdown-item-button
                                 @click="fullRefresh(false)"
                             >
                                 <iconButton
-                                    text="Full refresh"
+                                    text="Inline full refresh"
                                     icon="sync-alt"
                                 ></iconButton>
                             </b-dropdown-item-button>
@@ -209,12 +208,17 @@
             <template v-slot:cell(last_refresh)="row">
                 <span class="d-block" style="width: 100px;">
                     <span :class="forcedHidden == row.index ? 'd-none' : 'hide-on-hover'">
-                        <loaderPlaceholder :loading="!server_query_in_progress[row.item.id]">
-                            <timeSinceRefresh
-                                :key="table.timeKey"
-                                :timestamp="row.value"
-                            ></timeSinceRefresh>
-                        </loaderPlaceholder>
+                        <span>
+                            <loaderPlaceholder :loading="!server_query_in_progress[row.item.id]">
+                                <timeSinceRefresh
+                                    :key="table.timeKey"
+                                    :timestamp="row.value"
+                                ></timeSinceRefresh>
+                            </loaderPlaceholder>
+                            <span v-show="server_refresh_enqueued[row.item.id]">
+                                <i class="fas fa-circle-notch fa-spin"></i>
+                            </span>
+                        </span>
                     </span>
                     <span :class="forcedHidden == row.index ? '' : 'reveal-on-hover'">
                         <div class="btn-group">
@@ -254,16 +258,6 @@
                         </div>
                     </span>
                 </span>
-            </template>
-
-            <template v-slot:cell(notification)="row">
-                <loaderPlaceholder :loading="!server_query_in_progress[row.item.id]">
-                    <i
-                        class="fas fa-arrow-up text-success"
-                        title="Update available"
-                        v-if="row.item.canBeUpdated"
-                    ></i>
-                </loaderPlaceholder>
             </template>
 
             <template v-slot:cell(remote_connections)="row">
@@ -525,10 +519,6 @@ export default {
                             return this.last_refresh[item.id] || null
                         }
                     },
-                    {
-                        key: "notification",
-                        label: ""
-                    }
                 ],
             },
             pluginFields: [],
@@ -546,6 +536,7 @@ export default {
             server_status: state => state.servers.server_status,
             server_query_in_progress: state => state.servers.server_query_in_progress,
             server_query_error: state => state.servers.server_query_error,
+            server_refresh_enqueued: state => state.servers.server_refresh_enqueued,
             server_user: state => state.servers.server_user,
             remote_connections: state => state.servers.remote_connections,
             submodules: state => state.servers.submodules,
@@ -753,10 +744,8 @@ export default {
                     })
                 })
         },
-        refreshWS() {
-            const server_id = this.getIndex[0].id
-            this.serverRefresh(server_id)
-            // this.$socket.emit('xname', 'fooo')
+        wsRefresh() {
+            this.wsFleetRefresh(this.selectedServerGroup.id)
         },
         fullRefresh(quick=true) {
             if (quick) {

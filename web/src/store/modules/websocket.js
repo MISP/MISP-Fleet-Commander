@@ -15,19 +15,24 @@ const getters = {
 // actions
 const actions = {
     SOCKET_CONNECT(state) {
-        console.log('connected');
         commit("setConnected", true)
     },
     SOCKET_DISCONNECT(state) {
-        console.log('dis-connected');
         commit("setConnected", false)
     },
     SOCKET_DOACTION({ commit }, message) {
         console.log('wsaction ' + message);
         Vue.prototype.$socket.emit('xname2', 'test-from-client')
     },
-    SOCKET_UPDATE_SERVER({ commit }, serverData) {
-        console.log(serverData);
+    SOCKET_UPDATE_SERVER({ dispatch }, serverData) {
+        dispatch("servers/commitAllQueryInfo", serverData, { root: true })
+    },
+    SOCKET_SERVER_UPDATING({ commit }, serverData) {
+        const payload = {
+            server_id: serverData,
+            is_enqueued: true,
+        }
+        commit("servers/setServerRefreshEnqueued", payload, { root: true })
     },
 }
 

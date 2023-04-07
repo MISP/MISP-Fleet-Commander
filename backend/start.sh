@@ -9,4 +9,4 @@ export SQLALCHEMY_TRACK_MODIFICATIONS=1
 export SECRET_KEY=secret
 # export APP_CONFIG_FILE=config.ini
 # flask run --host=0.0.0.0
-flask run
+flask run --port 5001
