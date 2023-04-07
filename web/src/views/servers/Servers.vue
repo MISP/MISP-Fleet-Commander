@@ -91,8 +91,16 @@
                                 @click="refreshSelected"
                             >
                                 <iconButton
-                                    text="Refresh selected"
+                                    text="Refresh"
                                     icon="sync-alt"
+                                ></iconButton>
+                            </b-dropdown-item-button>
+                            <b-dropdown-item-button
+                                @click="refreshSelected"
+                            >
+                                <iconButton
+                                    text="Enqueue for refresh"
+                                    icon="clock"
                                 ></iconButton>
                             </b-dropdown-item-button>
                             <b-dropdown-item-button
@@ -100,7 +108,7 @@
                             >
                                 <iconButton
                                     text="Batch API"
-                                    title="Batch API call on selected servers"
+                                    title="Batch API call"
                                     icon="terminal"
                                 ></iconButton>
                             </b-dropdown-item-button>
@@ -109,7 +117,7 @@
                             >
                                 <iconButton
                                     text="Batch Plugin Action"
-                                    title="Batch Plugin Action on selected servers"
+                                    title="Batch Plugin Action"
                                     icon="plug"
                                 ></iconButton>
                             </b-dropdown-item-button>
@@ -119,7 +127,7 @@
                             >
                                 <iconButton
                                     text="Delete selected"
-                                    title="Delete selected servers"
+                                    title="Delete servers"
                                     icon="trash"
                                 ></iconButton>
                             </b-dropdown-item-button>
@@ -727,13 +735,9 @@ export default {
                         variant: "danger",
                     })
                 })
-            this.$store.dispatch("servers/fetchSelectedServerInfo", {no_cache: true, selection: this.getSelectedServerIDs})
-                .catch(error => {
-                    this.$bvToast.toast(error, {
-                        title: "Could not fetch server info",
-                        variant: "danger",
-                    })
-                })
+            this.getSelectedServerIDs.forEach((serverID) => {
+                this.wsServerRefresh(serverID)
+            })
         },
         refreshAllServerOnlineStatus() {
             this.$store.dispatch("servers/runAllConnectionTest")
