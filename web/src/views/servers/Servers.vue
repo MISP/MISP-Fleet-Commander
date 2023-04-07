@@ -239,7 +239,7 @@
                             <b-link class="ml-1 btn-xs" variant="link" :to="{ name: 'servers.view', params: { server_id: row.item.id } }">
                                 <i class="fas fa-eye align-middle"></i>
                             </b-link>
-                            <b-button class="ml-1" size="xs" variant="link" @click="openEditModal(row.item)">
+                            <b-button class="ml-1" size="xs" variant="link" @click="openEditModal(row.item.id)">
                                 <i class="fas fa-edit"></i>
                             </b-button>
                             <b-dropdown 
@@ -683,18 +683,19 @@ export default {
         handleBatchAdd() {
             this.refreshServerIndex()
         },
-        openEditModal(server) {
+        openEditModal(server_id) {
+            const server = this.servers[server_id]
             this.serverToEdit.formData = JSON.parse(JSON.stringify(server)) // deep clone
             this.modalAddAction = "Edit"
             this.$bvModal.show("modal-add")
         },
         openDeletionModal(data) {
-            let server = this.getIndex[data.index]
+            const server = this.servers[data.server_id]
             this.$bvModal.show("modal-delete")
             this.serverToDelete = server
         },
         handleDiscoverServersAdd(data) {
-            this.discoverServersRoot = this.getIndex[data.index]
+            this.discoverServersRoot = this.servers[data.server_id]
             this.$bvModal.show("modal-discover-servers-result")
         },
         openDeleteSelectedModal() {
