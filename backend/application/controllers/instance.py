@@ -1,5 +1,6 @@
 from flask import Blueprint, request, render_template, make_response, jsonify, send_from_directory
 import application.models.servers as serverModel
+from application.marshmallowSchemas import serversSchema
 from application.DBModels import db, Server
 import os.path
 
@@ -24,4 +25,4 @@ def static_proxy(path):
 @BPinstance.route('/instance/searchAll/<searchtext>', methods=['GET'])
 def index(searchtext):
     servers = serverModel.searchAll(searchtext)
-    return jsonify([server.to_dict() for server in servers])
+    return serversSchema.dump(servers)
