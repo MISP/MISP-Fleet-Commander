@@ -256,6 +256,7 @@
                                 <contextualMenu
                                     :menu="genContextualMenu(row.item.id)"
                                     @handle-refresh-info="handleRefreshInfo"
+                                    @handle-wsrefresh-info="handleRefreshInfoWS"
                                     @view-connections="viewConnections"
                                     @view-in-network="viewInNetwork"
                                     @open-deletion-modal="openDeletionModal"
@@ -614,6 +615,13 @@ export default {
                 },
                 {
                     variant: "",
+                    text: "Enqueue refresh",
+                    icon: "clock",
+                    eventName: "handle-wsrefresh-info",
+                    callbackData: {server_id: server_id}
+                },
+                {
+                    variant: "",
                     text: "View connections",
                     icon: "network-wired",
                     eventName: "view-connections",
@@ -784,6 +792,12 @@ export default {
             let server = this.servers[server_id]
             this.$store.dispatch("servers/runConnectionTest", server.id)
             this.refreshInfo(server, method == "no_cache")
+        },
+        handleRefreshInfoWS(data) {
+            const server_id = data.server_id
+            let server = this.servers[server_id]
+            this.$store.dispatch("servers/runConnectionTest", server.id)
+            this.wsServerRefresh(server_id)
         },
         refreshInfo(server, no_cache=false) {
             this.$store.dispatch("servers/fetchServerInfo", {server_id: server.id, no_cache: no_cache})

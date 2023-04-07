@@ -8,12 +8,12 @@
             @click.stop="emitClick(entry.eventName, entry.callbackData)"
         >
             <iconButton
-                    :text="entry.text"
-                    :title="entry.title"
-                    :icon="entry.icon"
-                    :useAsset="entry.useAsset"
-                    :forceWhite="entry.forceWhite"
-                ></iconButton>
+                :text="entry.text"
+                :title="entry.title"
+                :icon="entry.icon"
+                :useAsset="entry.useAsset"
+                :forceWhite="entry.forceWhite"
+            ></iconButton>
         </b-dropdown-item-button>
     </b-list-group>
 </template>
