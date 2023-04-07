@@ -36,9 +36,7 @@
 
                 </b-nav-text>
 
-                <b-nav-item href="#">
-                    <span class="fa fa-bell" title="Notifications"></span>
-                </b-nav-item>
+                <NavbarNotification></NavbarNotification>
 
                 <b-nav-item-dropdown right>
                     <template #button-content>
@@ -74,6 +72,7 @@ import api from "@/api/common"
 import iconButton from "@/components/ui/elements/iconButton.vue"
 import NavbarServerGroup from "@/components/layout/navbar/NavbarServerGroup.vue"
 import NavbarBreadcrumb from "@/components/layout/navbar/NavbarBreadcrumb.vue"
+import NavbarNotification from "@/components/layout/navbar/NavbarNotification.vue"
 
 export default {
     name: "TheNavBar",
@@ -81,6 +80,7 @@ export default {
         iconButton,
         NavbarServerGroup,
         NavbarBreadcrumb,
+        NavbarNotification,
     },
     data: function () {
         return {
