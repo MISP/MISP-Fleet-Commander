@@ -11,6 +11,7 @@
                     <b-badge
                         :variant="getEnquedServersForRefresh.length > 0 ? 'warning' : 'success'"
                         class="ml-1"
+                        style="vertical-align: text-bottom;"
                     >{{ getEnquedServersForRefresh.length }}</b-badge>
                 </iconButton>
             </template>
