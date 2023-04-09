@@ -7,11 +7,12 @@
                     text="Notifications"
                     icon="bell"
                     :tight="true"
-                ></iconButton>
-                <b-badge
-                    variant="warning"
-                    class="ml-1"
-                >{{ getEnquedServersForRefresh.length }}</b-badge>
+                >
+                    <b-badge
+                        :variant="getEnquedServersForRefresh.length > 0 ? 'warning' : 'success'"
+                        class="ml-1"
+                    >{{ getEnquedServersForRefresh.length }}</b-badge>
+                </iconButton>
             </template>
 
             <template v-if="getEnquedServersForRefresh.length > 0">

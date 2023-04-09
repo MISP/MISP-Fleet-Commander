@@ -1,6 +1,6 @@
 <template>
-     <div class="d-flex flex-nowrap compact" :title="title" :style="rootStyle">
-        <span class="text-center">
+     <div class="d-flex flex-nowrap compact" :title="title">
+        <span class="">
             <img
                 v-if="useAsset"
                 class="mr-2 svgIcon"
@@ -15,6 +15,7 @@
         <span :class="['text-nowrap', forceWhite ? 'text-white' : '']">
             {{ text }}
         </span>
+        <slot />
     </div>
 </template>
 
@@ -46,9 +47,6 @@ export default {
         }
     },
     computed: {
-        rootStyle: function() {
-            return this.style + (this.tight ? " line-height: 1.2" : "")
-        }
     }
 }
 </script>
