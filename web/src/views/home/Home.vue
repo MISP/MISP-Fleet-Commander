@@ -10,7 +10,7 @@
                 <div class="col">
                     <b-alert show variant="primary">
                         <h5 class="alert-heading">Quick import!</h5>
-                        Drag and Drop this link as a bookmark, Go to a MISP instance and click on the link.
+                        Drag and Drop this link as a bookmark, Go to a MISP instance and click on the bookmarked link.
                         <hr>
                         <b-alert show variant="light" class="d-flex justify-content-center mb-0 p-2">
                             <b-button :href="bookmarkJS" variant="primary">
