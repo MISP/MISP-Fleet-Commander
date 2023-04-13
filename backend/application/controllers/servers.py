@@ -296,9 +296,9 @@ def restQuery(server_id):
     server = Server.query.get(server_id)
     if server is not None:
         if queryMethod == 'POST':
-            response = mispPostRequest(server, queryURL, queryData, rawResponse=True)
+            response = mispPostRequest(server, queryURL, queryData, rawResponse=True, nocache=True)
         else:
-            response = mispGetRequest(server, queryURL, rawResponse=True)
+            response = mispGetRequest(server, queryURL, rawResponse=True, nocache=True)
         responseData = ""
         try:
             responseData = response.json()
