@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from datetime import timedelta
 import requests
+import requests.adapters
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 from requests_cache import CachedSession
@@ -9,7 +10,17 @@ import time
 from urllib.parse import urljoin
 import functools
 
-requestMISPSession = CachedSession(cache_name='misp_cache', expire_after=timedelta(minutes=1))
+# requestMISPSession = CachedSession(cache_name='misp_cache', expire_after=timedelta(minutes=1))
+# adapterCache = requests.adapters.HTTPAdapter(pool_connections=50, pool_maxsize=50)
+# requestMISPSession.mount('https://', adapterCache)
+# requestMISPSession.mount('http://', adapterCache)
+
+# requestSession = requests.Session()
+# adapter = requests.adapters.HTTPAdapter(pool_connections=50, pool_maxsize=50)
+# requestSession.mount('https://', adapter)
+# requestSession.mount('http://', adapter)
+
+# requestMISPSession = requestSession
 
 def timer(func):
     @functools.wraps(func)
@@ -26,6 +37,16 @@ def timer(func):
 
 @timer
 def mispGetRequest(server, url, data={}, rawResponse=False, nocache=False):
+    requestMISPSession = CachedSession(cache_name='misp_cache', expire_after=timedelta(minutes=1))
+    adapterCache = requests.adapters.HTTPAdapter(pool_connections=50, pool_maxsize=50)
+    requestMISPSession.mount('https://', adapterCache)
+    requestMISPSession.mount('http://', adapterCache)
+
+    requestSession = requests.Session()
+    adapter = requests.adapters.HTTPAdapter(pool_connections=50, pool_maxsize=50)
+    requestSession.mount('https://', adapter)
+    requestSession.mount('http://', adapter)
+
     headers = {
         "Authorization": server.authkey,
         "Accept": "application/json",
@@ -34,7 +55,7 @@ def mispGetRequest(server, url, data={}, rawResponse=False, nocache=False):
     full_url = urljoin(server.url, url)
     try:
         if nocache:
-            response = requests.get(full_url, data=data, headers=headers, verify=(not getattr(server, 'skip_ssl', True)))
+            response = requestSession.get(full_url, data=data, headers=headers, verify=(not getattr(server, 'skip_ssl', True)))
         else:
             response = requestMISPSession.get(full_url, data=data, headers=headers, verify=(not getattr(server, 'skip_ssl', True)))
         error = handleStatusCode(response)
@@ -58,6 +79,16 @@ def mispGetRequest(server, url, data={}, rawResponse=False, nocache=False):
 
 @timer
 def mispPostRequest(server, url, data={}, rawResponse=False, nocache=True):
+    requestMISPSession = CachedSession(cache_name='misp_cache', expire_after=timedelta(minutes=1))
+    adapterCache = requests.adapters.HTTPAdapter(pool_connections=50, pool_maxsize=50)
+    requestMISPSession.mount('https://', adapterCache)
+    requestMISPSession.mount('http://', adapterCache)
+
+    requestSession = requests.Session()
+    adapter = requests.adapters.HTTPAdapter(pool_connections=50, pool_maxsize=50)
+    requestSession.mount('https://', adapter)
+    requestSession.mount('http://', adapter)
+
     headers = {
         "Authorization": server.authkey,
         "Accept": "application/json",
@@ -66,7 +97,7 @@ def mispPostRequest(server, url, data={}, rawResponse=False, nocache=True):
     full_url = urljoin(server.url, url)
     try:
         if nocache:
-            response = requests.post(full_url, json=data, headers=headers, verify=(not getattr(server, 'skip_ssl', True)))
+            response = requestSession.post(full_url, json=data, headers=headers, verify=(not getattr(server, 'skip_ssl', True)))
         else:
             response = requestMISPSession.post(full_url, json=data, headers=headers, verify=(not getattr(server, 'skip_ssl', True)))
         error = handleStatusCode(response)
