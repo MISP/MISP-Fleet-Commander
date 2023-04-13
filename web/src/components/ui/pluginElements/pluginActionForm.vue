@@ -33,12 +33,22 @@
                 >option.text</b-form-checkbox>
             </b-form-checkbox-group>
 
+            <b-form-textarea
+                v-else-if="param.type == 'textarea'"
+                :id="`input-${i}`"
+                v-model="formData[param.key]"
+                :type="param.type"
+                :placeholder="param.placeholder || ''"
+                rows="3"
+                max-rows="6"
+            ></b-form-textarea>
+
             <b-form-input
                 v-else
                 :id="`input-${i}`"
                 v-model="formData[param.key]"
                 :type="param.type"
-                placeholder="param.placeholder"
+                :placeholder="param.placeholder || ''"
             ></b-form-input>
 
         </b-form-group>
