@@ -5,6 +5,7 @@ import click
 from pprint import pprint
 
 from flask.cli import AppGroup
+from application.marshmallowSchemas import serverSchema
 import application.models.servers as serverModel
 import application.models.serverGroups as serverGroupModel
 
@@ -50,6 +51,30 @@ def doQueryGroup(group_id: int, delay_second: int = 10):
             print(f'Querying server {server.name} ({server.id})')
             timer1 = time.time()
             serverModel.queryInfo(server.id, False)
+            time.sleep(delay_second)
+            print(f'\t Took {time.time() - timer1:.2f}')
+    else:
+        print('No server group with that ID')
+
+@server_cli.command('watch-group-ws')
+@click.argument('group_id')
+@click.option('--minute', required=False, default=5)
+@click.option('--delay_second', required=False, default=10)
+def watchGroupWs(group_id: int, minute: int = 5, delay_second: int = 10):
+    while True:
+        doQueryGroupWs(group_id, delay_second)
+        print(f'Sleeping {minute*60}')
+        time.sleep(minute*60)
+
+def doQueryGroupWs(group_id: int, delay_second: int = 10):
+    from application.workers.tasks import fetchServerInfoTask
+    server_group = serverGroupModel.get(group_id)
+    if server_group is not None:
+        print(f'Querying all {len(server_group.servers)} servers from group {server_group.name} ({server_group.id})')
+        for server in server_group.servers:
+            print(f'Querying server {server.name} ({server.id})')
+            timer1 = time.time()
+            fetchServerInfoTask.delay(serverSchema.dump(server))
             time.sleep(delay_second)
             print(f'\t Took {time.time() - timer1:.2f}')
     else:
