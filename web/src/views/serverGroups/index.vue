@@ -94,7 +94,6 @@ export default {
     methods: {
         selectServerGroup(group) {
             this.$store.dispatch("serverGroups/selectServerGroup", group)
-            router.push({ path: '/servers/' })
         },
         selectGroupForDeletion(group_id) {
             this.group_id_to_delete = group_id

@@ -1,5 +1,6 @@
 import api from "@/api/serverGroups"
 import Vue from "vue"
+import router from "@/router"
 
 // initial state
 const state = {
@@ -117,6 +118,9 @@ const actions = {
 const mutations = {
     selectServerGroup: function (state, group) {
         state.selected = group
+        if (router.history.current.path !== '/servers') {
+            router.push({ path: '/servers', replace: true })
+        }
     },
     setServerGroups(state, groups) {
         Vue.set(state, 'all', {})
