@@ -20,7 +20,7 @@ class UpToDate(BasePlugin):
         upToDate = upToDateStatus['up_to_date']
         data = {
             "component": "badge",
-            "variant": "danger",
+            "variant": "success" if upToDate else "danger",
             "text": upToDateStatus['current'],
             "title": f"Latest release {upToDateStatus['github']}"
         }
@@ -81,15 +81,11 @@ class UpToDate(BasePlugin):
             "current_tokenized": currentTokenized,
             "github": github,
             "github_tokenized": githubTokenized,
-            "up_to_date": UpToDate.canBeUpdated(githubTokenized, currentTokenized)
+            "up_to_date": UpToDate.isUpToDate(githubTokenized, currentTokenized)
         }
         return data
 
-    def canBeUpdated(github_version: str, current_version: str) -> bool:
-        if github_version['major'] != current_version['major']:
-            return False  # update for major version should be done manually
-        elif github_version['minor'] != current_version['minor']:
-            return False  # update for major version should be done manually
-        elif github_version['patch'] > current_version['patch']:
-            return True
-        return False
+    def isUpToDate(github_version: str, current_version: str) -> bool:
+        return github_version['major'] == current_version['major'] and \
+            github_version['minor'] == current_version['minor'] and \
+            github_version['patch'] == current_version['patch']
