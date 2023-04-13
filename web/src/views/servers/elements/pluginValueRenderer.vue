@@ -67,7 +67,7 @@ export default {
             return this.plugin_response.status
         },
         errors() {
-            return this.plugin_response.errors || null
+            return this.plugin_response.errors || this.plugin_response.error || null
         },
         printableErrors() {
             return this.errors.length == 1 ? this.errors[0] : JSON.stringify(this.errors)

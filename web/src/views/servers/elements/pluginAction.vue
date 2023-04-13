@@ -53,16 +53,24 @@ export default {
         handlePluginActionSubmit: function ({plugin_id, form_data}) {
             return pluginAPI.submitAction(this.server_id, plugin_id, form_data)
                 .then((response) => {
-                    const successMessage = response.data.data.message
-                    this.$bvToast.toast(successMessage, {
-                        title: "Successfully performed action",
-                        variant: "success",
-                    })
+                    if (response.data.error) {
+                        const errorMessage = response.data.error.join(', ')
+                        this.$bvToast.toast(errorMessage, {
+                            title: `Could not perform action for plugin ${plugin_id}`,
+                            variant: "danger",
+                        })
+                    } else {
+                        const successMessage = response.data.data.message
+                        this.$bvToast.toast(successMessage, {
+                            title: `Successfully performed action for plugin ${plugin_id}`,
+                            variant: "success",
+                        })
+                    }
                 })
                 .catch(error => {
                     const errorMessage = error.toJSON().message
                     this.$bvToast.toast(errorMessage, {
-                        title: "Could not perform action",
+                        title: `Could not perform action for plugin ${plugin_id}`,
                         variant: "danger",
                     })
                 })
