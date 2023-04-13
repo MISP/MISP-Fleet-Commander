@@ -38,7 +38,7 @@ def doAction(server_id, plugin_id):
     server = Server.query.get(server_id)
     if server:
         plugin = pluginsModel.getPluginFromID(loadedPlugins, plugin_id)
-        actionData = request.json.get(plugin_id, {})
+        actionData = request.json
         actionResult = pluginsModel.doAction(server, plugin, actionData)
         return actionResult
     else:
