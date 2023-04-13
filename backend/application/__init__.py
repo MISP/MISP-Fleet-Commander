@@ -35,7 +35,7 @@ def celery_init_app(app: Flask) -> Celery:
 #     "pk": "pk_%(table_name)s"
 # }
 # db = SQLAlchemy(metadata=MetaData(naming_convention=naming_convention))
-db = SQLAlchemy()
+db = None
 loadedPlugins = None
 flaskApp = None
 redisClient = redis.Redis(host='localhost', port=6379, db=1)
@@ -45,7 +45,8 @@ socketioApp = None
 
 def create_app():
     """Construct the core application."""
-    global loadedPlugins, flaskApp, celery_app, socketioApp
+    global loadedPlugins, flaskApp, celery_app, socketioApp, db
+    db = SQLAlchemy()
     flaskApp = Flask(__name__, instance_relative_config=False)
     flaskApp.config.from_object('config.DevelopmentConfig')
     CORS(flaskApp)
