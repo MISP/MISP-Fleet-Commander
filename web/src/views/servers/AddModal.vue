@@ -181,6 +181,9 @@ export default {
         serverForm: {}
     },
     computed: {
+        isEdit() {
+            return this.modalAction != "Add"
+        },
         modalActionText() {
             return this.modalAction == "Add" ? "Save" : this.modalAction
         },
@@ -269,8 +272,9 @@ export default {
                         this.$bvModal.hide("modal-add")
                     })
                     const toastText = response.data.name + " [" + response.data.url + "]"
+                    const messageText = this.isEdit ? "Server successfully edited" : "Server successfully added"
                     this.$bvToast.toast(toastText, {
-                        title: "Server successfully added",
+                        title: messageText,
                         variant: "success",
                     })
                     this.$emit("addition-success", "done")
