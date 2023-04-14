@@ -34,18 +34,25 @@ def timer(func):
         return result
     return wrapper_timer
 
-
-@timer
-def mispGetRequest(server, url, data={}, rawResponse=False, nocache=False):
+def getMISPRequestSession():
     requestMISPSession = CachedSession(cache_name='misp_cache', expire_after=timedelta(minutes=1))
     adapterCache = requests.adapters.HTTPAdapter(pool_connections=50, pool_maxsize=50)
     requestMISPSession.mount('https://', adapterCache)
     requestMISPSession.mount('http://', adapterCache)
+    return requestMISPSession
 
+def getRequestPSession():
     requestSession = requests.Session()
     adapter = requests.adapters.HTTPAdapter(pool_connections=50, pool_maxsize=50)
     requestSession.mount('https://', adapter)
     requestSession.mount('http://', adapter)
+    return requestSession
+
+
+@timer
+def mispGetRequest(server, url, data={}, rawResponse=False, nocache=False):
+    requestMISPSession = getMISPRequestSession()
+    requestSession = getRequestPSession()
 
     headers = {
         "Authorization": server.authkey,
@@ -79,15 +86,8 @@ def mispGetRequest(server, url, data={}, rawResponse=False, nocache=False):
 
 @timer
 def mispPostRequest(server, url, data={}, rawResponse=False, nocache=True):
-    requestMISPSession = CachedSession(cache_name='misp_cache', expire_after=timedelta(minutes=1))
-    adapterCache = requests.adapters.HTTPAdapter(pool_connections=50, pool_maxsize=50)
-    requestMISPSession.mount('https://', adapterCache)
-    requestMISPSession.mount('http://', adapterCache)
-
-    requestSession = requests.Session()
-    adapter = requests.adapters.HTTPAdapter(pool_connections=50, pool_maxsize=50)
-    requestSession.mount('https://', adapter)
-    requestSession.mount('http://', adapter)
+    requestMISPSession = getMISPRequestSession()
+    requestSession = getRequestPSession()
 
     headers = {
         "Authorization": server.authkey,
