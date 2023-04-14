@@ -13,14 +13,6 @@
                     </b-button>
                     <b-dropdown left variant="primary" size="sm" style="border-left: 1px solid #0069d9">
                         <b-dropdown-item
-                            v-b-modal.modal-batch-add
-                        >
-                        <iconButton
-                                text="Batch mode"
-                                icon="list-ol"
-                            ></iconButton>
-                        </b-dropdown-item>
-                        <b-dropdown-item
                             v-b-modal.modal-csv-add
                         >
                             <iconButton
@@ -342,10 +334,6 @@
             @addition-success="handleAdd"
         ></AddModal>
 
-        <BatchAddModal
-            @addition-success="handleBatchAdd"
-        ></BatchAddModal>
-
         <CSVAddModal
             @addition-success="handleBatchAdd"
         ></CSVAddModal>
@@ -386,7 +374,6 @@ import DeleteModal from "@/views/servers/DeleteModal.vue"
 import BatchAPI from "@/views/servers/BatchAPI.vue"
 import DeleteSelectedModal from "@/views/servers/DeleteSelectedModal.vue"
 import AddModal from "@/views/servers/AddModal.vue"
-import BatchAddModal from "@/views/servers/BatchAddModal.vue"
 import BatchPluginAction from "@/views/servers/BatchPluginAction.vue"
 import CSVAddModal from "@/views/servers/CSVAddModal.vue"
 import DiscoverServers from "@/views/servers/DiscoverServers.vue"
@@ -411,7 +398,6 @@ export default {
         RowDetails,
         DeleteModal,
         AddModal,
-        BatchAddModal,
         CSVAddModal,
         DeleteSelectedModal,
         DiscoverServers,
