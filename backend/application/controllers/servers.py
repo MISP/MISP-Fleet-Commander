@@ -54,7 +54,6 @@ def add(group_id):
                         comment=server.get('comment'),
                         skip_ssl=server.get('skip_ssl', False),
                         authkey=server.get('authkey', None),
-                        basicauth=server.get('basicauth', None),
                         server_group_id=group_id,
                         user_id=1)
             db.session.add(server)
@@ -67,7 +66,6 @@ def add(group_id):
                         comment=request.json.get('comment'),
                         skip_ssl=request.json.get('skip_ssl', False),
                         authkey=request.json.get('authkey', None),
-                        basicauth=request.json.get('basicauth', None),
                         server_group_id=group_id,
                         user_id=1)
         db.session.add(server)
@@ -80,7 +78,7 @@ def add(group_id):
 
 @BPserver.route('/servers/edit', methods=['POST'])
 def edit():
-    saveFields = ['name', 'comment', 'url', 'skip_ssl', 'authkey', 'basicauth']
+    saveFields = ['name', 'comment', 'url', 'skip_ssl', 'authkey']
     server = Server.query.get(request.json['id'])
     if server is not None:
         for field, value in request.json.items():

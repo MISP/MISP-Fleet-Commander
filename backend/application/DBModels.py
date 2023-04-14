@@ -58,8 +58,6 @@ class Server(BaseModel):
                          default=False)
     authkey = db.Column(db.String(40),
                         nullable=True)
-    basicauth = db.Column(db.String(120),
-                        nullable=True)
     user_id = db.Column(db.Integer,
                         db.ForeignKey('users.id'),
                         nullable=False,
@@ -79,20 +77,6 @@ class Server(BaseModel):
     # server_group = db.relationship('ServerGroup',
     #     backref=db.backref('server_group', lazy='joined', uselist=True))
     server_group = db.relationship('ServerGroup', back_populates='servers')
-
-
-    @hybrid_property
-    def auth_method(self):
-        methods = []
-        if self.authkey:
-            methods.append("API Key")
-        if self.basicauth:
-            methods.append("Basic Auth")
-        return methods
-
-    @auth_method.setter
-    def auth_method(self, method):
-        self._auth_method = method
 
     @hybrid_property
     def server_info(self):

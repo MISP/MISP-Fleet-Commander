@@ -67,66 +67,20 @@
                 </b-form-group>
 
                 <b-form-group
-                    label="User Authorization Key:"
+                    label="Authorization Key:"
                     label-for="input-authkey"
                     description="The authorisation information of the user"
                 >
-                    <template v-slot:label>
-                        <div class="d-flex">
-                            Authorization:
-                            <b-form-radio-group
-                                class="d-inline-block ml-auto"
-                                v-model="authMethodSelected"
-                                :options="authMethodOptions"
-                                name="radio-inline"
-                            ></b-form-radio-group>
-                        </div>
-                    </template>
-
-                    <div v-if="authMethodSelected == 'api'">
-                        <ValidationProvider v-slot="validationContext" rules="required|length:40" name="User AUTHKey">
-                            <b-form-input
-                                v-model="form.authkey"
-                                :state="getValidationState(validationContext)"
-                                placeholder="3vl1KgDgQ1m0W3rwKMgB5z6MqfYkUZobGwIj3Urw"
-                                autocomplete="off"
-                                type="search"
-                            ></b-form-input>
-                            <b-form-invalid-feedback v-for="(error, index) in validationContext.errors" v-bind:key="index">{{ error }}</b-form-invalid-feedback>
-                        </ValidationProvider>
-                    </div>
-                    <div v-else>
-                        <ValidationProvider v-slot="validationContext" rules="required|email" name="User Email">
-                            <b-input-group class="mb-2">
-                                <template v-slot:prepend>
-                                   <b-input-group-text ><i class="fas fa-at"></i></b-input-group-text>
-                                </template>
-                                <b-form-input
-                                    v-model="basicEmail"
-                                    :state="getValidationState(validationContext)"
-                                    placeholder="admin@admin.test"
-                                    autocomplete="off"
-                                    type="search"
-                                ></b-form-input>
-                                <b-form-invalid-feedback v-for="(error, index) in validationContext.errors" v-bind:key="index">{{ error }}</b-form-invalid-feedback>
-                            </b-input-group>
-                        </ValidationProvider>
-                        <ValidationProvider v-slot="validationContext" rules="required" name="User Password">
-                            <b-input-group>
-                                <template v-slot:prepend>
-                                    <b-input-group-text ><i class="fas fa-key"></i></b-input-group-text>
-                                </template>
-                                <b-form-input
-                                    v-model="basicPassword"
-                                    type="password"
-                                    :state="getValidationState(validationContext)"
-                                    placeholder="Password1234"
-                                    autocomplete="off"
-                                ></b-form-input>
-                                <b-form-invalid-feedback v-for="(error, index) in validationContext.errors" v-bind:key="index">{{ error }}</b-form-invalid-feedback>
-                            </b-input-group>
-                        </ValidationProvider>
-                    </div>
+                    <ValidationProvider v-slot="validationContext" rules="required|length:40" name="User AUTHKey">
+                        <b-form-input
+                            v-model="form.authkey"
+                            :state="getValidationState(validationContext)"
+                            placeholder="3vl1KgDgQ1m0W3rwKMgB5z6MqfYkUZobGwIj3Urw"
+                            autocomplete="off"
+                            type="search"
+                        ></b-form-input>
+                        <b-form-invalid-feedback v-for="(error, index) in validationContext.errors" v-bind:key="index">{{ error }}</b-form-invalid-feedback>
+                    </ValidationProvider>
                 </b-form-group>
             </b-form>
         </ValidationObserver>
@@ -152,7 +106,6 @@
 <script>
 import { ValidationProvider, ValidationObserver, extend } from "vee-validate"
 import { required, min, length, email } from "vee-validate/dist/rules"
-import axios from "axios"
 
 extend("required", required)
 extend("min", min)
@@ -187,53 +140,12 @@ export default {
         modalActionText() {
             return this.modalAction == "Add" ? "Save" : this.modalAction
         },
-        basicEmail: {
-            get: function() {
-                return this.basic.email
-            },
-            set: function(newValue) {
-                this.basic.email = newValue
-                this.form.basicauth = `${this.basic.email}:${this.basic.password}`
-            }
-        },
-        basicPassword: {
-            get: function() {
-                return this.basic.password
-            },
-            set: function(newValue) {
-                this.basic.password = newValue
-                this.form.basicauth = `${this.basic.email}:${this.basic.password}`
-            }
-        },
-        authMethodSelected: {
-            get: function() {
-                if (this.form.auth_method === undefined) {
-                    return this.localAuthMethodSelected
-                } else if (this.form.auth_method.length == 1 && this.form.auth_method[0] == "Basic Auth") {
-                    return "basic"
-                } else {
-                    return this.localAuthMethodSelected
-                }
-            },
-            set: function(newValue) {
-                this.localAuthMethodSelected = newValue
-            }
-        }
     },
     data: function() {
         return {
-            basic: {
-                email: "",
-                password: ""
-            },
             skip_ssl: false,
             form: this.serverForm,
             postInProgress: false,
-            localAuthMethodSelected: "api",
-            authMethodOptions: [
-                { text: "API authorisation", value: "api" },
-                { text: "Basic authorisation (email:password)", value: "basic" }
-            ]
         }
     },
     methods: {
@@ -247,11 +159,7 @@ export default {
             this.form.url = ""
             this.form.skip_ssl = false
             this.form.authkey = ""
-            this.form.basicauth = ""
-            this.basic.email = ""
-            this.basic.password = ""
             this.form.recursive_add = true
-            this.authMethodSelected = "api"
             this.$emit("update:modalAction", "Add")
         },
         handleSubmission(evt) {

@@ -109,7 +109,7 @@ export default {
             fileMaxAllowedSize: 102400,
             rawText: "",
             has_header: true,
-            defaultHeader: ["name", "description", "url", "skip_ssl", "authkey", "auth_method"],
+            defaultHeader: ["name", "description", "url", "skip_ssl", "authkey"],
             delimiter: ",",
             mappedFields: {
                 name: {label: "Name", csvIndex: null, required: true},
@@ -117,7 +117,6 @@ export default {
                 url: {label: "URL", csvIndex: null, required: true, regex:/^(ftp|http|https):\/\/[^ "]+$/},
                 skip_ssl: {label: "Skip SSL", csvIndex: null, required: false},
                 authkey: {label: "Authkey", csvIndex: null, required: true, regex:/^[a-zA-Z0-9]{40}$/},
-                auth_method: {label: "Basic auth", csvIndex: null, required: false},
             },
             csvHeader:"",
             speratedCSV: [],

@@ -40,8 +40,6 @@ class ServerSchema(BaseSchema):
     # server_info = mafields.Nested(lambda: ServerQuerySchema, many=False)
     server_info = fields.Nested(lambda: ServerQuerySchema)
 
-    auth_method = fields.Str(dump_only=True)
-
     class Meta(BaseSchema.Meta):
         model = Server
         unknown = INCLUDE

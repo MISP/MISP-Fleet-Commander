@@ -328,8 +328,7 @@
         ></DeleteSelectedModal>
 
         <AddModal
-            :modalActionX.sync="modalAddAction"
-            :modalAction="modalAddAction"
+            :modalAction.sync="modalAddAction"
             :serverForm="validServerToEdit"
             @addition-success="handleAdd"
         ></AddModal>
@@ -668,6 +667,10 @@ export default {
         },
         handleBatchAdd() {
             this.refreshServerIndex()
+        },
+        resetModalAction() {
+            console.log('yooo')
+            this.modalAddAction = "Add"
         },
         openEditModal(server_id) {
             const server = this.servers[server_id]
