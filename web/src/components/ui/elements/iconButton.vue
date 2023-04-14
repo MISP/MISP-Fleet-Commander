@@ -52,7 +52,7 @@ export default {
 </script>
 
 <style scoped>
-.compact i.fas, .compact img.svgIcon {
+.compact img.svgIcon {
     width: 20px;
 }
 </style>
