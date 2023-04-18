@@ -240,7 +240,7 @@ export default {
 
 <style scoped>
 .server-list-container {
-    max-height: 100px;
+    max-height: 400px;
     overflow: auto;
 }
 </style>
