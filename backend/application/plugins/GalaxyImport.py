@@ -8,7 +8,7 @@ from application.models.plugins import BasePlugin, PluginResponse, SuccessPlugin
 class GalaxyImport(BasePlugin):
     name = 'Galaxy Import'
     description = 'Call the /galaxies/import endpoint with the provided data'
-    icon = 'globe'
+    icon = 'fas fa-globe'
     action_parameters = [
         PluginResponse.genActionParameter('payload', 'textarea', 'Galaxy JSON', 'The JSON of the Galaxy to import', '[{"GalaxyCluster": { ...'),
     ]
