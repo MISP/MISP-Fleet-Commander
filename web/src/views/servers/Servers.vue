@@ -285,7 +285,7 @@
 
             <template v-slot:cell(zeromq)="row">
                 <loaderPlaceholder :loading="!server_query_in_progress[row.item.id]">
-                    <zeroMQStatus :status="row.value"></zeroMQStatus>
+                    <zeroMQStatus :server_id="row.item.id"></zeroMQStatus>
                 </loaderPlaceholder>
             </template>
 
@@ -490,11 +490,7 @@ export default {
                     {
                         key: "zeromq",
                         label: "ZeroMQ",
-                        sortable: true,
                         class: "align-middle d-none d-xxl-table-cell",
-                        formatter: (value, key, item) => {
-                            return this.zeromq[item.id] || null
-                        }
                     },
                     {
                         key: "workers",

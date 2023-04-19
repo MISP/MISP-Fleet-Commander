@@ -1,29 +1,46 @@
 <template>
     <span
-        v-if="status !== '' && status !== undefined"
         :class="statusOk ? 'text-success' : 'text-danger'"
+        :title="statusMessage"
     >
         <span :class="['fas', statusOk ? 'fa-check' : 'fa-times']"></span>
-        {{ printable === true ? '' : printable }}
-    </span>    
+    </span>
 </template>
 
 <script>
+import { mapState, mapGetters } from "vuex"
+
 export default {
     name: "zeroMQStatus",
     props: {
-        status: {}
-    },
-    computed: {
-        printable() {
-            return this.status !== ""
+        server_id: {
+            required: true,
+            type: Number,
         },
-        statusOk () {
-            return this.status !== ""
+    },
+    data: function () {
+        return {
+            statusMapping: {
+                0: 'OK',
+                1: 'Not enabled',
+                2: 'Python library not installed correctly',
+                3: 'ZMQ script not running',
+            }
         }
     },
-    data: function() {
-        return {}
+    computed: {
+        ...mapState({
+            zeromq: state => state.servers.zeromq,
+        }),
+        status() {
+            return this.zeromq[this.server_id]
+        },
+        statusOk () {
+            return this.status !== undefined && this.status == 0
+        },
+        statusMessage () {
+            return this.statusMapping[this.status] || 'Unknown status code'
+        },
     },
     methods: {
     }
