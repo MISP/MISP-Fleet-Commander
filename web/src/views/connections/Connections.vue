@@ -163,6 +163,14 @@
                 </loaderPlaceholder>
             </template>
 
+            <template v-slot:cell(push_galaxy_clusters)="row">
+                <i :class="['fa', row.item.destination.Server.push_galaxy_clusters ? 'fa-check text-success' : 'fa-times']"></i>
+            </template>
+
+            <template v-slot:cell(pull_galaxy_clusters)="row">
+                <i :class="['fa', row.item.destination.Server.pull_galaxy_clusters ? 'fa-check text-success' : 'fa-times']"></i>
+            </template>
+
             <template v-slot:cell(last_refresh)="row">
                 <span class="d-block" style="width: 90px;">
                     <span :class="forcedHidden == row.index ? 'd-none' : 'hide-on-hover'">
@@ -283,10 +291,20 @@ export default {
                         sortable: true
                     },
                     {
+                        key: "push_galaxy_clusters",
+                        label: "Push Clusters",
+                        sortable: true,
+                    },
+                    {
+                        key: "pull_galaxy_clusters",
+                        label: "Pull Clusters",
+                        sortable: true,
+                    },
+                    {
                         key: "last_refresh",
                         sortable: true,
                         class: "align-middle refresh-column py-1"
-                    }
+                    },
                 ]
             }
         }
