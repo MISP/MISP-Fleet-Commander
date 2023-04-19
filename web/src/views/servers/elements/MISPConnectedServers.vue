@@ -55,6 +55,14 @@
                 <i :class="['fa', row.value ? 'fa-check text-success' : 'fa-times']"></i>
             </template>
 
+            <template v-slot:cell(Server.push_galaxy_clusters)="row">
+                <i :class="['fa', row.value ? 'fa-check text-success' : 'fa-times']"></i>
+            </template>
+
+            <template v-slot:cell(Server.pull_galaxy_clusters)="row">
+                <i :class="['fa', row.value ? 'fa-check text-success' : 'fa-times']"></i>
+            </template>
+
         </b-table>
     </div>
 </template>
@@ -115,6 +123,16 @@ export default {
                     {
                         key: "Server.pull",
                         label: "Pull",
+                        sortable: true,
+                    },
+                    {
+                        key: "Server.push_galaxy_clusters",
+                        label: "Push Clusters",
+                        sortable: true,
+                    },
+                    {
+                        key: "Server.pull_galaxy_clusters",
+                        label: "Pull Clusters",
                         sortable: true,
                     },
                 ],
