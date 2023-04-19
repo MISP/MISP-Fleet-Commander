@@ -38,7 +38,14 @@ class ModifySyncConnection(BasePlugin):
     def getFilteredServers(cls, server: Server, urlFilters: str = '') -> list:
         url = f'/servers/index/search:{urlFilters}'
         servers = mispGetRequest(server, url)
-        return servers
+
+        filteredServers = []
+        # Make sure we filter based on server name and URL even if server doesn't support server/index filtering (2.4.171)
+        for syncConnection in servers:
+            if urlFilters in syncConnection['Server']['name'] or urlFilters in syncConnection['Server']['url']:
+                filteredServers.append(syncConnection)
+
+        return filteredServers
 
     @classmethod
     def pushChangesToAllServers(cls, server: Server, syncConnections: list, payload: str) -> Union[PluginResponse, List[PluginResponse]]:
