@@ -291,7 +291,7 @@
 
             <template v-slot:cell(workers)="row">
                 <loaderPlaceholder :loading="!server_query_in_progress[row.item.id]">
-                    <workersStatus v-if="typeof row.value === 'object'" :workers="row.value" :server_id="row.item.id"></workersStatus>
+                    <workersStatus :workers="row.value" :server_id="row.item.id"></workersStatus>
                 </loaderPlaceholder>
             </template>
 

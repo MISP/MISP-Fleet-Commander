@@ -10,6 +10,13 @@
             </div>
         </div>
         <b-badge
+            v-else-if="backgroundJobEnabled && workerCount == 0"
+            variant="danger"
+            rounded
+        >
+            Background job enabled but no worker running
+        </b-badge>
+        <b-badge
             v-else
             variant="danger"
             rounded
@@ -83,29 +90,46 @@ export default {
     },
     methods: {
         getVariantFromAliveAndJobCount(workerType) {
-            const deadCount = this.getAliveNumbers(workerType).dead
+            const aliveNumber = this.getAliveNumbers(workerType)
+            if (aliveNumber.total == 0) {
+                return "danger"
+            }
+            const deadCount = aliveNumber.dead
             return deadCount == 0 ? 
                 (workerType.jobCount <= 100 ? "" : (workerType <= 1000 ? "warning" : "danger")) :
                 (deadCount == workerType.workers.length ? "danger" : "warning")
         },
         getVariantFromAlive(workerType) {
-            const deadCount = this.getAliveNumbers(workerType).dead
+            const aliveNumber = this.getAliveNumbers(workerType)
+            if (aliveNumber.total == 0) {
+                return "danger"
+            }
+            const deadCount = aliveNumber.dead
             return deadCount == 0 ? 
                 "" :
                 (deadCount == workerType.workers.length ? "danger" : "warning")
         },
         getAliveNumbers(workerType) {
             let deadCount = 0
-            for (const worker of workerType.workers){
+            if (workerType.workers === undefined) {
+                workerType.workers = {}
+            }
+            Object.values(workerType.workers).forEach(worker => {
                 if (!worker.ok) {
                     deadCount++
                 }
-            }
-            return {dead: deadCount, alive: workerType.workers.length-deadCount, total: workerType.workers.length}
+            });
+            return {dead: deadCount, alive: Object.values(workerType.workers).length-deadCount, total: Object.values(workerType.workers).length}
         },
         getTitle(workerName, workerType) {
+            let title = ''
+            if (workerType.total == 0) {
+                title = `Worker <strong>${workerName}</strong>:<div class="text-left">${workerType.jobCount} in queue</br>No worker running</div>`
+            } else [
+                title = `Worker <strong>${workerName}</strong>:<div class="text-left">${workerType.jobCount} in queue</br>${workerType.alive}/${workerType.total} alive</div>`
+            ]
             return {
-                title: `Worker <strong>${workerName}</strong>:<div class="text-left">${workerType.jobCount} in queue</br>${workerType.alive}/${workerType.total} alive</div>`
+                title: title
             }
         }
     }

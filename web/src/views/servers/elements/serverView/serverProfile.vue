@@ -266,6 +266,7 @@ export default {
                 "ZeroMQ": {
                     data: {
                         status: this.getZmq,
+                        server_id: this.server_id,
                     },
                     component: zeroMQStatus,
                 },
