@@ -107,6 +107,8 @@ def mispPostRequest(server, url, data={}, rawResponse=False, nocache=True):
             return response
         else:
             jsonResponse = response.json()
+            if type(jsonResponse) is not dict:
+                jsonResponse = { 'data': jsonResponse }
             jsonResponse['_latency'] = response.elapsed.total_seconds()
             return jsonResponse
     except requests.exceptions.SSLError:
