@@ -1,4 +1,5 @@
 import Vue from "vue"
+import store from "@/store/index"
 
 // initial state
 const state = {
@@ -25,7 +26,9 @@ const actions = {
         Vue.prototype.$socket.emit('xname2', 'test-from-client')
     },
     SOCKET_UPDATE_SERVER({ dispatch }, serverData) {
-        dispatch("servers/commitAllQueryInfo", serverData, { root: true })
+        if (serverData.server.server_group.id == store.getters["serverGroups/selectedServerGroup"].id)  {
+            dispatch("servers/commitAllQueryInfo", serverData, { root: true })
+        }
     },
     SOCKET_SERVER_UPDATING({ commit }, serverData) {
         const payload = {
