@@ -85,20 +85,7 @@
             <keep-alive>
             <b-card no-body>
                 <div :style="getMaxHeight">
-                    <b-table-simple
-                        striped small
-                        class="mb-0"
-                        :bordered="false"
-                        :borderless="true"
-                        :outlined="false"
-                    >
-                        <b-tbody>
-                            <b-tr v-for="(v, k) in getServerUsage.stats" v-bind:key="k">
-                                <b-th>{{ k }}</b-th>
-                                <b-td>{{ v }}</b-td>
-                            </b-tr>
-                        </b-tbody>
-                    </b-table-simple>
+                    <instanceUsage :server_id="server_id"></instanceUsage>
                 </div>
             </b-card>
             </keep-alive>
@@ -164,6 +151,7 @@ import jsonViewer from "@/components/ui/elements/jsonViewer.vue"
 import MISPRemoteAdministration from "@/views/servers/elements/MISPRemoteAdministration.vue"
 import MISPSchemaDiagnostic from "@/views/servers/elements/MISPSchemaDiagnostic.vue"
 import MISPConnectedServers from "@/views/servers/elements/MISPConnectedServers.vue"
+import instanceUsage from "@/views/servers/elements/instanceUsage.vue"
 import pluginAction from "@/views/servers/elements/pluginAction.vue"
 
 export default {
@@ -175,6 +163,7 @@ export default {
         MISPRemoteAdministration,
         MISPSchemaDiagnostic,
         MISPConnectedServers,
+        instanceUsage,
         pluginAction,
     },
     props: {
