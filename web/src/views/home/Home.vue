@@ -10,7 +10,7 @@
                 <div class="col">
                     <b-alert show variant="primary">
                         <h5 class="alert-heading">Make importing servers easier!</h5>
-                        Drag and Drop this quick import link as a bookmark, Go to a MISP instance and click on the bookmarked link.
+                        Drag and Drop this import link as a browser bookmark, Go to a MISP instance and click on your bookmarked link.
                         <hr>
                         <b-alert show variant="light" class="d-flex justify-content-center mb-0 p-2">
                             <b-button :href="bookmarkJS" variant="primary">
