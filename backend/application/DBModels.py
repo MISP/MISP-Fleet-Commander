@@ -1,9 +1,14 @@
 from application import db
 from datetime import datetime
 import json
+import uuid
 from sqlalchemy import func
 from sqlalchemy.ext.hybrid import hybrid_property
 from application.baseModel import BaseModel
+
+
+def generate_uuid():
+    return str(uuid.uuid4())
 
 
 class User(BaseModel):
@@ -47,6 +52,11 @@ class Server(BaseModel):
     name = db.Column(db.String(120),
                      nullable=False,
                      index=True)
+    uuid = db.Column(db.CHAR(32),
+                     index=True,
+                     unique=True,
+                     nullable=False,
+                     default=generate_uuid)
     comment = db.Column(db.String(256),
                      nullable=False,
                      default='')

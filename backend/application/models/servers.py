@@ -39,11 +39,12 @@ def testConnection(server_id: int) -> Union[dict, None]:
 
 def getServerInfo(server_id, cache=True) -> Union[dict, None]:
     server = Server.query.get(server_id)
+    server_uuid = server.uuid
     if server is not None:
         if not cache:
             server_query_db = fetchServerInfo(server)
         else:
-            server_query_db = redisModel.getServerInfo(server_id)
+            server_query_db = redisModel.getServerInfo(server_uuid)
             if server_query_db is None: # No query associated to the server
                 server_query_db = fetchServerInfo(server)
         return serverQuerySchema.load(server_query_db)
@@ -87,7 +88,7 @@ def attachConnectedServerStatus(server, connectedServers):
 
 
 def saveInfo(server, fullQuery: dict) -> bool:
-    return redisModel.saveServerInfo(server.id, fullQuery)
+    return redisModel.saveServerInfo(server.uuid, fullQuery)
 
 
 def getConnectedServerStatus(server, connectedServer):
