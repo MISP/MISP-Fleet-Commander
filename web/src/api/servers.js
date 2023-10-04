@@ -1,25 +1,24 @@
-import { baseurl } from "./apiConfig"
 import common from "./common"
 import axios from "axios"
 import store from "@/store/index"
 
 const urls = {
-    testConnection: `${baseurl}/servers/testConnection`,
-    batchTestConnection: `${baseurl}/servers/batchTestConnection`,
-    queryInfo: `${baseurl}/servers/queryInfo`,
-    index: `${baseurl}/servers/index`,
-    add: `${baseurl}/servers/add`,
-    edit: `${baseurl}/servers/edit`,
-    delete: `${baseurl}/servers/delete`,
-    restQuery: `${baseurl}/servers/restQuery`,
-    getUsers: `${baseurl}/servers/getUsers`,
+    testConnection: `/servers/testConnection`,
+    batchTestConnection: `/servers/batchTestConnection`,
+    queryInfo: `/servers/queryInfo`,
+    index: `/servers/index`,
+    add: `/servers/add`,
+    edit: `/servers/edit`,
+    delete: `/servers/delete`,
+    restQuery: `/servers/restQuery`,
+    getUsers: `/servers/getUsers`,
 }
 
 export default {
     index(cb, errorCb) {
         // const url = `${url.index}?page=${ctx.currentPage}&size=${ctx.perPage}`
         const url = common.appendGroupIDIfDefined(`${urls.index}`)
-        return axios.get(url)
+        return common.getClient().get(url)
             .then((response) => {
                 cb(response.data)
             }).catch(error => {
@@ -29,7 +28,7 @@ export default {
 
     testConnection(server_id, cb, errorCb) {
         const url = `${urls.testConnection}/${server_id}`
-        return axios.get(url)
+        return common.getClient().get(url)
             .then((response) => {
                 cb(response.data)
             }).catch(error => {
@@ -39,7 +38,7 @@ export default {
 
     batchTestConnection(cb, errorCb) {
         const url = common.appendGroupIDIfDefined(`${urls.batchTestConnection}`)
-        return axios.get(url)
+        return common.getClient().get(url)
             .then((response) => {
                 cb(response.data)
             }).catch(error => {
@@ -51,7 +50,7 @@ export default {
     queryInfo(payload, cb, errorCb) {
         let url = `${urls.queryInfo}/${payload.server_id}`
         url += payload.no_cache ? "/1" : ""
-        return axios.get(url)
+        return common.getClient().get(url)
             .then((response) => {
                 cb(response.data)
             }).catch(error => {
@@ -61,7 +60,7 @@ export default {
 
     add(payload, cb, errorCb) {
         const url = common.appendGroupIDIfDefined(urls.add)
-        return axios.post(url, payload)
+        return common.getClient().post(url, payload)
             .then((response) => {
                 cb(response)
             })
@@ -73,7 +72,7 @@ export default {
 
     edit(payload, cb, errorCb) {
         const url = `${urls.edit}`
-        return axios.post(url, payload)
+        return common.getClient().post(url, payload)
             .then((response) => {
                 cb(response)
             })
@@ -84,7 +83,7 @@ export default {
 
     delete(payload, cb, errorCb) {
         const url = `${urls.delete}`
-        return axios.post(url, payload)
+        return common.getClient().post(url, payload)
             .then((response) => {
                 cb(response)
             })
@@ -95,7 +94,7 @@ export default {
 
     restQuery(server, payload, cb, errorCb) {
         const url = `${urls.restQuery}/${server.id}`
-        return axios.post(url, payload)
+        return common.getClient().post(url, payload)
             .then((response) => {
                 cb(response.data)
             })
@@ -109,7 +108,7 @@ export default {
         let allPromises = []
         server_ids.forEach(server_id => {
             const url = `${urls.restQuery}/${server_id}`
-            const query = axios.post(url, payload)
+            const query = common.getClient().post(url, payload)
             allPromises.push(query)
         });
         return Promise.all(allPromises)
@@ -117,7 +116,7 @@ export default {
 
     queryGetUsers(server_id, cb, errorCb) {
         const url = `${urls.getUsers}/${server_id}`
-        return axios.get(url)
+        return common.getClient().get(url)
         .then((response) => {
             cb(response.data)
         }).catch(error => {

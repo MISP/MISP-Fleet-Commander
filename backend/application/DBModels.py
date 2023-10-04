@@ -1,10 +1,15 @@
-from application import db
+# from application import db
 from datetime import datetime
 import json
 import uuid
 from sqlalchemy import func
 from sqlalchemy.ext.hybrid import hybrid_property
+# from application.baseModel import BaseModel
+from flask_sqlalchemy import SQLAlchemy
+
+db = SQLAlchemy()
 from application.baseModel import BaseModel
+from application import bcrypt
 
 
 def generate_uuid():
@@ -24,10 +29,35 @@ class User(BaseModel):
                         unique=False,
                         nullable=False,
                         default=datetime.utcnow)
-    password = db.Column(db.String(80),
+    updated = db.Column(db.DateTime,
+                        index=False,
+                        unique=False,
+                        nullable=False,
+                        default=datetime.utcnow,
+                        onupdate=datetime.utcnow)
+    hashed_password = db.Column(db.String(80),
                       index=False,
                       unique=False,
                       nullable=False)
+
+    @classmethod
+    def authenticate(cls, email, password_candidate):
+        user = User.query.filter_by(email=email).first()
+        if user and user.verify_password(password_candidate):
+            return user
+        return None
+    
+    @hybrid_property
+    def password(self):
+        """Return the hashed user password."""
+        return self.hashed_password
+
+    @password.setter
+    def password(self, password):
+        self.hashed_password = bcrypt.generate_password_hash(password)
+
+    def verify_password(self, candidate):
+        return bcrypt.check_password_hash(self.hashed_password, candidate)
 
 
 #class UserSettings(BaseModel):
@@ -52,7 +82,7 @@ class Server(BaseModel):
     name = db.Column(db.String(120),
                      nullable=False,
                      index=True)
-    uuid = db.Column(db.CHAR(32),
+    uuid = db.Column(db.CHAR(36),
                      index=True,
                      unique=True,
                      nullable=False,

@@ -12,6 +12,7 @@ class Config:
     FLASK_DEBUG = environ.get('FLASK_DEBUG')
     FLASK_ENV = environ.get('FLASK_ENV')
     SECRET_KEY = environ.get('SECRET_KEY')
+    TOKEN_EXPIRATION_MIN = environ.get('TOKEN_EXPIRATION_MIN')
 
     # Database
     SQLALCHEMY_DATABASE_URI = environ.get('SQLALCHEMY_DATABASE_URI')
@@ -21,6 +22,7 @@ class ProductionConfig(Config):
     FLASK_DEBUG = False
     FLASK_ENV = environ.get('FLASK_ENV')
     SECRET_KEY = environ.get('SECRET_KEY')
+    TOKEN_EXPIRATION_MIN = environ.get('TOKEN_EXPIRATION_MIN')
 
     # Database
     SQLALCHEMY_DATABASE_URI = 'mysql://user@localhost/foo'
@@ -31,6 +33,7 @@ class DevelopmentConfig(Config):
     FLASK_ENV = 'development'
     FLASK_HOST = '0.0.0.0'
     SECRET_KEY = 'secret'
+    TOKEN_EXPIRATION_MIN = 30
 
     # Database
     # SQLALCHEMY_DATABASE_URI = 'sqlite:///database3.db'

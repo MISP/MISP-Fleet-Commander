@@ -39,7 +39,7 @@ export default {
     },
     methods: {
         selectServerGroup(group) {
-            this.$store.dispatch("serverGroups/selectServerGroup", group)
+            this.$store.dispatch("serverGroups/selectServerGroup", { data: group, redirect: true })
         },
         refreshServerGroupIndex() {
             this.refreshInProgress = true

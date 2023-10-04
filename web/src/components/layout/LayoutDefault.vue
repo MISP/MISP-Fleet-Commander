@@ -11,6 +11,7 @@
                 </div>
             </div>
         </div>
+        <b-modal id="reauthentication-modal">Hello From My Modal!</b-modal>
     </div>
 </template>
 

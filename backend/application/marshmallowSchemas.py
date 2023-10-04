@@ -20,8 +20,14 @@ class BaseSchema(SQLAlchemyAutoSchema):
 
 
 class UserSchema(BaseSchema):
+
+    hashed_password = fields.Str(load_only=True)
+    password = fields.Str(load_only=True)
+
     class Meta(BaseSchema.Meta):
+        include_relationships = False
         model = User
+        unknown = EXCLUDE
 
 
 class ServerGroupSchema(BaseSchema):
@@ -34,11 +40,14 @@ class ServerGroupSchema(BaseSchema):
         unknown = EXCLUDE
 
 
+def existOrNone(data):
+    return
+
 class ServerSchema(BaseSchema):
 
     server_group = mafields.Nested(lambda: ServerGroupSchema(exclude=('servers', )), many=False)
     # server_info = mafields.Nested(lambda: ServerQuerySchema, many=False)
-    server_info = fields.Nested(lambda: ServerQuerySchema)
+    server_info = fields.Nested(lambda: ServerQuerySchema, validate=existOrNone, missing=None)
 
     class Meta(BaseSchema.Meta):
         model = Server

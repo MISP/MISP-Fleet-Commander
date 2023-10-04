@@ -67,10 +67,10 @@ const actions = {
             )
         })
     },
-    selectServerGroup({ commit, dispatch }, group) {
+    selectServerGroup({ commit, dispatch }, payload) {
         return new Promise((resolve, reject) => {
             dispatch("servers/resetState", undefined, {root: true})
-            commit("selectServerGroup", group)
+            commit("selectServerGroup", payload)
         })
     },
     selectServerGroupFromServerId({ commit, dispatch }, server_id) {
@@ -79,7 +79,7 @@ const actions = {
             api.getFromServerId(
                 server_id,
                 group => {
-                    dispatch("selectServerGroup", group)
+                    dispatch("selectServerGroup", { data: group, redirect: false})
                     resolve()
                 },
                 (error) => { reject(error) }
@@ -116,9 +116,12 @@ const actions = {
 
 // mutations
 const mutations = {
-    selectServerGroup: function (state, group) {
+    selectServerGroup: function (state, payload) {
+        const group = payload.data
+        const redirect = payload.redirect !== undefined ? payload.redirect : true
         state.selected = group
-        if (router.history.current.path !== '/servers') {
+        if (redirect && router.history.current.path !== '/servers') {
+            console.log(router);
             router.push({ path: '/servers', replace: true })
         }
     },

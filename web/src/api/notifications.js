@@ -1,14 +1,13 @@
-import { baseurl } from "./apiConfig"
-import axios from "axios"
+import common from "./common"
 
 const urls = {
-    get: `${baseurl}/servers/getNotifications`,
+    get: `/servers/getNotifications`,
 }
   
 export default {
     index(cb, errorCb) {
         const url = `${urls.index}`
-        return axios.get(url)
+        return common.getClient().get(url)
             .then((response) => {
                 cb(response.data)
             }).catch(error => {
@@ -18,7 +17,7 @@ export default {
     get(server_id, cb, errorCb) {
         // const url = `${url.index}?page=${ctx.currentPage}&size=${ctx.perPage}`
         const url = `${urls.get}/${server_id}`
-        return axios.get(url)
+        return common.getClient().get(url)
             .then((response) => {
                 cb(response.data)
             }).catch(error => {

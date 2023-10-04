@@ -37,7 +37,7 @@ class SocketioEmitter:
         self.socketio.emit('UPDATE_SERVER', data)
 
     def udpate_fleet(self, fleet):
-        self.socketio.emit('UPDATE_FLEET', data)
+        self.socketio.emit('UPDATE_FLEET', fleet)
 
     def server_updating(self, serverID):
         self.socketio.emit('SERVER_UPDATING', serverID)

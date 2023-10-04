@@ -1,5 +1,5 @@
 <template>
-    <div>
+    <div v-if="serverHasSettings">
         <div v-if="workerCount > 0 && backgroundJobEnabled">
             <div :id="`badge-workers-${server_id}`" class="badge-list d-flex flex-nowrap">
                 <b-badge v-b-tooltip.hover.html="getTitle('cache', workerCache)" class="rounded-left flat-right" :variant="workerCache.variant">{{ workerCache.jobCount }}</b-badge>
@@ -46,42 +46,45 @@ export default {
         backgroundJobEnabled() {
             return this.final_settings[this.server_id]['MISP.background_jobs']
         },
+        serverHasSettings() {
+            return this.final_settings[this.server_id] !== undefined && Object.keys(this.final_settings[this.server_id]).length > 0
+        },
         workerCount() {
             return Object.keys(this.workers).length
         },
         workerCache() {
             return {
-                jobCount: this.workers.cache.jobCount,
-                variant: this.getVariantFromAlive(this.workers.cache),
-                ...this.getAliveNumbers(this.workers.cache)
+                jobCount: this.workers?.cache?.jobCount,
+                variant: this.getVariantFromAlive(this.workers?.cache),
+                ...this.getAliveNumbers(this.workers?.cache)
             }
         },
         workerDefault() {
             return {
-                jobCount: this.workers.default.jobCount,
-                variant: this.getVariantFromAliveAndJobCount(this.workers.default),
-                ...this.getAliveNumbers(this.workers.default)
+                jobCount: this.workers?.default?.jobCount,
+                variant: this.getVariantFromAliveAndJobCount(this.workers?.default),
+                ...this.getAliveNumbers(this.workers?.default)
             }
         },
         workerPrio() {
             return {
-                jobCount: this.workers.prio.jobCount,
-                variant: this.getVariantFromAliveAndJobCount(this.workers.prio),
-                ...this.getAliveNumbers(this.workers.prio)
+                jobCount: this.workers.prio?.jobCount,
+                variant: this.getVariantFromAliveAndJobCount(this.workers?.prio),
+                ...this.getAliveNumbers(this.workers?.prio)
             }
         },
         workerUpdate() {
             return {
-                jobCount: this.workers.update.jobCount,
-                variant: this.getVariantFromAlive(this.workers.update),
-                ...this.getAliveNumbers(this.workers.update)
+                jobCount: this.workers?.update?.jobCount,
+                variant: this.getVariantFromAlive(this.workers?.update),
+                ...this.getAliveNumbers(this.workers?.update)
             }
         },
         workerMail() {
             return {
-                jobCount: this.workers.email.jobCount,
-                variant: this.getVariantFromAlive(this.workers.email),
-                ...this.getAliveNumbers(this.workers.email)
+                jobCount: this.workers?.email?.jobCount,
+                variant: this.getVariantFromAlive(this.workers?.email),
+                ...this.getAliveNumbers(this.workers?.email)
             }
         }
     },

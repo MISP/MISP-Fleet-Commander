@@ -7,7 +7,9 @@ import concurrent.futures
 from application import redisClient, redisModel
 from application.DBModels import db, User, Server
 from application.controllers.utils import mispGetRequest
-from application.marshmallowSchemas import serverQuerySchema
+from application.marshmallowSchemas import ServerSchema, serverQuerySchema
+
+from application.workers.tasks import fetchServerInfoTask
 
 
 def index(group_id=None):
@@ -17,14 +19,30 @@ def index(group_id=None):
     servers = q.all()
     return servers
 
-def searchAll(text: str) -> List:
+def indexForUser(user, group_id=None):
+    q = Server.query
+    q = q.filter_by(user_id=user.id)
+    if group_id is not None:
+        q = q.filter_by(server_group_id=group_id)
+    servers = q.all()
+    return servers
+
+def getForUser(user, server_id: int):
+    q = Server.query
+    q = q.filter_by(user_id=user.id, id=server_id)
+    server = q.first()
+    return server
+
+def searchAll(text: str, user) -> List:
     search = "%{}%".format(text)
-    query = Server.query.filter(
+    q = Server.query
+    q = q.filter_by(user_id=user.id)
+    q = q.filter(
         (Server.name.ilike(search)) |
         (Server.url.ilike(search)) |
         (Server.comment.ilike(search))
     )
-    servers = query.limit(10).all()
+    servers = q.limit(10).all()
     return servers
 
 def testConnection(server_id: int) -> Union[dict, None]:
@@ -36,17 +54,46 @@ def testConnection(server_id: int) -> Union[dict, None]:
     else:
         return None
 
-
-def getServerInfo(server_id, cache=True) -> Union[dict, None]:
-    server = Server.query.get(server_id)
-    server_uuid = server.uuid
+def testConnectionForUser(user, server_id: int) -> Union[dict, None]:
+    server = getForUser(user, server_id)
     if server is not None:
+        testConnection = mispGetRequest(server, '/servers/getVersion')
+        testConnection['timestamp'] = int(time.time())
+        return testConnection
+    else:
+        return None
+
+
+def getServerInfoForUser(user, server_id, cache=True) -> Union[dict, None]:
+    server = getForUser(user, server_id)
+    if server is not None:
+        server_uuid = server.uuid
         if not cache:
             server_query_db = fetchServerInfo(server)
         else:
             server_query_db = redisModel.getServerInfo(server_uuid)
             if server_query_db is None: # No query associated to the server
-                server_query_db = fetchServerInfo(server)
+                # server_query_db = fetchServerInfo(server)
+                schema = ServerSchema(exclude=['server_info'])
+                fetchServerInfoTask.delay(schema.dump(server))
+                return None
+        return serverQuerySchema.load(server_query_db)
+    else:
+        return None
+
+def getServerInfo(server_id, cache=True) -> Union[dict, None]:
+    server = Server.query.get(server_id)
+    if server is not None:
+        server_uuid = server.uuid
+        if not cache:
+            server_query_db = fetchServerInfo(server)
+        else:
+            server_query_db = redisModel.getServerInfo(server_uuid)
+            if server_query_db is None: # No query associated to the server
+                # server_query_db = fetchServerInfo(server)
+                schema = ServerSchema(exclude=['server_info'])
+                fetchServerInfoTask.delay(schema.dump(server))
+                return None
         return serverQuerySchema.load(server_query_db)
     else:
         return None

@@ -3,6 +3,7 @@ from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import MetaData
 from flask_migrate import Migrate
+from flask_bcrypt import Bcrypt
 import redis
 from celery import Celery, Task
 from flask_socketio import SocketIO
@@ -41,19 +42,26 @@ flaskApp = None
 redisClient = redis.Redis(host='localhost', port=6379, db=1)
 celery_app = None
 socketioApp = None
+bcrypt = None
 
 
 def create_app():
     """Construct the core application."""
-    global loadedPlugins, flaskApp, celery_app, socketioApp, db
-    db = SQLAlchemy()
+
+    global loadedPlugins, flaskApp, celery_app, socketioApp, bcrypt, db
     flaskApp = Flask(__name__, instance_relative_config=False)
     flaskApp.config.from_object('config.DevelopmentConfig')
+    bcrypt = Bcrypt(flaskApp)
+
+    from application.DBModels import db as sqla_db
+    db = sqla_db
+
     CORS(flaskApp)
     migrate = Migrate(flaskApp, db)
     migrate.init_app(flaskApp, db, render_as_batch=True)
     db.init_app(flaskApp)
     celery_app = celery_init_app(flaskApp)
+
 
     from application.plugins import loadAvailablePlugins
     loadedPlugins = loadAvailablePlugins()

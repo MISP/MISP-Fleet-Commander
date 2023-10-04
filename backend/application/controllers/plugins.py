@@ -5,19 +5,22 @@ from application import loadedPlugins
 from application.marshmallowSchemas import pluginsSchema
 import application.models.servers as serverModel
 import application.models.plugins as pluginsModel
+from application.controllers.instance import token_required
 
 
 BPplugins = Blueprint('plugins', __name__)
 
 
 @BPplugins.route('/plugins/index', methods=['GET'])
-def index():
+@token_required
+def index(user):
     plugins = loadedPlugins
     return pluginsSchema.dump(plugins)
 
 @BPplugins.route('/plugins/indexValues/<int:group_id>', methods=['GET'])
-def indexValues(group_id=None):
-    servers = serverModel.index(group_id)
+@token_required
+def indexValues(user, group_id=None):
+    servers = serverModel.indexForUser(user, group_id)
     if servers:
         allIndexValues = pluginsModel.getAllIndexValues(loadedPlugins, servers)
         return allIndexValues
@@ -25,8 +28,9 @@ def indexValues(group_id=None):
         return jsonify([])
 
 @BPplugins.route('/plugins/viewValues/<int:server_id>', methods=['GET'])
-def viewValues(server_id):
-    server = Server.query.get(server_id)
+@token_required
+def viewValues(user, server_id):
+    server = serverModel.getForUser(user, server_id)
     if server:
         allViewValues = pluginsModel.getAllViewValues(loadedPlugins, server)
         return allViewValues
@@ -34,8 +38,9 @@ def viewValues(server_id):
         return jsonify([])
 
 @BPplugins.route('/plugins/doAction/<int:server_id>/<plugin_id>', methods=['POST'])
-def doAction(server_id, plugin_id):
-    server = Server.query.get(server_id)
+@token_required
+def doAction(user, server_id, plugin_id):
+    server = serverModel.getForUser(user, server_id)
     if server:
         plugin = pluginsModel.getPluginFromID(loadedPlugins, plugin_id)
         actionData = request.json
@@ -45,8 +50,9 @@ def doAction(server_id, plugin_id):
         return jsonify([])
 
 @BPplugins.route('/plugins/notifications/<int:server_id>', methods=['GET'])
-def notifications(server_id):
-    server = Server.query.get(server_id)
+@token_required
+def notifications(user, server_id):
+    server = serverModel.getForUser(user, server_id)
     if server:
         allNotifications = pluginsModel.getAllNotifications(loadedPlugins, server)
         return allNotifications

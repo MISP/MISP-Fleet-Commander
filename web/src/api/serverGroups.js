@@ -1,19 +1,18 @@
-import { baseurl } from "./apiConfig"
-import axios from "axios"
+import common from "./common"
 
 const urls = {
-    index: `${baseurl}/serverGroups/index`,
-    get: `${baseurl}/serverGroups/get`,
-    add: `${baseurl}/serverGroups/add`,
-    edit: `${baseurl}/serverGroups/edit`,
-    delete: `${baseurl}/serverGroups/delete`,
-    getFromServerId: `${baseurl}/serverGroups/getFromServerId`,
+    index: `/serverGroups/index`,
+    get: `/serverGroups/get`,
+    add: `/serverGroups/add`,
+    edit: `/serverGroups/edit`,
+    delete: `/serverGroups/delete`,
+    getFromServerId: `/serverGroups/getFromServerId`,
 }
   
 export default {
     index(cb, errorCb) {
         const url = `${urls.index}`
-        return axios.get(url)
+        return common.getClient().get(url)
             .then((response) => {
                 cb(response.data)
             }).catch(error => {
@@ -23,7 +22,7 @@ export default {
     get(group, cb, errorCb) {
         // const url = `${url.index}?page=${ctx.currentPage}&size=${ctx.perPage}`
         const url = `${urls.get}/${group.id}`
-        return axios.get(url)
+        return common.getClient().get(url)
             .then((response) => {
                 cb(response.data)
             }).catch(error => {
@@ -33,7 +32,7 @@ export default {
     add(group, cb, errorCb) {
         // const url = `${url.index}?page=${ctx.currentPage}&size=${ctx.perPage}`
         const url = `${urls.add}`
-        return axios.post(url, group)
+        return common.getClient().post(url, group)
             .then((response) => {
                 cb(response.data)
             }).catch(error => {
@@ -42,7 +41,7 @@ export default {
     },
     delete(group, cb, errorCb) {
         const url = `${urls.delete}/${group.id}`
-        return axios.delete(url, group)
+        return common.getClient().delete(url, group)
             .then((response) => {
                 cb(response.data)
             }).catch(error => {
@@ -51,7 +50,7 @@ export default {
     },
     getFromServerId(serverId, cb, errorCb) {
         const url = `${urls.getFromServerId}/${serverId}`
-        return axios.get(url)
+        return common.getClient().get(url)
             .then((response) => {
                 cb(response.data)
             }).catch(error => {

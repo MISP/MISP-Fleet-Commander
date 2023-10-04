@@ -2,25 +2,57 @@ from flask import Blueprint, request, render_template, make_response, jsonify
 # from flask import current_app as app
 from datetime import datetime as dt
 from application.DBModels import db, User
-
+from application.controllers.instance import token_required
+from application.marshmallowSchemas import userSchema, usersSchema
+import application.models.users as userModel
 
 BPuser = Blueprint('user', __name__)
 
 
 @BPuser.route('/users/index', methods=['GET'])
-def index():
-    users = User.query.all()
-    return jsonify([u.to_dict() for u in users])
+@token_required
+def index(loggedUser):
+    import time
+    users = userModel.index()
+    return usersSchema.dump(users)
 
 
-@BPuser.route('/user/add', methods=['GET'])
-def add():
-    """Create a user."""
-    email = request.args.get('email')
-    if email:
-        new_user = User(email=email,
-                        created=dt.now(),
-                        password="Password1234")
-        db.session.add(new_user)  # Adds new User record to database
-        db.session.commit()  # Commits all changes
-    return make_response(f"{new_user} successfully created!")
+@BPuser.route('/users/get/<int:user_id>', methods=['GET'])
+@token_required
+def get(loggedUser, user_id):
+    user = userModel.get(loggedUser, user_id)
+    if user is not None:
+        return userSchema.dump(user)
+    else:
+        return jsonify({})
+
+
+@BPuser.route('/users/add', methods=['POST', 'PUT'])
+@token_required
+def add(loggedUser):
+    newUser = userModel.add(request.json)
+    if newUser is not None:
+        return userSchema.dump(newUser)
+    else:
+        return jsonify([])
+
+
+@BPuser.route('/users/edit', methods=['POST'])
+@token_required
+def edit(loggedUser):
+    updatedUser = userModel.edit(request.json)
+    if updatedUser is not None:
+        return userSchema.dump(updatedUser)
+    else:
+        return jsonify([])
+
+
+@BPuser.route('/users/delete/<int:user_id>', methods=['DELETE', 'POST'])
+@token_required
+def delete(loggedUser, user_id):
+    """Delete a group and it's associated servers"""
+    userToDelete = userModel.delete(user_id)
+    if userToDelete:
+        return jsonify([user_id])
+    else:
+        return jsonify({})

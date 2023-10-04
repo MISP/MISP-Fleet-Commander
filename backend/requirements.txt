@@ -1,6 +1,8 @@
 flask_cors
 flask_sqlalchemy
 flask_migrate
+flask-bcrypt
 requests
 requests-cache
 marshmallow_sqlalchemy
+PyJWT

@@ -1,5 +1,6 @@
 <template>
     <span
+        v-if="hasStatus"
         :class="statusOk ? 'text-success' : 'text-danger'"
         :title="statusMessage"
     >
@@ -35,8 +36,11 @@ export default {
         status() {
             return this.zeromq[this.server_id]
         },
+        hasStatus() {
+            return this.status !== undefined
+        },
         statusOk () {
-            return this.status !== undefined && this.status == 0
+            return this.hasStatus && this.status == 0
         },
         statusMessage () {
             return this.statusMapping[this.status] || 'Unknown status code'

@@ -93,7 +93,7 @@ export default {
     },
     methods: {
         selectServerGroup(group) {
-            this.$store.dispatch("serverGroups/selectServerGroup", group)
+            this.$store.dispatch("serverGroups/selectServerGroup", { data: group, redirect: true })
         },
         selectGroupForDeletion(group_id) {
             this.group_id_to_delete = group_id

@@ -14,7 +14,7 @@ from application.controllers.utils import mispGetRequest, mispPostRequest, batch
 from application.marshmallowSchemas import ServerSchema, serverGroupSchema, serverQuerySchema, serverSchema, taskSchema, serverSchema, serversSchema
 import application.models.servers as serverModel
 from application.workers.tasks import fetchServerInfoTask
-from pprint import pprint
+from application.controllers.instance import token_required
 
 
 BPserver = Blueprint('server', __name__)
@@ -25,8 +25,9 @@ class DictToObject:
 
 
 @BPserver.route('/servers/index/<int:group_id>', methods=['GET'])
-def index(group_id=None):
-    servers = serverModel.index(group_id)
+@token_required
+def index(user, group_id=None):
+    servers = serverModel.indexForUser(user, group_id)
     if servers:
         return serversSchema.dump(servers)
     else:
@@ -34,8 +35,9 @@ def index(group_id=None):
 
 
 @BPserver.route('/servers/get/<int:server_id>', methods=['GET'])
-def get(server_id):
-    server = Server.query.get(server_id)
+@token_required
+def get(user, server_id):
+    server = serverModel.getForUser(user, server_id)
     if server is not None:
         return serverSchema.dump(server)
     else:
@@ -43,7 +45,8 @@ def get(server_id):
 
 
 @BPserver.route('/servers/add/<int:group_id>', methods=['POST'])
-def add(group_id):
+@token_required
+def add(user, group_id):
     servers = []
     # TODO: If password provided, fetch the associated API key
     if isinstance(request.json, list):
@@ -55,7 +58,7 @@ def add(group_id):
                         skip_ssl=server.get('skip_ssl', False),
                         authkey=server.get('authkey', None),
                         server_group_id=group_id,
-                        user_id=1)
+                        user_id=user.id)
             db.session.add(server)
             servers.append(server)
         db.session.commit()
@@ -67,7 +70,7 @@ def add(group_id):
                         skip_ssl=request.json.get('skip_ssl', False),
                         authkey=request.json.get('authkey', None),
                         server_group_id=group_id,
-                        user_id=1)
+                        user_id=user.id)
         db.session.add(server)
         if request.json.get('recursive_add', False):
             # recursively add servers
@@ -77,9 +80,10 @@ def add(group_id):
 
 
 @BPserver.route('/servers/edit', methods=['POST'])
-def edit():
+@token_required
+def edit(user):
     saveFields = ['name', 'comment', 'url', 'skip_ssl', 'authkey']
-    server = Server.query.get(request.json['id'])
+    server = serverModel.getForUser(user, request.json['id'])
     if server is not None:
         for field, value in request.json.items():
             if field in saveFields:
@@ -92,18 +96,19 @@ def edit():
 
 
 @BPserver.route('/servers/delete', methods=['DELETE', 'POST'])
-def delete():
+@token_required
+def delete(user):
     if isinstance(request.json, list):
         deletedServers = []
         for server in request.json:
-            server = Server.query.get(server['id'])
+            server = serverModel.getForUser(user, server['id'])
             if server is not None:
                 db.session.delete(server)
                 deletedServers.append(server.id)
         db.session.commit()
         return serversSchema.dump(deletedServers)
     else:
-        server = Server.query.get(request.json['id'])
+        server = serverModel.getForUser(user, request.json['id'])
         if server is not None:
             server_id = server.id
             db.session.delete(server)
@@ -112,17 +117,20 @@ def delete():
         else:
             return jsonify([])
 
+
 @BPserver.route('/servers/testConnection/<int:server_id>', methods=['GET'])
-def ping_server(server_id):
-    result = serverModel.testConnection(server_id)
+@token_required
+def ping_server(user, server_id):
+    result = serverModel.testConnectionForUser(user, server_id)
     if result is not None:
         return jsonify(result)
     else:
         return jsonify({})
 
 @BPserver.route('/servers/batchTestConnection/<int:group_id>', methods=['GET'])
-def batch_ping_server(group_id=None):
-    servers = serverModel.index(group_id)
+@token_required
+def batch_ping_server(user, group_id=None):
+    servers = serverModel.indexForUser(user, group_id)
     allRequests = []
     if servers:
         for server in servers:
@@ -138,16 +146,18 @@ def batch_ping_server(group_id=None):
 
 @BPserver.route('/servers/queryInfo/<int:server_id>', defaults={'no_cache': False}, methods=['GET'])
 @BPserver.route('/servers/queryInfo/<int:server_id>/<int:no_cache>', methods=['GET'])
-def queryInfo(server_id, no_cache):
-    info = serverModel.getServerInfo(server_id, not no_cache)
+@token_required
+def queryInfo(user, server_id, no_cache):
+    info = serverModel.getServerInfoForUser(user, server_id, not no_cache)
     if info:
         return serverQuerySchema.dump(info)
     else:
         return jsonify({'error': 'Unkown server'})
 
 @BPserver.route('/servers/queryInfoWS/<int:server_id>', methods=['GET'])
-def queryInfoWS(server_id,):
-    server = Server.query.get(server_id)
+@token_required
+def queryInfoWS(user, server_id,):
+    server = serverModel.getForUser(user, server_id)
     if server is not None:
             server_query_task = fetchServerInfoTask.delay(serverSchema.dump(server))
             return taskSchema.dump({
@@ -159,8 +169,9 @@ def queryInfoWS(server_id,):
         return jsonify({'error': 'Unkown server'})
 
 @BPserver.route('/servers/getUsers/<int:server_id>', methods=['GET'])
-def getUsers(server_id):
-    server = Server.query.get(server_id)
+@token_required
+def getUsers(user, server_id):
+    server = serverModel.getForUser(user, server_id)
     if server is not None:
         server_query_users = fetchServerUsers(server)
         return jsonify(server_query_users)
@@ -168,7 +179,8 @@ def getUsers(server_id):
         return jsonify({'error': 'Unkown server'})
 
 @BPserver.route('/servers/batchTest', methods=['POST'])
-def batchTest():
+@token_required
+def batchTest(user):
     test_result = []
     allVersionRequests = []
     allUserRequests = []
@@ -177,6 +189,11 @@ def batchTest():
         serverObject = DictToObject(**server)
         if 'id' not in server:
             serverObject.id = index
+
+        server = serverModel.getForUser(user, serverObject.id) # Make sure user has access to this server
+        if server is None:
+            continue
+
         allVersionRequests.append({
             'fn': mispGetRequest,
             'server': serverObject,
@@ -187,6 +204,7 @@ def batchTest():
             'server': serverObject,
             'path': '/users/view/me'
         })
+
     allTestConnections = batchRequest(allVersionRequests)
     allTestUsers = batchRequest(allUserRequests)
     for index, server in enumerate(server_to_test):
@@ -199,11 +217,17 @@ def batchTest():
     return jsonify(test_result)
 
 @BPserver.route('/servers/discoverConnected', methods=['POST'])
-def discoverConnected():
+@token_required
+def discoverConnected(user):
     rootServer = request.json
     test_result = []
     if rootServer:
         rootServerObject = DictToObject(**rootServer)
+
+        server = serverModel.getForUser(user, rootServerObject.id) # Make sure user has access to this server
+        if server is None:
+            return jsonify({'error': 'Unkown server'})
+
         rootIndex = mispGetRequest(rootServerObject, '/servers/index')
         if type(rootIndex) != list:
             abort(404, Response('Could not fetch valid server index'))
@@ -233,14 +257,16 @@ def discoverConnected():
     return jsonify(test_result)
 
 @BPserver.route('/servers/network/<int:group_id>')
-def network(group_id=None):
-    servers = serverModel.index(group_id)
+@token_required
+def network(user, group_id=None):
+    servers = serverModel.indexForUser(user, group_id)
     network = buildNetwork(servers)
     return jsonify(network)
 
 @BPserver.route('/servers/getConnection/<int:server_id>/<int:connection_id>')
-def getConnection(server_id, connection_id):
-    server = Server.query.get(server_id)
+@token_required
+def getConnection(user, server_id, connection_id):
+    server = serverModel.getForUser(user, server_id)
     if server is not None:
         destinations = server.server_info['query_result']['connectedServers']
         connection = [ d for d in destinations if int(d['Server']['id']) == connection_id]
@@ -255,8 +281,9 @@ def getConnection(server_id, connection_id):
         return jsonify({})
 
 @BPserver.route('/servers/syncOvertime/<int:server_id>', methods=['GET'])
-def syncOvertime(server_id):
-    server = Server.query.get(server_id)
+@token_required
+def syncOvertime(user, server_id):
+    server = serverModel.getForUser(user, server_id)
     if server is not None:
         syncLogs = mispPostRequest(server, '/logs/admin_search/search', {"Log":{"model":"Server","action":"pull","email":"","org":"","model_id":"","title":"","change":"", "ip": ""}})
         if 'error' in syncLogs:
@@ -271,8 +298,9 @@ def syncOvertime(server_id):
         return jsonify({})
 
 @BPserver.route('/servers/loginOvertime/<int:server_id>', methods=['GET'])
-def loginOvertime(server_id):
-    server = Server.query.get(server_id)
+@token_required
+def loginOvertime(user, server_id):
+    server = serverModel.getForUser(user, server_id)
     if server is not None:
         loginLogs = mispPostRequest(server, '/logs/admin_search/search', {"Log":{"model":"User","action":["login", "auth_fail"],"email":"","org":"","model_id":"","title":"","change":"", "ip": ""}})
         if 'error' in loginLogs:
@@ -287,11 +315,12 @@ def loginOvertime(server_id):
         return jsonify({})
 
 @BPserver.route('/servers/restQuery/<int:server_id>', methods=['POST'])
-def restQuery(server_id):
+@token_required
+def restQuery(user, server_id):
     queryURL = request.json['url']
     queryData = request.json['data']
     queryMethod = request.json['method']
-    server = Server.query.get(server_id)
+    server = serverModel.getForUser(user, server_id)
     if server is not None:
         if queryMethod == 'POST':
             try:

@@ -9,12 +9,14 @@
 <script>
 import LayoutDefault from "@/components/layout/LayoutDefault.vue"
 import LayoutStretch from "@/components/layout/LayoutStretch.vue"
+import LayoutLogin from "@/components/layout/LayoutLogin.vue"
 
 export default {
     name: "App",
     components: {
         LayoutDefault,
-        LayoutStretch
+        LayoutStretch,
+        LayoutLogin,
     },
     data () {
         return {

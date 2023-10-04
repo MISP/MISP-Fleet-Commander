@@ -1,18 +1,17 @@
 import common from "./common"
-import axios from "axios"
 
 const urls = {
-    index: `/plugins/index`,
-    getIndexValues: `/plugins/indexValues`,
-    getViewValues: `/plugins/viewValues`,
-    notifications: `/plugins/notifications`,
-    submitAction: `/plugins/doAction`,
+    index: `/users/index`,
+    get: `/users/get`,
+    add: `/users/add`,
+    edit: `/users/edit`,
+    delete: `/users/delete`,
 }
-
 
 export default {
     index(cb, errorCb) {
-        const url = `${urls.index}`
+        // const url = `${url.index}?page=${ctx.currentPage}&size=${ctx.perPage}`
+        const url = urls.index
         return common.getClient().get(url)
             .then((response) => {
                 cb(response.data)
@@ -20,8 +19,8 @@ export default {
                 common.handleError(error, errorCb)
             })
     },
-    getIndexValues(cb, errorCb) {
-        const url = common.appendGroupIDIfDefined(`${urls.getIndexValues}`)
+    get(cb, errorCb) {
+        const url = urls.get
         return common.getClient().get(url)
             .then((response) => {
                 cb(response.data)
@@ -29,22 +28,27 @@ export default {
                 common.handleError(error, errorCb)
             })
     },
-    getViewValues(serverID, cb, errorCb) {
-        const url = `${urls.getViewValues}/${serverID}`
-        return common.getClient().get(url)
+    add(payload, cb, errorCb) {
+        const url = urls.add
+        return common.getClient().post(url, payload)
             .then((response) => {
                 cb(response.data)
             }).catch(error => {
                 common.handleError(error, errorCb)
             })
     },
-    submitAction(serverID, pluginID, data) {
-        const url = `${urls.submitAction}/${serverID}/${pluginID}`
-        return axios.post(url, data)
+    edit(payload, cb, errorCb) {
+        const url = urls.edit
+        return common.getClient().post(url, payload)
+            .then((response) => {
+                cb(response.data)
+            }).catch(error => {
+                common.handleError(error, errorCb)
+            })
     },
-    getNotifications(serverID, cb, errorCb) {
-        const url = `${urls.notifications}/${serverID}`
-        return common.getClient().get(url)
+    delete(user_id, cb, errorCb) {
+        const url = `${urls.delete}/${user_id}`
+        return common.getClient().delete(url,)
             .then((response) => {
                 cb(response.data)
             }).catch(error => {

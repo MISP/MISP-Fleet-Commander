@@ -36,7 +36,7 @@ export default {
             let items = []
             items.push({
                 alt: "Application icon",
-                image_path: require("@/assets/icon.png"),
+                image_path: require("@/assets/icon.svg"),
                 to: { name: "home" }
             })
             this.$route.matched.forEach(routeEntry => {
@@ -90,6 +90,6 @@ export default {
 
 .breadcrumb-item .icon-navbar {
     height: auto;
-    width: 37px;
+    width: 56px;
 }
 </style>

@@ -4,11 +4,19 @@
     --var-color-lapislazuli : #2978a0;
     --var-color-deepgreencyan : #136f63;
     --var-color-giantorgane : #f2621a;
+    --var-color-giantorganedarker : #d9510d;
+    --var-color-background : #f8f9fb;
+    --var-color-backgroundsteel : #cacdcf;
     --var-width-sidebar: 160px;
+
+    --var-color-main-dark-blue: #003a5a;
+    --var-color-giantorganedarker: #d9510d;
+    --var-color-light-grey: #dfe1e2;
+    --var-color-misp-blue: #2ca1db
 }
 
 body {
-    background-color: #f8f9fb;
+    background-color: var(--var-color-background);
 }
 
 .main {

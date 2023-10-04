@@ -91,22 +91,16 @@ export default {
     methods: {
         refreshPlugins(use_cache) {
             this.refreshInProgress = true
-            return new Promise((resolve, reject) => {
-                this.$store.dispatch("plugins/getPlugins", {use_cache: use_cache})
-                    .then(() => {
-                        resolve()
+            return this.$store.dispatch("plugins/getPlugins", {use_cache: use_cache})
+                .catch((error) => {
+                    this.$bvToast.toast(error, {
+                        title: "Could not fetch plugin list",
+                        variant: "danger",
                     })
-                    .catch((error) => {
-                        this.$bvToast.toast(error, {
-                            title: "Could not fetch plugin list",
-                            variant: "danger",
-                        })
-                        reject()
-                    })
-                    .finally(() => {
-                        this.refreshInProgress = false
-                    })
-            })
+                })
+                .finally(() => {
+                    this.refreshInProgress = false
+                })
         },
     },
     mounted() {

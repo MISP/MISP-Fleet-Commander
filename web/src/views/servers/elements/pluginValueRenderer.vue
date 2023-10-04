@@ -70,7 +70,8 @@ export default {
             return this.plugin_response.errors || this.plugin_response.error || null
         },
         printableErrors() {
-            return this.errors.length == 1 ? this.errors[0] : JSON.stringify(this.errors)
+            return this.errors === null ? '' : 
+                this.errors.length == 1 ? this.errors[0] : JSON.stringify(this.errors)
         },
     },
     methods: {

@@ -53,6 +53,11 @@ export default {
                     name: "Strategic View",
                     to: { name: "strategicView" },
                     scope: "strategicView"
+                },
+                {
+                    name: "Users",
+                    to: { name: "users" },
+                    scope: "users"
                 }
             ]
         }

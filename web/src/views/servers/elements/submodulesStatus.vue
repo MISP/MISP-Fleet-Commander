@@ -1,10 +1,11 @@
 <template>
     <span
-        v-if="submodules !== '' && submodules !== undefined"
+        v-if="submodules !== '' && submodules !== undefined && hasSubmodules"
         :class="allValids ? 'text-success' : 'text-danger'"
     >
         <span :class="['fas', allValids ? 'fa-check' : 'fa-times']"></span>
         {{ invalidModuleNames }}
+        {{ allValids }}
     </span>
 </template>
 
@@ -15,6 +16,9 @@ export default {
         submodules: {}
     },
     computed: {
+        hasSubmodules() {
+            return Object.keys(this.submodules).length > 0
+        },
         invalidModuleNames() {
             if (typeof this.submodules === "string" || this.submodules === undefined) {
                 return ""

@@ -11,7 +11,7 @@
                     @blur.native="handleSearchInputBlur"
                     @focus.native="revealSearch = true"
                     type="search"
-                    size="sm" class="m-0" placeholder="Search servers…"
+                    size="sm" class="m-0 global-search" placeholder="Search servers…"
                     ></b-form-input>
 
                     <b-list-group
@@ -27,7 +27,10 @@
                             <div class="d-flex flex-column">
                                 <div class="d-flex">
                                     <span class="mr-2">{{ searchResult.name }}</span>
-                                    <b class="ml-auto">{{ searchResult.server_group.name }}</b>
+                                    <span class="ml-auto">
+                                        <i class="fas fa-layer-group mr-1"></i>
+                                        <b>{{ searchResult.server_group.name }}</b>
+                                    </span>
                                 </div>
                                 <span class="font-weight-light" style="font-size: smaller;">{{ searchResult.url }}</span>
                             </div>
@@ -49,6 +52,20 @@
                     </template>
                     <NavbarServerGroup></NavbarServerGroup>
                 </b-nav-item-dropdown>
+
+                <template v-if="user">
+                    <b-nav-item-dropdown right>
+                        <template #button-content>
+                            <iconButton
+                                style="display: inline-block !important"
+                                :text="user.email"
+                                icon="user"
+                                :tight="true"
+                            ></iconButton>
+                        </template>
+                        <NavbarProfile></NavbarProfile>
+                    </b-nav-item-dropdown>
+                </template>
 
                 <template v-if="!wsConnected">
                     <div title="Trying to connect websocket" class="d-flex align-items-center justify-content-center">
@@ -73,6 +90,7 @@ import iconButton from "@/components/ui/elements/iconButton.vue"
 import NavbarServerGroup from "@/components/layout/navbar/NavbarServerGroup.vue"
 import NavbarBreadcrumb from "@/components/layout/navbar/NavbarBreadcrumb.vue"
 import NavbarNotification from "@/components/layout/navbar/NavbarNotification.vue"
+import NavbarProfile from "@/components/layout/navbar/NavbarProfile.vue"
 
 export default {
     name: "TheNavBar",
@@ -81,6 +99,7 @@ export default {
         NavbarServerGroup,
         NavbarBreadcrumb,
         NavbarNotification,
+        NavbarProfile,
     },
     data: function () {
         return {
@@ -94,10 +113,11 @@ export default {
             getSelectedServerGroup: state => state.serverGroups.selected,
         }),
         ...mapGetters({
-            wsConnected: "websocket/wsConnected"
+            wsConnected: "websocket/wsConnected",
+            user: "auth/user"
         }),
         serverGroupText() {
-            return this.getSelectedServerGroup !== null ? this.getSelectedServerGroup.name : "-no server group selected-"
+            return this.getSelectedServerGroup !== null ? this.getSelectedServerGroup.name : ""
         }
     },
     methods: {
@@ -157,4 +177,13 @@ export default {
     left: 0px;
     min-width: 20rem;
 }
+</style>
+
+<style>
+    .navbar .global-search {
+        transition: width 0.25s ease-out;
+    }
+    .navbar .global-search:focus {
+        width: 400px;
+    }
 </style>

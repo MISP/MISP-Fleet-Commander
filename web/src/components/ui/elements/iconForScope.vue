@@ -15,6 +15,10 @@
         v-else-if="scope === 'strategicView'"
         :class="['fas', 'fa-satellite-dish']"
     ></i>
+    <i
+        v-else-if="scope === 'users'"
+        :class="['fas', 'fa-users']"
+    ></i>
      <i
         v-else
         :class="['fa', 'fa-question']"
@@ -29,7 +33,7 @@ export default {
             type: String,
             required: true,
             validator: function (value) {
-                return ["", "home", "servers", "connections", "strategicView"].indexOf(value) !== -1
+                return ["", "home", "servers", "connections", "strategicView", "users"].indexOf(value) !== -1
             }
         },
         forceBlack: {
