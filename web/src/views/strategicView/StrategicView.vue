@@ -9,17 +9,9 @@
                 buttons
                 button-variant="outline-primary"
                 size="sm"
-                class="mr-1"
             ></b-form-radio-group>
-            <b-dropdown variant="primary" size="sm" text="Layout">
-                <b-dropdown-item
-                    @click="resetPositions"
-                >
-                    <iconButton
-                        text="Reset info window location"
-                        icon="window-restore"
-                    ></iconButton>
-                </b-dropdown-item>
+
+            <b-dropdown variant="primary" size="sm" text="Layout" class="ml-1">
                  <b-dropdown-item
                     @click="zoomFit"
                 >
@@ -29,8 +21,28 @@
                     ></iconButton>
                 </b-dropdown-item>
             </b-dropdown>
+
+            <b-dropdown variant="primary" size="sm" text="Pinned data" class="ml-1">
+                <b-dropdown-item
+                    @click="togglePinPanel"
+                >
+                    <iconButton
+                        text="Toggle pin panel"
+                        icon="thumbtack"
+                    ></iconButton>
+                </b-dropdown-item>
+                <b-dropdown-item
+                    @click="showPinnedContentOnNodes"
+                >
+                    <iconButton
+                        text="Show pinned content on all nodes"
+                        icon="eye"
+                    ></iconButton>
+                </b-dropdown-item>
+            </b-dropdown>
+
         </div>
-        <div ref="networkContainer" class="w-100 h-100">
+        <div ref="networkContainer" class="w-100 h-100 network-container">
             <svg ref="networkSVG"></svg>
         </div>
         <DraggableComponent
@@ -46,11 +58,22 @@
             ></TheInfoCard>
         </DraggableComponent>
 
+        <DraggableComponent
+            class="right-panel"
+            :positions.sync="pinCard.position"
+            draggableContainer="pinPanel"
+            handleClass=".card-header"
+        >
+            <ThePinCard
+                :open.sync="pinCard.show"
+            ></ThePinCard>
+        </DraggableComponent>
+
         <div
             class="position-absolute border overflow-hidden p-1 bg-white"
             :style="minimapPosition"
         >
-            <NetworkMinimap
+            <!-- <NetworkMinimap
                 v-if="svgSelection !== null"
                 ref="minimap"
                 :network="d3data"
@@ -59,7 +82,7 @@
                 :zoom="zoom"
                 :redrawCount="minimapRedrawCount"
                 :selectedNode="selectedNode"
-            ></NetworkMinimap>
+            ></NetworkMinimap> -->
         </div>
     </div>
 </Layout>
@@ -74,8 +97,9 @@ import ServerNodeGeneric from "@/views/strategicView/elements/ServerNodeGeneric.
 import ServerNode from "@/views/strategicView/elements/ServerNode.vue"
 import ServerNodeMini from "@/views/strategicView/elements/ServerNodeMini.vue"
 import ServerNodeMicro from "@/views/strategicView/elements/ServerNodeMicro.vue"
-import NetworkMinimap from "@/views/strategicView/elements/NetworkMinimap.vue"
+// import NetworkMinimap from "@/views/strategicView/elements/NetworkMinimap.vue"
 import TheInfoCard from "@/views/strategicView/elements/InfoCard.vue"
+import ThePinCard from "@/views/strategicView/elements/PinCard.vue"
 import DraggableComponent from "@/components/ui/DraggableComponent.vue"
 import d3Network from "@/helpers/d3Network.js"
 
@@ -85,14 +109,19 @@ export default {
         Layout,
         iconButton,
         TheInfoCard,
+        ThePinCard,
         DraggableComponent,
-        NetworkMinimap
+        // NetworkMinimap
     },
     data: function () {
         return {
             scope: "administration",
             refreshInProgress: false,
             infoCard: {
+                show: false,
+                position: {top: "4em", left: "unset", right: "1em"}
+            },
+            pinCard: {
                 show: false,
                 position: {top: "4em", left: "unset", right: "1em"}
             },
@@ -105,6 +134,7 @@ export default {
                 nodes: [],
                 links: []
             },
+            nodeFunctions: [],
             svg: null,
             svgSelection: null,
             zoom: null,
@@ -115,15 +145,12 @@ export default {
     },
     computed: {
         ...mapState({
-            servers: state => state.servers.servers,
-            connections: state => state.connections.all,
-            server_status: state => state.servers.server_status,
-            server_usage: state => state.servers.server_usage,
             remote_connections: state => state.servers.remote_connections,
         }),
         ...mapGetters({
             serverCount: "servers/serverCount",
             getServerList: "servers/getServerList",
+            serversByURL: "servers/serversByURL",
             getConnectionList: "connections/getConnectionList",
         }),
     },
@@ -135,13 +162,29 @@ export default {
                 this.infoCard.show = show
             }
         },
-        resetPositions() {
+        resetPositionsInfo() {
             this.infoCard.position.top = "4em"
             this.infoCard.position.left = "unset"
             this.infoCard.position.right = "1em"
         },
+        resetPositionsPin() {
+            this.pinCard.position.top = "4em"
+            this.pinCard.position.left = "unset"
+            this.pinCard.position.right = "1em"
+        },
+        togglePinPanel() {
+            this.pinCard.show = !this.pinCard.show
+            this.resetPositionsPin()
+        },
+        showPinnedContentOnNodes() {
+            this.nodeFunctions.forEach(nodeFunctions => {
+                nodeFunctions.setTabIndex(3)
+            });
+        },
         zoomFit() {
-            this.$refs["minimap"].zoomFit()
+            if (this.$refs["minimap"]) {
+                this.$refs["minimap"].zoomFit()
+            }
         },
         generateGenericNodeComponent(node, htmlNode, d3Node, d3SVGNode) {
             let ComponentGenericServerNodeClass = Vue.extend(ServerNodeGeneric)
@@ -151,16 +194,20 @@ export default {
                     scaleInfo: this.scaleInfo,
                     server_id: node.id,
                     d3Node: d3Node,
-                    d3SVGNode: d3SVGNode
+                    d3SVGNode: d3SVGNode,
+                    nodeData: node,
                 }
             })
             // nodeInstance.$slots.default = ['Click me!']
+            nodeInstance.$on('nodeFunctions', (nodeFunctions) => {
+                this.nodeFunctions.push(nodeFunctions)
+            })
             nodeInstance.$mount(htmlNode)
             return nodeInstance
         },
         selectNode(node) {
             this.selectedNode = node
-            this.selectedNodeID = node.server_info.server_id
+            // this.selectedNodeID = node.id
         },
         constructNetwork() {
             const vm = this
@@ -272,13 +319,35 @@ export default {
             this.d3data.links.forEach((link, index) => { // remap source -> origin
                 link.origin = link.source
                 link.source = parseInt(link.origin.id)
-                link.target = parseInt(link.destination.Server.id) // FIXME: Not working. Server.id will certainly not be the same ID as saved in the backend
-                link.id = `${link.source}-${link.target}`
-                if(this.servers[link.target]) {
-                    link.toRemove = false
+                const destinationURL = link.destination.Server.url
+                const knownDestination = this.serversByURL[destinationURL] // FIXME: Potentially rely on MISP.uuid instead of the URL..
+                if (knownDestination) {
+                    link.target = parseInt(knownDestination.id)
+                    link._managed_server = true
+                } else {
+                    link.target = 'v' + link.destination.Server.id
+                    link.remote_sync_server = link.destination.Server
+                    const targetServer = Object.values(this.remote_connections[link.origin.id]).filter((server) => {
+                        return server.Server.id == link.destination.Server.id
+                    })
+                    link.remote_sync_server.status = targetServer[0].connectionTest
+                    link._managed_server = false
                 }
+                link.id = `${link.source}-${link.target}`
             })
-            this.d3data.links = this.d3data.links.filter(l => !l.toRemove)
+            // Add fake nodes
+            this.d3data.links
+                .filter(l => !l._managed_server)
+                .forEach(link => {
+                    const virtualNode = Object.assign({}, link.remote_sync_server)
+                    virtualNode.id = link.target
+                    virtualNode._managed_server = false
+                    this.d3data.nodes.push(virtualNode)
+                })
+            this.d3data.nodes = this.d3data.nodes.map(node => {
+                node._managed_server = node._managed_server === undefined ? true : node._managed_server;
+                return node
+            })
         }
     },
     mounted() {
@@ -297,6 +366,12 @@ export default {
 </script>
 
 <style scoped>
+
+.network-container {
+    background-image: linear-gradient(to right, #66666612 1px, transparent 1px), linear-gradient(to bottom, #66666612 1px, transparent 1px);
+    background-size: 20px 20px;
+    background-color: white;
+}
 .network-toolbar {
     width: calc(100% - 6.5em);
     border-bottom-left-radius: 1em;

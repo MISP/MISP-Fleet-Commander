@@ -6,3 +6,4 @@ requests
 requests-cache
 marshmallow_sqlalchemy
 PyJWT
+Pillow

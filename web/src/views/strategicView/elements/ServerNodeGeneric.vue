@@ -1,5 +1,5 @@
 <template>
-    <div>
+    <div v-if="nodeData._managed_server">
         <ServerNodeMicro
             v-if="scale < 0.2"
             :server_id="server_id"
@@ -18,7 +18,15 @@
             :server_id="server_id"
             :d3Node="d3Node"
             :d3SVGNode="d3SVGNode"
+            @nodeFunctions="propagatedNodeFunctions"
         ></ServerNode>
+    </div>
+    <div v-else>
+        <UnmanagedServerNode
+            :nodeData="nodeData"
+            :d3Node="d3Node"
+            :d3SVGNode="d3SVGNode"
+        ></UnmanagedServerNode>
     </div>
 </template>
 
@@ -26,13 +34,15 @@
 import ServerNode from "@/views/strategicView/elements/ServerNode.vue"
 import ServerNodeMini from "@/views/strategicView/elements/ServerNodeMini.vue"
 import ServerNodeMicro from "@/views/strategicView/elements/ServerNodeMicro.vue"
+import UnmanagedServerNode from "@/views/strategicView/elements/UnmanagedServerNode.vue"
 
 export default {
     name: "ServerNodeGeneric",
     components: {
         ServerNode,
         ServerNodeMini,
-        ServerNodeMicro
+        ServerNodeMicro,
+        UnmanagedServerNode,
     },
     props: {
         scaleInfo: {
@@ -40,8 +50,7 @@ export default {
             required: true
         },
         server_id: {
-            type: Number,
-            required: true
+            required: false
         },
         d3Node: {
             type: Object,
@@ -50,7 +59,11 @@ export default {
         d3SVGNode: {
             type: SVGSVGElement,
             required: true
-        }
+        },
+        nodeData: {
+            type: Object,
+            required: true
+        },
     },
     data: function() {
         return {
@@ -59,6 +72,11 @@ export default {
     computed: {
         scale() {
             return this.scaleInfo.k
+        }
+    },
+    methods: {
+        propagatedNodeFunctions(nodeFunctions) {
+            this.$emit('nodeFunctions', nodeFunctions);
         }
     },
     mounted: function() {

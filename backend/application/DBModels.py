@@ -163,3 +163,44 @@ class ServerGroup(BaseModel):
         else:
             server_group_id, the_count = result
         return the_count
+
+
+class PinList(BaseModel):
+    __tablename__ = 'pin_lists'
+    id = db.Column(db.Integer,
+                   primary_key=True)
+    model = db.Column(db.String(120),
+                     nullable=False,
+                     index=True)
+    uuid = db.Column(db.String(36),
+                            nullable=False,
+                            default='')
+    user_id = db.Column(db.Integer,
+                        db.ForeignKey('users.id'),
+                        nullable=False,
+                        index=True)
+
+    user = db.relationship('User',
+        backref=db.backref('pinlists', lazy='joined'))
+    pinlist_entries = db.relationship("PinListEntry", back_populates="pinlist", cascade="all, delete-orphan")
+    # pinlist_entries = db.relationship("PinListEntry", cascade="all, delete-orphan")
+
+
+class PinListEntry(BaseModel):
+    __tablename__ = 'pin_list_entries'
+    id = db.Column(db.Integer,
+                   primary_key=True)
+    pinlist_id = db.Column(db.Integer,
+                   db.ForeignKey('pin_lists.id'),
+                   nullable=False,
+                   index=True)
+    server_id = db.Column(db.Integer,
+                   db.ForeignKey('servers.id'),
+                   nullable=False,
+                   index=True)
+    data = db.Column(db.JSON,
+                     nullable=False,
+                     default='{}')
+
+    pinlist = db.relationship('PinList', back_populates="pinlist_entries")
+        # backref=db.backref('pinlist_entries', lazy='joined', cascade="all, delete-orphan"))

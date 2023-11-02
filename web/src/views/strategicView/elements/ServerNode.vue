@@ -23,7 +23,7 @@
                         </div>
                     </div>
                 </template>
-                <b-tabs card nav-class="card-header-tabs" @input="tabChanged">
+                <b-tabs card nav-class="card-header-tabs" @input="tabChanged" v-model="tabIndex">
                     <b-tab title="Info" active>
                         <ServerNodeInfo :server="getServer"></ServerNodeInfo>
                     </b-tab>
@@ -33,8 +33,8 @@
                     <b-tab title="Synchronization">
                         <ServerNodeSync :sync="{}"></ServerNodeSync>
                     </b-tab>
-                    <b-tab title="Content" disabled>
-                        <ServerNodeContent :content="{}"></ServerNodeContent>
+                    <b-tab title="Pinned content">
+                        <ServerNodePinnedContent :server="getServer"></ServerNodePinnedContent>
                     </b-tab>
                     <template v-slot:tabs-end>
                         <a class="nav-link disabled ml-auto border-0" href="#" style="pointer-events: auto;">
@@ -60,7 +60,7 @@ import iconButton from "@/components/ui/elements/iconButton.vue"
 import ServerNodeInfo from "@/views/strategicView/elements/nodeElements/ServerNodeInfo.vue"
 import ServerNodeUsage from "@/views/strategicView/elements/nodeElements/ServerNodeUsage.vue"
 import ServerNodeSync from "@/views/strategicView/elements/nodeElements/ServerNodeSync.vue"
-import ServerNodeContent from "@/views/strategicView/elements/nodeElements/ServerNodeContent.vue"
+import ServerNodePinnedContent from "@/views/strategicView/elements/nodeElements/ServerNodePinnedContent.vue"
 
 export default {
     name: "ServerNode",
@@ -69,12 +69,13 @@ export default {
         ServerNodeInfo,
         ServerNodeUsage,
         ServerNodeSync,
-        ServerNodeContent,
+        ServerNodePinnedContent,
         iconButton,
         loaderPlaceholder
     },
     data: function () {
         return {
+            tabIndex: 0,
         }
     },
     computed: {
@@ -114,6 +115,9 @@ export default {
             const parentSVG = this.$el.closest("foreignObject.nodeFO")
             parentSVG.setAttribute("width", `${divBoundingRect.width * tranformScaleInverse}px`)
             parentSVG.setAttribute("height", `${divBoundingRect.height * tranformScaleInverse}px`)
+        },
+        setTabIndex(index) {
+            this.tabIndex = index
         }
     },
     props: {
@@ -130,6 +134,12 @@ export default {
             required: true
         }
     },
+    created() {
+        const nodeFunctions = {
+            setTabIndex: this.setTabIndex,
+        }
+        this.$emit('nodeFunctions', nodeFunctions);
+    }
 }
 </script>
 

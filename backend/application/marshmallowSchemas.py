@@ -7,7 +7,7 @@ from sqlalchemy import event
 from sqlalchemy.orm import mapper
 
 from application import db
-from application.DBModels import Server, ServerGroup, User
+from application.DBModels import Server, ServerGroup, User, PinList, PinListEntry
 from application.baseModel import BaseModel
 
 
@@ -54,6 +54,23 @@ class ServerSchema(BaseSchema):
         unknown = INCLUDE
 
 
+class PinlistSchema(BaseSchema):
+
+    class Meta(BaseSchema.Meta):
+        model = PinList
+        unknown = EXCLUDE
+
+
+class PinlistEntrySchema(BaseSchema):
+
+    server_id = fields.Integer()
+    pinlist_id = fields.Integer()
+
+    class Meta(BaseSchema.Meta):
+        model = PinListEntry
+        unknown = EXCLUDE
+
+
 class ServerQuerySchema(Schema):
     timestamp = fields.Integer()
     query_result = fields.Dict()
@@ -86,6 +103,12 @@ serverQuerysSchema = ServerQuerySchema(many=True)
 
 serverGroupSchema = ServerGroupSchema()
 serverGroupsSchema = ServerGroupSchema(many=True)
+
+pinlistSchema = PinlistSchema()
+pinlistsSchema = PinlistSchema(many=True)
+
+pinlistEntrySchema = PinlistEntrySchema()
+pinlistEntriesSchema = PinlistEntrySchema(many=True)
 
 pluginSchema = PluginSchema()
 pluginsSchema = PluginSchema(many=True)

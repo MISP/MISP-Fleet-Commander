@@ -35,6 +35,13 @@ const getters = {
     getServerList: state => {
         return Object.values(state.servers)
     },
+    serversByURL: state => {
+        let serversByURL = {}
+        Object.values(state.servers).forEach(server => {
+            serversByURL[server.url] = server
+        })
+        return serversByURL
+    },
 }
 
 // actions

@@ -80,12 +80,14 @@ def create_app():
         from application.controllers.serverGroups import BPserverGroup
         from application.controllers.plugins import BPplugins
         from application.controllers.instance import BPinstance
+        from application.controllers.pinLists import BPpinLists
         from application.controllers.websocket import registerListeners as registerWSListeners
 
         flaskApp.register_blueprint(BPuser)
         flaskApp.register_blueprint(BPserver)
         flaskApp.register_blueprint(BPserverGroup)
         flaskApp.register_blueprint(BPplugins)
+        flaskApp.register_blueprint(BPpinLists)
         flaskApp.register_blueprint(BPinstance)
         registerWSListeners()
 

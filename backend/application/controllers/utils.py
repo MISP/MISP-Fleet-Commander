@@ -74,6 +74,7 @@ def mispGetRequest(server, url, data={}, rawResponse=False, nocache=False):
             jsonResponse = response.json()
             if type(jsonResponse) == dict:
                 jsonResponse['_latency'] = response.elapsed.total_seconds()
+                jsonResponse['_status_code'] = response.status_code
             return jsonResponse
         return response.json() if not rawResponse else response
     except requests.exceptions.SSLError as e:
@@ -110,6 +111,7 @@ def mispPostRequest(server, url, data={}, rawResponse=False, nocache=True):
             if type(jsonResponse) is not dict:
                 jsonResponse = { 'data': jsonResponse }
             jsonResponse['_latency'] = response.elapsed.total_seconds()
+            jsonResponse['_status_code'] = response.status_code
             return jsonResponse
     except requests.exceptions.SSLError:
         return { "error": "SSL Error" }
@@ -120,25 +122,27 @@ def mispPostRequest(server, url, data={}, rawResponse=False, nocache=True):
 
 def handleStatusCode(response):
     if response.status_code == 403:
-        return { "error": "Authentication error" }
+        return { "error": "Authentication error", "_status_code": response.status_code }
     if response.status_code == 405:
-        return { "error": "Insufficent permission" }
+        return { "error": "Insufficent permission", "_status_code": response.status_code }
     if response.status_code == 400:
-        return { "error" : "Bad Request" }
+        return { "error" : "Bad Request", "_status_code": response.status_code }
     return None
 
 
 def batchRequest(batch_request):
     result = []
     with concurrent.futures.ThreadPoolExecutor(35) as executor:
-        future_to_serverid = {executor.submit(req['fn'], req['server'], req['path'], req.get('data', {})): req['server'].id for req in batch_request}
+        future_to_serverid = {executor.submit(req['fn'], req['server'], req['path'], req.get('data', {})): (req['server'].id, req.get('passAlong', None), ) for req in batch_request}
         starttimer = time.time()
         for future in concurrent.futures.as_completed(future_to_serverid):
-            server_id = future_to_serverid[future]
+            server_id, passAlong = future_to_serverid[future]
             try:
                 data = future.result()
                 data['timestamp'] = int(time.time())
                 data['server_id'] = server_id
+                if passAlong is not None:
+                    data['_passAlong'] = passAlong
                 result.append(data)
             except Exception as exc:
                 print('%r generated an exception: %s' % (server_id, exc))

@@ -121,7 +121,6 @@ const mutations = {
         const redirect = payload.redirect !== undefined ? payload.redirect : true
         state.selected = group
         if (redirect && router.history.current.path !== '/servers') {
-            console.log(router);
             router.push({ path: '/servers', replace: true })
         }
     },
