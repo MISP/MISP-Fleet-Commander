@@ -13,11 +13,13 @@
                     <h1 class="mb-4">Login Account</h1>
                     <b-form-input
                         v-model="email"
-                        size="lg" type="email" class="mb-2" placeholder="Enter your username"
+                        v-on:keyup.enter="login"
+                        size="lg" type="email" class="mb-2" placeholder="Username"
                     ></b-form-input>
                     <b-form-input
                         v-model="password"
-                        size="lg" type="password" class="mb-2" placeholder="Enter your password"
+                        v-on:keyup.enter="login"
+                        size="lg" type="password" class="mb-2" placeholder="Password"
                     ></b-form-input>
                     <Transition name="shake-x">
                         <b-alert :show="loginError" variant="danger">{{ errorMessage }}</b-alert>
