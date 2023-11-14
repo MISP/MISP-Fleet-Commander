@@ -5,7 +5,8 @@ import json
 import re
 import concurrent.futures
 from datetime import datetime as dt, timedelta
-from collections import Mapping, MutableSequence, defaultdict
+from collections.abc import Mapping, MutableSequence
+from collections import defaultdict
 from flask import Blueprint, request, jsonify, abort, Response
 from marshmallow import ValidationError
 

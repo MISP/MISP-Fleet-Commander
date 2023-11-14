@@ -1,8 +1,11 @@
 flask_cors
 flask_sqlalchemy
 flask_migrate
+flask_socketio
 flask-bcrypt
 requests
+redis
+celery
 requests-cache
 marshmallow_sqlalchemy
 PyJWT
