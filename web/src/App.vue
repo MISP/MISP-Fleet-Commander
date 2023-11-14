@@ -26,17 +26,17 @@ export default {
     sockets: {
         connect: function () {
             this.$store.commit('websocket/setConnected', true)
-            console.log('connect');
+            console.debug('connect');
         },
         disconnect(reason) {
             this.$store.commit('websocket/setConnected', false)
-            console.log('disconnect');
+            console.debug('disconnect');
         },
         disconnecting(reason) {
-            console.log('disconnecting');
+            console.debug('disconnecting');
         },
         connect_error(error) {
-            console.log('connect_error');
+            console.debug('connect_error');
         },
         reconnect() {
         },

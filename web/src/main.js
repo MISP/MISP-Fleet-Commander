@@ -23,7 +23,7 @@ import { baseurl } from "@/api/apiConfig"
 
 const socket = SocketIO(baseurl)
 export const socketInstance = new VueSocketIO({
-    debug: true,
+    debug: false,
     connection: socket,
     vuex: {
         store,

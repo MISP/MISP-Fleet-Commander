@@ -46,8 +46,8 @@ export default {
     },
     data: function () {
         return {
-            email: "admin@admin.test",
-            password: "Password1234",
+            email: "",
+            password: "",
             postInProgress: false,
             loginError: null,
             errorMessage: "Invalid username or password",
