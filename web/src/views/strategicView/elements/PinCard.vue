@@ -9,17 +9,21 @@
         <b-tabs
             card fill small
         >
-            <b-tab no-body active>
+            <b-tab
+                v-for="(pinTab, i) in pinTabs"
+                :key="i"
+                no-body :active="i == 0"
+            >
                 <template #title>
-                    <i class="fa fa-envelope"></i> Events
+                    <i :class="pinTab.icon"></i> {{ pinTab.name }}
                 </template>
 
                 <div class="m-2">
-                    <ValidationProvider v-slot="validationContext" rules="required|validUUID" name="Event UUID">
+                    <ValidationProvider v-slot="validationContext" rules="required|validUUID" :name="`${pinTab.name} UUID`">
                         <b-input-group size="sm">
                             <b-input-group-prepend>
                                 <b-button
-                                    @click="pinEvent()"
+                                    @click="pinEntry(pinTab.model)"
                                     variant="primary" size="sm"
                                     :disabled="!getValidationState(validationContext)"
                                 >
@@ -31,10 +35,10 @@
 
                                 <b-form-input
                                     :formatter="trimmer"
-                                    v-model="form.event_uuid"
+                                    v-model="form.uuid"
                                     :state="getValidationState(validationContext)"
                                     type="text"
-                                    placeholder="Event UUID"
+                                    :placeholder="`${pinTab.name} UUID`"
                                 ></b-form-input>
                         </b-input-group>
                     </ValidationProvider>
@@ -51,15 +55,15 @@
                     :outlined="false"
                     thead-class="d-none"
                     tbody-tr-class="tiny-row"
-                    :items="pinnedEvents"
-                    :fields="EventsFields"
+                    :items="pinTab.items()"
+                    :fields="pinFields"
                 >
                     <template #empty>
-                        <div class="text-muted text-center">No events pinned</div>
+                        <div class="text-muted text-center">No entry pinned</div>
                     </template>
 
                      <template v-slot:cell(img)="row">
-                        <Avatar :avatar_id="row.item.id" width="32" height="32"></Avatar>
+                        <Avatar :avatar_id="row.item.id" :pinlist_model="pinTab.model" width="32" height="32"></Avatar>
                     </template>
 
                     <template v-slot:cell(action)="row">
@@ -92,25 +96,6 @@
                 </div>
             </b-tab>
 
-            <b-tab no-body>
-                <template #title>
-                    <i class="fa fa-users"></i> Sharing Groups
-                </template>
-
-                {{ entriesByServerID }}
-
-                <b-table
-                    striped small
-                    class="mb-0"
-                    :bordered="false"
-                    :borderless="true"
-                    :outlined="false"
-                    :items="pinnedSharingGroups"
-                    :fields="SharingGroupFields"
-                >
-                </b-table>
-            </b-tab>
-            
 
             <template v-slot:tabs-end>
                 <b-btn-close
@@ -133,7 +118,7 @@
 import { mapState, mapGetters } from "vuex"
 import { ValidationProvider, extend } from "vee-validate"
 import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
-import Avatar from "@/views/strategicView/elements/Avatar.vue";
+import Avatar from "@/views/strategicView/elements/avatar/Avatar.vue";
 
 extend('validUUID', value => {
     return value.length == 36;
@@ -154,21 +139,20 @@ export default {
     },
     data: function() {
         return {
-            EventsFields: [
-                { key: "img", label: "", class: "tiny-cell-button" },
-                { key: "uuid", label: "UUID", class: "tiny-cell-text" },
-                { key: "action", label: "", class: "tiny-cell-button" },
-            ],
-            SharingGroupFields: [
-                { key: "img", label: "", class: "tiny-cell-button" },
-                { key: "uuid", label: "UUID", class: "tiny-cell-text" },
-                { key: "action", label: "", class: "tiny-cell-button" },
-            ],
             form: {
-                event_uuid: "",
-                sharinggroup_uuid: "",
+                uuid: "",
                 postInProgress: false,
             },
+            pinTabs: [
+                { icon: 'fa fa-envelope', name: 'Event', model: 'event', items: () => this.pinnedEvents },
+                { icon: 'fa fa-users', name: 'Sharing Groups', model: 'sharinggroup', items: () => this.pinnedSharingGroups },
+                { icon: 'fa fa-eye', name: 'Sightings', model: 'sighting', items: () => this.pinnedSightings },
+            ],
+            pinFields : [
+                { key: "img", label: "", class: "tiny-cell-button" },
+                { key: "uuid", label: "UUID", class: "tiny-cell-text" },
+                { key: "action", label: "", class: "tiny-cell-button" },
+            ],
             fetchingPinLists: false
         }
     },
@@ -176,6 +160,7 @@ export default {
         ...mapGetters({
             pinnedEvents: "pinlists/pinnedEvents",
             pinnedSharingGroups: "pinlists/pinnedSharingGroups",
+            pinnedSightings: "pinlists/pinnedSightings",
             pinnedByID: "pinlists/pinnedByID",
             entriesByServerID: "pinlists/entriesByServerID",
             entriesByPinnedID: "pinlists/entriesByPinnedID",
@@ -191,11 +176,8 @@ export default {
         close() {
             this.$emit("update:open", false)
         },
-        pinEvent() {
-            this.doPinning('event', this.form.event_uuid)
-        },
-        pinSharingGroup() {
-            this.doPinning('sharinggroup', this.form.sharinggroup_uuid)
+        pinEntry(model) {
+            this.doPinning(model, this.form.uuid)
         },
         doPinning(model, uuid) {
             this.form.postInProgress = true
@@ -255,7 +237,7 @@ export default {
                     let message = `${entry.model} deleted from all servers`
                     let variant = 'success'
                     if (fails.length > 0) {
-                        variant = sucess.length > 0 ? 'success' : 'warning'
+                        variant = successes.length > 0 ? 'success' : 'warning'
                         message = `${entry.model} deleted from ${successes.length} server(s).\n But, could not delete from ${fails.length} server(s)`
                     }
                     this.$bvToast.toast(message, {

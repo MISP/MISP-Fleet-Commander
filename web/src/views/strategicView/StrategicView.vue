@@ -122,7 +122,7 @@ export default {
                 position: {top: "4em", left: "unset", right: "1em"}
             },
             pinCard: {
-                show: false,
+                show: true,
                 position: {top: "4em", left: "unset", right: "1em"}
             },
             selectedNode: {},
@@ -324,6 +324,10 @@ export default {
                 if (knownDestination) {
                     link.target = parseInt(knownDestination.id)
                     link._managed_server = true
+                    if (link.filtering_rules.pull_rule_number > 0 || link.filtering_rules.push_rule_number > 0) {
+                        link._has_rules = true
+                        link.weight = 4
+                    }
                 } else {
                     link.target = 'v' + link.destination.Server.id
                     link.remote_sync_server = link.destination.Server
@@ -334,6 +338,7 @@ export default {
                     link._managed_server = false
                 }
                 link.id = `${link.source}-${link.target}`
+                link._has_rules = link._has_rules ? true : false
             })
             // Add fake nodes
             this.d3data.links

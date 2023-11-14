@@ -139,6 +139,9 @@ export default {
             setTabIndex: this.setTabIndex,
         }
         this.$emit('nodeFunctions', nodeFunctions);
+    },
+    mounted() {
+        this.tabChanged()
     }
 }
 </script>

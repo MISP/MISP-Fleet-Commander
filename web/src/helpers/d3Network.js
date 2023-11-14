@@ -46,7 +46,16 @@ export default {
             .selectAll("line")
             .data(d3data.links)
             .enter().append("line")
-            .attr("class", function (d) { return "link" + (!d._managed_server ? ' unmanaged_server' : '') })
+            .attr("class", function (d) {
+                let classes = ['link']
+                if (!d._managed_server) {
+                    classes.push('unmanaged_server')
+                }
+                if (d._has_rules) {
+                    classes.push('has_rules')
+                }
+                return classes.join(' ')
+            })
             .attr("stroke", "#999")
             .attr("stroke-opacity", 0.6)
             .style("stroke-width", function(d) { return Math.sqrt(d.weight ? d.weight : 1) })
@@ -113,8 +122,19 @@ export default {
             }
             
             function dragged(event, d) {
+                const freeze = d.fx == event.x && d.fy == event.y
                 d.fx = event.x
                 d.fy = event.y
+                if (freeze) {
+                    d.vx = 0
+                    d.vy = 0
+                    simulation.alphaTarget(0)
+                    d.frozen = true
+                }
+                if (!freeze && d.frozen) {
+                    d.frozen = false
+                    simulation.alphaTarget(0.3).restart()
+                }
             }
             
             function dragended(event, d) {

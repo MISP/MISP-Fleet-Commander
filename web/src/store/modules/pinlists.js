@@ -13,7 +13,10 @@ const getters = {
         return state.all.filter(entry => entry.model == 'event')
     },
     pinnedSharingGroups: state => {
-        return state.all.filter(entry => entry.model == 'sharing-group')
+        return state.all.filter(entry => entry.model == 'sharinggroup')
+    },
+    pinnedSightings: state => {
+        return state.all.filter(entry => entry.model == 'sighting')
     },
     pinnedByID: state => {
         const pinnedByID = {}

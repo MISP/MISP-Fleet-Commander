@@ -61,13 +61,13 @@ def delete(entry: PinList):
 def deleteFromServers(group_id: int, entry: PinList):
     servers = serverModel.index(group_id)
     allRequests = []
-    uuidToDelete = entry.uuid
+    url = __genDeleteURLFromModel(entry)
     if servers:
         for server in servers:
             allRequests.append({
                 'fn': mispPostRequest,
                 'server': server,
-                'path': f'/events/delete/{uuidToDelete}',
+                'path': url,
                 'data': {}
             })
         allDeletion = batchRequest(allRequests)
@@ -77,7 +77,7 @@ def deleteFromServers(group_id: int, entry: PinList):
 def refreshAllServers(group_id: int, entry: PinList):
     servers = serverModel.index(group_id)
     allRequests = []
-    url = __genURLFromModel(entry)
+    url = __genViewURLFromModel(entry)
     if servers and url is not None:
         for server in servers:
             allRequests.append({
@@ -103,9 +103,20 @@ def __handleRefreshResults(allRefresh):
             pinlistEntryModel.add(data)
             
 
-def __genURLFromModel(entry: PinList) -> Union[str, None]:
+def __genViewURLFromModel(entry: PinList) -> Union[str, None]:
     if entry.model == 'event':
         return f'/events/view/{entry.uuid}.json'
     elif entry.model == 'sharinggroup':
         return f'/sharingGroups/view/{entry.uuid}.json'
+    elif entry.model == 'sighting':
+        return f'/sightings/view/{entry.uuid}.json'
+    return None
+
+def __genDeleteURLFromModel(entry: PinList) -> Union[str, None]:
+    if entry.model == 'event':
+        return f'/events/delete/{entry.uuid}'
+    elif entry.model == 'sharinggroup':
+        return f'/sharingGroups/delete/{entry.uuid}'
+    elif entry.model == 'sighting':
+        return f'/sightings/delete/{entry.uuid}'
     return None

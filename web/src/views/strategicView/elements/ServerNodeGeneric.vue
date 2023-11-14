@@ -7,7 +7,7 @@
             :d3SVGNode="d3SVGNode"
         ></ServerNodeMicro>
         <ServerNodeMini
-            v-else-if="scale < 0.6"
+            v-else-if="scale < 0.33"
             :server_id="server_id"
             :d3Node="d3Node"
             :d3SVGNode="d3SVGNode"
@@ -83,6 +83,13 @@ export default {
     }
 }
 </script>
+
+<style>
+line.link.has_rules {
+    stroke: #ff0000;
+    stroke-opacity: 0.8;
+}
+</style>
 
 <style scoped>
 </style>
