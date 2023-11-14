@@ -48,8 +48,11 @@ export default {
         PluginIndex
     },
     data: function () {
+        const token_type = this.$store.getters["auth/access_token_type"];
+        const token = this.$store.getters["auth/access_token"];
+        const location = window.location.origin
         return {
-            bookmarkJS: `javascript: (function () {if (window.bookmarkletMFC !== undefined) {bookmarkletMFC();} else {localStorage.setItem("MFM_token", "fmf_54e1836c_6225_4c50_9e68_40ded4c1ed21");document.body.appendChild(document.createElement("script")).src = "${baseurl}/static/bookmarklet.js?r=" + Math.floor(Math.random() * 999999999)}})()`,
+            bookmarkJS: `javascript: (function () {if (window.bookmarkletMFC !== undefined) {bookmarkletMFC();} else {localStorage.setItem("MFM_token", "${token}");localStorage.setItem("MFM_token_type", "${token_type}");localStorage.setItem("MFM_baseurl", "${location}");document.body.appendChild(document.createElement("script")).src = "${baseurl}/static/bookmarklet.js?r=" + Math.floor(Math.random() * 999999999)}})()`,
         }
     }
 }

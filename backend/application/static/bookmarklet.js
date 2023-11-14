@@ -2,16 +2,22 @@
 (function () {
     (window.bookmarkletMFC = function () {
 
-        const MFC_URL = 'http://localhost:5001'
+        const MFC_URL = localStorage.getItem('MFM_baseurl')
         const MFC_FLEET_INDEX_URL = `${MFC_URL}/serverGroups/index`
         const MFC_SERVER_ADD_URL = `${MFC_URL}/servers/add`
 
         const DEFAULT_SERVER_NAME = window.location.origin
+        const token = localStorage.getItem('MFM_token')
+        const token_type = localStorage.getItem('MFM_token_type')
 
         /** API MFC */
         async function getFleetIndex() {
             const response = await fetch(MFC_FLEET_INDEX_URL, {
-                headers: { "Content-Type": "application/json; charset=utf-8", "Accept": "application/json" },
+                headers: {
+                    "Content-Type": "application/json; charset=utf-8",
+                    "Accept": "application/json",
+                    "Authorization": `${token_type} ${token}`
+                },
                 method: 'GET',
             })
             return response.json()
@@ -19,11 +25,13 @@
 
         async function addServer(fleetID, serverData) {
             const url = `${MFC_SERVER_ADD_URL}/${fleetID}`
-            // console.log(`Posting to ${url}`);
-            // console.log(serverData);
-            // return
+            // console.debug(`Posting to ${url}`);
+            // console.debug(serverData);
             const response = await fetch(url, {
-                headers: { "Content-Type": "application/json; charset=utf-8" },
+                headers: {
+                    "Content-Type": "application/json; charset=utf-8",
+                    "Authorization": `${token_type} ${token}`
+                },
                 method: 'POST',
                 body: JSON.stringify(serverData)
             })
@@ -219,6 +227,7 @@
             fleetNameInput.name = 'server_name'
             fleetNameInput.id = 'server_name'
             fleetNameInput.value = DEFAULT_SERVER_NAME
+            fleetNameInput.style.width = "95%"
             fleetNameLabel.appendChild(fleetNameInput)
             bodyElem.appendChild(fleetNameLabel)
 
@@ -240,7 +249,6 @@
         }
 
         async function doImport() {
-            const token = localStorage.getItem('token')
             const fleetID = document.querySelector('#MFC_MODAL .modal-body input:checked').value
             const serverName = document.querySelector('#MFC_MODAL .modal-body input#server_name').value
 
