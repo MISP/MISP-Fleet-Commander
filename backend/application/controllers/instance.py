@@ -1,5 +1,6 @@
 
 from functools import wraps
+import pathlib
 from flask import Blueprint, current_app, request, render_template, make_response, jsonify, send_from_directory
 from flask import session, abort
 import jwt
@@ -49,14 +50,16 @@ BPinstance = Blueprint('instance', __name__)
 @BPinstance.route('/<string:path>')
 @BPinstance.route('/<path:path>')
 def static_proxy(path):
-    if os.path.isfile('./dist/' + path):
+    basepath = pathlib.Path(__file__).parent.resolve()
+    requestedPath = basepath / '../dist/' / path
+    if os.path.isfile(requestedPath):
         # If request is made for a file by vue.js for example main.js
         # condition will be true, file will be served from the public directory
-        return send_from_directory('../dist', path)
+        return send_from_directory(basepath / '../dist', path)
     else:
         # Otherwise index.html will be served,
         # vue.js router will handle the rest
-        return send_from_directory('../dist', "index.html")
+        return send_from_directory(basepath / '../dist', "index.html")
 
 @BPinstance.route('/instance/searchAll/<searchtext>', methods=['GET'])
 @token_required
