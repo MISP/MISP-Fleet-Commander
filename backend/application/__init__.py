@@ -9,8 +9,6 @@ from celery import Celery, Task
 from flask_socketio import SocketIO
 import socketio
 
-from application.DBModels import init_defaults
-
 
 def celery_init_app(app: Flask) -> Celery:
     class FlaskTask(Task):
@@ -99,6 +97,7 @@ def create_app():
         flaskApp.cli.add_command(server_cli)
 
         # Create tables for our models
+        from application.DBModels import init_defaults
         db.create_all()
         init_defaults()
 
