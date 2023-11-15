@@ -11,7 +11,7 @@
         </template>
         <template v-else>
             <b-alert variant="danger text-nowrap" class="m-0" show >
-                No server group available
+                No fleet available
             </b-alert>
         </template>
     </div>
@@ -50,7 +50,7 @@ export default {
                     })
                     .catch(error => {
                         this.$bvToast.toast(error, {
-                            title: "Could not fetch server group index",
+                            title: "Could not fetch fleet index",
                             variant: "danger",
                         })
                         reject()

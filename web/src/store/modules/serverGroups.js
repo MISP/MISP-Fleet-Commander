@@ -37,7 +37,7 @@ const actions = {
                     (error) => { reject(error) }
                 )
             } else {
-                resolve("Server groups already loaded")
+                resolve("Fleets already loaded")
             }
         })
     },

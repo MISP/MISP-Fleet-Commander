@@ -112,7 +112,7 @@ export default {
                     })
                     .catch(error => {
                         this.$bvToast.toast(error, {
-                            title: "Could not fetch server group index",
+                            title: "Could not fetch fleet index",
                             variant: "danger",
                         })
                         reject()

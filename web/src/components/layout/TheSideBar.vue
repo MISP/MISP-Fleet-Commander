@@ -9,7 +9,7 @@
                 <router-link
                     :class="{'sidebar-link text-decoration-none': true, 'inactive': !canBeAccessed(item)}"
                     v-b-tooltip.hover.right
-                    :title="!canBeAccessed(item) ? 'No server group selected' : ''"
+                    :title="!canBeAccessed(item) ? 'No fleet selected' : ''"
                     :to="item.to"
                 >
                     <span class="icon">

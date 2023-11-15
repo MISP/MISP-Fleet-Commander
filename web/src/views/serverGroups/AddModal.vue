@@ -115,14 +115,14 @@ export default {
                         this.$bvModal.hide("modal-add")
                     })
                     this.$bvToast.toast(`${this.formData.name} created`, {
-                        title: "Server group successfully added",
+                        title: "Fleet successfully added",
                         variant: "success",
                     })
                     this.$emit("addition-success", "done")
                 })
                 .catch(error => {
                     this.$bvToast.toast(error, {
-                        title: "Could not save Server group",
+                        title: "Could not save Fleet",
                         variant: "danger",
                     })
                 })

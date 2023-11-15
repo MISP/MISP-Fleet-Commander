@@ -54,7 +54,7 @@ def doQueryGroup(group_id: int, delay_second: int = 10):
             time.sleep(delay_second)
             print(f'\t Took {time.time() - timer1:.2f}')
     else:
-        print('No server group with that ID')
+        print('No fleet with that ID')
 
 @server_cli.command('watch-group-ws')
 @click.argument('group_id')
@@ -78,4 +78,4 @@ def doQueryGroupWs(group_id: int, delay_second: int = 10):
             time.sleep(delay_second)
             print(f'\t Took {time.time() - timer1:.2f}')
     else:
-        print('No server group with that ID')
+        print('No fleet with that ID')
