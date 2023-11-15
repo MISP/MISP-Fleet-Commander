@@ -15,6 +15,12 @@ from application import bcrypt
 def generate_uuid():
     return str(uuid.uuid4())
 
+def init_defaults():
+    if User.query.first() is None:
+        user = User(email='admin@admin.test', password='Password1234')
+        db.session.add(user)
+        db.session.commit()
+
 
 class User(BaseModel):
     __tablename__ = 'users'
