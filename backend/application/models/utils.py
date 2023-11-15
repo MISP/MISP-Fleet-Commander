@@ -14,8 +14,7 @@ class AvatarGenerator:
     BLOCK_SIZE = 30
     totalArea = 2*PAD + 5*BLOCK_SIZE
     WHITE = (255, 255, 255,)
-    # ROOT_PATH = Path(os.path.dirname(__file__)) / '..' / 'data' / 'pin-avatars'
-    ROOT_PATH = Path('/home/sami/git/MISP-Fleet-Commander/backend') / 'data' / 'pin-avatars'
+    ROOT_PATH = Path(os.path.dirname(__file__)) / '..' / '..' / 'data' / 'pin-avatars'
 
     def __init__(self, uuid=None) -> None:
         self.uuid = uuid
