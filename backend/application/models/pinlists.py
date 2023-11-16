@@ -131,6 +131,8 @@ def __handleRefreshResults(allRefresh):
 def __genViewURLFromModel(entry: PinList) -> Union[str, None]:
     if entry.model == 'event':
         return f'/events/view/{entry.uuid}.json'
+    elif entry.model == 'attribute':
+        return f'/attributes/view/{entry.uuid}.json'
     elif entry.model == 'sharinggroup':
         return f'/sharingGroups/view/{entry.uuid}.json'
     elif entry.model == 'sighting':
@@ -140,6 +142,8 @@ def __genViewURLFromModel(entry: PinList) -> Union[str, None]:
 def __genDeleteURLFromModel(entry: PinList) -> Union[str, None]:
     if entry.model == 'event':
         return f'/events/delete/{entry.uuid}'
+    elif entry.model == 'attribute':
+        return f'/attributes/delete/{entry.uuid}/1'
     elif entry.model == 'sharinggroup':
         return f'/sharingGroups/delete/{entry.uuid}'
     elif entry.model == 'sighting':

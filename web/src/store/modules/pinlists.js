@@ -12,6 +12,9 @@ const getters = {
     pinnedEvents: state => {
         return state.all.filter(entry => entry.model == 'event')
     },
+    pinnedAttributes: state => {
+        return state.all.filter(entry => entry.model == 'attribute')
+    },
     pinnedSharingGroups: state => {
         return state.all.filter(entry => entry.model == 'sharinggroup')
     },

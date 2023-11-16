@@ -1,12 +1,27 @@
 <template>
     <span class="avatar-container">
-        <span class="m-1 event-avatar" v-if="pinlist_model == 'event'">
+        <span
+            v-if="pinlist_model == 'event'"
+            class="m-1 event-avatar"
+        >
             <AvatarImage v-bind="$attrs" :avatar_id="pinlist_id"></AvatarImage>
         </span>
-        <span class="m-1 sharinggroup-avatar" v-else-if="pinlist_model == 'sharinggroup'">
+        <span
+            v-else-if="pinlist_model == 'attribute'"
+            class="m-1 attribute-avatar"
+        >
             <AvatarImage v-bind="$attrs" :avatar_id="pinlist_id"></AvatarImage>
         </span>
-        <span class="m-1 sighting-avatar" v-else-if="pinlist_model == 'sighting'">
+        <span
+            v-else-if="pinlist_model == 'sharinggroup'"
+            class="m-1 sharinggroup-avatar"
+        >
+            <AvatarImage v-bind="$attrs" :avatar_id="pinlist_id"></AvatarImage>
+        </span>
+        <span
+            v-else-if="pinlist_model == 'sighting'"
+            class="m-1 sighting-avatar"
+        >
             <AvatarImage v-bind="$attrs" :avatar_id="pinlist_id"></AvatarImage>
         </span>
     </span>
@@ -47,6 +62,14 @@ export default {
 .event-avatar {
     display: inline-block;
     box-shadow: 0 0 4px 0 #00000077;
+}
+
+
+.attribute-avatar {
+    display: inline-block;
+    box-shadow: 0 0 4px 0 #00000077;
+    border-radius: 50%;
+    overflow: hidden;
 }
 
 .sharinggroup-avatar {

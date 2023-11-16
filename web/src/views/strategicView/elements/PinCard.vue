@@ -144,7 +144,8 @@ export default {
                 postInProgress: false,
             },
             pinTabs: [
-                { icon: 'fa fa-envelope', name: 'Event', model: 'event', items: () => this.pinnedEvents },
+                { icon: 'fa fa-envelope', name: 'Events', model: 'event', items: () => this.pinnedEvents },
+                { icon: 'fa fa-cube', name: 'Attributes', model: 'attribute', items: () => this.pinnedAttributes },
                 { icon: 'fa fa-users', name: 'Sharing Groups', model: 'sharinggroup', items: () => this.pinnedSharingGroups },
                 { icon: 'fa fa-eye', name: 'Sightings', model: 'sighting', items: () => this.pinnedSightings },
             ],
@@ -159,6 +160,7 @@ export default {
     computed: {
         ...mapGetters({
             pinnedEvents: "pinlists/pinnedEvents",
+            pinnedAttributes: "pinlists/pinnedAttributes",
             pinnedSharingGroups: "pinlists/pinnedSharingGroups",
             pinnedSightings: "pinlists/pinnedSightings",
             pinnedByID: "pinlists/pinnedByID",

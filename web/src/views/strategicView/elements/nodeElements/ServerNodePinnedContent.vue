@@ -8,6 +8,14 @@
                 <AvatarActions :server_id="server.id" :pinlist_id="entry.pinlist_id" :pinlist_model="entry.model" width="32" height="32"></AvatarActions>
             </span>
         </div>
+        <div class="text-muted">
+            <i class="fa fa-cube fa-fw"></i> Attributes
+        </div>
+        <div>
+            <span v-for="entry in attributes" :key="entry.id">
+                <AvatarActions :server_id="server.id" :pinlist_id="entry.pinlist_id" :pinlist_model="entry.model" width="32" height="32"></AvatarActions>
+            </span>
+        </div>
         <div class="text-muted mt-1">
             <i class="fa fa-users fa-fw"></i> Sharing Groups
         </div>
@@ -58,6 +66,9 @@ export default {
         },
         events() {
             return this.entries.filter(e => e.model == 'event')
+        },
+        attributes() {
+            return this.entries.filter(e => e.model == 'attribute')
         },
         sharinggroups() {
             return this.entries.filter(e => e.model == 'sharinggroup')
