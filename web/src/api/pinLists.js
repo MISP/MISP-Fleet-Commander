@@ -5,9 +5,12 @@ const urls = {
     index: `/pinlists/index`,
     add: `/pinlists/add`,
     delete: `/pinlists/delete`,
+    delete_from_server: `/pinlists/deleteFromServer`,
     delete_from_servers: `/pinlists/deleteFromServers`,
+    refresh_server_entry: `/pinlists/refreshServerEntry`,
     refresh_all_servers: `/pinlists/refreshAllServers`,
     all_entries: `/pinlists/getAllEntries`,
+    all_entries_from_server: `/pinlists/getAllEntriesFromServer`,
     entries_from_pinned: `/pinlists/getEntriesFromPinned`,
     entries_on_server: `/pinlists/getEntriesOnServer`,
     get_avatar: `${baseurl}/pinlists/getAvatar`,
@@ -35,6 +38,16 @@ export default {
     delete(entry_id, cb, errorCb) {
         const url = `${urls.delete}/${entry_id}`
         return common.getClient().delete(url)
+            .then((response) => {
+                cb(response.data)
+            })
+            .catch(error => {
+                errorCb(error.data.toJSON())
+            })
+    },
+    deleteFromServer(entry_id, server_id, cb, errorCb) {
+        const url = `${urls.delete_from_server}/${server_id}/${entry_id}`
+        return common.getClient().post(url)
             .then((response) => {
                 cb(response.data)
             })
@@ -70,6 +83,15 @@ export default {
                 errorCb(error.toJSON().message)
             })
     },
+    getAllFromServer(server_id, cb, errorCb) {
+        const url = `${urls.all_entries_from_server}/${server_id}`
+        return common.getClient().get(url)
+            .then((response) => {
+                cb(response.data)
+            }).catch(error => {
+                errorCb(error.toJSON().message)
+            })
+    },
     getEntriesFromPinned(entry_id, cb, errorCb) {
         const url = `${urls.entries_from_pinned}/${entry_id}`
         return common.getClient().get(url)
@@ -79,6 +101,16 @@ export default {
                 errorCb(error.toJSON().message)
             })
     },
+    refreshServerEntry(entry_id, server_id, cb, errorCb) {
+        const url = `${urls.refresh_server_entry}/${server_id}/${entry_id}`
+        return common.getClient().post(url)
+            .then((response) => {
+                cb(response.data)
+            })
+            .catch(error => {
+                errorCb(error.data.toJSON())
+            })
+    },
     refreshAllServers(entry_id, cb, errorCb) {
         const url = common.appendGroupIDIfDefined(`${urls.refresh_all_servers}`) + `/${entry_id}`
         return common.getClient().post(url)
@@ -86,7 +118,6 @@ export default {
                 cb(response.data)
             })
             .catch(error => {
-                debugger
                 errorCb(error.data.toJSON())
             })
     },

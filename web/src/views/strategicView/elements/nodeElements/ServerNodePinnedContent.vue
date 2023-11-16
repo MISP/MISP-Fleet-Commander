@@ -5,7 +5,7 @@
         </div>
         <div>
             <span v-for="entry in events" :key="entry.id">
-                <Avatar :avatar_id="entry.pinlist_id" :pinlist_model="entry.model" width="32" height="32"></Avatar>
+                <AvatarActions :server_id="server.id" :pinlist_id="entry.pinlist_id" :pinlist_model="entry.model" width="32" height="32"></AvatarActions>
             </span>
         </div>
         <div class="text-muted mt-1">
@@ -13,7 +13,7 @@
         </div>
         <div>
             <span v-for="entry in sharinggroups" :key="entry.id">
-                <Avatar :avatar_id="entry.pinlist_id" :pinlist_model="entry.model" width="32" height="32"></Avatar>
+                <AvatarActions :server_id="server.id" :pinlist_id="entry.pinlist_id" :pinlist_model="entry.model" width="32" height="32"></AvatarActions>
             </span>
         </div>
         <div class="text-muted mt-1">
@@ -21,7 +21,7 @@
         </div>
         <div>
             <span v-for="entry in sightings" :key="entry.id">
-                <Avatar :avatar_id="entry.pinlist_id" :pinlist_model="entry.model" width="32" height="32"></Avatar>
+                <AvatarActions :server_id="server.id" :pinlist_id="entry.pinlist_id" :pinlist_model="entry.model" width="32" height="32"></AvatarActions>
             </span>
         </div>
     </div>
@@ -29,13 +29,13 @@
 
 <script>
 import { mapGetters } from "vuex"
-import Avatar from "@/views/strategicView/elements/avatar/Avatar.vue";
+import AvatarActions from "@/views/strategicView/elements/avatar/AvatarActions.vue";
 
 
 export default {
     name: "ServerNodePinnedContent",
     components: {
-        Avatar
+        AvatarActions
     },
     props: {
         server: {

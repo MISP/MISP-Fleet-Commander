@@ -63,7 +63,7 @@
                     </template>
 
                      <template v-slot:cell(img)="row">
-                        <Avatar :avatar_id="row.item.id" :pinlist_model="pinTab.model" width="32" height="32"></Avatar>
+                        <Avatar :pinlist_id="row.item.id" :pinlist_model="pinTab.model" width="32" height="32"></Avatar>
                     </template>
 
                     <template v-slot:cell(action)="row">

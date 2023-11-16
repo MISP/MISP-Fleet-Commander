@@ -24,19 +24,19 @@
 
             <b-dropdown variant="primary" size="sm" text="Pinned data" class="ml-1">
                 <b-dropdown-item
-                    @click="togglePinPanel"
-                >
-                    <iconButton
-                        text="Toggle pin panel"
-                        icon="thumbtack"
-                    ></iconButton>
-                </b-dropdown-item>
-                <b-dropdown-item
                     @click="showPinnedContentOnNodes"
                 >
                     <iconButton
                         text="Show pinned content on all nodes"
                         icon="eye"
+                    ></iconButton>
+                </b-dropdown-item>
+                <b-dropdown-item
+                    @click="togglePinPanel"
+                >
+                    <iconButton
+                        text="Toggle pin panel"
+                        icon="thumbtack"
                     ></iconButton>
                 </b-dropdown-item>
             </b-dropdown>

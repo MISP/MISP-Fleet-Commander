@@ -27,6 +27,12 @@ def indexForUser(user, group_id=None):
     servers = q.all()
     return servers
 
+def get(server_id: int):
+    q = Server.query
+    q = q.filter_by(id=server_id)
+    server = q.first()
+    return server
+
 def getForUser(user, server_id: int):
     q = Server.query
     q = q.filter_by(user_id=user.id, id=server_id)

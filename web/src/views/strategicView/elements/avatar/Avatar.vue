@@ -1,13 +1,13 @@
 <template>
-    <span>
+    <span class="avatar-container">
         <span class="m-1 event-avatar" v-if="pinlist_model == 'event'">
-            <AvatarImage v-bind="$attrs" :avatar_id="avatar_id"></AvatarImage>
+            <AvatarImage v-bind="$attrs" :avatar_id="pinlist_id"></AvatarImage>
         </span>
         <span class="m-1 sharinggroup-avatar" v-else-if="pinlist_model == 'sharinggroup'">
-            <AvatarImage v-bind="$attrs" :avatar_id="avatar_id"></AvatarImage>
+            <AvatarImage v-bind="$attrs" :avatar_id="pinlist_id"></AvatarImage>
         </span>
         <span class="m-1 sighting-avatar" v-else-if="pinlist_model == 'sighting'">
-            <AvatarImage v-bind="$attrs" :avatar_id="avatar_id"></AvatarImage>
+            <AvatarImage v-bind="$attrs" :avatar_id="pinlist_id"></AvatarImage>
         </span>
     </span>
 </template>
@@ -23,7 +23,7 @@ export default {
         AvatarImage
     },
     props: {
-        avatar_id: {
+        pinlist_id: {
             type: Number,
             required: true,
         },
@@ -33,7 +33,8 @@ export default {
         },
     },
     data: function () {
-        return {}
+        return {
+        }
     },
     computed: {
     },

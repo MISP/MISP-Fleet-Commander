@@ -40,6 +40,13 @@ def getAllForUser(user_id: int) -> list:
     entries = q.all()
     return entries
 
+def getAllEntriesFromServerForUser(user_id: int, server_id: int) -> list:
+    q = PinListEntry.query
+    q = q.filter_by(server_id=server_id)
+    q = q.join(PinListEntry.pinlist.and_(PinList.user_id == user_id))
+    entries = q.all()
+    return entries
+
 def getEntriesFromPinned(pinlist_id: int) -> list:
     q = PinListEntry.query
     q = q.filter_by(pinlist_id=pinlist_id)

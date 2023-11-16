@@ -2,7 +2,7 @@
 
 from typing import List, Union
 
-from application.DBModels import db, PinList, PinListEntry
+from application.DBModels import Server, db, PinList, PinListEntry
 import application.models.servers as serverModel
 import application.models.pinlistEntries as pinlistEntryModel
 from application.controllers.utils import batchRequest, mispGetRequest, mispPostRequest
@@ -58,6 +58,15 @@ def delete(entry: PinList):
     avatarGenerator = AvatarGenerator(entry.uuid)
     avatarGenerator.delete()
 
+def deleteFromServer(server_id: int, entry: PinList):
+    server = serverModel.get(server_id)
+    url = __genDeleteURLFromModel(entry)
+    if server:
+        deletion = mispPostRequest(server, url)
+        __afterDeleteActions(entry, server)
+        return deletion
+    return []
+
 def deleteFromServers(group_id: int, entry: PinList):
     servers = serverModel.index(group_id)
     allRequests = []
@@ -88,6 +97,15 @@ def refreshAllServers(group_id: int, entry: PinList):
             })
         allRefresh = batchRequest(allRequests)
         __handleRefreshResults(allRefresh)
+
+def refreshServerEntry(server_id: int, entry: PinList):
+    server = serverModel.get(server_id)
+    url = __genViewURLFromModel(entry)
+    if server:
+        refreshResult = mispGetRequest(server, url)
+        refreshResult['_passAlong'] = {'pinlist_id': entry.id}
+        refreshResult['_passAlong']['server_id'] = server.id
+        __handleRefreshResults([refreshResult])
 
 def __handleRefreshResults(allRefresh):
     for result in allRefresh:
@@ -120,3 +138,10 @@ def __genDeleteURLFromModel(entry: PinList) -> Union[str, None]:
     elif entry.model == 'sighting':
         return f'/sightings/delete/{entry.uuid}'
     return None
+
+def __afterDeleteActions(entry: PinList, server: Server) -> bool:
+    if entry.model == 'event':
+        url_blocklist = f'/event_blocklists/delete/{entry.uuid}'
+        blocklist_deletion = mispPostRequest(server, url_blocklist)
+        return True if blocklist_deletion else False
+    return True

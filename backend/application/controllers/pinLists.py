@@ -67,6 +67,14 @@ def getAllEntries(user):
     return pinlistEntriesSchema.dump(entries)
 
 
+@BPpinLists.route('/pinlists/getAllEntriesFromServer/<int:server_id>', methods=['GET'])
+@token_required
+def getAllEntriesFromServer(user, server_id):
+    """Return all entries for the provided server"""
+    entries = pinlistsEntriesModel.getAllEntriesFromServerForUser(user.id, server_id)
+    return pinlistEntriesSchema.dump(entries)
+
+
 @BPpinLists.route('/pinlists/getEntriesFromPinned/<int:entry_id>', methods=['GET'])
 @token_required
 def getEntriesFromPinned(user, entry_id):
@@ -77,6 +85,18 @@ def getEntriesFromPinned(user, entry_id):
         return pinlistEntriesSchema.dump(entries)
     else:
         return jsonify([])
+
+
+@BPpinLists.route('/pinlists/deleteFromServer/<int:server_id>/<int:entry_id>', methods=['DELETE', 'POST'])
+@token_required
+def deleteFromServer(user, server_id, entry_id):
+    """Delete the data associated with the pin entry on all servers"""
+    entry = pinlistsModel.getForUser(user, entry_id)
+    if entry is not None:
+        result = pinlistsModel.deleteFromServer(server_id, entry)
+        return jsonify(result)
+    else:
+        return jsonify({})
 
 
 @BPpinLists.route('/pinlists/deleteFromServers/<int:group_id>/<int:entry_id>', methods=['DELETE', 'POST'])
@@ -98,5 +118,15 @@ def refreshAllServers(user, group_id, entry_id):
     entry = pinlistsModel.getForUser(user, entry_id)
     if entry is not None:
         pinlistsModel.refreshAllServers(group_id, entry)
+    return jsonify({})
+
+
+@BPpinLists.route('/pinlists/refreshServerEntry/<int:server_id>/<int:entry_id>', methods=['POST'])
+@token_required
+def refreshServerEntry(user, server_id, entry_id):
+    """Collect the data associated with that entry on all servers"""
+    entry = pinlistsModel.getForUser(user, entry_id)
+    if entry is not None:
+        pinlistsModel.refreshServerEntry(server_id, entry)
     return jsonify({})
 

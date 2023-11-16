@@ -91,12 +91,47 @@ const actions = {
         })
     },
 
+    deleteFromServer({ dispatch }, payload) {
+        return new Promise((resolve, reject) => {
+            api.deleteFromServer(
+                payload.entry_id,
+                payload.server_id,
+                (response) => {
+                    resolve(response)
+                    dispatch("refreshServerEntry", payload)
+                },
+                (error) => {
+                    reject(error)
+                    dispatch("refreshServerEntry", payload)
+                }
+            )
+        })
+    },
+
     deleteFromServers({ }, entry_id) {
         return new Promise((resolve, reject) => {
             api.deleteFromServers(
                 entry_id,
                 (response) => {
                     resolve(response)
+                    dispatch("refreshAllServers", entry_id)
+                },
+                (error) => {
+                    reject(error)
+                    dispatch("refreshAllServers", entry_id)
+                }
+            )
+        })
+    },
+
+    refreshServerEntry({ dispatch }, payload) {
+        return new Promise((resolve, reject) => {
+            api.refreshServerEntry(
+                payload.entry_id,
+                payload.server_id,
+                (result) => {
+                    resolve(result)
+                    dispatch("getAllFromServer", payload.server_id)
                 },
                 (error) => { reject(error) }
             )
@@ -120,6 +155,19 @@ const actions = {
             api.getAllEntries(
                 (entries) => {
                     commit("setEntries", entries)
+                    resolve(entries)
+                },
+                (error) => { reject(error) }
+            )
+        })
+    },
+
+    getAllFromServer({ commit }, server_id) {
+        return new Promise((resolve, reject) => {
+            api.getAllFromServer(
+                server_id,
+                (entries) => {
+                    commit("setEntriesForServer", { server_id: server_id, entries: entries })
                     resolve(entries)
                 },
                 (error) => { reject(error) }
@@ -157,6 +205,14 @@ const mutations = {
     },
     setEntries(state, entries) {
         state.entriesFromPinned = entries
+    },
+    setEntriesForServer(state, payload) {
+        const server_id = payload.server_id
+        const entries = payload.entries
+        state.entriesFromPinned = state.entriesFromPinned.filter(entry => entry.server_id != server_id)
+        entries.forEach(entry => {
+            state.entriesFromPinned.push(entry)
+        });
     },
 }
 
