@@ -130,3 +130,14 @@ def refreshServerEntry(user, server_id, entry_id):
         pinlistsModel.refreshServerEntry(server_id, entry)
     return jsonify({})
 
+
+
+@BPpinLists.route('/pinlists/publishEventOnServer/<int:server_id>/<int:entry_id>', methods=['POST'])
+@token_required
+def publishEventOnServer(user, server_id, entry_id):
+    """Collect the data associated with that entry on all servers"""
+    entry = pinlistsModel.getForUser(user, entry_id)
+    if entry is not None:
+        pinlistsModel.publishEventOnServer(server_id, entry)
+    return jsonify({})
+

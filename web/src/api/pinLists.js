@@ -13,6 +13,7 @@ const urls = {
     all_entries_from_server: `/pinlists/getAllEntriesFromServer`,
     entries_from_pinned: `/pinlists/getEntriesFromPinned`,
     entries_on_server: `/pinlists/getEntriesOnServer`,
+    publish_event_on_server: `/pinlists/publishEventOnServer`,
     get_avatar: `${baseurl}/pinlists/getAvatar`,
 }
   
@@ -113,6 +114,16 @@ export default {
     },
     refreshAllServers(entry_id, cb, errorCb) {
         const url = common.appendGroupIDIfDefined(`${urls.refresh_all_servers}`) + `/${entry_id}`
+        return common.getClient().post(url)
+        .then((response) => {
+            cb(response.data)
+        })
+        .catch(error => {
+            errorCb(error.data.toJSON())
+        })
+    },
+    publishEventOnServer(entry_id, server_id, cb, errorCb) {
+        const url = `${urls.publish_event_on_server}/${server_id}/${entry_id}`
         return common.getClient().post(url)
             .then((response) => {
                 cb(response.data)

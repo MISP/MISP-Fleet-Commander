@@ -61,7 +61,7 @@ def delete(entry: PinList):
 def deleteFromServer(server_id: int, entry: PinList):
     server = serverModel.get(server_id)
     url = __genDeleteURLFromModel(entry)
-    if server:
+    if server and url is not None:
         deletion = mispPostRequest(server, url)
         __afterDeleteActions(entry, server)
         return deletion
@@ -71,7 +71,7 @@ def deleteFromServers(group_id: int, entry: PinList):
     servers = serverModel.index(group_id)
     allRequests = []
     url = __genDeleteURLFromModel(entry)
-    if servers:
+    if servers and url is not None:
         for server in servers:
             allRequests.append({
                 'fn': mispPostRequest,
@@ -107,6 +107,13 @@ def refreshServerEntry(server_id: int, entry: PinList):
         refreshResult['_passAlong']['server_id'] = server.id
         __handleRefreshResults([refreshResult])
 
+def publishEventOnServer(server_id: int, entry: PinList):
+    server = serverModel.get(server_id)
+    url = __genActionURLFromModel(entry, 'publish')
+    if server is not None:
+        result = mispPostRequest(server, url)
+        return result
+
 def __handleRefreshResults(allRefresh):
     for result in allRefresh:
         data = {
@@ -137,6 +144,12 @@ def __genDeleteURLFromModel(entry: PinList) -> Union[str, None]:
         return f'/sharingGroups/delete/{entry.uuid}'
     elif entry.model == 'sighting':
         return f'/sightings/delete/{entry.uuid}'
+    return None
+
+def __genActionURLFromModel(entry: PinList, action: str) -> Union[str, None]:
+    if entry.model == 'event':
+        if action == 'publish':
+            return f'/events/publish/{entry.uuid}'
     return None
 
 def __afterDeleteActions(entry: PinList, server: Server) -> bool:

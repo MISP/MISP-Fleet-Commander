@@ -188,6 +188,19 @@ const actions = {
             )
         })
     },
+
+    publishEventOnServer({ }, payload) {
+        return new Promise((resolve, reject) => {
+            api.publishEventOnServer(
+                payload.entry_id,
+                payload.server_id,
+                (result) => {
+                    resolve(result)
+                },
+                (error) => { reject(error) }
+            )
+        })
+    },
 }
 
 // mutations
