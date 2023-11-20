@@ -21,7 +21,7 @@
                              v-if="getServerStatus.latency !== undefined"
                              :class="{'text-success': getServerStatus.latency < 0.3, 'text-warning': getServerStatus.latency >= 0.3 && getServerStatus.latency < 2, 'text-danger': getServerStatus.latency >= 2}"
                         >
-                            ({{ getServerStatus.latency.toFixed(3) }}ms)
+                            ({{ (getServerStatus.latency*1000).toFixed(0) }}ms)
                         </small>
                     </span>
                     <b-button
