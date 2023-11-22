@@ -12,7 +12,7 @@ from marshmallow import ValidationError
 
 from application.DBModels import db, User, Server
 from application.controllers.utils import mispGetRequest, mispPostRequest, batchRequest
-from application.marshmallowSchemas import ServerSchema, serverGroupSchema, serverQuerySchema, serverSchema, taskSchema, serverSchema, serversSchema
+from application.marshmallowSchemas import ServerSchema, serverGroupSchema, serverQuerySchema, serverSchema, serversSchemaLighter, taskSchema, serverSchema, serversSchema
 import application.models.servers as serverModel
 from application.workers.tasks import fetchServerInfoTask
 from application.controllers.instance import token_required
@@ -30,7 +30,8 @@ class DictToObject:
 def index(user, group_id=None):
     servers = serverModel.indexForUser(user, group_id)
     if servers:
-        return serversSchema.dump(servers)
+        serversDict = serversSchemaLighter.dump(servers)
+        return jsonify(serversDict)
     else:
         return jsonify([])
 

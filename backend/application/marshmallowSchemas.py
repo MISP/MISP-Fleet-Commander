@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from pprint import pprint
-from marshmallow import EXCLUDE, INCLUDE, RAISE, Schema, ValidationError, fields, pre_load, validates_schema
+from marshmallow import EXCLUDE, INCLUDE, RAISE, Schema, ValidationError, fields, post_dump, pre_load, validates_schema
 from marshmallow_sqlalchemy import ModelConversionError, SQLAlchemyAutoSchema, fields as mafields
 from sqlalchemy import event
 from sqlalchemy.orm import mapper
@@ -54,6 +54,15 @@ class ServerSchema(BaseSchema):
         unknown = INCLUDE
 
 
+class ServerSchemaLighter(ServerSchema):
+
+    @post_dump
+    def cull_settings_from_server_info(self, server, **kwargs):
+        server['server_info']['query_result']['serverSettings'].pop('dbDiagnostics')
+        server['server_info']['query_result']['serverSettings'].pop('dbSchemaDiagnostics')
+        server['server_info']['query_result']['serverSettings'].pop('finalSettings')
+        return server
+
 class PinlistSchema(BaseSchema):
 
     class Meta(BaseSchema.Meta):
@@ -94,6 +103,9 @@ class TaskSchema(Schema):
 
 serverSchema = ServerSchema()
 serversSchema = ServerSchema(many=True)
+
+serverSchemaLighter = ServerSchemaLighter()
+serversSchemaLighter = ServerSchemaLighter(many=True)
 
 userSchema = UserSchema()
 usersSchema = UserSchema(many=True)

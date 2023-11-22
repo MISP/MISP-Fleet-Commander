@@ -76,7 +76,6 @@ def mispGetRequest(server, url, data={}, rawResponse=False, nocache=False):
                 jsonResponse['_latency'] = response.elapsed.total_seconds()
                 jsonResponse['_status_code'] = response.status_code
             return jsonResponse
-        return response.json() if not rawResponse else response
     except requests.exceptions.SSLError as e:
         return { "error": "SSL error" }
     except requests.exceptions.ConnectionError:
@@ -133,8 +132,13 @@ def handleStatusCode(response):
 def batchRequest(batch_request):
     result = []
     with concurrent.futures.ThreadPoolExecutor(35) as executor:
-        future_to_serverid = {executor.submit(req['fn'], req['server'], req['path'], req.get('data', {}), rawResponse=req.get('rawResponse', False), nocache=req.get('nocache', False)): (req['server'].id, req.get('passAlong', None), ) for req in batch_request}
-        starttimer = time.time()
+        future_to_serverid = {
+            executor.submit(
+                req['fn'], req['server'], req['path'], req.get('data', {}), rawResponse=req.get('rawResponse', False), nocache=req.get('nocache', False)
+            ): (
+                req['server'].id, req.get('passAlong', None),
+            ) for req in batch_request
+        }
         for future in concurrent.futures.as_completed(future_to_serverid):
             server_id, passAlong = future_to_serverid[future]
             try:
