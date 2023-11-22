@@ -22,7 +22,7 @@ export default {
             .then((response) => {
                 cb(response.data)
             }).catch(error => {
-                errorCb(error.toJSON().message)
+                common.handleError(error, errorCb)
             })
     },
 
@@ -32,7 +32,7 @@ export default {
             .then((response) => {
                 cb(response.data)
             }).catch(error => {
-                errorCb(error.toJSON().message)
+                common.handleError(error, errorCb)
             })
     },
 
@@ -43,7 +43,7 @@ export default {
                 cb(response.data)
             }).catch(error => {
                 console.log(error)
-                errorCb(error.toJSON().message)
+                common.handleError(error, errorCb)
             })
     },
 
@@ -54,7 +54,7 @@ export default {
             .then((response) => {
                 cb(response.data)
             }).catch(error => {
-                errorCb(error.toJSON().message)
+                common.handleError(error, errorCb)
             })
     },
 
@@ -65,8 +65,7 @@ export default {
                 cb(response)
             })
             .catch(error => {
-                console.log(error)
-                errorCb(error.data.toJSON())
+                common.handleError(error, errorCb)
             })
     },
 
@@ -77,7 +76,7 @@ export default {
                 cb(response)
             })
             .catch(error => {
-                errorCb(error.data.toJSON())
+                common.handleError(error, errorCb)
             })
     },
 
@@ -88,7 +87,7 @@ export default {
                 cb(response)
             })
             .catch(error => {
-                errorCb(error.data.toJSON())
+                common.handleError(error, errorCb)
             })
     },
 
@@ -99,8 +98,7 @@ export default {
                 cb(response.data)
             })
             .catch(error => {
-                console.log(error)
-                errorCb(error)
+                common.handleError(error, errorCb)
             })
     },
 
@@ -120,7 +118,7 @@ export default {
         .then((response) => {
             cb(response.data)
         }).catch(error => {
-            errorCb(error.data.toJSON())
+            common.handleError(error, errorCb)
         })
     }
 

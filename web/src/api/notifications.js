@@ -11,7 +11,7 @@ export default {
             .then((response) => {
                 cb(response.data)
             }).catch(error => {
-                errorCb(error.toJSON().message)
+                common.handleError(error, errorCb)
             })
     },
     get(server_id, cb, errorCb) {
@@ -21,7 +21,7 @@ export default {
             .then((response) => {
                 cb(response.data)
             }).catch(error => {
-                errorCb(error.toJSON().message)
+                common.handleError(error, errorCb)
             })
     },
 }

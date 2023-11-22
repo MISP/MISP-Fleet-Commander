@@ -15,7 +15,7 @@ export default {
             .then((response) => {
                 cb(response.data)
             }).catch(error => {
-                errorCb(error.toJSON().message)
+                common.handleError(error, errorCb)
             })
     },
     get(connection, cb, errorCb) {
@@ -25,7 +25,7 @@ export default {
             .then((response) => {
                 cb(response.data)
             }).catch(error => {
-                errorCb(error.toJSON().message)
+                common.handleError(error, errorCb)
             })
     },
 }

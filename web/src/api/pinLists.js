@@ -24,7 +24,7 @@ export default {
             .then((response) => {
                 cb(response.data)
             }).catch(error => {
-                errorCb(error.toJSON().message)
+                common.handleError(error, errorCb)
             })
     },
     add(payload, cb, errorCb) {
@@ -33,7 +33,7 @@ export default {
             .then((response) => {
                 cb(response.data)
             }).catch(error => {
-                errorCb(error.toJSON().message)
+                common.handleError(error, errorCb)
             })
     },
     delete(entry_id, cb, errorCb) {
@@ -72,7 +72,7 @@ export default {
             .then((response) => {
                 cb(response.data)
             }).catch(error => {
-                errorCb(error.toJSON().message)
+                common.handleError(error, errorCb)
             })
     },
     getAllEntries(cb, errorCb) {
@@ -81,7 +81,7 @@ export default {
             .then((response) => {
                 cb(response.data)
             }).catch(error => {
-                errorCb(error.toJSON().message)
+                common.handleError(error, errorCb)
             })
     },
     getAllFromServer(server_id, cb, errorCb) {
@@ -90,7 +90,7 @@ export default {
             .then((response) => {
                 cb(response.data)
             }).catch(error => {
-                errorCb(error.toJSON().message)
+                common.handleError(error, errorCb)
             })
     },
     getEntriesFromPinned(entry_id, cb, errorCb) {
@@ -99,7 +99,7 @@ export default {
             .then((response) => {
                 cb(response.data)
             }).catch(error => {
-                errorCb(error.toJSON().message)
+                common.handleError(error, errorCb)
             })
     },
     refreshServerEntry(entry_id, server_id, cb, errorCb) {
@@ -109,7 +109,7 @@ export default {
                 cb(response.data)
             })
             .catch(error => {
-                errorCb(error.data.toJSON())
+                common.handleError(error, errorCb)
             })
     },
     refreshAllServers(entry_id, cb, errorCb) {
@@ -119,7 +119,7 @@ export default {
             cb(response.data)
         })
         .catch(error => {
-            errorCb(error.data.toJSON())
+            common.handleError(error, errorCb)
         })
     },
     publishEventOnServer(entry_id, server_id, cb, errorCb) {
@@ -129,7 +129,7 @@ export default {
                 cb(response.data)
             })
             .catch(error => {
-                errorCb(error.data.toJSON())
+                common.handleError(error, errorCb)
             })
     },
     avatarURL() {

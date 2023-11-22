@@ -16,7 +16,7 @@ export default {
             .then((response) => {
                 cb(response.data)
             }).catch(error => {
-                errorCb(error.toJSON().message)
+                common.handleError(error, errorCb)
             })
     },
     get(group, cb, errorCb) {
@@ -26,7 +26,7 @@ export default {
             .then((response) => {
                 cb(response.data)
             }).catch(error => {
-                errorCb(error.toJSON().message)
+                common.handleError(error, errorCb)
             })
     },
     add(group, cb, errorCb) {
@@ -36,7 +36,7 @@ export default {
             .then((response) => {
                 cb(response.data)
             }).catch(error => {
-                errorCb(error.toJSON().message)
+                common.handleError(error, errorCb)
             })
     },
     delete(group, cb, errorCb) {
@@ -45,7 +45,7 @@ export default {
             .then((response) => {
                 cb(response.data)
             }).catch(error => {
-                errorCb(error.toJSON().message)
+                common.handleError(error, errorCb)
             })
     },
     getFromServerId(serverId, cb, errorCb) {
@@ -54,7 +54,7 @@ export default {
             .then((response) => {
                 cb(response.data)
             }).catch(error => {
-                errorCb(error.toJSON().message)
+                common.handleError(error, errorCb)
             })
     },
 }
