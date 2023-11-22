@@ -58,9 +58,12 @@ class ServerSchemaLighter(ServerSchema):
 
     @post_dump
     def cull_settings_from_server_info(self, server, **kwargs):
-        server['server_info']['query_result']['serverSettings'].pop('dbDiagnostics')
-        server['server_info']['query_result']['serverSettings'].pop('dbSchemaDiagnostics')
-        server['server_info']['query_result']['serverSettings'].pop('finalSettings')
+        try:
+            server['server_info']['query_result']['serverSettings'].pop('dbDiagnostics')
+            server['server_info']['query_result']['serverSettings'].pop('dbSchemaDiagnostics')
+            server['server_info']['query_result']['serverSettings'].pop('finalSettings')
+        except TypeError:
+            pass
         return server
 
 class PinlistSchema(BaseSchema):
