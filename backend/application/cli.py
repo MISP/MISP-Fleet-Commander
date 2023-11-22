@@ -51,8 +51,8 @@ def doQueryGroup(group_id: int, delay_second: int = 10):
             print(f'Querying server {server.name} ({server.id})')
             timer1 = time.time()
             serverModel.queryInfo(server.id, False)
-            time.sleep(delay_second)
             print(f'\t Took {time.time() - timer1:.2f}')
+            time.sleep(delay_second)
     else:
         print('No fleet with that ID')
 
@@ -75,7 +75,7 @@ def doQueryGroupWs(group_id: int, delay_second: int = 10):
             print(f'Querying server {server.name} ({server.id})')
             timer1 = time.time()
             fetchServerInfoTask.delay(serverSchema.dump(server))
-            time.sleep(delay_second)
             print(f'\t Took {time.time() - timer1:.2f}')
+            time.sleep(delay_second)
     else:
         print('No fleet with that ID')
