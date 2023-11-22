@@ -133,7 +133,7 @@ def handleStatusCode(response):
 def batchRequest(batch_request):
     result = []
     with concurrent.futures.ThreadPoolExecutor(35) as executor:
-        future_to_serverid = {executor.submit(req['fn'], req['server'], req['path'], req.get('data', {})): (req['server'].id, req.get('passAlong', None), ) for req in batch_request}
+        future_to_serverid = {executor.submit(req['fn'], req['server'], req['path'], req.get('data', {}), rawResponse=req.get('rawResponse', False), nocache=req.get('nocache', False)): (req['server'].id, req.get('passAlong', None), ) for req in batch_request}
         starttimer = time.time()
         for future in concurrent.futures.as_completed(future_to_serverid):
             server_id, passAlong = future_to_serverid[future]

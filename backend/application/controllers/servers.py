@@ -138,7 +138,8 @@ def batch_ping_server(user, group_id=None):
             allRequests.append({
                 'fn': mispGetRequest,
                 'server': server,
-                'path': '/servers/getVersion'
+                'path': '/servers/getVersion',
+                'nocache': True,
             })
         allTestConnections = batchRequest(allRequests)
         return jsonify(allTestConnections)
