@@ -12,11 +12,14 @@
                     v-model="file"
                     @change="handleFileChange"
                 ></b-form-file>
+                <b-form-textarea
+                    v-model="rawText"
+                    class="w-100 mt-2"
+                    size="sm"
+                    placeholder="Enter CSV data"
+                    rows="3"
+                ></b-form-textarea>
             </b-overlay>
-            <b-form-checkbox
-                class="ml-2"
-                v-model="has_header"
-            >First row is header</b-form-checkbox>
 
         </b-form>
         <b-form-group
@@ -32,6 +35,10 @@
                 v-model="delimiter"
             ></b-form-input>
         </b-form-group>
+         <b-form-checkbox
+            class="ml-2"
+            v-model="has_header"
+        >First row is header</b-form-checkbox>
 
         <b-table
             striped small empty-text selectable
@@ -191,7 +198,6 @@ export default {
             this.readFile(file)
                 .then((result) => {
                     this.rawText = result
-                    this.updateAfterRead()
                 })
                 // .catch((error) => {
                 // })
@@ -280,7 +286,10 @@ export default {
     watch: {
         has_header: function() {
             this.updateAfterRead()
-        }
+        },
+        rawText: function() {
+            this.updateAfterRead()
+        },
     }
 }
 </script>

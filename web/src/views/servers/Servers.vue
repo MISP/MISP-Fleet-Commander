@@ -114,6 +114,15 @@
                                 ></iconButton>
                             </b-dropdown-item-button>
                             <b-dropdown-item-button
+                                @click="exportSelected"
+                            >
+                                <iconButton
+                                    text="Export selected"
+                                    title="Export servers"
+                                    icon="upload"
+                                ></iconButton>
+                            </b-dropdown-item-button>
+                            <b-dropdown-item-button
                                 @click="openDeleteSelectedModal"
                                 class="outline-danger"
                             >
@@ -665,7 +674,6 @@ export default {
             this.refreshServerIndex()
         },
         resetModalAction() {
-            console.log('yooo')
             this.modalAddAction = "Add"
         },
         openEditModal(server_id) {
@@ -828,6 +836,20 @@ export default {
                 }
                 this.pluginFields.push(field)
                 this.table.fields.splice(lastRefreshPosition - 1, 0, field)
+            })
+        },
+        exportSelected() {
+            let csv = ''
+            const fields = ['name', 'comment', 'url', 'authkey', 'skip_ssl']
+            this.getSelectedServer.forEach((server) => {
+                csv += fields.map((f) => server[f]).join(',') + '\n'
+            })
+            csv = fields.join(',') + '\n' + csv
+            const toastContent = this.$createElement('textarea', {class: ['form-control form-control-sm'], attrs: {rows: Math.min(10, this.getSelectedServerIDs.length)}}, csv)
+            this.$bvToast.toast(toastContent, {
+                title: "Exported servers",
+                variant: "info",
+                "no-auto-hide": true,
             })
         },
     },
