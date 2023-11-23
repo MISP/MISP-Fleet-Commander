@@ -5,8 +5,8 @@ set -o errexit
 script_dir=$(dirname "$(realpath "$0")")
 cd "$script_dir" || exit 1
 
-rm backend/application/dist.zip 
-rm -r backend/application/dist
+rm -f backend/application/dist.zip 
+rm -rf backend/application/dist
 pushd web
 npm run buildproduction
 popd

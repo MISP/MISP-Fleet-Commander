@@ -30,7 +30,7 @@ class DictToObject:
 def index(user, group_id=None):
     servers = serverModel.indexForUser(user, group_id)
     if servers:
-        serversDict = serversSchemaLighter.dump(servers)
+        serversDict = serversSchema.dump(servers)
         return jsonify(serversDict)
     else:
         return jsonify([])
