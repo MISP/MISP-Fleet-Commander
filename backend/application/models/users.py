@@ -18,6 +18,10 @@ def get(user_id: int) -> Union[User, None]:
     return User.query.get(user_id)
 
 
+def getByEmail(email: str) -> Union[User, None]:
+    return User.query.filter_by(email=email).first()
+
+
 def add(user: dict) -> User:
     user = User(email=user['email'],
                 password=user['password'])

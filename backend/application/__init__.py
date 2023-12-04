@@ -92,9 +92,10 @@ def create_app():
         registerWSListeners()
 
         # Add CLI commands
-        from application.cli import server_cli
+        from application.cli import server_cli, user_cli
 
         flaskApp.cli.add_command(server_cli)
+        flaskApp.cli.add_command(user_cli)
 
         # Create tables for our models
         from application.DBModels import init_defaults

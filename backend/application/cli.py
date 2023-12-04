@@ -5,11 +5,13 @@ import click
 from pprint import pprint
 
 from flask.cli import AppGroup
-from application.marshmallowSchemas import serverSchema
+from application.marshmallowSchemas import serverSchema, userSchema
 import application.models.servers as serverModel
 import application.models.serverGroups as serverGroupModel
+import application.models.users as userModel
 
 server_cli = AppGroup('server')
+user_cli = AppGroup('user')
 
 
 @server_cli.command('test-connection')
@@ -79,3 +81,16 @@ def doQueryGroupWs(group_id: int, delay_second: int = 10):
             time.sleep(delay_second)
     else:
         print('No fleet with that ID')
+
+
+@user_cli.command('change_pw')
+@click.argument('user_email')
+@click.argument('password')
+def change_pw(user_email: str, password: str):
+    user = userModel.getByEmail(user_email)
+    user.password = password
+    user = userModel.edit(userSchema.dump(user))
+    if user is not None:
+        print('Password updated')
+        return
+    print('Could not update password')
