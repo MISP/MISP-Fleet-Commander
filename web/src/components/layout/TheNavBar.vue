@@ -28,7 +28,7 @@
                                 <div class="d-flex">
                                     <span class="mr-2">{{ searchResult.name }}</span>
                                     <span class="ml-auto">
-                                        <i class="fas fa-layer-group mr-1"></i>
+                                        <img src="@/assets/fleet.svg" alt="Fleet icon" width="20" class="mr-1" style="filter: grayscale(1);">
                                         <b>{{ searchResult.fleet.name }}</b>
                                     </span>
                                 </div>
@@ -44,9 +44,10 @@
                 <b-nav-item-dropdown right>
                     <template #button-content>
                         <iconButton
-                            style="display: inline-block !important"
+                            style="display: inline-block !important; filter: grayscale(1);"
                             :text="fleetText"
-                            icon="layer-group"
+                            icon="fleet"
+                            use-asset
                             :tight="true"
                         ></iconButton>
                     </template>

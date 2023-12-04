@@ -1,7 +1,10 @@
 <template>
     <div>
         <div class="d-flex align-items-center pb-1">
-            <h4><i class="fas fa-layer-group mr-2"></i>Fleets</h4>
+            <h4>
+                <img src="@/assets/fleet.svg" alt="Fleet icon" width="32" height="32" style="filter: grayscale(1);">
+                Fleets
+            </h4>
             <b-button
                 class="ml-auto"
                 size="sm"
