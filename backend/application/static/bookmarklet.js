@@ -3,7 +3,7 @@
     (window.bookmarkletMFC = function () {
 
         const MFC_URL = localStorage.getItem('MFM_baseurl')
-        const MFC_FLEET_INDEX_URL = `${MFC_URL}/serverGroups/index`
+        const MFC_FLEET_INDEX_URL = `${MFC_URL}/fleets/index`
         const MFC_SERVER_ADD_URL = `${MFC_URL}/servers/add`
 
         const DEFAULT_SERVER_NAME = window.location.origin

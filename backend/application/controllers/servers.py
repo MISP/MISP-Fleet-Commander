@@ -12,7 +12,7 @@ from marshmallow import ValidationError
 
 from application.DBModels import db, User, Server
 from application.controllers.utils import mispGetRequest, mispPostRequest, batchRequest
-from application.marshmallowSchemas import ServerSchema, serverGroupSchema, serverQuerySchema, serverSchema, serversSchemaLighter, taskSchema, serverSchema, serversSchema
+from application.marshmallowSchemas import ServerSchema, fleetSchema, serverQuerySchema, serverSchema, serversSchemaLighter, taskSchema, serverSchema, serversSchema
 import application.models.servers as serverModel
 from application.workers.tasks import fetchServerInfoTask
 from application.controllers.instance import token_required
@@ -25,10 +25,10 @@ class DictToObject:
         self.__dict__.update(entries)
 
 
-@BPserver.route('/servers/index/<int:group_id>', methods=['GET'])
+@BPserver.route('/servers/index/<int:fleet_id>', methods=['GET'])
 @token_required
-def index(user, group_id=None):
-    servers = serverModel.indexForUser(user, group_id)
+def index(user, fleet_id=None):
+    servers = serverModel.indexForUser(user, fleet_id)
     if servers:
         serversDict = serversSchema.dump(servers)
         return jsonify(serversDict)
@@ -46,9 +46,9 @@ def get(user, server_id):
         return jsonify({})
 
 
-@BPserver.route('/servers/add/<int:group_id>', methods=['POST'])
+@BPserver.route('/servers/add/<int:fleet_id>', methods=['POST'])
 @token_required
-def add(user, group_id):
+def add(user, fleet_id):
     servers = []
     # TODO: If password provided, fetch the associated API key
     if isinstance(request.json, list):
@@ -59,7 +59,7 @@ def add(user, group_id):
                         comment=server.get('comment'),
                         skip_ssl=server.get('skip_ssl', False),
                         authkey=server.get('authkey', None),
-                        server_group_id=group_id,
+                        fleet_id=fleet_id,
                         user_id=user.id)
             db.session.add(server)
             servers.append(server)
@@ -71,7 +71,7 @@ def add(user, group_id):
                         comment=request.json.get('comment'),
                         skip_ssl=request.json.get('skip_ssl', False),
                         authkey=request.json.get('authkey', None),
-                        server_group_id=group_id,
+                        fleet_id=fleet_id,
                         user_id=user.id)
         db.session.add(server)
         if request.json.get('recursive_add', False):
@@ -129,10 +129,10 @@ def ping_server(user, server_id):
     else:
         return jsonify({})
 
-@BPserver.route('/servers/batchTestConnection/<int:group_id>', methods=['GET'])
+@BPserver.route('/servers/batchTestConnection/<int:fleet_id>', methods=['GET'])
 @token_required
-def batch_ping_server(user, group_id=None):
-    servers = serverModel.indexForUser(user, group_id)
+def batch_ping_server(user, fleet_id=None):
+    servers = serverModel.indexForUser(user, fleet_id)
     allRequests = []
     if servers:
         for server in servers:
@@ -259,10 +259,10 @@ def discoverConnected(user):
             test_result.append(server)
     return jsonify(test_result)
 
-@BPserver.route('/servers/network/<int:group_id>')
+@BPserver.route('/servers/network/<int:fleet_id>')
 @token_required
-def network(user, group_id=None):
-    servers = serverModel.indexForUser(user, group_id)
+def network(user, fleet_id=None):
+    servers = serverModel.indexForUser(user, fleet_id)
     network = buildNetwork(servers)
     return jsonify(network)
 

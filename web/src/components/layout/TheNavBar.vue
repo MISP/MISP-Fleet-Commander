@@ -29,7 +29,7 @@
                                     <span class="mr-2">{{ searchResult.name }}</span>
                                     <span class="ml-auto">
                                         <i class="fas fa-layer-group mr-1"></i>
-                                        <b>{{ searchResult.server_group.name }}</b>
+                                        <b>{{ searchResult.fleet.name }}</b>
                                     </span>
                                 </div>
                                 <span class="font-weight-light" style="font-size: smaller;">{{ searchResult.url }}</span>
@@ -45,12 +45,12 @@
                     <template #button-content>
                         <iconButton
                             style="display: inline-block !important"
-                            :text="serverGroupText"
+                            :text="fleetText"
                             icon="layer-group"
                             :tight="true"
                         ></iconButton>
                     </template>
-                    <NavbarServerGroup></NavbarServerGroup>
+                    <NavbarFleet></NavbarFleet>
                 </b-nav-item-dropdown>
 
                 <template v-if="user">
@@ -87,7 +87,7 @@ import { mapState, mapGetters } from "vuex"
 import api from "@/api/common"
 
 import iconButton from "@/components/ui/elements/iconButton.vue"
-import NavbarServerGroup from "@/components/layout/navbar/NavbarServerGroup.vue"
+import NavbarFleet from "@/components/layout/navbar/NavbarFleet.vue"
 import NavbarBreadcrumb from "@/components/layout/navbar/NavbarBreadcrumb.vue"
 import NavbarNotification from "@/components/layout/navbar/NavbarNotification.vue"
 import NavbarProfile from "@/components/layout/navbar/NavbarProfile.vue"
@@ -96,7 +96,7 @@ export default {
     name: "TheNavBar",
     components: {
         iconButton,
-        NavbarServerGroup,
+        NavbarFleet,
         NavbarBreadcrumb,
         NavbarNotification,
         NavbarProfile,
@@ -110,14 +110,14 @@ export default {
     },
     computed: {
         ...mapState({
-            getSelectedServerGroup: state => state.serverGroups.selected,
+            getSelectedFleet: state => state.fleets.selected,
         }),
         ...mapGetters({
             wsConnected: "websocket/wsConnected",
             user: "auth/user"
         }),
-        serverGroupText() {
-            return this.getSelectedServerGroup !== null ? this.getSelectedServerGroup.name : ""
+        fleetText() {
+            return this.getSelectedFleet !== null ? this.getSelectedFleet.name : ""
         }
     },
     methods: {

@@ -21,7 +21,7 @@ export default {
             })
     },
     getIndexValues(cb, errorCb) {
-        const url = common.appendGroupIDIfDefined(`${urls.getIndexValues}`)
+        const url = common.appendFleetIDIfDefined(`${urls.getIndexValues}`)
         return common.getClient().get(url)
             .then((response) => {
                 cb(response.data)

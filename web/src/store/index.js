@@ -6,7 +6,7 @@ import auth from "./modules/auth"
 import users from "./modules/users"
 import servers from "./modules/servers"
 import connections from "./modules/connections"
-import serverGroups from "./modules/serverGroups"
+import fleets from "./modules/fleets"
 import plugins from "./modules/plugins"
 import notifications from "./modules/notifications"
 import pinlists from "./modules/pinlists"
@@ -25,7 +25,7 @@ export default new Vuex.Store({
         users,
         servers,
         connections,
-        serverGroups,
+        fleets,
         notifications,
         pinlists,
         plugins,

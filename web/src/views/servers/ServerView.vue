@@ -163,8 +163,8 @@ export default {
         this.$store.dispatch("plugins/getPlugins", {use_cache: true})
     },
     beforeRouteEnter(to, from, next) {
-        if (store.getters["serverGroups/selectedServerGroup"] === null) {
-            store.dispatch("serverGroups/selectServerGroupFromServerId", to.params.server_id).then(() => {
+        if (store.getters["fleets/selectedFleet"] === null) {
+            store.dispatch("fleets/selectFleetFromServerId", to.params.server_id).then(() => {
                 store.dispatch("servers/fetchServers", {force: true})
                 next()
             }).catch(() => {

@@ -77,7 +77,7 @@ def create_app():
         from . import routes
         from application.controllers.users import BPuser
         from application.controllers.servers import BPserver
-        from application.controllers.serverGroups import BPserverGroup
+        from application.controllers.fleets import BPfleet
         from application.controllers.plugins import BPplugins
         from application.controllers.instance import BPinstance
         from application.controllers.pinLists import BPpinLists
@@ -85,7 +85,7 @@ def create_app():
 
         flaskApp.register_blueprint(BPuser)
         flaskApp.register_blueprint(BPserver)
-        flaskApp.register_blueprint(BPserverGroup)
+        flaskApp.register_blueprint(BPfleet)
         flaskApp.register_blueprint(BPplugins)
         flaskApp.register_blueprint(BPpinLists)
         flaskApp.register_blueprint(BPinstance)

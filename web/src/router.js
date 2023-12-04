@@ -10,9 +10,9 @@ import store from "./store/index"
 
 Vue.use(Router)
 
-const serverGroupSelected = (to, from, next) => {
-    if (store.getters["serverGroups/selectedServerGroup"] === null) {
-        if (noServerGroupPassThrough.includes(to.name)) {
+const fleetSelected = (to, from, next) => {
+    if (store.getters["fleets/selectedFleet"] === null) {
+        if (noFleetPassThrough.includes(to.name)) {
             next()
         } else {
             next('home')
@@ -22,7 +22,7 @@ const serverGroupSelected = (to, from, next) => {
     }
 }
 
-const noServerGroupPassThrough = [
+const noFleetPassThrough = [
     "servers.view",
 ]
 
@@ -57,7 +57,7 @@ let router =  new Router({
             path: "/servers",
             component: () => import("./components/layout/layoutWrapper.vue"),
             meta: {
-                requiresServerGroup: true,
+                requiresFleet: true,
                 breadcrumbs: {
                     text: "Servers",
                     to: { name: "servers.index" },
@@ -82,7 +82,7 @@ let router =  new Router({
                     name: "servers.index",
                     component: () => import("./views/servers/Servers.vue"),
                     meta: {
-                        requiresServerGroup: true,
+                        requiresFleet: true,
                     }
                 },
             ]
@@ -92,7 +92,7 @@ let router =  new Router({
             name: "connections",
             component: () => import("./views/connections/Connections.vue"),
             meta: {
-                requiresServerGroup: true,
+                requiresFleet: true,
                 breadcrumbs: {
                     text: "Connections",
                     to: { name: "connections" },
@@ -105,7 +105,7 @@ let router =  new Router({
             name: "strategicView",
             component: StrategicView,
             meta: {
-                requiresServerGroup: true,
+                requiresFleet: true,
                 breadcrumbs: {
                     text: "Strategic View",
                     to: { name: "strategicView" },
@@ -118,7 +118,7 @@ let router =  new Router({
             name: "users",
             component: () => import("./views/users/Users.vue"),
             meta: {
-                requiresServerGroup: false,
+                requiresFleet: false,
                 breadcrumbs: {
                     text: "Users",
                     to: { name: "users" },
@@ -137,8 +137,8 @@ router.beforeEach((to, from, next) => {
     }
     
 
-    if(to.matched.some(record => record.meta.requiresServerGroup)) {
-        serverGroupSelected(to, from, next)
+    if (to.matched.some(record => record.meta.requiresFleet)) {
+        fleetSelected(to, from, next)
     } else {
         next()
     }

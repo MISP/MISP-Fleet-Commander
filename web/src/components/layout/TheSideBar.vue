@@ -66,7 +66,7 @@ export default {
     },
     computed: {
         ...mapGetters({
-            selectedServerGroup: "serverGroups/selectedServerGroup"
+            selectedFleet: "fleets/selectedFleet"
         }),
     },
     methods: {
@@ -74,8 +74,8 @@ export default {
             const { route } = this.$router.resolve({
                 name: item.to.name,
             })
-            if ([route].some(record => record.meta.requiresServerGroup)) {
-                if (this.selectedServerGroup === null) {
+            if ([route].some(record => record.meta.requiresFleet)) {
+                if (this.selectedFleet === null) {
                     return false
                 } else {
                     return true

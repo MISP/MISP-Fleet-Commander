@@ -7,7 +7,7 @@ from pprint import pprint
 from flask.cli import AppGroup
 from application.marshmallowSchemas import serverSchema, userSchema
 import application.models.servers as serverModel
-import application.models.serverGroups as serverGroupModel
+import application.models.fleets as fleetModel
 import application.models.users as userModel
 
 server_cli = AppGroup('server')
@@ -29,27 +29,27 @@ def getServerInfo(server_id, cache=True):
     pprint(result)
 
 
-@server_cli.command('query-group')
-@click.argument('group_id')
+@server_cli.command('query-fleet')
+@click.argument('fleet_id')
 @click.option('--delay_second', required=False, default=10)
-def queryGroup(group_id: int, delay_second: int):
-    doQueryGroup(group_id, delay_second)
+def queryFleet(fleet_id: int, delay_second: int):
+    doQueryFleet(fleet_id, delay_second)
 
-@server_cli.command('watch-group')
-@click.argument('group_id')
+@server_cli.command('watch-fleet')
+@click.argument('fleet_id')
 @click.option('--minute', required=False, default=5)
 @click.option('--delay_second', required=False, default=10)
-def watchGroup(group_id: int, minute: int = 5, delay_second: int = 10):
+def watchFleet(fleet_id: int, minute: int = 5, delay_second: int = 10):
     while True:
-        doQueryGroup(group_id, delay_second)
+        doQueryFleet(fleet_id, delay_second)
         print(f'Sleeping {minute*60}')
         time.sleep(minute*60)
 
-def doQueryGroup(group_id: int, delay_second: int = 10):
-    server_group = serverGroupModel.get(group_id)
-    if server_group is not None:
-        print(f'Querying all {len(server_group.servers)} servers from group {server_group.name} ({server_group.id})')
-        for server in server_group.servers:
+def doQueryFleet(fleet_id: int, delay_second: int = 10):
+    fleet = fleetModel.get(fleet_id)
+    if fleet is not None:
+        print(f'Querying all {len(fleet.servers)} servers from fleet {fleet.name} ({fleet.id})')
+        for server in fleet.servers:
             print(f'Querying server {server.name} ({server.id})')
             timer1 = time.time()
             serverModel.queryInfo(server.id, False)
@@ -58,22 +58,22 @@ def doQueryGroup(group_id: int, delay_second: int = 10):
     else:
         print('No fleet with that ID')
 
-@server_cli.command('watch-group-ws')
-@click.argument('group_id')
+@server_cli.command('watch-fleet-ws')
+@click.argument('fleet_id')
 @click.option('--minute', required=False, default=5)
 @click.option('--delay_second', required=False, default=10)
-def watchGroupWs(group_id: int, minute: int = 5, delay_second: int = 10):
+def watchFleetWs(fleet_id: int, minute: int = 5, delay_second: int = 10):
     while True:
-        doQueryGroupWs(group_id, delay_second)
+        doQueryFleetWs(fleet_id, delay_second)
         print(f'Sleeping {minute*60}')
         time.sleep(minute*60)
 
-def doQueryGroupWs(group_id: int, delay_second: int = 10):
+def doQueryFleetWs(fleet_id: int, delay_second: int = 10):
     from application.workers.tasks import fetchServerInfoTask
-    server_group = serverGroupModel.get(group_id)
-    if server_group is not None:
-        print(f'Querying all {len(server_group.servers)} servers from group {server_group.name} ({server_group.id})')
-        for server in server_group.servers:
+    fleet = fleetModel.get(fleet_id)
+    if fleet is not None:
+        print(f'Querying all {len(fleet.servers)} servers from fleet {fleet.name} ({fleet.id})')
+        for server in fleet.servers:
             print(f'Querying server {server.name} ({server.id})')
             timer1 = time.time()
             fetchServerInfoTask.delay(serverSchema.dump(server))

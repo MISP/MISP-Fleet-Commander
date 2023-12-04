@@ -10,7 +10,7 @@ export default {
     index(cb, errorCb) {
         // const url = `${url.index}?page=${ctx.currentPage}&size=${ctx.perPage}`
         // const url = `${urls.index}`
-        const url = common.appendGroupIDIfDefined(`${urls.index}`)
+        const url = common.appendFleetIDIfDefined(`${urls.index}`)
         return common.getClient().get(url)
             .then((response) => {
                 cb(response.data)

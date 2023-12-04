@@ -1,4 +1,4 @@
-import api from "@/api/serverGroups"
+import api from "@/api/fleets"
 import Vue from "vue"
 import router from "@/router"
 
@@ -10,10 +10,10 @@ const state = {
 
 // getters
 const getters = {
-    serverGroupCount: state => {
+    fleetCount: state => {
         return Object.values(state.all).length
     },
-    selectedServerGroup: state => {
+    selectedFleet: state => {
         return state.selected
     }
 }
@@ -24,14 +24,14 @@ const actions = {
         return new Promise((resolve, reject) => {
             if (
                 payload === undefined ||
-                (!payload.use_cache || getters.serverGroupCount == 0)
+                (!payload.use_cache || getters.fleetCount == 0)
             ) {
                 api.index(
-                    groups => {
-                        groups.forEach(group => {
-                            group._loading = false
+                    fleets => {
+                        fleets.forEach(fleet => {
+                            fleet._loading = false
                         })
-                        commit("setServerGroups", groups)
+                        commit("setFleets", fleets)
                         resolve()
                     },
                     (error) => { reject(error) }
@@ -41,69 +41,69 @@ const actions = {
             }
         })
     },
-    getServerGroups({ commit }) {
+    getFleets({ commit }) {
         return new Promise((resolve, reject) => {
             api.index(
-                groups => {
-                    groups.forEach(group => {
-                        group._loading = false
+                fleets => {
+                    fleets.forEach(fleet => {
+                        fleet._loading = false
                     })
-                    commit("setServerGroups", groups)
+                    commit("setFleets", fleets)
                     resolve()
                 },
                 (error) => { reject(error) }
             )
         })
     },
-    getServerGroup({ commit }, id) {
+    getFleet({ commit }, id) {
         return new Promise((resolve, reject) => {
             api.get(
                 id,
-                group => {
-                    commit("setGroup", group)
+                fleet => {
+                    commit("setFleet", fleet)
                     resolve()
                 },
                 (error) => { reject(error) }
             )
         })
     },
-    selectServerGroup({ commit, dispatch }, payload) {
+    selectFleet({ commit, dispatch }, payload) {
         return new Promise((resolve, reject) => {
             dispatch("servers/resetState", undefined, {root: true})
-            commit("selectServerGroup", payload)
+            commit("selectFleet", payload)
         })
     },
-    selectServerGroupFromServerId({ commit, dispatch }, server_id) {
+    selectFleetFromServerId({ commit, dispatch }, server_id) {
         return new Promise((resolve, reject) => {
             dispatch("initFetch", { use_cache: false })
             api.getFromServerId(
                 server_id,
-                group => {
-                    dispatch("selectServerGroup", { data: group, redirect: false})
+                fleet => {
+                    dispatch("selectFleet", { data: fleet, redirect: false})
                     resolve()
                 },
                 (error) => { reject(error) }
             )
         })
     },
-    addServerGroup({ commit }, payload={}) {
+    addFleet({ commit }, payload={}) {
         return new Promise((resolve, reject) => {
             api.add(
                 payload,
-                group => {
-                    commit("setServerGroup", group)
+                fleet => {
+                    commit("setFleet", fleet)
                     resolve()
                 },
                 (error) => { reject(error) }
             )
         }) 
     },
-    deleteServerGroup({ dispatch }, payload={}) {
+    deleteFleet({ dispatch }, payload={}) {
         return new Promise((resolve, reject) => {
             api.delete(
                 payload,
                 (response) => {
-                    dispatch("getServerGroups")
+                    dispatch("getFleet")
                     .then(() => {
                         resolve(response)
                     })
@@ -116,25 +116,25 @@ const actions = {
 
 // mutations
 const mutations = {
-    selectServerGroup: function (state, payload) {
-        const group = payload.data
+    selectFleet: function (state, payload) {
+        const fleet = payload.data
         const redirect = payload.redirect !== undefined ? payload.redirect : true
-        state.selected = group
+        state.selected = fleet
         if (redirect && router.history.current.path !== '/servers') {
             router.push({ path: '/servers', replace: true })
         }
     },
-    setServerGroups(state, groups) {
+    setFleets(state, fleets) {
         Vue.set(state, 'all', {})
-        groups.forEach(group => {
-            Vue.set(state.all, group.id, group)
+        fleets.forEach(fleet => {
+            Vue.set(state.all, fleet.id, fleet)
         })
     },
-    setServerGroup(state, group) {
+    setFleet(state, fleet) {
         for (let i = 0; i < state.all.length; i++) {
-            if (state.all[i].id == group.vid) {
-                const updatedGroup = state.all[i] = {...state.all[i], group}
-                Vue.set(state.all, i, updatedGroup)
+            if (state.all[i].id == fleet.vid) {
+                const updatedFleet = state.all[i] = {...state.all[i], fleet}
+                Vue.set(state.all, i, updatedFleet)
                 break
             }
         }

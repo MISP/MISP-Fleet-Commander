@@ -14,25 +14,25 @@
 
         <b-list-group>
             <b-list-group-item
-                v-for="(group, index) in getServerGroups"
+                v-for="(fleet, index) in getFleets"
                 v-bind:key="index"
                 href="#" class="p-2 flex-column align-items-start"
-                :active="getSelectedServerGroupId == group.id"
-                @click="selectServerGroup(group)"
+                :active="getSelectedFleetId == fleet.id"
+                @click="selectFleet(fleet)"
             >
                 <div class="d-flex w-100 justify-content-between">
-                    <h5 class="mb-1">{{ group.name }}</h5>
-                    <small>{{ group.server_count }} {{ group.server_count > 1 ? "servers" : "server"}}</small>
+                    <h5 class="mb-1">{{ fleet.name }}</h5>
+                    <small>{{ fleet.server_count }} {{ fleet.server_count > 1 ? "servers" : "server"}}</small>
                 </div>
                 <div class="d-flex">
-                    <span>{{ group.description }}</span>
+                    <span>{{ fleet.description }}</span>
                     <span class="ml-auto">
                         <b-button
                             class="ml-auto fa fa-trash reveal-on-parent-hover"
                             size="sm"
                             variant="outline-danger"
                             v-b-modal.modal-delete-selected
-                            @click.stop="selectGroupForDeletion(group.id)"
+                            @click.stop="selectFleetForDeletion(fleet.id)"
                         >
                         </b-button>
                     </span>
@@ -40,16 +40,16 @@
             </b-list-group-item>
         </b-list-group>
 
-        <b-alert :show="serverGroupEmpty" variant="primary">
+        <b-alert :show="fleetEmpty" variant="primary">
             <strong>No fleet available.</strong> Create one to get started!
         </b-alert>
 
         <AddModal
-            :groupForm="groupData"
+            :fleetForm="fleetData"
             @addition-success="handleAdd"
         ></AddModal>
         <DeleteModal
-            :group_id="group_id_to_delete"
+            :fleet_id="fleet_id_to_delete"
             @deletion-success="handleDelete"
         ></DeleteModal>
     </div>
@@ -58,12 +58,12 @@
 <script>
 import { mapState, mapGetters } from "vuex"
 import iconButton from "@/components/ui/elements/iconButton.vue"
-import AddModal from "@/views/serverGroups/AddModal.vue"
-import DeleteModal from "@/views/serverGroups/DeleteModal.vue"
+import AddModal from "@/views/fleets/AddModal.vue"
+import DeleteModal from "@/views/fleets/DeleteModal.vue"
 import router from "@/router"
 
 export default {
-    name: "ServerGroup",
+    name: "Fleet",
     components: {
         iconButton,
         AddModal,
@@ -72,41 +72,41 @@ export default {
     data: function () {
         return {
             refreshInProgress: false,
-            groupData: {},
-            group_id_to_delete: -1,
+            fleetData: {},
+            fleet_id_to_delete: -1,
         }
     },
     computed: {
         ...mapState({
-            getSelectedServerGroup: state => state.serverGroups.selected,
-            getServerGroups: state => state.serverGroups.all
+            getSelectedFleet: state => state.fleets.selected,
+            getFleets: state => state.fleets.all
         }),
         ...mapGetters({
-            serverGroupCount: "serverGroups/serverGroupCount"
+            fleetCount: "fleets/fleetCount"
         }),
-        getSelectedServerGroupId () {
-            return this.getSelectedServerGroup === null ? -1 : this.getSelectedServerGroup.id
+        getSelectedFleetId () {
+            return this.getSelectedFleet === null ? -1 : this.getSelectedFleet.id
         },
-        serverGroupEmpty() {
-            return this.serverGroupCount == 0
+        fleetEmpty() {
+            return this.fleetCount == 0
         }
     },
     methods: {
-        selectServerGroup(group) {
-            this.$store.dispatch("serverGroups/selectServerGroup", { data: group, redirect: true })
+        selectFleet(fleet) {
+            this.$store.dispatch("fleets/selectFleet", { data: fleet, redirect: true })
         },
-        selectGroupForDeletion(group_id) {
-            this.group_id_to_delete = group_id
+        selectFleetForDeletion(fleet_id) {
+            this.fleet_id_to_delete = fleet_id
         },
         handleAdd() {
-            this.refreshServerGroupIndex()
+            this.refreshFleetIndex()
         },
         handleDelete() {
         },
-        refreshServerGroupIndex() {
+        refreshFleetIndex() {
             this.refreshInProgress = true
             return new Promise((resolve, reject) => {
-                this.$store.dispatch("serverGroups/initFetch", {use_cache: false})
+                this.$store.dispatch("fleets/initFetch", {use_cache: false})
                     .then(() => {
                         resolve()
                     })
@@ -124,7 +124,7 @@ export default {
         },
     },
     mounted() {
-        this.refreshServerGroupIndex()
+        this.refreshFleetIndex()
     }
 }
 </script>

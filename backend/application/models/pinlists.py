@@ -67,8 +67,8 @@ def deleteFromServer(server_id: int, entry: PinList):
         return deletion
     return []
 
-def deleteFromServers(group_id: int, entry: PinList):
-    servers = serverModel.index(group_id)
+def deleteFromServers(fleet_id: int, entry: PinList):
+    servers = serverModel.index(fleet_id)
     allRequests = []
     url = __genDeleteURLFromModel(entry)
     if servers and url is not None:
@@ -83,8 +83,8 @@ def deleteFromServers(group_id: int, entry: PinList):
         return allDeletion
     return []
 
-def refreshAllServers(group_id: int, entry: PinList):
-    servers = serverModel.index(group_id)
+def refreshAllServers(fleet_id: int, entry: PinList):
+    servers = serverModel.index(fleet_id)
     allRequests = []
     url = __genViewURLFromModel(entry)
     if servers and url is not None:

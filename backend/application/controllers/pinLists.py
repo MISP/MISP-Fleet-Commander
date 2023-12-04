@@ -13,8 +13,8 @@ BPpinLists = Blueprint('pinLists', __name__)
 @token_required
 def index(user):
     """Get all pinned entries for the user"""
-    groups = pinlistsModel.indexForUser(user)
-    return pinlistsSchema.dump(groups)
+    entries = pinlistsModel.indexForUser(user)
+    return pinlistsSchema.dump(entries)
 
 
 @BPpinLists.route('/pinlists/add', methods=['POST'])
@@ -99,25 +99,25 @@ def deleteFromServer(user, server_id, entry_id):
         return jsonify({})
 
 
-@BPpinLists.route('/pinlists/deleteFromServers/<int:group_id>/<int:entry_id>', methods=['DELETE', 'POST'])
+@BPpinLists.route('/pinlists/deleteFromServers/<int:fleet_id>/<int:entry_id>', methods=['DELETE', 'POST'])
 @token_required
-def deleteFromServers(user, group_id, entry_id):
+def deleteFromServers(user, fleet_id, entry_id):
     """Delete the data associated with the pin entry on all servers"""
     entry = pinlistsModel.getForUser(user, entry_id)
     if entry is not None:
-        result = pinlistsModel.deleteFromServers(group_id, entry)
+        result = pinlistsModel.deleteFromServers(fleet_id, entry)
         return jsonify(result)
     else:
         return jsonify({})
 
 
-@BPpinLists.route('/pinlists/refreshAllServers/<int:group_id>/<int:entry_id>', methods=['POST'])
+@BPpinLists.route('/pinlists/refreshAllServers/<int:fleet_id>/<int:entry_id>', methods=['POST'])
 @token_required
-def refreshAllServers(user, group_id, entry_id):
+def refreshAllServers(user, fleet_id, entry_id):
     """Collect the data associated with that entry on all servers"""
     entry = pinlistsModel.getForUser(user, entry_id)
     if entry is not None:
-        pinlistsModel.refreshAllServers(group_id, entry)
+        pinlistsModel.refreshAllServers(fleet_id, entry)
     return jsonify({})
 
 

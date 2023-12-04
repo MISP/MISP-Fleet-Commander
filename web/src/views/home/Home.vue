@@ -23,7 +23,7 @@
             </div>
             <div class="row">
                 <div class="col">
-                    <ServerGroup class="mt-3"></ServerGroup>
+                    <Fleet class="mt-3"></Fleet>
                 </div>
                 <div class="col">
                     <PluginIndex class="mt-3"></PluginIndex>
@@ -36,7 +36,7 @@
 
 <script>
 import Layout from "@/components/layout/Layout.vue"
-import ServerGroup from "@/views/serverGroups/index.vue"
+import Fleet from "@/views/fleets/index.vue"
 import PluginIndex from "@/views/plugins/PluginIndex.vue"
 import { baseurl } from "@/api/apiConfig"
 
@@ -44,7 +44,7 @@ export default {
     name: "TheHome",
     components: {
         Layout,
-        ServerGroup,
+        Fleet,
         PluginIndex
     },
     data: function () {

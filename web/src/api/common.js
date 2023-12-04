@@ -52,10 +52,10 @@ function handleError(error, errorCb) {
     errorCb('Something went wrong.')
 }
 
-function appendGroupIDIfDefined(url) {
-    if (store.getters["serverGroups/selectedServerGroup"] !== null) {
-        const groupID = store.getters["serverGroups/selectedServerGroup"].id
-        url += `/${groupID}`
+function appendFleetIDIfDefined(url) {
+    if (store.getters["fleets/selectedFleet"] !== null) {
+        const fleetID = store.getters["fleets/selectedFleet"].id
+        url += `/${fleetID}`
     }
     return url
 }
@@ -90,7 +90,7 @@ function fetchGithubVersion(cb, errorCb) {
 export default {
     getClient,
     handleError,
-    appendGroupIDIfDefined,
+    appendFleetIDIfDefined,
     fetchGithubVersion,
     searchAll,
 }

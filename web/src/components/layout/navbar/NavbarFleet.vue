@@ -1,13 +1,13 @@
 <template>
     <div class="">
-        <template v-if="hasValidServerGroups">
+        <template v-if="hasValidFleets">
             <b-dropdown-item
             href="#"
-            v-for="(group, index) in getServerGroups"
+            v-for="(fleet, index) in getFleets"
             v-bind:key="index"
-            @click="selectServerGroup(group)"
-            :active="getSelectedServerGroup && getSelectedServerGroup.id == group.id"
-            >{{ group.name }}</b-dropdown-item>
+            @click="selectFleet(fleet)"
+            :active="getSelectedFleet && getSelectedFleet.id == fleet.id"
+            >{{ fleet.name }}</b-dropdown-item>
         </template>
         <template v-else>
             <b-alert variant="danger text-nowrap" class="m-0" show >
@@ -21,7 +21,7 @@
 import { mapState, mapGetters } from "vuex"
 
 export default {
-    name: "NavbarServerGroup",
+    name: "NavbarFleet",
     components: {
     },
     data: function () {
@@ -30,21 +30,21 @@ export default {
     },
     computed: {
         ...mapState({
-            getSelectedServerGroup: state => state.serverGroups.selected,
-            getServerGroups: state => state.serverGroups.all
+            getSelectedFleet: state => state.fleets.selected,
+            getFleets: state => state.fleets.all
         }),
-        hasValidServerGroups() {
-            return Object.values(this.getServerGroups).length > 0
+        hasValidFleets() {
+            return Object.values(this.getFleets).length > 0
         }
     },
     methods: {
-        selectServerGroup(group) {
-            this.$store.dispatch("serverGroups/selectServerGroup", { data: group, redirect: true })
+        selectFleet(fleet) {
+            this.$store.dispatch("fleets/selectFleet", { data: fleet, redirect: true })
         },
-        refreshServerGroupIndex() {
+        refreshFleetIndex() {
             this.refreshInProgress = true
             return new Promise((resolve, reject) => {
-                this.$store.dispatch("serverGroups/initFetch", {use_cache: true})
+                this.$store.dispatch("fleets/initFetch", {use_cache: true})
                     .then(() => {
                         resolve()
                     })
@@ -62,7 +62,7 @@ export default {
         },
     },
     mounted() {
-        // this.refreshServerGroupIndex()
+        // this.refreshFleetIndex()
     }
 }
 </script>

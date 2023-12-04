@@ -530,7 +530,7 @@ export default {
         ...mapState({
             fetching_servers_in_progress: state => state.servers.fetching_servers_in_progress,
             fetching_plugin_index_in_progress: state => state.plugins.fetching_index_in_progress,
-            selectedServerGroup: state => state.serverGroups.selected,
+            selectedFleet: state => state.fleets.selected,
             servers: state => state.servers.servers,
             server_status: state => state.servers.server_status,
             server_query_in_progress: state => state.servers.server_query_in_progress,
@@ -751,7 +751,7 @@ export default {
                 })
         },
         wsRefresh() {
-            this.wsFleetRefresh(this.selectedServerGroup.id)
+            this.wsFleetRefresh(this.selectedFleet.id)
         },
         fullRefresh(quick=true) {
             if (quick) {
@@ -857,7 +857,7 @@ export default {
         fetching_servers_in_progress: function() {
             this.table.timeKey += 1 // used to force reload of the timeSinceLastRefresh component
         },
-        selectedServerGroup: function() {
+        selectedFleet: function() {
             this.fullRefresh()
         }
     },

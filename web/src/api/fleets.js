@@ -1,12 +1,12 @@
 import common from "./common"
 
 const urls = {
-    index: `/serverGroups/index`,
-    get: `/serverGroups/get`,
-    add: `/serverGroups/add`,
-    edit: `/serverGroups/edit`,
-    delete: `/serverGroups/delete`,
-    getFromServerId: `/serverGroups/getFromServerId`,
+    index: `/fleets/index`,
+    get: `/fleets/get`,
+    add: `/fleets/add`,
+    edit: `/fleets/edit`,
+    delete: `/fleets/delete`,
+    getFromServerId: `/fleets/getFromServerId`,
 }
   
 export default {
@@ -19,9 +19,9 @@ export default {
                 common.handleError(error, errorCb)
             })
     },
-    get(group, cb, errorCb) {
+    get(fleet, cb, errorCb) {
         // const url = `${url.index}?page=${ctx.currentPage}&size=${ctx.perPage}`
-        const url = `${urls.get}/${group.id}`
+        const url = `${urls.get}/${fleet.id}`
         return common.getClient().get(url)
             .then((response) => {
                 cb(response.data)
@@ -29,19 +29,19 @@ export default {
                 common.handleError(error, errorCb)
             })
     },
-    add(group, cb, errorCb) {
+    add(fleet, cb, errorCb) {
         // const url = `${url.index}?page=${ctx.currentPage}&size=${ctx.perPage}`
         const url = `${urls.add}`
-        return common.getClient().post(url, group)
+        return common.getClient().post(url, fleet)
             .then((response) => {
                 cb(response.data)
             }).catch(error => {
                 common.handleError(error, errorCb)
             })
     },
-    delete(group, cb, errorCb) {
-        const url = `${urls.delete}/${group.id}`
-        return common.getClient().delete(url, group)
+    delete(fleet, cb, errorCb) {
+        const url = `${urls.delete}/${fleet.id}`
+        return common.getClient().delete(url, fleet)
             .then((response) => {
                 cb(response.data)
             }).catch(error => {

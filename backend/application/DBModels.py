@@ -108,8 +108,8 @@ class Server(BaseModel):
                         db.ForeignKey('users.id'),
                         nullable=False,
                         index=True)
-    server_group_id = db.Column(db.Integer,
-                        db.ForeignKey('server_groups.id'),
+    fleet_id = db.Column(db.Integer,
+                        db.ForeignKey('fleets.id'),
                         nullable=False,
                         index=True)
     # server_query_id = db.Column(db.Integer,
@@ -120,9 +120,9 @@ class Server(BaseModel):
     user = db.relationship('User',
         backref=db.backref('servers', lazy='joined'))
 
-    # server_group = db.relationship('ServerGroup',
-    #     backref=db.backref('server_group', lazy='joined', uselist=True))
-    server_group = db.relationship('ServerGroup', back_populates='servers')
+    # fleet = db.relationship('Fleet',
+    #     backref=db.backref('fleet', lazy='joined', uselist=True))
+    fleet = db.relationship('Fleet', back_populates='servers')
 
     @hybrid_property
     def server_info(self):
@@ -135,8 +135,8 @@ class Server(BaseModel):
 
 
 
-class ServerGroup(BaseModel):
-    __tablename__ = 'server_groups'
+class Fleet(BaseModel):
+    __tablename__ = 'fleets'
     id = db.Column(db.Integer,
                    primary_key=True)
     name = db.Column(db.String(120),
@@ -153,21 +153,21 @@ class ServerGroup(BaseModel):
                         nullable=False,
                         index=True)
 
-    servers = db.relationship('Server', back_populates='server_group', cascade='all, delete-orphan')
+    servers = db.relationship('Server', back_populates='fleet', cascade='all, delete-orphan')
     # servers = db.relationship('Server',
-    #     backref=db.backref('server_group', lazy=True, uselist=True, nullable=False),
+    #     backref=db.backref('fleet', lazy=True, uselist=True, nullable=False),
     #     cascade='all, delete-orphan')
-    # servers = db.relationship('Server', back_populates="server_group", lazy="joined", uselist=True, cascade="all, delete-orphan")
+    # servers = db.relationship('Server', back_populates="fleet", lazy="joined", uselist=True, cascade="all, delete-orphan")
 
     @hybrid_property
     def server_count(self):
-        result = db.session.query(Server.server_group_id, func.count(Server.id)) \
-                    .group_by(Server.server_group_id) \
-                    .filter_by(server_group_id=self.id).first()
+        result = db.session.query(Server.fleet_id, func.count(Server.id)) \
+                    .group_by(Server.fleet_id) \
+                    .filter_by(fleet_id=self.id).first()
         if result is None:
             the_count = 0
         else:
-            server_group_id, the_count = result
+            fleet_id, the_count = result
         return the_count
 
 

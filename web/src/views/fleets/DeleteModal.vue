@@ -11,24 +11,24 @@
             <b-tbody>
                 <b-tr>
                     <b-th>Fleet name</b-th>
-                    <b-td class="font-mono">{{ getGroup.name }}</b-td>
+                    <b-td class="font-mono">{{ getFleet.name }}</b-td>
                 </b-tr>
                 <b-tr>
                     <b-th>Description</b-th>
-                    <b-td class="text-muted">{{ getGroup.description || '-- None --' }}</b-td>
+                    <b-td class="text-muted">{{ getFleet.description || '-- None --' }}</b-td>
                 </b-tr>
                 <b-tr>
                     <b-th>Server count</b-th>
-                    <b-td>{{ getGroup.server_count }}</b-td>
+                    <b-td>{{ getFleet.server_count }}</b-td>
                 </b-tr>
             </b-tbody>
         </b-table-simple>
 
-        <template v-if="getGroup.server_count > 0">
+        <template v-if="getFleet.server_count > 0">
             <b-table-lite
                 small 
                 :fields="getServerFields"
-                :items="getGroup.servers"
+                :items="getFleet.servers"
             >
             </b-table-lite>
         </template>
@@ -58,7 +58,7 @@ import { mapState } from "vuex"
 export default {
     name: "DeleteSelectedModal",
     props: {
-        group_id: {
+        fleet_id: {
             type: Number,
             required: true
         },
@@ -70,11 +70,11 @@ export default {
     },
     computed: {
         ...mapState({
-            getSelectedServerGroup: state => state.serverGroups.selected,
-            getServerGroups: state => state.serverGroups.all
+            getSelectedFleet: state => state.fleets.selected,
+            getFleets: state => state.fleets.all
         }),
-        getGroup() {
-            return this.getServerGroups[this.group_id] ?? {}
+        getFleet() {
+            return this.getFleets[this.fleet_id] ?? {}
         },
         getServerFields() {
             return ['id', 'name', 'url']
@@ -83,21 +83,21 @@ export default {
     methods: {
         handleSubmission() {
             this.postInProgress = true
-            const serverGroup = this.getGroup
-            this.$store.dispatch("serverGroups/deleteServerGroup", this.getGroup)
+            const fleet = this.getFleet
+            this.$store.dispatch("fleets/deleteFleet", this.getFleet)
                 .then(() => {
                     this.$nextTick(() => {
                         this.$bvModal.hide("modal-delete-selected")
                     })
-                    this.$bvToast.toast(`${serverGroup.name} has been successfully deleted`, {
-                        title: `${serverGroup.name} deleted`,
+                    this.$bvToast.toast(`${fleet.name} has been successfully deleted`, {
+                        title: `${fleet.name} deleted`,
                         variant: "success",
                     })
                     this.$emit("deletion-success", "done")
                 })
                 .catch(error => {
                     this.$bvToast.toast(error, {
-                        title: `Could not delete ${serverGroup.name}`,
+                        title: `Could not delete ${fleet.name}`,
                         variant: "danger",
                     })
                 })

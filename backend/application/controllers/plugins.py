@@ -17,10 +17,10 @@ def index(user):
     plugins = loadedPlugins
     return pluginsSchema.dump(plugins)
 
-@BPplugins.route('/plugins/indexValues/<int:group_id>', methods=['GET'])
+@BPplugins.route('/plugins/indexValues/<int:fleet_id>', methods=['GET'])
 @token_required
-def indexValues(user, group_id=None):
-    servers = serverModel.indexForUser(user, group_id)
+def indexValues(user, fleet_id=None):
+    servers = serverModel.indexForUser(user, fleet_id)
     if servers:
         allIndexValues = pluginsModel.getAllIndexValues(loadedPlugins, servers)
         return allIndexValues

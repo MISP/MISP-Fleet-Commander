@@ -17,7 +17,7 @@ const urls = {
 export default {
     index(cb, errorCb) {
         // const url = `${url.index}?page=${ctx.currentPage}&size=${ctx.perPage}`
-        const url = common.appendGroupIDIfDefined(`${urls.index}`)
+        const url = common.appendFleetIDIfDefined(`${urls.index}`)
         return common.getClient().get(url)
             .then((response) => {
                 cb(response.data)
@@ -37,7 +37,7 @@ export default {
     },
 
     batchTestConnection(cb, errorCb) {
-        const url = common.appendGroupIDIfDefined(`${urls.batchTestConnection}`)
+        const url = common.appendFleetIDIfDefined(`${urls.batchTestConnection}`)
         return common.getClient().get(url)
             .then((response) => {
                 cb(response.data)
@@ -59,7 +59,7 @@ export default {
     },
 
     add(payload, cb, errorCb) {
-        const url = common.appendGroupIDIfDefined(urls.add)
+        const url = common.appendFleetIDIfDefined(urls.add)
         return common.getClient().post(url, payload)
             .then((response) => {
                 cb(response)

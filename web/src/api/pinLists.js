@@ -57,7 +57,7 @@ export default {
             })
     },
     deleteFromServers(entry_id, cb, errorCb) {
-        const url = common.appendGroupIDIfDefined(`${urls.delete_from_servers}`) + `/${entry_id}`
+        const url = common.appendFleetIDIfDefined(`${urls.delete_from_servers}`) + `/${entry_id}`
         return common.getClient().post(url)
             .then((response) => {
                 cb(response.data)
@@ -113,7 +113,7 @@ export default {
             })
     },
     refreshAllServers(entry_id, cb, errorCb) {
-        const url = common.appendGroupIDIfDefined(`${urls.refresh_all_servers}`) + `/${entry_id}`
+        const url = common.appendFleetIDIfDefined(`${urls.refresh_all_servers}`) + `/${entry_id}`
         return common.getClient().post(url)
         .then((response) => {
             cb(response.data)

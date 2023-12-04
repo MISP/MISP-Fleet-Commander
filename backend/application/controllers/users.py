@@ -50,7 +50,7 @@ def edit(loggedUser):
 @BPuser.route('/users/delete/<int:user_id>', methods=['DELETE', 'POST'])
 @token_required
 def delete(loggedUser, user_id):
-    """Delete a group and it's associated servers"""
+    """Delete a user"""
     userToDelete = userModel.delete(user_id)
     if userToDelete:
         return jsonify([user_id])

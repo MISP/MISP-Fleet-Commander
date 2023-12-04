@@ -71,7 +71,7 @@ export default {
         ValidationObserver
     },
     props: {
-        groupForm: {}
+        fleetForm: {}
     },
     computed: {
         formData() {
@@ -83,7 +83,7 @@ export default {
     },
     data: function() {
         return {
-            form: this.groupForm,
+            form: this.fleetForm,
             postInProgress: false,
         }
     },
@@ -108,7 +108,7 @@ export default {
         },
         submitForm() {
             this.postInProgress = true
-            this.$store.dispatch("serverGroups/addServerGroup", this.formData)
+            this.$store.dispatch("fleets/addFleet", this.formData)
                 .then(() => {
                     this.$nextTick(() => {
                         this.$refs.observer.reset()
@@ -128,7 +128,7 @@ export default {
                 })
                 .finally(() => {
                     this.postInProgress = false
-                    this.$store.dispatch("serverGroups/getServerGroups")
+                    this.$store.dispatch("fleets/getFleets")
                 })
         },
     },

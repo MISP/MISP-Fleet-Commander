@@ -26,7 +26,7 @@ const actions = {
         Vue.prototype.$socket.emit('xname2', 'test-from-client')
     },
     SOCKET_UPDATE_SERVER({ dispatch }, serverData) {
-        if (serverData.server.server_group.id == store.getters["serverGroups/selectedServerGroup"].id)  {
+        if (serverData.server.fleet.id == store.getters["fleets/selectedFleet"].id)  {
             dispatch("servers/commitAllQueryInfo", serverData, { root: true })
         }
     },

@@ -7,7 +7,7 @@ from sqlalchemy import event
 from sqlalchemy.orm import mapper
 
 from application import db
-from application.DBModels import Server, ServerGroup, User, PinList, PinListEntry
+from application.DBModels import Server, Fleet, User, PinList, PinListEntry
 from application.baseModel import BaseModel
 
 
@@ -30,13 +30,13 @@ class UserSchema(BaseSchema):
         unknown = EXCLUDE
 
 
-class ServerGroupSchema(BaseSchema):
+class FleetSchema(BaseSchema):
 
     server_count = fields.Integer(dump_only=True)
-    servers = mafields.Nested(lambda: ServerSchema(exclude=('server_group', 'server_info', )), many=True, dump_only=True)
+    servers = mafields.Nested(lambda: ServerSchema(exclude=('fleet', 'server_info', )), many=True, dump_only=True)
 
     class Meta(BaseSchema.Meta):
-        model = ServerGroup
+        model = Fleet
         unknown = EXCLUDE
 
 
@@ -45,7 +45,7 @@ def existOrNone(data):
 
 class ServerSchema(BaseSchema):
 
-    server_group = mafields.Nested(lambda: ServerGroupSchema(exclude=('servers', )), many=False)
+    fleet = mafields.Nested(lambda: FleetSchema(exclude=('servers', )), many=False)
     # server_info = mafields.Nested(lambda: ServerQuerySchema, many=False)
     server_info = fields.Nested(lambda: ServerQuerySchema, validate=existOrNone, missing=None)
 
@@ -116,8 +116,8 @@ usersSchema = UserSchema(many=True)
 serverQuerySchema = ServerQuerySchema()
 serverQuerysSchema = ServerQuerySchema(many=True)
 
-serverGroupSchema = ServerGroupSchema()
-serverGroupsSchema = ServerGroupSchema(many=True)
+fleetSchema = FleetSchema()
+fleetsSchema = FleetSchema(many=True)
 
 pinlistSchema = PinlistSchema()
 pinlistsSchema = PinlistSchema(many=True)

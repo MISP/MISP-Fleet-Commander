@@ -12,18 +12,18 @@ from application.marshmallowSchemas import ServerSchema, serverQuerySchema
 from application.workers.tasks import fetchServerInfoTask
 
 
-def index(group_id=None):
+def index(fleet_id=None):
     q = Server.query
-    if group_id is not None:
-        q = q.filter_by(server_group_id=group_id)
+    if fleet_id is not None:
+        q = q.filter_by(fleet_id=fleet_id)
     servers = q.all()
     return servers
 
-def indexForUser(user, group_id=None):
+def indexForUser(user, fleet_id=None):
     q = Server.query
     q = q.filter_by(user_id=user.id)
-    if group_id is not None:
-        q = q.filter_by(server_group_id=group_id)
+    if fleet_id is not None:
+        q = q.filter_by(fleet_id=fleet_id)
     servers = q.all()
     return servers
 
