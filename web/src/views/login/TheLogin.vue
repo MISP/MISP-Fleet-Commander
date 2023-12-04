@@ -10,7 +10,7 @@
             </div>
             <div class="panel-right d-flex align-items-center justify-content-center">
                 <div class="d-flex flex-column justify-content-center">
-                    <h1 class="mb-4">Login Account</h1>
+                    <h1 class="mb-4">Login</h1>
                     <b-form-input
                         v-model="email"
                         v-on:keyup.enter="login"
