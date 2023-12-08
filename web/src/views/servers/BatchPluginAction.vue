@@ -198,12 +198,11 @@ export default {
         },
         handlePluginResponse(server_id, response) {
             Vue.set(this.serverResponse, server_id, {
-                status_code: response.status,
-                // reason: response.data.data.message,
-                url: response.data.data.url,
+                status_code: response.data?.request_response?.status_code ?? response.status,
+                reason: response.data?.request_response?.reason ?? (response.data?.data?.message ?? ''),
+                url: response.data?.data?.url ?? '',
                 data: response.data.data,
-                elapsed_time: '',
-                // elapsed_time: moment.duration(response.data.data._latency, 'seconds'),
+                elapsed_time: response.data?.request_response?.elapsed_time ?? '',
             })
         },
         resetRequestInProgress() {
