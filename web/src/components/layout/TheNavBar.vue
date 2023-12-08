@@ -60,7 +60,6 @@
                             <iconButton
                                 style="display: inline-block !important"
                                 :text="user.email"
-                                icon="user"
                                 :tight="true"
                             ></iconButton>
                         </template>

@@ -17,7 +17,7 @@
     ></i>
     <i
         v-else-if="scope === 'users'"
-        :class="['fas', 'fa-users']"
+        :class="['fas', 'fa-user-astronaut']"
     ></i>
      <i
         v-else

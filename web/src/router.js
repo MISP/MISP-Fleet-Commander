@@ -120,9 +120,9 @@ let router =  new Router({
             meta: {
                 requiresFleet: false,
                 breadcrumbs: {
-                    text: "Users",
+                    text: "Commanders",
                     to: { name: "users" },
-                    icon: "fa-users"
+                    icon: "user-astronaut"
                 }
             }
         }

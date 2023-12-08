@@ -9,7 +9,7 @@
                         variant="primary"
                         v-b-modal.modal-add
                     >
-                        <i class="fas fa-plus"></i> Add user
+                        <i class="fas fa-plus"></i> Add Commander
                     </b-button>
                 </div>
                 <b-pagination
