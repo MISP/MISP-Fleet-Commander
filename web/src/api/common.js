@@ -12,13 +12,12 @@ const urls = {
 }
 
 function getClient() {
-    const token = store.getters["auth/access_token"]
-    const token_type = store.getters["auth/access_token_type"]
+    
     const client = axios.create({
         baseURL: baseurl,
         headers: {
             common: {
-                Authorization: `${token_type} ${token}`
+                Authorization: getAuthorizationHeaderValue()
             }
         }
     });
@@ -29,7 +28,9 @@ function getClient() {
                 return new Promise((resolve, reject) => {
                     showLoginModal(
                         () => {
-                            resolve(axios(error.config))
+                            const axios_config = Object.assign({}, error.config)
+                            axios_config.headers.Authorization = getAuthorizationHeaderValue()
+                            resolve(axios(axios_config))
                         },
                         (error) => {
                             console.log('Refresh login error: ', error)
@@ -45,6 +46,12 @@ function getClient() {
         }
     )
     return client
+}
+
+function getAuthorizationHeaderValue() {
+    const token = store.getters["auth/access_token"]
+    const token_type = store.getters["auth/access_token_type"]
+    return `${token_type} ${token}`
 }
 
 function showLoginModal(successCB, errorCB) {
