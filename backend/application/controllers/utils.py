@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import json
 from datetime import timedelta
 import requests
 import requests.adapters
@@ -102,7 +103,10 @@ def mispPostRequest(server, url, data={}, rawResponse=False, nocache=True):
             response = requestMISPSession.post(full_url, json=data, headers=headers, verify=(not getattr(server, 'skip_ssl', True)))
         error = handleStatusCode(response)
         if error is not None:
-            return error
+            if rawResponse:
+                return response
+            else:
+                return error
         if rawResponse:
             return response
         else:

@@ -40,66 +40,10 @@
             </b-form-group>
         </b-form>
 
-        <b-card
-            class=""
-            no-body
-        >
-            <template #header>
-                <div class="d-flex">
-                    <loaderPlaceholder class="d-flex flex-grow-1" :loading="!requestInProgress" maxWidth="50%" placeholderWidth="100%">
-                    <div class="mb-0 d-flex flex-fill">
-                        <span class="font-weight-bold mr-3">
-                            <b-icon :class="statusCodeColorClass" icon="circle-fill"></b-icon>
-                            {{ response.status_code }}
-                            {{ response.reason }}
-                        </span>
-                        <span class="text-mono font-weight-light">{{ response.url }}</span>
-                        <span class="ml-auto text-muted">
-                            <span class="mr-3">{{ elapsed_time_printable }}</span>
-                            <span>{{ contentLengthPrintable }}</span>
-                        </span>
-                    </div>
-                    </loaderPlaceholder>
-                    <loaderPlaceholder class="d-flex flex-grow-1 justify-content-end" v-if="requestInProgress" :loading="!requestInProgress" maxWidth="100%" placeholderWidth="25%"></loaderPlaceholder>
-                </div>
-            </template>
-            <b-tabs 
-                pills card end
-                content-class="max-height-300"
-            >
-                <b-tab title="Response Text" active>
-                    <loaderPlaceholder :loading="!requestInProgress" maxWidth="">
-                    <pre class="m-0" style="white-space: break-spaces;">{{ response.data }}</pre>
-                    </loaderPlaceholder>
-                </b-tab>
-                <b-tab title="Response JSON">
-                    <loaderPlaceholder :loading="!requestInProgress" maxWidth="">
-                    <jsonViewer
-                        :item="responseDataJson"
-                        :open="true"
-                    ></jsonViewer>
-                    </loaderPlaceholder>
-                </b-tab>
-                <b-tab title="Response Headers">
-                    <loaderPlaceholder :loading="!requestInProgress" maxWidth="">
-                    <b-table-simple
-                        striped small
-                        class="mb-0"
-                        :bordered="false"
-                        :borderless="true"
-                        :outlined="false"
-                    >
-                        <b-tbody>
-                            <b-tr v-for="(v, k) in response.headers" v-bind:key="k">
-                                <b-th class="text-nowrap">{{ k }}</b-th>
-                                <b-td>{{ v }}</b-td>
-                            </b-tr>
-                        </b-tbody>
-                    </b-table-simple>
-                    </loaderPlaceholder>
-                </b-tab>
-            </b-tabs>
-        </b-card>
+        <APIResponsePanel
+            :response="response"
+            :requestInProgress="requestInProgress"
+        ></APIResponsePanel>
     </div>
 </template>
 
@@ -107,12 +51,14 @@
 import api from "@/api/servers"
 import jsonViewer from "@/components/ui/elements/jsonViewer.vue"
 import loaderPlaceholder from "@/components/ui/elements/loaderPlaceholder.vue"
+import APIResponsePanel from "@/views/servers/elements/mispRemoteAdministration/APIResponsePanel"
 
 export default {
     name: "RestAPIAdministrationModal",
     components: {
         jsonViewer,
-        loaderPlaceholder
+        loaderPlaceholder,
+        APIResponsePanel,
     },
     props: {
         server: {

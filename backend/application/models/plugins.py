@@ -4,19 +4,21 @@
 
 from collections import defaultdict
 import time
-from typing import List, Optional, Union
+from typing import List, Literal, Optional, Union
 import json
 from application.DBModels import Server
+from requests import Response as requestsResponse
 # from application import loadedPlugins
 
 
 class PluginResponse:
 
-    def __init__(self, status: str, data: dict, errors: Optional[List] = [], component: Optional[str] = None):
+    def __init__(self, status: str, data: dict, errors: Optional[List] = [], component: Optional[str] = None, request: Optional[requestsResponse] = None):
         self.status = status
         self.data = data
         self.errors = errors
         self.component = component
+        self.requestsResponse = request
 
     def response(self) -> dict:
         response = {
@@ -27,12 +29,21 @@ class PluginResponse:
             response['error'] = self.errors
         if self.component:
             response['component'] = self.component
+        if self.requestsResponse is not None:
+            response['request_response'] = {
+                'timestamp': int(time.time()),
+                'headers': dict(self.requestsResponse.headers),
+                'status_code': self.requestsResponse.status_code,
+                'reason': self.requestsResponse.reason,
+                'elapsed_time': str(self.requestsResponse.elapsed),
+                'url': self.requestsResponse.url,
+            }
 
         return response
 
     def genActionParameter(
         key: str,
-        type: str,
+        type: Literal['select', 'checkbox', 'textarea', 'text', 'input',],
         label: Optional[str],
         description: Optional[str] = '',
         placeholder: Optional[str] = '',
@@ -64,16 +75,16 @@ class PluginResponse:
 
 
 class SuccessPluginResponse(PluginResponse):
-    def __init__(self, data: dict, errors: Optional[List] = [], component: Optional[str] = None):
-        super().__init__('success', data, errors, component)
+    def __init__(self, data: dict, errors: Optional[List] = [], component: Optional[str] = None, request: Optional[requestsResponse] = None):
+        super().__init__('success', data, errors, component, request)
 
 class FailPluginResponse(PluginResponse):
-    def __init__(self, data: dict, errors: Optional[List] = [], component: Optional[str] = None):
-        super().__init__('fail', data, errors, component)
+    def __init__(self, data: dict, errors: Optional[List] = [], component: Optional[str] = None, request: Optional[requestsResponse] = None):
+        super().__init__('fail', data, errors, component, request)
 
 class ErrorPluginResponse(PluginResponse):
-    def __init__(self, data: dict, errors: Optional[List] = [], component: Optional[str] = None):
-        super().__init__('error', data, errors, component)
+    def __init__(self, data: dict, errors: Optional[List] = [], component: Optional[str] = None, request: Optional[requestsResponse] = None):
+        super().__init__('error', data, errors, component, request)
 
 
 class PluginNotification:
@@ -201,6 +212,7 @@ def getViewValue(server: Server, plugin) -> dict:
 
 def doAction(server: Server, plugin, data: Optional[dict]) -> dict:
     pluginInstance = plugin['instance']
+    actionResult = pluginInstance.action(server, data)
     try:
         actionResult = pluginInstance.action(server, data)
     except Exception as e:

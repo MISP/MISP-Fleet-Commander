@@ -33,7 +33,7 @@
                     <b-tbody>
                         <b-tr v-for="(plugin, index) in plugins" :key="index">
                             <b-td class="text-nowrap">
-                                <i v-if="plugin.icon" :class="[plugin.icon, 'mr-2']" style="width: 1rem;"></i>
+                                <i v-if="plugin.icon" :class="[plugin.icon, 'fa-fw mr-2']" style="width: 1rem;"></i>
                                 <b :title="plugin.description">{{ plugin.name }}</b>
                             </b-td>
                             <b-td>

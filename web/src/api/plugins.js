@@ -40,7 +40,7 @@ export default {
     },
     submitAction(serverID, pluginID, data) {
         const url = `${urls.submitAction}/${serverID}/${pluginID}`
-        return axios.post(url, data)
+        return common.getClient().post(url, data)
     },
     getNotifications(serverID, cb, errorCb) {
         const url = `${urls.notifications}/${serverID}`

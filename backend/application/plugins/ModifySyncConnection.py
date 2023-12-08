@@ -63,7 +63,7 @@ class ModifySyncConnection(BasePlugin):
     @classmethod
     def pushChanges(cls, server: Server, serverID: int, payload: str) -> dict:
         url = f"/servers/edit/{serverID}"
-        result = mispPostRequest(server, url, data=payload)
+        result = mispPostRequest(server, url, data=payload, rawResponse=False, nocache=True)
         if 'error' in result:
             return {'success': False, 'error': result['error']}
         else:

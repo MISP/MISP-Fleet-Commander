@@ -47,7 +47,7 @@
                 v-else
                 :id="`input-${i}`"
                 v-model="formData[param.key]"
-                :type="param.type"
+                type="text"
                 :placeholder="param.placeholder || ''"
             ></b-form-input>
 
@@ -79,7 +79,7 @@ export default {
         },
         submit_function: {
             type: Function,
-        }
+        },
     },
     data: function() {
         return {
@@ -99,9 +99,11 @@ export default {
                 form_data: { ...this.formData }
             }
             this.postInProgress = true
+            this.$emit('update:postInProgress', true)
             this.submit_function(finalData)
-                .finally(() => {
-                    this.postInProgress = false
+            .finally(() => {
+                this.postInProgress = false
+                this.$emit('update:postInProgress', false)
                 })
         }
     },

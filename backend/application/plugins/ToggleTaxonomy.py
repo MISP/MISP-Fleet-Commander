@@ -1,4 +1,5 @@
 from typing import List, Optional, Union
+from requests import Response as requestsResponse
 from application.DBModels import Server
 from application.controllers.utils import mispGetRequest, mispPostRequest
 from application.models.plugins import BasePlugin, PluginResponse, SuccessPluginResponse, FailPluginResponse
@@ -29,38 +30,43 @@ class ToggleTaxonomy(BasePlugin):
         if state is None or namespace is None:
             result = FailPluginResponse({}, [f'Invalid parameters (namespace: `{namespace}`, state: `{state}`)'])
 
-        taxonomyID = ToggleTaxonomy.getTaxonomyID(server, namespace)
-        if taxonomyID is not None:
+        taxonomyIDOrRequestResponse = ToggleTaxonomy.getTaxonomyID(server, namespace)
+        if type(taxonomyIDOrRequestResponse) is not requestsResponse:
             if state:
-                result = ToggleTaxonomy.enabledTaxonomy(server, taxonomyID)
+                result = ToggleTaxonomy.enabledTaxonomy(server, taxonomyIDOrRequestResponse)
             else:
-                result = ToggleTaxonomy.disableTaxonomy(server, taxonomyID)
+                result = ToggleTaxonomy.disableTaxonomy(server, taxonomyIDOrRequestResponse)
         else:
-            result = FailPluginResponse({}, [f'Could not found taxonomy with namespace `{namespace}`'])
+            taxonomyIDOrRequestResponse.status_code = 404
+            taxonomyIDOrRequestResponse.reason = 'Not Found'
+            result = FailPluginResponse({}, [f'Could not find taxonomy with namespace `{namespace}`'], None, taxonomyIDOrRequestResponse)
         return result
 
     @classmethod
-    def getTaxonomyID(cls, server: Server, namespace: str) -> int:
+    def getTaxonomyID(cls, server: Server, namespace: str) -> Union[int, requestsResponse]:
         urlTaxonomyIndex = f'/taxonomies/index/value:{namespace}'
-        result = mispGetRequest(server, urlTaxonomyIndex, {})
-        for taxonomy in result:
+        result = mispGetRequest(server, urlTaxonomyIndex, {}, rawResponse=True, nocache=True)
+        data = result.json()
+        for taxonomy in data:
             if taxonomy['Taxonomy']['namespace'] == namespace:
                 return int(taxonomy['Taxonomy']['id'])
+        return result
 
 
     @classmethod
     def enabledTaxonomy(cls, server: Server, taxonomyID: int) -> PluginResponse:
         urlEnable = f'/taxonomies/enable/{taxonomyID}'
         urlAddTags = f'/taxonomies/addTag/{taxonomyID}'
-        result = mispPostRequest(server, urlEnable, {})
-        if 'error' in result:
-            actionResponse = FailPluginResponse(result, [result['error']])
+        resultEnable = mispPostRequest(server, urlEnable, {}, rawResponse=True, nocache=True)
+        if 'error' in resultEnable:
+            actionResponse = FailPluginResponse(resultEnable, [resultEnable['error']], None, resultEnable)
         else:
-            result = mispPostRequest(server, urlAddTags, {})
-            if 'error' in result:
-                actionResponse = FailPluginResponse(result, [result['error']])
+            resultAdd = mispPostRequest(server, urlAddTags, {}, rawResponse=True, nocache=True)
+            data = resultAdd.json()
+            if 'error' in resultAdd:
+                actionResponse = FailPluginResponse(data, [resultAdd['error']], None, resultAdd)
             else:
-                actionResponse = SuccessPluginResponse(result)
+                actionResponse = SuccessPluginResponse(data, [], None, resultAdd)
 
         return actionResponse
 
@@ -68,10 +74,11 @@ class ToggleTaxonomy(BasePlugin):
     def disableTaxonomy(cls, server: Server, taxonomyID: int) -> PluginResponse:
         print('di')
         url = f'/taxonomies/disable/{taxonomyID}'
-        result = mispPostRequest(server, url, {})
+        result = mispPostRequest(server, url, {}, rawResponse=True, nocache=True)
+        data = result.json()
         if 'error' in result:
-            actionResponse = FailPluginResponse(result, [result['error']])
+            actionResponse = FailPluginResponse(data, [result['error']], None, result)
         else:
-            actionResponse = SuccessPluginResponse(result)
+            actionResponse = SuccessPluginResponse(data, [], None, result)
 
         return actionResponse

@@ -64,9 +64,13 @@
                     :title="plugin.name"
                     lazy
                 >
+                    <template #title>
+                        <i v-if="plugin.icon" :class="[plugin.icon, 'fa-fw mr-1']" style="width: 1rem;"></i>
+                        {{ plugin.name }}
+                    </template>
                     <div>
                         <h6 class="mb-0">
-                            <i v-if="plugin.icon" :class="[plugin.icon, 'mr-1']" style="width: 1rem;"></i>
+                            <i v-if="plugin.icon" :class="[plugin.icon, 'fa-fw mr-1']" style="width: 1rem;"></i>
                             {{ plugin.name }}
                         </h6>
                         <div class="text-muted mb-3 ml-4" style="font-size: 0.875">{{ plugin.description }}</div>

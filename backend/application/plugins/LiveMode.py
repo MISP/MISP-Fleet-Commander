@@ -38,10 +38,11 @@ class LiveMode(BasePlugin):
     @classmethod
     def toggleLiveMode(cls, server: Server, liveModeEnabled: bool = True) -> PluginResponse:
         url = '/servers/serverSettingsEdit/MISP.live'
-        result = mispPostRequest(server, url, {'Server': {'value': liveModeEnabled}})
+        result = mispPostRequest(server, url, {'Server': {'value': liveModeEnabled}}, rawResponse=True, nocache=True)
+        data = result.json()
         if 'error' in result:
-            actionResponse = FailPluginResponse(result, [result['error']])
+            actionResponse = FailPluginResponse(data, [result['error']], None, result)
         else:
-            actionResponse = SuccessPluginResponse(result)
+            actionResponse = SuccessPluginResponse(data, None, None, result)
 
         return actionResponse

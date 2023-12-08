@@ -18,9 +18,9 @@
             </template>
             <div :style="getMaxHeight">
                 <keep-alive>
-                    <pluginAction
+                    <pluginActions
                         :server_id="server_id"
-                    ></pluginAction>
+                    ></pluginActions>
                 </keep-alive>
             </div>
         </b-tab>
@@ -152,7 +152,7 @@ import MISPRemoteAdministration from "@/views/servers/elements/MISPRemoteAdminis
 import MISPSchemaDiagnostic from "@/views/servers/elements/MISPSchemaDiagnostic.vue"
 import MISPConnectedServers from "@/views/servers/elements/MISPConnectedServers.vue"
 import instanceUsage from "@/views/servers/elements/instanceUsage.vue"
-import pluginAction from "@/views/servers/elements/pluginAction.vue"
+import pluginActions from "@/views/servers/elements/pluginActions.vue"
 
 export default {
     name: "serverInfoAndManagements",
@@ -164,7 +164,7 @@ export default {
         MISPSchemaDiagnostic,
         MISPConnectedServers,
         instanceUsage,
-        pluginAction,
+        pluginActions,
     },
     props: {
         server_id: {
