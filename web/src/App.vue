@@ -3,6 +3,9 @@
         <component :is="layout">
             <router-view :layout.sync="layout"/>
         </component>
+
+        <TheLoginModal
+        ></TheLoginModal>
     </div>
 </template>
 
@@ -10,6 +13,7 @@
 import LayoutDefault from "@/components/layout/LayoutDefault.vue"
 import LayoutStretch from "@/components/layout/LayoutStretch.vue"
 import LayoutLogin from "@/components/layout/LayoutLogin.vue"
+import TheLoginModal from '@/views/login/TheLoginModal.vue';
 
 export default {
     name: "App",
@@ -17,6 +21,7 @@ export default {
         LayoutDefault,
         LayoutStretch,
         LayoutLogin,
+        TheLoginModal,
     },
     data () {
         return {
@@ -40,6 +45,6 @@ export default {
         },
         reconnect() {
         },
-    },
+    }
 }
 </script>

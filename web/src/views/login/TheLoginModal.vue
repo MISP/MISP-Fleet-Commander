@@ -1,38 +1,50 @@
 <template>
-<Layout name="LayoutLogin">
-    <div class="page-container">
-        <div class="main-container bg-info d-flex justify-content-between">
-            <div class="panel-left d-flex align-items-center justify-content-center">
-                <div class="">
-                    <img src="@/assets/logo.svg" class="logo mb-3" alt="MISP Fleet Commander logo">
-                    <h5 class="text-muted fw-light text-center">Manage your MISP communities easily</h5>
-                </div>
-            </div>
-            <div class="panel-right d-flex align-items-center justify-content-center">
-                <div class="d-flex flex-column justify-content-center">
-                    <loginForm></loginForm>
-                </div>
-            </div>
-        </div>
+    <div>
+        <b-modal ref="login-modal" hide-footer hide-header>
+            <loginForm
+                :callbackOnLoging="handleLogin"
+            ></loginForm>
+        </b-modal>
     </div>
-</Layout>
 </template>
 
 <script>
-import Layout from "@/components/layout/Layout.vue"
+import EventBus from '@/event-bus';
 import loginForm from "@/views/login/loginForm.vue"
 
 export default {
-    name: "TheLogin",
+    name: "TheLoginModal",
     components: {
-        Layout,
         loginForm,
     },
     data: function () {
         return {
+            successCB: null,
+            errorCB: null,
         }
     },
     methods: {
+        showModal() {
+            this.$refs['login-modal'].show()
+        },
+        hideModal() {
+            this.$refs['login-modal'].hide()
+        },
+        handleLogin(success) {
+            if (success) {
+                this.successCB()
+            } else {
+                this.errorCB()
+            }
+            this.hideModal()
+        },
+    },
+    mounted() {
+        EventBus.$on('open-login-modal', (successCB, errorCB) => {
+            this.showModal()
+            this.successCB = successCB
+            this.errorCB = errorCB
+        });
     }
 }
 </script>

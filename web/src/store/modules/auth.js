@@ -9,7 +9,6 @@ const state = {
     access_token: localStorage.getItem('access_token'),
     access_token_type: localStorage.getItem('access_token_type'),
     decoded_access_token: JSON.parse(localStorage.getItem('decoded_access_token')) || {},
-    showLoginModal: false,
 }
 
 // getters
@@ -44,7 +43,6 @@ const mutations = {
         state.access_token = access_token
         state.access_token_type = token_type
         state.decoded_access_token = jwt_decode(access_token)
-        state.showLoginModal = false
         setLocalStorage(state)
     },
     cleanAccessToken(state) {
@@ -53,9 +51,6 @@ const mutations = {
         state.decoded_access_token = {}
         setLocalStorage(state)
     },
-    toggleShowLoginPage(state, toggleState) {
-        state.showLoginModal = toggleState
-    }
 }
 
 function setLocalStorage(state) {

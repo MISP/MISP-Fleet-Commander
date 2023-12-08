@@ -2,6 +2,9 @@ import axios from "axios"
 
 import store from "@/store/index"
 import { baseurl } from "./apiConfig"
+import Vue from "vue"
+import router from "@/router"
+import EventBus from '@/event-bus';
 
 const urls = {
     searchAll: `${baseurl}/instance/searchAll`,
@@ -23,7 +26,18 @@ function getClient() {
         (response) => response,
         (error) => {
             if (error.response.status === 401) {
-                return Promise.reject({ message: 'Authentication required' });
+                return new Promise((resolve, reject) => {
+                    showLoginModal(
+                        () => {
+                            resolve(axios(error.config))
+                        },
+                        (error) => {
+                            console.log('Refresh login error: ', error)
+                            reject(error)
+                            router.push('/login')
+                        }
+                    )
+                });
             } else if (error.response.data?.message !== undefined) {
                 return Promise.reject(error.response.data.message);
             }
@@ -33,8 +47,8 @@ function getClient() {
     return client
 }
 
-function showLoginModal() {
-    store.commit('auth/toggleShowLoginPage', true)
+function showLoginModal(successCB, errorCB) {
+    EventBus.$emit('open-login-modal', successCB, errorCB);
 }
 
 function handleError(error, errorCb) {
