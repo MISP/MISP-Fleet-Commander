@@ -6,6 +6,7 @@ from collections import defaultdict
 import time
 from typing import List, Literal, Optional, Union
 import json
+from application import flaskApp
 from application.DBModels import Server
 from requests import Response as requestsResponse
 # from application import loadedPlugins
@@ -192,6 +193,7 @@ def getIndexValue(server: Server, plugin) -> dict:
     try:
         indexValue = pluginInstance.index(server)
     except Exception as e:
+        flaskApp.logger.error('getIndexValue failed for plugin {0}. Error: {1}'.format(plugin['id'], str(e)))
         indexValue = FailPluginResponse({}, [str(e)])
     return indexValue.response()
 
@@ -207,6 +209,7 @@ def getViewValue(server: Server, plugin) -> dict:
     try:
         viewValue = pluginInstance.view(server)
     except Exception as e:
+        flaskApp.logger.error('getViewValue failed for plugin {0}. Error: {1}'.format(plugin['id'], str(e)))
         viewValue = FailPluginResponse({}, [str(e)])
     return viewValue.response()
 
@@ -216,6 +219,7 @@ def doAction(server: Server, plugin, data: Optional[dict]) -> dict:
     try:
         actionResult = pluginInstance.action(server, data)
     except Exception as e:
+        flaskApp.logger.error('doAction failed for plugin {0}. Error: {1}'.format(plugin['id'], str(e)))
         actionResult = FailPluginResponse({}, [str(e)])
     return actionResult.response()
 
@@ -225,6 +229,7 @@ def getNotificationForPlugin(server: Server, plugin) -> list:
         notifications = pluginInstance.notifications(server)
         notifications.data = [notificationData.to_dict() for notificationData in notifications.data]
     except Exception as e:
+        flaskApp.logger.error('getNotificationForPlugin failed for plugin {0}. Error: {1}'.format(plugin['id'], str(e)))
         notifications = FailPluginResponse({}, [str(e)])
     return notifications.response()
 
