@@ -53,7 +53,7 @@
                 </span>
             </h5>
 
-            <b-overlay :show="getQueryInProgress" rounded="sm">
+            <b-overlay :show="getQueryInProgress || getRefreshEnqueued" rounded="sm">
                 <template v-if="isOnline">
                     <b-table-simple
                     small
@@ -85,7 +85,7 @@
             <h5 class="card-title mb-0 mx-3 my-2">
                 Server Info
             </h5>
-            <b-overlay :show="getQueryInProgress" rounded="sm" class="table-server-info">
+            <b-overlay :show="getQueryInProgress || getRefreshEnqueued" rounded="sm" class="table-server-info">
                 <b-table-simple
                 striped small
                 class="mb-0"
@@ -215,7 +215,7 @@ export default {
             return this.MISPMainLogo ? `${this.getServer.url}/img/custom/${this.MISPMainLogo}` : `${this.getServer.url}/img/misp-logo.png`
         },
         MISPMainLogo: function() {
-            return this.getFinalSettings['MISP.main_logo']
+            return this.getFinalSettings ? this.getFinalSettings['MISP.main_logo'] : false
         },
         statusData: function() {
             let status = {
@@ -251,7 +251,7 @@ export default {
                 },
                 "User permissions": {
                     data: {
-                        perms: this.getServerUser['Role'],
+                        perms: this.getServerUser ? this.getServerUser.Role : {},
                         row_id: 0,
                         context: "serverView"
                     },
@@ -275,10 +275,10 @@ export default {
         },
         infoData: function() {
             let info = Object.assign({}, this.defaultInfoData)
-            if (this.getFinalSettings.error !== undefined) {
+            if (this.getFinalSettings?.error !== undefined) {
                 return info
             }
-            info["MISP UUID"] = this.getFinalSettings['MISP.uuid']
+            info["MISP UUID"] = this.getFinalSettings ? this.getFinalSettings['MISP.uuid'] : ''
             this.viewPlugins.forEach(plugin => {
                 info[plugin.name] = this.pluginValuesForServer ? (this.pluginValuesForServer[plugin.id] || {}) : {}
             })

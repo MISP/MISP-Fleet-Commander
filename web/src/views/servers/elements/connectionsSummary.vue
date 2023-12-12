@@ -143,7 +143,7 @@ export default {
     },
     computed: {
         hasValidConnections() {
-            return this.connections !== undefined && this.connections.length > 0 && this.connections[0]['error'] === undefined
+            return this.connections !== undefined && this.getConnectionList.length > 0 && this.getConnectionList[0]['error'] === undefined
         },
         connectionCount() {
             return this.getConnectionList.length
