@@ -9,8 +9,15 @@
             <div class="row">
                 <div class="col">
                     <b-alert show variant="primary">
-                        <h5 class="alert-heading">Make importing servers easier!</h5>
-                        Drag and Drop this import link as a browser bookmark, Go to a MISP instance and click on your bookmarked link.
+                        <h5 class="alert-heading">Instant Fleet Expansion: Simplify server encoding in a click!</h5>
+                        <p class="m-0">
+                            <i class="fa fa-info-circle"></i>
+                            Drag and Drop this import link as a browser bookmark, Go to a MISP instance and click on your bookmarked link.
+                        </p>
+                        <small class="text-danger">
+                            <i class="fa fa-warning"></i>
+                            Temporarily disabling Content Security Policy headers may be necessary for the bookmark to execute .
+                        </small>
                         <hr>
                         <b-alert show variant="light" class="d-flex justify-content-center mb-0 p-2">
                             <b-button :href="bookmarkJS" variant="primary">
