@@ -8,8 +8,8 @@
             >
                 <router-link
                     :class="{'sidebar-link text-decoration-none': true, 'inactive': !canBeAccessed(item)}"
-                    v-b-tooltip.hover.right
-                    :title="!canBeAccessed(item) ? 'No fleet selected' : ''"
+                    v-b-tooltip.hover.right.d0
+                    :title="!canBeAccessed(item) ? 'No fleet selected' : item.name"
                     :to="item.to"
                 >
                     <span class="icon">
@@ -37,27 +37,27 @@ export default {
                 {
                     name: "Home",
                     to: { name: "home" },
-                    scope: "home"
+                    scope: "home",
                 },
                 {
                     name: "MISP Servers",
                     to: { name: "servers.index" },
-                    scope: "servers"
+                    scope: "servers",
                 },
                 {
                     name: "MISP Connections",
                     to: { name: "connections" },
-                    scope: "connections"
+                    scope: "connections",
                 },
                 {
                     name: "Strategic View",
                     to: { name: "strategicView" },
-                    scope: "strategicView"
+                    scope: "strategicView",
                 },
                 {
-                    name: "Users",
+                    name: "Commanders",
                     to: { name: "users" },
-                    scope: "users"
+                    scope: "users",
                 }
             ]
         }
