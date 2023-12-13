@@ -10,7 +10,7 @@
             >{{ fleet.name }}</b-dropdown-item>
         </template>
         <template v-else>
-            <b-alert variant="danger text-nowrap" class="m-0" show >
+            <b-alert variant="danger" class="m-0 text-nowrap" show>
                 No fleet available
             </b-alert>
         </template>

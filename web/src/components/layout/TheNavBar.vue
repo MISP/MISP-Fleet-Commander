@@ -41,10 +41,10 @@
 
                 <NavbarNotification></NavbarNotification>
 
-                <b-nav-item-dropdown right>
+                <b-dropdown right variant="secondary" toggle-class="secondary-soft">
                     <template #button-content>
                         <iconButton
-                            style="display: inline-block !important; filter: grayscale(1);"
+                            style="display: inline-block !important;"
                             :text="fleetText"
                             icon="fleet"
                             use-asset
@@ -52,7 +52,7 @@
                         ></iconButton>
                     </template>
                     <NavbarFleet></NavbarFleet>
-                </b-nav-item-dropdown>
+                </b-dropdown>
 
                 <template v-if="user">
                     <b-nav-item-dropdown right>
@@ -185,5 +185,15 @@ export default {
     }
     .navbar .global-search:focus {
         width: 400px;
+    }
+
+    .btn-secondary.secondary-soft {
+        color: rgba(0, 0, 0, 0.5) !important;
+        background-color: #33333311 !important;
+        border-color: #cccccc !important;
+    }
+    .btn-secondary.secondary-soft:hover {
+        background-color: #33333322 !important;
+        border-color: #999999 !important;
     }
 </style>
