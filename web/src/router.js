@@ -122,7 +122,9 @@ let router =  new Router({
                 breadcrumbs: {
                     text: "Commanders",
                     to: { name: "users" },
-                    icon: "user-astronaut"
+                    image_path: require('@/assets/commander.svg'),
+                    image_style: "width: 1.5em; filter: invert(0.4);",
+                    image_class: "d-inline-block align-top",
                 }
             }
         }

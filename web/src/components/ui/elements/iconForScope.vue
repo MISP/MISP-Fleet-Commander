@@ -15,10 +15,12 @@
         v-else-if="scope === 'strategicView'"
         :class="['fas', 'fa-satellite-dish']"
     ></i>
-    <i
+    <img
         v-else-if="scope === 'users'"
-        :class="['fas', 'fa-user-astronaut']"
-    ></i>
+        :src="require('@/assets/commander.svg')"
+        class="mw-100 mh-100 d-inline-block align-top"
+        style="filter: invert(1);"
+    />
      <i
         v-else
         :class="['fa', 'fa-question']"

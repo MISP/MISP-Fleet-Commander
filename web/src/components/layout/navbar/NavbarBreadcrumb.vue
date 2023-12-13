@@ -9,6 +9,8 @@
                 <img v-if="item.image_path"
                     :src="item.image_path"
                     :alt="item.alt"
+                    :style="item.image_style"
+                    :class="[item.image_class, 'mr-1']"
                     class="icon-navbar"
                 >
                 <i v-else-if="item.icon" :class="`fa fa-${item.icon} mr-1`"></i>
@@ -58,7 +60,10 @@ export default {
                     items.push({
                         text: bcItem,
                         to: routeEntry.meta.breadcrumbs.to,
-                        icon: routeEntry.meta.breadcrumbs.icon ? routeEntry.meta.breadcrumbs.icon : ""
+                        icon: routeEntry.meta.breadcrumbs.icon ? routeEntry.meta.breadcrumbs.icon : "",
+                        image_path: routeEntry.meta.breadcrumbs.image_path ? routeEntry.meta.breadcrumbs.image_path : "",
+                        image_style: routeEntry.meta.breadcrumbs.image_style ? routeEntry.meta.breadcrumbs.image_style : "",
+                        image_class: routeEntry.meta.breadcrumbs.image_class ? routeEntry.meta.breadcrumbs.image_class : "",
                     })
                 }
             })
