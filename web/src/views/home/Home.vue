@@ -16,7 +16,7 @@
                         </p>
                         <small class="text-danger">
                             <i class="fa fa-warning"></i>
-                            Temporarily disabling Content Security Policy headers may be necessary for the bookmark to execute .
+                            Temporarily disabling Content Security Policy headers may be necessary for the bookmark to execute.
                         </small>
                         <hr>
                         <b-alert show variant="light" class="d-flex justify-content-center mb-0 p-2">
