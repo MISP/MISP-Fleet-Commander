@@ -1,0 +1,69 @@
+version: '3'
+services:
+    backend:
+        build: 
+            context: backend
+            dockerfile: docker/Dockerfile
+        working_dir: /app
+        environment:
+            - FLASK_APP=wsgi.py
+            - FLASK_DEBUG=0
+            - FLASK_ENV=production
+            - FLASK_CONFIG=config.ProductionConfig
+            - SQLALCHEMY_DATABASE_URI=/app/database/database.db
+            - SQLALCHEMY_TRACK_MODIFICATIONS=1
+            - SECRET_KEY=secret
+            - TOKEN_EXPIRATION_MIN=30
+            - AUTHLIB_INSECURE_TRANSPORT=true
+            # - REDIS_URL=redis://redis
+            - REDIS_URL=redis
+            - REDIS_PORT=6379
+            - REDIS_DB=1
+            - SOCKETIO_MESSAGE_QUEUE=redis://redis:6379/3
+            - CELERY_BROKER_URL=redis://redis
+            - CELERY_RESULT_BACKEND=redis://redis
+        volumes:
+            - "./run:/app/database"
+        ports:
+            - "5001:5001"
+        depends_on:
+            - redis
+
+    web:
+        build:
+            context: web
+            dockerfile: docker/Dockerfile
+        working_dir: /app
+        ports:
+            - "8080:80"
+        depends_on:
+            - backend
+
+    workers:
+        build: 
+            context: backend
+            dockerfile: docker/Dockerfile
+        working_dir: /app
+        environment:
+            - FLASK_ENV=production
+            - FLASK_CONFIG=config.ProductionConfig
+            - SQLALCHEMY_DATABASE_URI=/app/database/database.db
+            - SQLALCHEMY_TRACK_MODIFICATIONS=1
+            # - REDIS_URL=redis://redis
+            - REDIS_URL=redis
+            - REDIS_PORT=6379
+            - REDIS_DB=1
+            - SOCKETIO_MESSAGE_QUEUE=redis://redis:6379/3
+            - CELERY_BROKER_URL=redis://redis
+            - CELERY_RESULT_BACKEND=redis://redis
+        volumes:
+            - "./run:/app/database"
+        command: celery -A application.celery worker -l INFO
+        depends_on:
+            - redis
+            - backend
+
+    redis:
+        image: redis:7-alpine
+        healthcheck:
+            test: [ "CMD", "redis-cli", "ping" ]

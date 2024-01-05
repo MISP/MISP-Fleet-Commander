@@ -8,7 +8,7 @@ def create_access_token(user, data, currentApp):
     token = jwt.encode({
         'sub': user.email,
         'iat':datetime.utcnow(),
-        'exp': datetime.utcnow() + timedelta(minutes=currentApp.config['TOKEN_EXPIRATION_MIN']),
+        'exp': datetime.utcnow() + timedelta(minutes=int(currentApp.config['TOKEN_EXPIRATION_MIN'])),
         'data': data,
         },
         currentApp.config['SECRET_KEY'],

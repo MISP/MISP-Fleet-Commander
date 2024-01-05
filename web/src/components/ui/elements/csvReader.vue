@@ -122,7 +122,7 @@ export default {
                 name: {label: "Name", csvIndex: null, required: true},
                 description: {label: "Description", csvIndex: null, required: false},
                 url: {label: "URL", csvIndex: null, required: true, regex:/^(ftp|http|https):\/\/[^ "]+$/},
-                skip_ssl: {label: "Skip SSL", csvIndex: null, required: false},
+                skip_ssl: {label: "Skip SSL", csvIndex: null, required: false, castFun: (v) => { return (v === 'true' || v === '1') ? true : false }},
                 authkey: {label: "Authkey", csvIndex: null, required: true, regex:/^[a-zA-Z0-9]{40}$/},
             },
             csvHeader:"",
@@ -165,6 +165,9 @@ export default {
                 Object.entries(this.mappedFields).map(([field_name, field_config]) => {
                     if (Number.isInteger(field_config.csvIndex)) {
                         row[field_name] = csvLineArray[field_config.csvIndex]
+                        if (field_config.castFun) {
+                            row[field_name] = field_config.castFun(row[field_name])
+                        }
                     }
                 })
                 if (Object.keys(row).length > 0) {

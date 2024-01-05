@@ -25,7 +25,10 @@ class ProductionConfig(Config):
     TOKEN_EXPIRATION_MIN = environ.get('TOKEN_EXPIRATION_MIN')
 
     # Database
-    SQLALCHEMY_DATABASE_URI = 'mysql://user@localhost/foo'
+    # SQLALCHEMY_DATABASE_URI = 'mysql://user@localhost/foo'
+    # SQLALCHEMY_DATABASE_URI = 'sqlite:///' + osPath.join(basedir, 'app.db')
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///' + osPath.join(basedir,  environ.get('SQLALCHEMY_DATABASE_URI', 'app.db'))
+    # SQLALCHEMY_DATABASE_URI = environ.get('SQLALCHEMY_DATABASE_URI', 'sqlite:///' + osPath.join(basedir, 'app.db'))
     SQLALCHEMY_TRACK_MODIFICATIONS = True
 
 class DevelopmentConfig(Config):
