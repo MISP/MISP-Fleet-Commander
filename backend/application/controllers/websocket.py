@@ -1,3 +1,4 @@
+import os
 from application import socketioApp
 from application.DBModels import Server
 from application.marshmallowSchemas import serverSchema
@@ -31,7 +32,7 @@ def registerListeners():
 class SocketioEmitter:
 
     def __init__(self):
-        self.socketio = SocketIO(message_queue='redis://localhost:6379/3')
+        self.socketio = SocketIO(message_queue=os.environ.get('SOCKETIO_MESSAGE_QUEUE', 'redis://localhost:6379/3'))
 
     def udpate_server(self, data):
         self.socketio.emit('UPDATE_SERVER', data)

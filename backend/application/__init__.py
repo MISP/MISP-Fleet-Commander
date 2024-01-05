@@ -4,6 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import MetaData
 from flask_migrate import Migrate
 from flask_bcrypt import Bcrypt
+import os
 import redis
 from celery import Celery, Task
 from flask_socketio import SocketIO
@@ -17,8 +18,8 @@ def celery_init_app(app: Flask) -> Celery:
                 return self.run(*args, **kwargs)
 
     celery_app = Celery(app.name, task_cls=FlaskTask,
-            broker_url = 'redis://localhost',
-            result_backend = 'redis://localhost',
+            broker_url = os.environ.get('CELERY_BROKER_URL', 'redis://localhost'),
+            result_backend = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost'),
             enable_utc = True,
             include=['application.workers.tasks']
     )
@@ -39,7 +40,7 @@ def celery_init_app(app: Flask) -> Celery:
 db = None
 loadedPlugins = None
 flaskApp = None
-redisClient = redis.Redis(host='localhost', port=6379, db=1)
+redisClient = redis.Redis(host=os.environ.get('REDIS_URL', 'localhost'), port=os.environ.get('REDIS_PORT', 6379), db=os.environ.get('REDIS_DB', 1))
 celery_app = None
 socketioApp = None
 bcrypt = None
@@ -50,7 +51,7 @@ def create_app():
 
     global loadedPlugins, flaskApp, celery_app, socketioApp, bcrypt, db
     flaskApp = Flask(__name__, instance_relative_config=False)
-    flaskApp.config.from_object('config.DevelopmentConfig')
+    flaskApp.config.from_object(os.environ.get('FLASK_CONFIG', 'config.DevelopmentConfig'))
     bcrypt = Bcrypt(flaskApp)
 
     from application.DBModels import db as sqla_db
@@ -71,7 +72,7 @@ def create_app():
 
     with flaskApp.app_context():
 
-        socketioApp = SocketIO(flaskApp, cors_allowed_origins='*', message_queue='redis://localhost:6379/3')
+        socketioApp = SocketIO(flaskApp, cors_allowed_origins='*', message_queue=os.environ.get('SOCKETIO_MESSAGE_QUEUE', 'redis://localhost:6379/3'))
 
         # Imports
         from . import routes
@@ -101,5 +102,6 @@ def create_app():
         from application.DBModels import init_defaults
         db.create_all()
         init_defaults()
+        print(flaskApp.config['SQLALCHEMY_DATABASE_URI'])
 
         return flaskApp
