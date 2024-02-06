@@ -320,7 +320,8 @@ export default {
                 link.origin = link.source
                 link.source = parseInt(link.origin.id)
                 const destinationURL = link.destination.Server.url
-                const knownDestination = this.serversByURL[destinationURL] // FIXME: Potentially rely on MISP.uuid instead of the URL..
+                const destinationURLWithoutTrailing = destinationURL.endsWith('/') ? destinationURL.substr(0, destinationURL.length - 1) : destinationURL
+                const knownDestination = this.serversByURL[destinationURLWithoutTrailing] // FIXME: Potentially rely on MISP.uuid instead of the URL..
                 if (knownDestination) {
                     link.target = parseInt(knownDestination.id)
                     link._managed_server = true

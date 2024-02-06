@@ -38,7 +38,8 @@ const getters = {
     serversByURL: state => {
         let serversByURL = {}
         Object.values(state.servers).forEach(server => {
-            serversByURL[server.url] = server
+            const server_url = server.url.endsWith('/') ? server.url.substr(0, server.url.length - 1) : server.url
+            serversByURL[server_url] = server
         })
         return serversByURL
     },
