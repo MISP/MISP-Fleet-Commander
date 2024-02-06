@@ -148,6 +148,7 @@ export default {
                 { icon: 'fa fa-cube', name: 'Attributes', model: 'attribute', items: () => this.pinnedAttributes },
                 { icon: 'fa fa-users', name: 'Sharing Groups', model: 'sharinggroup', items: () => this.pinnedSharingGroups },
                 { icon: 'fa fa-eye', name: 'Sightings', model: 'sighting', items: () => this.pinnedSightings },
+                { icon: 'fa fa-sticky-note', name: 'Analyst Data', model: 'analystdata', items: () => this.pinnedAnalystData },
             ],
             pinFields : [
                 { key: "img", label: "", class: "tiny-cell-button" },
@@ -163,6 +164,7 @@ export default {
             pinnedAttributes: "pinlists/pinnedAttributes",
             pinnedSharingGroups: "pinlists/pinnedSharingGroups",
             pinnedSightings: "pinlists/pinnedSightings",
+            pinnedAnalystData: "pinlists/pinnedAnalystData",
             pinnedByID: "pinlists/pinnedByID",
             entriesByServerID: "pinlists/entriesByServerID",
             entriesByPinnedID: "pinlists/entriesByPinnedID",

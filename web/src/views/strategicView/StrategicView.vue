@@ -405,6 +405,6 @@ export default {
 .right-panel {
     top: 2em;
     right: 0;
-    width: 25em;
+    width: 30em;
 }
 </style>

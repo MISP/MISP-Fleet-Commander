@@ -32,6 +32,14 @@
                 <AvatarActions :server_id="server.id" :pinlist_id="entry.pinlist_id" :pinlist_model="entry.model" width="32" height="32"></AvatarActions>
             </span>
         </div>
+        <div class="text-muted mt-1">
+            <i class="fa fa-sticky-note fa-fw"></i> Analyst Data
+        </div>
+        <div>
+            <span v-for="entry in analystdata" :key="entry.id">
+                <AvatarActions :server_id="server.id" :pinlist_id="entry.pinlist_id" :pinlist_model="entry.model" width="32" height="32"></AvatarActions>
+            </span>
+        </div>
     </div>
 </template>
 
@@ -75,7 +83,10 @@ export default {
         },
         sightings() {
             return this.entries.filter(e => e.model == 'sighting')
-        }
+        },
+        analystdata() {
+            return this.entries.filter(e => e.model == 'analystdata')
+        },
     },
 }
 </script>

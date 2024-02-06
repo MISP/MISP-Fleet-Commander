@@ -137,6 +137,8 @@ def __genViewURLFromModel(entry: PinList) -> Union[str, None]:
         return f'/sharingGroups/view/{entry.uuid}.json'
     elif entry.model == 'sighting':
         return f'/sightings/view/{entry.uuid}.json'
+    elif entry.model == 'analystdata':
+        return f'/analyst_data/view/all/{entry.uuid}.json'
     return None
 
 def __genDeleteURLFromModel(entry: PinList) -> Union[str, None]:
@@ -148,6 +150,8 @@ def __genDeleteURLFromModel(entry: PinList) -> Union[str, None]:
         return f'/sharingGroups/delete/{entry.uuid}'
     elif entry.model == 'sighting':
         return f'/sightings/delete/{entry.uuid}'
+    elif entry.model == 'analystdata':
+        return f'/analyst_data/delete/all/{entry.uuid}'
     return None
 
 def __genActionURLFromModel(entry: PinList, action: str) -> Union[str, None]:
@@ -159,6 +163,10 @@ def __genActionURLFromModel(entry: PinList, action: str) -> Union[str, None]:
 def __afterDeleteActions(entry: PinList, server: Server) -> bool:
     if entry.model == 'event':
         url_blocklist = f'/event_blocklists/delete/{entry.uuid}'
+        blocklist_deletion = mispPostRequest(server, url_blocklist)
+        return True if blocklist_deletion else False
+    elif entry.model == 'analystdata':
+        url_blocklist = f'/analyst_data_blocklists/delete/{entry.uuid}'
         blocklist_deletion = mispPostRequest(server, url_blocklist)
         return True if blocklist_deletion else False
     return True

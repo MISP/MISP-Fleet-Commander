@@ -24,6 +24,12 @@
         >
             <AvatarImage v-bind="$attrs" :avatar_id="pinlist_id"></AvatarImage>
         </span>
+        <span
+            v-else-if="pinlist_model == 'analystdata'"
+            class="m-1 analystdata-avatar"
+        >
+            <AvatarImage v-bind="$attrs" :avatar_id="pinlist_id"></AvatarImage>
+        </span>
     </span>
 </template>
 
@@ -82,6 +88,11 @@ export default {
     border: 1px solid #00000066;
     border-radius: 50%;
     overflow: hidden;
+}
+.analystdata-avatar {
+    display: inline-block;
+    border: 1px solid #c8da00;
+    box-shadow: 0 0 4px 0 #bbc54f;
 }
 
 </style>

@@ -21,6 +21,9 @@ const getters = {
     pinnedSightings: state => {
         return state.all.filter(entry => entry.model == 'sighting')
     },
+    pinnedAnalystData: state => {
+        return state.all.filter(entry => entry.model == 'analystdata')
+    },
     pinnedByID: state => {
         const pinnedByID = {}
         state.all.forEach(entry => {
