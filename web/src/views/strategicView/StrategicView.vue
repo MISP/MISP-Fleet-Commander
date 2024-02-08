@@ -151,6 +151,7 @@ export default {
             serverCount: "servers/serverCount",
             getServerList: "servers/getServerList",
             serversByURL: "servers/serversByURL",
+            serversByUUID: "servers/serversByUUID",
             getConnectionList: "connections/getConnectionList",
         }),
     },
@@ -321,7 +322,13 @@ export default {
                 link.source = parseInt(link.origin.id)
                 const destinationURL = link.destination.Server.url
                 const destinationURLWithoutTrailing = destinationURL.endsWith('/') ? destinationURL.substr(0, destinationURL.length - 1) : destinationURL
-                const knownDestination = this.serversByURL[destinationURLWithoutTrailing] // FIXME: Potentially rely on MISP.uuid instead of the URL..
+                const destinationUUID = link.destination.connectionTest.uuid
+                let knownDestination
+                if (this.serversByUUID[destinationUUID]) {
+                    knownDestination = this.serversByUUID[destinationUUID]
+                } else if (this.serversByURL[destinationURLWithoutTrailing]) {
+                    knownDestination = this.serversByURL[destinationURLWithoutTrailing]
+                }
                 if (knownDestination) {
                     link.target = parseInt(knownDestination.id)
                     link._managed_server = true

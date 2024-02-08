@@ -43,6 +43,14 @@ const getters = {
         })
         return serversByURL
     },
+    serversByUUID: state => {
+        let serversByUUID = {}
+        Object.values(state.servers).forEach(server => {
+            const server_uuid = state.final_settings[server.id]['MISP.uuid']
+            serversByUUID[server_uuid] = server
+        })
+        return serversByUUID
+    },
 }
 
 // actions

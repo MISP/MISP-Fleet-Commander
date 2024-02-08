@@ -185,6 +185,7 @@ def parseMISPConnectionOutput(connection):
         'post': { 'result': "", 'color': "danger", 'success': False },
         'localVersion': "",
         'remoteVersion': "",
+        'uuid': "?",
     }
     if connection['status'] == 1:
         parsed['status']['color'] = "success"
@@ -193,6 +194,8 @@ def parseMISPConnectionOutput(connection):
         parsed['compatibility']['message'] = "Compatible"
         parsed['localVersion'] = connection['local_version']
         parsed['remoteVersion'] = connection['version']
+        if 'uuid' in connection:
+            parsed['uuid'] = connection['uuid']
         if connection['mismatch'] == "hotfix":
             parsed['compatibility']['color'] = "warning"
 
