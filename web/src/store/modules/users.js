@@ -61,6 +61,17 @@ const actions = {
             )
         })
     },
+    genAPIKey({ }, user_id) {
+        return new Promise((resolve, reject) => {
+            api.genAPIKey(
+                user_id,
+                (data) => {
+                    resolve(data)
+                },
+                (error) => { reject(error) }
+            )
+        })
+    },
 }
 
 // mutations

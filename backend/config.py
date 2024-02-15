@@ -13,6 +13,7 @@ class Config:
     FLASK_ENV = environ.get('FLASK_ENV')
     SECRET_KEY = environ.get('SECRET_KEY')
     TOKEN_EXPIRATION_MIN = environ.get('TOKEN_EXPIRATION_MIN')
+    APIKEY_EXPIRATION_DAYS = environ.get('APIKEY_EXPIRATION_DAYS')
 
     # Database
     SQLALCHEMY_DATABASE_URI = environ.get('SQLALCHEMY_DATABASE_URI')
@@ -23,6 +24,7 @@ class ProductionConfig(Config):
     FLASK_ENV = environ.get('FLASK_ENV')
     SECRET_KEY = environ.get('SECRET_KEY')
     TOKEN_EXPIRATION_MIN = environ.get('TOKEN_EXPIRATION_MIN')
+    APIKEY_EXPIRATION_DAYS = environ.get('APIKEY_EXPIRATION_DAYS')
 
     # Database
     # SQLALCHEMY_DATABASE_URI = 'mysql://user@localhost/foo'
@@ -37,6 +39,7 @@ class DevelopmentConfig(Config):
     FLASK_HOST = '0.0.0.0'
     SECRET_KEY = 'secret'
     TOKEN_EXPIRATION_MIN = 30
+    APIKEY_EXPIRATION_DAYS = 365
 
     # Database
     # SQLALCHEMY_DATABASE_URI = 'sqlite:///database3.db'

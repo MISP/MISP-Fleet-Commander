@@ -6,6 +6,8 @@ from application.DBModels import User
 from application.DBModels import db
 from application.marshmallowSchemas import userSchema
 
+from application.models.auth import create_API_key
+
 editFields = ['email', 'password']
 
 def index() -> List[User]:
@@ -48,3 +50,14 @@ def delete(user_id: int) -> bool:
         db.session.commit()
         return True
     return False
+
+
+def createAPIKey(user_id: User) -> Union[str, None]:
+    user = get(user_id)
+    if user is not None:
+        token = create_API_key()
+        user.apikey = token
+        db.session.add(user)
+        db.session.commit()
+        return token
+    return None

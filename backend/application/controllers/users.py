@@ -20,7 +20,7 @@ def index(loggedUser):
 @BPuser.route('/users/get/<int:user_id>', methods=['GET'])
 @token_required
 def get(loggedUser, user_id):
-    user = userModel.get(loggedUser, user_id)
+    user = userModel.get(user_id)
     if user is not None:
         return userSchema.dump(user)
     else:
@@ -56,3 +56,10 @@ def delete(loggedUser, user_id):
         return jsonify([user_id])
     else:
         return jsonify({})
+
+
+@BPuser.route('/users/genAPIKey/<int:user_id>', methods=['POST'])
+@token_required
+def createAPIKey(loggedUser, user_id):
+    token = userModel.createAPIKey(user_id)
+    return jsonify({'token': token})

@@ -38,6 +38,7 @@ def celery_init_app(app: Flask) -> Celery:
 # }
 # db = SQLAlchemy(metadata=MetaData(naming_convention=naming_convention))
 db = None
+migrate = Migrate()
 loadedPlugins = None
 flaskApp = None
 redisClient = redis.Redis(host=os.environ.get('REDIS_URL', 'localhost'), port=os.environ.get('REDIS_PORT', 6379), db=os.environ.get('REDIS_DB', 1))
@@ -49,7 +50,7 @@ bcrypt = None
 def create_app():
     """Construct the core application."""
 
-    global loadedPlugins, flaskApp, celery_app, socketioApp, bcrypt, db
+    global loadedPlugins, flaskApp, celery_app, socketioApp, bcrypt, db, migrate
     flaskApp = Flask(__name__, instance_relative_config=False)
     flaskApp.config.from_object(os.environ.get('FLASK_CONFIG', 'config.DevelopmentConfig'))
     bcrypt = Bcrypt(flaskApp)
@@ -58,11 +59,13 @@ def create_app():
     db = sqla_db
 
     CORS(flaskApp)
-    migrate = Migrate(flaskApp, db)
-    migrate.init_app(flaskApp, db, render_as_batch=True)
     db.init_app(flaskApp)
-    celery_app = celery_init_app(flaskApp)
+    # migrate.init_app(flaskApp, db, render_as_batch=True)
 
+    print(flaskApp.config['SQLALCHEMY_DATABASE_URI'])
+
+    migrate.init_app(flaskApp, db)
+    celery_app = celery_init_app(flaskApp)
 
     from application.plugins import loadAvailablePlugins
     loadedPlugins = loadAvailablePlugins()
@@ -100,8 +103,7 @@ def create_app():
 
         # Create tables for our models
         from application.DBModels import init_defaults
-        db.create_all()
-        init_defaults()
-        print(flaskApp.config['SQLALCHEMY_DATABASE_URI'])
+        # db.create_all()
+        # init_defaults()
 
         return flaskApp

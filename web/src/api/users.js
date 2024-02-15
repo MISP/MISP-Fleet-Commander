@@ -6,6 +6,7 @@ const urls = {
     add: `/users/add`,
     edit: `/users/edit`,
     delete: `/users/delete`,
+    genAPIKey: `/users/genAPIKey`,
 }
 
 export default {
@@ -49,6 +50,15 @@ export default {
     delete(user_id, cb, errorCb) {
         const url = `${urls.delete}/${user_id}`
         return common.getClient().delete(url,)
+            .then((response) => {
+                cb(response.data)
+            }).catch(error => {
+                common.handleError(error, errorCb)
+            })
+    },
+    genAPIKey(user_id, cb, errorCb) {
+        const url = `${urls.genAPIKey}/${user_id}`
+        return common.getClient().post(url,)
             .then((response) => {
                 cb(response.data)
             }).catch(error => {

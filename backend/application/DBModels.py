@@ -7,6 +7,8 @@ from sqlalchemy.ext.hybrid import hybrid_property
 # from application.baseModel import BaseModel
 from flask_sqlalchemy import SQLAlchemy
 
+from application.models.auth import create_API_key
+
 db = SQLAlchemy()
 from application.baseModel import BaseModel
 from application import bcrypt
@@ -45,6 +47,11 @@ class User(BaseModel):
                       index=False,
                       unique=False,
                       nullable=False)
+    apikey = db.Column(db.String(40),
+                      index=False,
+                      unique=False,
+                      nullable=True,
+                      default= create_API_key)
 
     @classmethod
     def authenticate(cls, email, password_candidate):

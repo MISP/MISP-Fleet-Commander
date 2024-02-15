@@ -9,7 +9,7 @@ from application.marshmallowSchemas import userSchema, serversSchema
 from application.DBModels import User, db, Server
 import os.path
 
-from application.models.auth import create_access_token, get_current_user
+from application.models.auth import create_access_token, get_email_from_token
 
 
 def token_required(f):
@@ -29,18 +29,34 @@ def token_required(f):
         if len(auth_headers) != 2:
             return jsonify(invalid_msg), 401
 
-        try:
-            token = auth_headers[1]
-            user = get_current_user(token, current_app)
+        token_type, token_value = auth_headers
+        if token_type.lower() == 'bearer':
+            try:
+                user = get_current_user(token_value, current_app)
+                if not user:
+                    abort(401)
+                return f(user, *args, **kwargs)
+            except jwt.ExpiredSignatureError:
+                return jsonify(expired_msg), 401 # 401 is Unauthorized HTTP status code
+            except (jwt.InvalidTokenError) as e:
+                return jsonify(invalid_msg), 401
+
+        elif token_type.lower() == 'apikey':
+            user = get_current_user_api(token_value)
             if not user:
-                raise RuntimeError('User not found')
+                abort(401)
             return f(user, *args, **kwargs)
-        except jwt.ExpiredSignatureError:
-            return jsonify(expired_msg), 401 # 401 is Unauthorized HTTP status code
-        except (jwt.InvalidTokenError) as e:
-            return jsonify(invalid_msg), 401
 
     return _verify
+
+def get_current_user(token, app):
+    email = get_email_from_token(token, app)
+    user = User.query.filter_by(email=email).first()
+    return user
+
+def get_current_user_api(token):
+    user = User.query.filter_by(apikey=token).first()
+    return user
 
 
 BPinstance = Blueprint('instance', __name__)
@@ -83,4 +99,3 @@ def login():
             'scopes': scopes, 
         }, current_app)
         return jsonify({"access_token": token, "token_type": "bearer"})
-

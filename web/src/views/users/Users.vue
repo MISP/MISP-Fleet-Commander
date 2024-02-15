@@ -69,19 +69,26 @@
             <template v-slot:cell(action)="row">
                 <span class="d-block" style="width: 90px;">
                     <b-button-group size="sm">
-                            <b-button
-                                variant="primary"
-                                @click="openEditModal(row.item.id)"
-                            >
-                                <i class="fas fa-edit"></i>
-                            </b-button>
-                            <b-button
-                                variant="danger"
-                                @click="openDeleteModal(row.item.id)"
-                            >
-                                <i class="fas fa-trash"></i>
-                            </b-button>
-                        </b-button-group>
+                        <b-button
+                            variant="primary"
+                            @click="openEditModal(row.item.id)"
+                        >
+                            <i class="fas fa-edit"></i>
+                        </b-button>
+                        <b-button
+                            variant="danger"
+                            @click="openDeleteModal(row.item.id)"
+                        >
+                            <i class="fas fa-trash"></i>
+                        </b-button>
+                        <b-button
+                            title="Resfresh API Key"
+                            variant="primary"
+                            @click="openAPIKeyModal(row.item.id)"
+                        >
+                            <i class="fas fa-key"></i>
+                        </b-button>
+                    </b-button-group>
                 </span>
             </template>
 
@@ -97,6 +104,10 @@
             :userToDelete="validUserToDelete"
             @deletion-success="handleDelete"
        ></DeleteModal>
+        <APIKeyModal
+            :userIDToGenAPIKey="userIDToGenAPIKey"
+            @deletion-success="handleDelete"
+       ></APIKeyModal>
     </div>
 </Layout>
 </template>
@@ -106,6 +117,7 @@ import { mapState, mapGetters } from "vuex"
 import Layout from "@/components/layout/Layout.vue"
 import AddModal from "@/views/users/AddModal.vue"
 import DeleteModal from "@/views/users/DeleteModal.vue"
+import APIKeyModal from "@/views/users/APIKeyModal.vue"
 
 export default {
     name: "UserIndex",
@@ -113,6 +125,7 @@ export default {
         Layout,
         AddModal,
         DeleteModal,
+        APIKeyModal,
     },
     data: function () {
         return {
@@ -120,6 +133,7 @@ export default {
             modalAddAction: "Add",
             userToEdit: { formData: {} },
             userToDelete: { formData: {} },
+            userIDToGenAPIKey: false,
             table: {
                 isBusy: false,
                 filtered: "",
@@ -139,6 +153,11 @@ export default {
                     {
                         key: "updated",
                         sortable: true,
+                    },
+                    {
+                        key: "apikey",
+                        sortable: false,
+                        tdClass: ['unblur-on-hover']
                     },
                     {
                         key: "action",
@@ -196,6 +215,10 @@ export default {
             this.modalAddAction = "Edit"
             this.$bvModal.show("modal-add")
         },
+        openAPIKeyModal(user_id) {
+            this.userIDToGenAPIKey = user_id
+            this.$bvModal.show("modal-gen-apikey")
+        },
         openDeleteModal(user_id) {
             const user = this.userList.filter(u => u.id == user_id)[0]
             this.userToDelete.formData = JSON.parse(JSON.stringify(user)) // deep clone
@@ -219,5 +242,11 @@ export default {
 }
 </script>
 
-<style scoped>
+<style>
+.unblur-on-hover {
+    filter: blur(5px);
+}
+.unblur-on-hover:hover {
+    filter: unset;
+}
 </style>

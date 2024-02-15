@@ -8,6 +8,7 @@ export SQLALCHEMY_DATABASE_URI=sqlite:///database.db
 export SQLALCHEMY_TRACK_MODIFICATIONS=1
 export SECRET_KEY=secret
 export TOKEN_EXPIRATION_MIN=30
+export APIKEY_EXPIRATION_DAYS=365
 export AUTHLIB_INSECURE_TRANSPORT=true
 # export APP_CONFIG_FILE=config.ini
 # flask run --host=0.0.0.0

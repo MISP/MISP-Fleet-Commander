@@ -1,7 +1,7 @@
 
 import jwt
 from datetime import datetime, timedelta
-from application.DBModels import User
+import secrets
 
 
 def create_access_token(user, data, currentApp):
@@ -17,8 +17,23 @@ def create_access_token(user, data, currentApp):
     return token
 
 
-def get_current_user(token, currentApp):
+def create_API_key():
+    apikey = secrets.token_urlsafe(40)
+    return apikey
+
+
+# def get_current_user(token, currentApp):
+#     data = jwt.decode(token, currentApp.config['SECRET_KEY'], algorithms=["HS256"])
+#     email = data.get('sub')
+#     user = User.query.filter_by(email=email).first()
+#     return user
+
+def get_email_from_token(token, currentApp):
     data = jwt.decode(token, currentApp.config['SECRET_KEY'], algorithms=["HS256"])
     email = data.get('sub')
-    user = User.query.filter_by(email=email).first()
-    return user
+    return email
+
+
+# def get_current_user_api(token):
+#     user = User.query.filter_by(apikey=token).first()
+#     return user
