@@ -1,7 +1,7 @@
 <template>
     <div class="d-flex flex-column container">
         <div class="text-muted">
-            <i class="fa fa-envelope fa-fw"></i> Events
+            <i class="fa fa-envelope fa-fw"></i> Events: {{ events.length }}
         </div>
         <div>
             <span v-for="entry in events" :key="entry.id">
@@ -9,7 +9,7 @@
             </span>
         </div>
         <div class="text-muted">
-            <i class="fa fa-cube fa-fw"></i> Attributes
+            <i class="fa fa-cube fa-fw"></i> Attributes: {{ attributes.length }}
         </div>
         <div>
             <span v-for="entry in attributes" :key="entry.id">
@@ -17,7 +17,7 @@
             </span>
         </div>
         <div class="text-muted mt-1">
-            <i class="fa fa-users fa-fw"></i> Sharing Groups
+            <i class="fa fa-users fa-fw"></i> Sharing Groups: {{ sharinggroups.length }}
         </div>
         <div>
             <span v-for="entry in sharinggroups" :key="entry.id">
@@ -25,7 +25,7 @@
             </span>
         </div>
         <div class="text-muted mt-1">
-            <i class="fa fa-eye fa-fw"></i> Sightings
+            <i class="fa fa-eye fa-fw"></i> Sightings: {{ sightings.length }}
         </div>
         <div>
             <span v-for="entry in sightings" :key="entry.id">
@@ -33,7 +33,7 @@
             </span>
         </div>
         <div class="text-muted mt-1">
-            <i class="fa fa-sticky-note fa-fw"></i> Analyst Data
+            <i class="fa fa-sticky-note fa-fw"></i> Analyst Data: {{ analystdata.length }}
         </div>
         <div>
             <span v-for="entry in analystdata" :key="entry.id">

@@ -44,6 +44,10 @@
                     </ValidationProvider>
                 </div>
 
+                <div class="text-muted mx-2">
+                    <small>{{ pinTab.items().length }} pinned entries</small>
+                </div>
+
                 <b-table-lite
                     v-show="!fetchingPinLists"
                     id="table-pinlist-events"
@@ -191,7 +195,7 @@ export default {
             }
             this.$store.dispatch('pinlists/add', payload)
                 .then(() => {
-                    this.form[`${model}_uuid`] = ''
+                    this.form[`uuid`] = ''
                 })
                 .catch(error => {
                     this.$bvToast.toast(error.message !== undefined ? error.message : error, {
