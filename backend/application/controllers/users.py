@@ -1,4 +1,4 @@
-from flask import Blueprint, request, render_template, make_response, jsonify
+from flask import Blueprint, abort, request, render_template, make_response, jsonify
 # from flask import current_app as app
 from datetime import datetime as dt
 from application.DBModels import db, User
@@ -9,10 +9,24 @@ import application.models.users as userModel
 BPuser = Blueprint('user', __name__)
 
 
+@BPuser.route('/users/view/<user_id>', methods=['GET'])
+@token_required
+def view(loggedUser, user_id):
+    if user_id == 'me':
+        user_id = loggedUser.id
+    else:
+        try:
+            user_id = int(user_id)
+        except ValueError:
+            abort(400)
+            
+    user = userModel.get(user_id)
+    return userSchema.dump(user)
+
+
 @BPuser.route('/users/index', methods=['GET'])
 @token_required
 def index(loggedUser):
-    import time
     users = userModel.index()
     return usersSchema.dump(users)
 

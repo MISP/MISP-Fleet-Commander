@@ -5,6 +5,7 @@ from flask import Blueprint, current_app, request, render_template, make_respons
 from flask import session, abort
 import jwt
 import application.models.servers as serverModel
+import application.models.users as userModel
 from application.marshmallowSchemas import userSchema, serversSchema
 from application.DBModels import User, db, Server
 import os.path
@@ -51,7 +52,7 @@ def token_required(f):
 
 def get_current_user(token, app):
     email = get_email_from_token(token, app)
-    user = User.query.filter_by(email=email).first()
+    user = userModel.getByEmail(email)
     return user
 
 def get_current_user_api(token):
