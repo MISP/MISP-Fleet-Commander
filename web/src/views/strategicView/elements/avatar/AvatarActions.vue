@@ -11,7 +11,7 @@
                     role="button" tabindex="0"
                     class="action-entry delete-entry text-center"
                     title="Delete this entry from this server"
-                    @click.stop="deleteFromServer()"
+                    @click.stop="deleteFromServer(pinlist_id)"
                 >
                     <i class="fas fa-fw fa-times"></i>
                 </span>
@@ -20,7 +20,7 @@
                     role="button" tabindex="0"
                     class="action-entry publish-event text-center"
                     title="Publish this event"
-                    @click.stop="publishEvent()"
+                    @click.stop="publishEvent(pinlist_id)"
                 >
                     <i class="fas fa-fw fa-upload"></i>
                 </span>
@@ -30,6 +30,7 @@
 </template>
 
 <script>
+import { mapState, mapGetters } from "vuex"
 import Avatar from "@/views/strategicView/elements/avatar/Avatar.vue"
 
 
@@ -59,33 +60,67 @@ export default {
         }
     },
     computed: {
+        ...mapGetters({
+            pinnedByID: "pinlists/pinnedByID",
+        }),
     },
     methods: {
-        deleteFromServer() {
+        deleteFromServer(entry_id) {
             this.show = true
-            this.$store.dispatch("pinlists/deleteFromServer", {entry_id: this.pinlist_id, server_id: this.server_id})
-                .catch(error => {
-                    this.$bvToast.toast(error.message, {
-                        title: 'Error while trying to delete the entry from the server',
-                        variant: "danger",
-                    })
-                })
-                .finally(() => {
+            const entry = this.pinnedByID[entry_id]
+            this.$bvModal.msgBoxConfirm(`Please confirm that you want to remove the data associated to the entry ${entry.uuid} from that server.`, {
+                title: 'Please Confirm',
+                size: 'sm',
+                buttonSize: 'sm',
+                okVariant: 'danger',
+                okTitle: 'Yes',
+                cancelTitle: 'No',
+                footerClass: 'p-2',
+                hideHeaderClose: false,
+            }).then(confirm => {
+                if (!confirm) {
                     this.show = false
-                })
+                    return
+                }
+                this.$store.dispatch("pinlists/deleteFromServer", {entry_id: this.pinlist_id, server_id: this.server_id})
+                    .catch(error => {
+                        this.$bvToast.toast(error.message, {
+                            title: 'Error while trying to delete the entry from the server',
+                            variant: "danger",
+                        })
+                    })
+                    .finally(() => {
+                        this.show = false
+                    })
+            })
         },
-        publishEvent() {
+        publishEvent(entry_id) {
             this.show = true
-            this.$store.dispatch("pinlists/publishEventOnServer", {entry_id: this.pinlist_id, server_id: this.server_id})
-                .catch(error => {
-                    this.$bvToast.toast(error.message, {
-                        title: 'Error while trying to delete the entry from the server',
-                        variant: "danger",
-                    })
-                })
-                .finally(() => {
+            this.$bvModal.msgBoxConfirm(`Please confirm that you want to publish that event`, {
+                title: 'Please Confirm',
+                size: 'sm',
+                buttonSize: 'sm',
+                okVariant: 'success',
+                okTitle: 'Yes',
+                cancelTitle: 'No',
+                footerClass: 'p-2',
+                hideHeaderClose: false,
+            }).then(confirm => {
+                if (!confirm) {
                     this.show = false
-                })
+                    return
+                }
+                this.$store.dispatch("pinlists/publishEventOnServer", {entry_id: this.pinlist_id, server_id: this.server_id})
+                    .catch(error => {
+                        this.$bvToast.toast(error.message, {
+                            title: 'Error while trying to delete the entry from the server',
+                            variant: "danger",
+                        })
+                    })
+                    .finally(() => {
+                        this.show = false
+                    })
+            })
         }
     },
 }

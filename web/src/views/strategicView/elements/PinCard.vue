@@ -235,9 +235,8 @@ export default {
             const entry = this.pinnedByID[entry_id]
             this.$bvModal.msgBoxConfirm(`Please confirm that you want to un-pin entry ${entry.uuid}.`, {
                 title: 'Please Confirm',
-                size: 'sm',
                 buttonSize: 'sm',
-                okVariant: 'danger',
+                okVariant: 'warning',
                 okTitle: 'Yes',
                 cancelTitle: 'No',
                 footerClass: 'p-2',
@@ -254,9 +253,9 @@ export default {
                 })
         },
         deleteOnAllServers(entry_id) {
-            this.$bvModal.msgBoxConfirm(`Please confirm that you want to un-pin entry ${entry.uuid}.`, {
+            const entry = this.pinnedByID[entry_id]
+            this.$bvModal.msgBoxConfirm(`Please confirm that you want to remove the data associated to the entry ${entry.uuid} from all servers.`, {
                 title: 'Please Confirm',
-                size: 'sm',
                 buttonSize: 'sm',
                 okVariant: 'danger',
                 okTitle: 'Yes',
