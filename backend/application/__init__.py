@@ -62,8 +62,6 @@ def create_app():
     db.init_app(flaskApp)
     # migrate.init_app(flaskApp, db, render_as_batch=True)
 
-    print(flaskApp.config['SQLALCHEMY_DATABASE_URI'])
-
     migrate.init_app(flaskApp, db)
     celery_app = celery_init_app(flaskApp)
 

@@ -25,6 +25,7 @@ services:
             - CELERY_RESULT_BACKEND=redis://redis
         volumes:
             - "./run:/app/database"
+            - "./run/data:/app/data"
         ports:
             - "5001:5001"
         depends_on:
