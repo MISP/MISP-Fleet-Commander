@@ -232,37 +232,62 @@ export default {
                 })
         },
         deleteEntry(entry_id) {
-            this.$store.dispatch("pinlists/delete", entry_id)
-                .catch(error => {
-                    this.$bvToast.toast(error.message, {
-                        title: 'Could not fetch delete entry',
-                        variant: "danger",
-                    })
+            const entry = this.pinnedByID[entry_id]
+            this.$bvModal.msgBoxConfirm(`Please confirm that you want to un-pin entry ${entry.uuid}.`, {
+                title: 'Please Confirm',
+                size: 'sm',
+                buttonSize: 'sm',
+                okVariant: 'danger',
+                okTitle: 'Yes',
+                cancelTitle: 'No',
+                footerClass: 'p-2',
+                hideHeaderClose: false,
+            }).then(confirm => {
+                    if (!confirm) return
+                    this.$store.dispatch("pinlists/delete", entry_id)
+                        .catch(error => {
+                            this.$bvToast.toast(error.message, {
+                                title: 'Could not fetch delete entry',
+                                variant: "danger",
+                            })
+                        })
                 })
         },
         deleteOnAllServers(entry_id) {
-            this.$store.dispatch("pinlists/deleteFromServers", entry_id)
-                .then(deletionResult => {
-                    const entry = this.pinnedByID[entry_id]
-                    const successes = deletionResult.filter(result => result.error === undefined)
-                    const fails = deletionResult.filter(result => result.error !== undefined)
-                    let message = `${entry.model} deleted from all servers`
-                    let variant = 'success'
-                    if (fails.length > 0) {
-                        variant = successes.length > 0 ? 'success' : 'warning'
-                        message = `${entry.model} deleted from ${successes.length} server(s).\n But, could not delete from ${fails.length} server(s)`
-                    }
-                    this.$bvToast.toast(message, {
-                        title: `${entry.model} deletion from all servers`,
-                        variant: variant,
+            this.$bvModal.msgBoxConfirm(`Please confirm that you want to un-pin entry ${entry.uuid}.`, {
+                title: 'Please Confirm',
+                size: 'sm',
+                buttonSize: 'sm',
+                okVariant: 'danger',
+                okTitle: 'Yes',
+                cancelTitle: 'No',
+                footerClass: 'p-2',
+                hideHeaderClose: false,
+            }).then(confirm => {
+                if (!confirm) return
+                this.$store.dispatch("pinlists/deleteFromServers", entry_id)
+                    .then(deletionResult => {
+                        const entry = this.pinnedByID[entry_id]
+                        const successes = deletionResult.filter(result => result.error === undefined)
+                        const fails = deletionResult.filter(result => result.error !== undefined)
+                        let message = `${entry.model} deleted from all servers`
+                        let variant = 'success'
+                        if (fails.length > 0) {
+                            variant = successes.length > 0 ? 'success' : 'warning'
+                            message = `${entry.model} deleted from ${successes.length} server(s).\n But, could not delete from ${fails.length} server(s)`
+                        }
+                        this.$bvToast.toast(message, {
+                            title: `${entry.model} deletion from all servers`,
+                            variant: variant,
+                        })
                     })
-                })
-                .catch(error => {
-                    this.$bvToast.toast(error.message, {
-                        title: 'Error while trying to delete the entry',
-                        variant: "danger",
+                    .catch(error => {
+                        this.$bvToast.toast(error.message, {
+                            title: 'Error while trying to delete the entry',
+                            variant: "danger",
+                        })
                     })
-                })
+            })
         },
         refreshAllServers(entry_id) {
             this.loadingInProgressForID = entry_id
