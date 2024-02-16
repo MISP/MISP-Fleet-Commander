@@ -25,6 +25,11 @@ class AvatarGenerator:
         filename = (uuid + '.png') if uuid is not None else (str(int(time.time())) + '.png')
         self.path = str(self.ROOT_PATH / filename)
 
+        try:
+            os.mkdir(self.ROOT_PATH)
+        except (FileExistsError, FileNotFoundError) as e:
+            pass
+
     def generate(self) -> None:
         pattern = self.__genPattern()
         color = self.__genColor()

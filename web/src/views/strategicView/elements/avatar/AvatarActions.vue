@@ -11,7 +11,7 @@
                     role="button" tabindex="0"
                     class="action-entry delete-entry text-center"
                     title="Delete this entry from this server"
-                    @click="deleteFromServer()"
+                    @click.stop="deleteFromServer()"
                 >
                     <i class="fas fa-fw fa-times"></i>
                 </span>
@@ -20,7 +20,7 @@
                     role="button" tabindex="0"
                     class="action-entry publish-event text-center"
                     title="Publish this event"
-                    @click="publishEvent()"
+                    @click.stop="publishEvent()"
                 >
                     <i class="fas fa-fw fa-upload"></i>
                 </span>

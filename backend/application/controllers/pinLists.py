@@ -46,7 +46,10 @@ def getAvatar(entry_id):
     if entry is not None:
         avatarGenerator = AvatarGenerator(entry.uuid)
         fullPath = avatarGenerator.getPath()
-        return send_file(fullPath)
+        try:
+            return send_file(fullPath)
+        except FileNotFoundError:
+            return "Not found", 404
     else:
         return "Not found", 404
 

@@ -19,7 +19,7 @@
                 </template>
 
                 <div class="m-2">
-                    <ValidationProvider v-slot="validationContext" rules="required|validUUID" :name="`${pinTab.name} UUID`">
+                    <ValidationProvider v-slot="validationContext" rules="validUUID" :name="`${pinTab.name} UUID`">
                         <b-input-group size="sm">
                             <b-input-group-prepend>
                                 <b-button
@@ -75,20 +75,23 @@
                             variant="link" size="xs" class="p-0"
                             title="Refresh nodes for that entry"
                             @click="refreshAllServers(row.item.id)"
+                            :disabled="loadingInProgressForID == row.item.id"
                         >
                             <i class="fas fa-sync-alt"></i>
                         </b-button>
                         <b-button
                             variant="link" size="xs" class="p-0"
-                            title="Remove the pinned event"
+                            title="Remove the pinned entry"
                             @click="deleteEntry(row.item.id)"
+                            :disabled="loadingInProgressForID == row.item.id"
                         >
                             <i class="fas fa-eraser"></i>
                         </b-button>
                         <b-button
                             variant="link" size="xs" class="ml-1 p-0 text-danger"
-                            title="Delete the pinned event from all servers"
+                            title="Delete the pinned entry from all servers"
                             @click="deleteOnAllServers(row.item.id)"
+                            :disabled="loadingInProgressForID == row.item.id"
                         >
                             <i class="fas fa-trash"></i>
                         </b-button>
@@ -159,7 +162,8 @@ export default {
                 { key: "uuid", label: "UUID", class: "tiny-cell-text" },
                 { key: "action", label: "", class: "tiny-cell-button" },
             ],
-            fetchingPinLists: false
+            fetchingPinLists: false,
+            loadingInProgressForID: null,
         }
     },
     computed: {
@@ -261,15 +265,20 @@ export default {
                 })
         },
         refreshAllServers(entry_id) {
+            this.loadingInProgressForID = entry_id
             this.$store.dispatch("pinlists/refreshAllServers", entry_id)
                 .then(() => {
                     this.$store.dispatch("pinlists/getEntriesFromPinned", entry_id)
+                    .then(() => {
+                        this.loadingInProgressForID = null
+                    })
                 })
                 .catch(error => {
                     this.$bvToast.toast(error.message !== undefined ? error.message : error, {
                         title: 'Error while trying to refresh the entry on all servers',
                         variant: "danger",
                     })
+                    this.loadingInProgressForID = null
                 })
         }
     },

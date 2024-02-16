@@ -4,7 +4,7 @@
             <i class="fa fa-envelope fa-fw"></i> Events: {{ events.length }}
         </div>
         <div>
-            <span v-for="entry in events" :key="entry.id">
+            <span v-for="entry in events" :key="entry.id" @click="setSelectedEntry(entry)" v-b-modal="`modal-entry-data-${server.id}`">
                 <AvatarActions :server_id="server.id" :pinlist_id="entry.pinlist_id" :pinlist_model="entry.model" width="32" height="32"></AvatarActions>
             </span>
         </div>
@@ -12,7 +12,7 @@
             <i class="fa fa-cube fa-fw"></i> Attributes: {{ attributes.length }}
         </div>
         <div>
-            <span v-for="entry in attributes" :key="entry.id">
+            <span v-for="entry in attributes" :key="entry.id" @click="setSelectedEntry(entry)" v-b-modal="`modal-entry-data-${server.id}`">
                 <AvatarActions :server_id="server.id" :pinlist_id="entry.pinlist_id" :pinlist_model="entry.model" width="32" height="32"></AvatarActions>
             </span>
         </div>
@@ -20,7 +20,7 @@
             <i class="fa fa-users fa-fw"></i> Sharing Groups: {{ sharinggroups.length }}
         </div>
         <div>
-            <span v-for="entry in sharinggroups" :key="entry.id">
+            <span v-for="entry in sharinggroups" :key="entry.id" @click="setSelectedEntry(entry)" v-b-modal="`modal-entry-data-${server.id}`">
                 <AvatarActions :server_id="server.id" :pinlist_id="entry.pinlist_id" :pinlist_model="entry.model" width="32" height="32"></AvatarActions>
             </span>
         </div>
@@ -28,7 +28,7 @@
             <i class="fa fa-eye fa-fw"></i> Sightings: {{ sightings.length }}
         </div>
         <div>
-            <span v-for="entry in sightings" :key="entry.id">
+            <span v-for="entry in sightings" :key="entry.id" @click="setSelectedEntry(entry)" v-b-modal="`modal-entry-data-${server.id}`">
                 <AvatarActions :server_id="server.id" :pinlist_id="entry.pinlist_id" :pinlist_model="entry.model" width="32" height="32"></AvatarActions>
             </span>
         </div>
@@ -36,27 +36,57 @@
             <i class="fa fa-sticky-note fa-fw"></i> Analyst Data: {{ analystdata.length }}
         </div>
         <div>
-            <span v-for="entry in analystdata" :key="entry.id">
+            <span v-for="entry in analystdata" :key="entry.id" @click="setSelectedEntry(entry)" v-b-modal="`modal-entry-data-${server.id}`">
                 <AvatarActions :server_id="server.id" :pinlist_id="entry.pinlist_id" :pinlist_model="entry.model" width="32" height="32"></AvatarActions>
             </span>
         </div>
+
+        <b-modal
+            :id="`modal-entry-data-${server.id}`"
+            :title="`Pinned entry for \`${selectedEntryModel}\` in server ${server.id}`"
+            size="lg"
+            scrollable
+        >
+            <b-button
+                variant="link"
+                @click="toggleRulesTreeMode"
+            >
+                <i :class="['fas', rulesTreeMode ? 'fa-code' : 'fa-stream']"></i>
+            </b-button>
+            <jsonViewer 
+                :tree="rulesTreeMode"
+                :item="selectedEntryData"
+                rootKeyName="Data"
+                :open="true"
+            ></jsonViewer>
+        </b-modal>
     </div>
 </template>
 
 <script>
+import Vue from "vue"
 import { mapGetters } from "vuex"
 import AvatarActions from "@/views/strategicView/elements/avatar/AvatarActions.vue";
+import jsonViewer from "@/components/ui/elements/jsonViewer.vue"
 
 
 export default {
     name: "ServerNodePinnedContent",
     components: {
-        AvatarActions
+        AvatarActions,
+        jsonViewer,
     },
     props: {
         server: {
             type: Object,
             required: true
+        }
+    },
+    data: function() {
+        return {
+            selectedEntry: {},
+            rulesTreeMode: true,
+            modalActive: true,
         }
     },
     computed: {
@@ -86,6 +116,24 @@ export default {
         },
         analystdata() {
             return this.entries.filter(e => e.model == 'analystdata')
+        },
+        selectedEntryModel() {
+            return this.selectedEntry.model ? this.selectedEntry.model : '?'
+        },
+        selectedEntryData() {
+            if (!this.selectedEntry.data) {
+                return {}
+            }
+            const keyContainingData = Object.keys(this.selectedEntry.data).filter((k) => k != 'server_id' && k != 'timestamp')[0]
+            return this.selectedEntry.data[keyContainingData]
+        },
+    },
+    methods: {
+        toggleRulesTreeMode() {
+            this.rulesTreeMode = !this.rulesTreeMode
+        },
+        setSelectedEntry(entry) {
+            this.selectedEntry = entry
         },
     },
 }

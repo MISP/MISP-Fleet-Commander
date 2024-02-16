@@ -140,7 +140,8 @@ export default {
             zoom: null,
             scaleInfo: {x: 0, y: 0, k: 1},
             minimapPosition: {top: "unset", right: "unset", left: "20px", bottom: "20px"},
-            minimapRedrawCount: 0
+            minimapRedrawCount: 0,
+            allNodeInstances: [],
         }
     },
     computed: {
@@ -204,6 +205,7 @@ export default {
                 this.nodeFunctions.push(nodeFunctions)
             })
             nodeInstance.$mount(htmlNode)
+            this.allNodeInstances.push(nodeInstance)
             return nodeInstance
         },
         selectNode(node) {
@@ -374,6 +376,11 @@ export default {
                 this.syncWithStore()
                 this.constructNetwork()
             })
+    },
+    destroyed() {
+        this.allNodeInstances.forEach(nodeInstance => {
+            nodeInstance.$destroy() // We have to manually destroy the mounted nodes as it's not done automatically
+        })
     }
 }
 </script>
