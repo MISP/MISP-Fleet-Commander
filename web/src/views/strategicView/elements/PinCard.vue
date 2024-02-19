@@ -232,8 +232,8 @@ export default {
                     })
                 })
         },
-        deleteEntry(entry_id) {
-            const entry = this.pinnedByID[entry_id]
+        deleteEntry(pinlist_id) {
+            const entry = this.pinnedByID[pinlist_id]
             this.$bvModal.msgBoxConfirm(`Please confirm that you want to un-pin entry ${entry.uuid}.`, {
                 title: 'Please Confirm',
                 buttonSize: 'sm',
@@ -244,7 +244,7 @@ export default {
                 hideHeaderClose: false,
             }).then(confirm => {
                     if (!confirm) return
-                    this.$store.dispatch("pinlists/delete", entry_id)
+                    this.$store.dispatch("pinlists/delete", pinlist_id)
                         .catch(error => {
                             this.$bvToast.toast(error.message, {
                                 title: 'Could not fetch delete entry',

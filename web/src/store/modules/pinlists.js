@@ -84,11 +84,12 @@ const actions = {
         })
     },
 
-    delete({ dispatch }, entry_id) {
+    delete({ commit, dispatch }, pinlist_id) {
         return new Promise((resolve, reject) => {
             api.delete(
-                entry_id,
+                pinlist_id,
                 (response) => {
+                    commit("removeEntry", pinlist_id)
                     dispatch("fetchIndex")
                     resolve(response)
                 },
@@ -221,6 +222,9 @@ const mutations = {
         entries.forEach(entry => {
             state.entriesFromPinned.push(entry)
         });
+    },
+    removeEntry(state, pinlist_id) {
+        state.entriesFromPinned = state.entriesFromPinned.filter(entry => entry.pinlist_id != pinlist_id)
     },
     setEntries(state, entries) {
         state.entriesFromPinned = entries
