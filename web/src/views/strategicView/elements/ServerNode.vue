@@ -38,7 +38,7 @@
                     </b-tab>
                     <template v-slot:tabs-end>
                         <a class="nav-link disabled ml-auto border-0" href="#" style="pointer-events: auto;">
-                            <timeSinceRefresh :timestamp="getServer.server_info.timestamp" :clockNoMargin="true"></timeSinceRefresh>
+                            <timeSinceRefresh :timestamp="lastRefreshTimestamp" :clockNoMargin="true"></timeSinceRefresh>
                             <button type="button btn-sm" class="btn btn-link sync-btn p-0">
                                 <i class="fas fa-sync"></i>
                             </button>
@@ -90,16 +90,19 @@ export default {
             return this.servers[this.server_id] || null
         },
         getServerStatus: function() {
-            return this.server_status[this.server_id]
+            return this.server_status[this.server_id] || {}
         },
         getServerUsage: function() {
-            return this.server_usage[this.server_id]
+            return this.server_usage[this.server_id] || {}
         },
         getQueryInProgress: function() {
             return this.server_query_in_progress[this.server_id]
         },
         isOnline: function() {
             return !this.getServerStatus.error
+        },
+        lastRefreshTimestamp: function() {
+            return this.getServer?.server_info?.timestamp || null
         },
     },
     methods: {
