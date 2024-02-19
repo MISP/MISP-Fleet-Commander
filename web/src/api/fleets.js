@@ -19,9 +19,9 @@ export default {
                 common.handleError(error, errorCb)
             })
     },
-    get(fleet, cb, errorCb) {
+    get(fleetId, cb, errorCb) {
         // const url = `${url.index}?page=${ctx.currentPage}&size=${ctx.perPage}`
-        const url = `${urls.get}/${fleet.id}`
+        const url = `${urls.get}/${fleetId}`
         return common.getClient().get(url)
             .then((response) => {
                 cb(response.data)
