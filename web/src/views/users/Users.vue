@@ -244,6 +244,8 @@ export default {
 
 <style>
 .unblur-on-hover {
+    font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: .85em;
     filter: blur(5px);
 }
 .unblur-on-hover:hover {
