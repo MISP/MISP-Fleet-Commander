@@ -13,6 +13,7 @@
                 v-for="(pinTab, i) in pinTabs"
                 :key="i"
                 no-body :active="i == 0"
+                style="max-height: 85vh; overflow-y: auto;"
             >
                 <template #title>
                     <i :class="pinTab.icon"></i> {{ pinTab.name }}
