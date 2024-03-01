@@ -55,16 +55,18 @@ export default {
             this.postInProgress = true
             this.$store.dispatch("auth/authenticate", credentials)
                 .then(() => {
-                    if (this.callbackOnLoging) {
+                    if (this.callbackOnLoging !== undefined) {
                         this.callbackOnLoging(true)
                     } else {
                         this.$router.push(this.$route.query.redirect || '/')
                     }
                 })
                 .catch((error) => {
-                    console.error(error);
-                    this.callbackOnLoging(false)
+                    if (this.callbackOnLoging !== undefined) {
+                        this.callbackOnLoging(false)
+                    }
                     this.loginError = true
+                    console.error(error);
                 })
                 .finally(() => {
                     this.postInProgress = false
