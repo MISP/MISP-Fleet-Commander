@@ -28,7 +28,7 @@ def loadPlugins():
     os.chdir(cwd)
     return phandlers, plugins
 
-def loadAvailablePlugins():
+def loadAvailablePlugins(enabledPlugins = ['*']):
     phandlers, _ = loadPlugins()
     plugins = []
     for name, _ in phandlers.items():
@@ -46,5 +46,15 @@ def loadAvailablePlugins():
                     'features': instantiatedPlugin.introspection(),
                     'instance': instantiatedPlugin
                 }
-                plugins.append(plugin)
+                if (isPluginEnabled(enabledPlugins, instantiatedPlugin.id)):
+                    plugins.append(plugin)
     return plugins
+
+def isPluginEnabled(enabledPlugins, pluginName):
+    print(pluginName)
+    if '*' in enabledPlugins:
+        return True
+    for plugin in enabledPlugins:
+        if pluginName == plugin:
+            return True
+    return False

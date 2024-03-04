@@ -66,7 +66,7 @@ def create_app():
     celery_app = celery_init_app(flaskApp)
 
     from application.plugins import loadAvailablePlugins
-    loadedPlugins = loadAvailablePlugins()
+    loadedPlugins = loadAvailablePlugins(flaskApp.config['ENABLED_PLUGINS'])
 
     # app.config.from_object('config.Config')
     # app.config.from_object('config.DevelopmentConfig')
