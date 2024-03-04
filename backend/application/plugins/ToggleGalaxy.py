@@ -51,17 +51,18 @@ class ToggleGalaxy(BasePlugin):
             result = ErrorPluginResponse({}, [f'Invalid parameters (namespace: `{galaxies_uuid}`, state: `{state}`)'])
             return result
 
-        print(galaxies_uuid)
+        galaxyIDByUUID = ToggleGalaxy.fetchAllIDs(server)
+        if type(galaxyIDByUUID) is requestsResponse:
+            return galaxyIDByUUID
+
         for galaxy_uuid in galaxies_uuid:
-            galaxyIDOrRequestResponse = ToggleGalaxy.getGalaxyID(server, galaxy_uuid)
-            if type(galaxyIDOrRequestResponse) is not requestsResponse:
+            galaxyID = galaxyIDByUUID.get(galaxy_uuid, None)
+            if galaxyID is not None:
                 if state:
-                    success = ToggleGalaxy.enableGalaxy(server, galaxyIDOrRequestResponse)
+                    success = ToggleGalaxy.enableGalaxy(server, galaxyID)
                 else:
-                    success = ToggleGalaxy.disableGalaxy(server, galaxyIDOrRequestResponse)
+                    success = ToggleGalaxy.disableGalaxy(server, galaxyID)
             else:
-                galaxyIDOrRequestResponse.status_code = 404
-                galaxyIDOrRequestResponse.reason = 'Not Found'
                 success = f'Could not find galaxy with name or UUID `{galaxy_uuid}`'
 
             if success is True:
@@ -93,17 +94,19 @@ class ToggleGalaxy(BasePlugin):
                 }
             }
             return FailPluginResponse(data, errors)
-        # return result
+
 
     @classmethod
-    def getGalaxyID(cls, server: Server, galaxy_name_uuid: str) -> Union[int, requestsResponse]:
-        url = f'/galaxies/index/value:{galaxy_name_uuid}'
+    def fetchAllIDs(cls, server: Server) -> Union[list, requestsResponse]:
+        url = f'/galaxies/index'
         result = mispGetRequest(server, url, {}, rawResponse=True, nocache=True)
         data = result.json()
+        if 'Galaxy' not in data[0]:
+            return result
+        galaxyIDByUUID = {}
         for galaxy in data:
-            if galaxy['Galaxy']['name'] == galaxy_name_uuid or galaxy['Galaxy']['uuid'] == galaxy_name_uuid:
-                return int(galaxy['Galaxy']['id'])
-        return result
+            galaxyIDByUUID[galaxy['Galaxy']['uuid']] = int(galaxy['Galaxy']['id'])
+        return galaxyIDByUUID
 
 
     @classmethod
@@ -122,7 +125,6 @@ class ToggleGalaxy(BasePlugin):
     def disableGalaxy(cls, server: Server, galaxyID: int) -> Union[bool, str]:
         url = f'/galaxies/disable/{galaxyID}'
         result = mispPostRequest(server, url, {}, rawResponse=True, nocache=True)
-        data = result.json()
         if 'error' in result:
             actionResponse = result['error']
         else:
