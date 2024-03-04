@@ -44,7 +44,7 @@ class PluginResponse:
 
     def genActionParameter(
         key: str,
-        type: Literal['select', 'checkbox', 'textarea', 'text', 'input',],
+        type: Literal['select', 'checkbox', 'textarea', 'text', 'input', 'picker'],
         label: Optional[str],
         description: Optional[str] = '',
         placeholder: Optional[str] = '',

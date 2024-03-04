@@ -4,7 +4,7 @@
             v-for="(param, i) in plugin.action_parameters"
             :key="`${plugin.id}-${param.key}`"
             :id="`${plugin.id}-${param.key}`"
-            :label="plugin.name"
+            :label="param.label"
             :label-for="`input-${i}`"
             :description="param.description"
             class="col-lg-6 col-md-8"
@@ -43,6 +43,13 @@
                 max-rows="6"
             ></b-form-textarea>
 
+            <selectPicker
+                v-else-if="param.type == 'picker'"
+                :id="`input-${i}`"
+                @input="(value) => { handleInput(param.key, value) }"
+                :options="param.options"
+            ></selectPicker>
+
             <b-form-input
                 v-else
                 :id="`input-${i}`"
@@ -65,12 +72,15 @@
 </template>
 
 <script>
-import { mapState, mapGetters } from "vuex"
 import Vue from "vue"
+import { mapState, mapGetters } from "vuex"
+
+import selectPicker from "@/components/ui/pluginElements/selectPicker.vue"
 
 export default {
     name: "pluginActionForm",
     components: {
+        selectPicker,
     },
     props: {
         plugin: {
@@ -105,11 +115,18 @@ export default {
                 this.postInProgress = false
                 this.$emit('update:postInProgress', false)
                 })
+        },
+        handleInput: function(formKey, value) {
+            this.formData[formKey] = value
         }
     },
     created() {
         this.plugin.action_parameters.forEach(param => {
-            Vue.set(this.formData, param.key, null)
+            if (param.type == 'picker') {
+                Vue.set(this.formData, param.key, [])
+            } else {
+                Vue.set(this.formData, param.key, null)
+            }
         })
     }
 }

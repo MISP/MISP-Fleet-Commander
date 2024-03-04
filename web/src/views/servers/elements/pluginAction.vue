@@ -62,6 +62,14 @@ export default {
         }
     },
     methods: {
+        getToastVariant(state) {
+            if (state == 'success') {
+                return 'success'
+            } else if (state == 'fail' || state == 'error') {
+                return 'danger'
+            }
+            return 'primary'
+        },
         handlePluginActionSubmit: function ({plugin_id, form_data}) {
             return pluginAPI.submitAction(this.server_id, plugin_id, form_data)
                 .then((response) => {
@@ -76,7 +84,7 @@ export default {
                         const successMessage = response.data.data.message
                         this.$bvToast.toast(successMessage, {
                             title: `Success for plugin action ${plugin_id}`,
-                            variant: "success",
+                            variant: this.getToastVariant(response.data.status),
                         })
                     }
                 })
