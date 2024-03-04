@@ -6,6 +6,9 @@
     >
         <div class="mb-3">
             <b-button size="sm" variant="warning" class="mr-1">
+                <i class="fas fa-lock"></i> Set password
+            </b-button>
+            <b-button size="sm" variant="warning" class="mr-1">
                 <i class="fas fa-lock"></i> Reset password
             </b-button>
             <b-button size="sm" variant="warning" class="mr-1">
