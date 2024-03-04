@@ -51,7 +51,6 @@ def loadAvailablePlugins(enabledPlugins = ['*']):
     return plugins
 
 def isPluginEnabled(enabledPlugins, pluginName):
-    print(pluginName)
     if '*' in enabledPlugins:
         return True
     for plugin in enabledPlugins:
