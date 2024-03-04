@@ -40,7 +40,7 @@ class DevelopmentConfig(Config):
     FLASK_ENV = 'development'
     FLASK_HOST = '0.0.0.0'
     SECRET_KEY = 'secret'
-    TOKEN_EXPIRATION_MIN = 30
+    TOKEN_EXPIRATION_MIN = 60*12
     APIKEY_EXPIRATION_DAYS = 365
 
     # Database

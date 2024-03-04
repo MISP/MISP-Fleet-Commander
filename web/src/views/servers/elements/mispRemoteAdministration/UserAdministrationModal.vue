@@ -1,13 +1,11 @@
 <template>
     <b-modal
         id="modal-user-administration"
+        size="lg"
         :title="`User administration for server ${server.name}`"
         :hide-footer="true"
     >
         <div class="mb-3">
-            <b-button size="sm" variant="warning" class="mr-1">
-                <i class="fas fa-lock"></i> Set password
-            </b-button>
             <b-button size="sm" variant="warning" class="mr-1">
                 <i class="fas fa-lock"></i> Reset password
             </b-button>
@@ -15,7 +13,16 @@
                 <i class="fas fa-key"></i> Reset authkey
             </b-button>
             <b-button size="sm" variant="primary" class="mr-1">
-                <i :class="`fas fa-toggle-${user.disabled ? 'on' : 'off'}`"></i> {{ user.disabled ? 'Enable' : 'Disable' }} User
+                <i class="fas fa-lock"></i> Set password
+            </b-button>
+            <b-button size="sm" variant="primary" class="mr-1" v-b-modal="'modal-administration-user-disable'">
+                <i :class="`fas fa-toggle-${user.disabled ? 'on' : 'off'}`"></i> {{ user.User.disabled ? 'Enable' : 'Disable' }} User
+            </b-button>
+            <b-button size="sm" variant="primary" class="mr-1" :href="`${server.url}/admin/users/view/${user.User.id}`" target="_blank">
+               <i class="fas fa-external-link-alt"></i> View
+            </b-button>
+            <b-button size="sm" variant="primary" class="mr-1" :href="`${server.url}/admin/users/edit/${user.User.id}`" target="_blank">
+               <i class="fas fa-external-link-alt"></i> Edit
             </b-button>
         </div>
 
@@ -87,18 +94,22 @@
                 </b-tr>
             </b-tbody>
         </b-table-simple>
+
+        <userDisable :user="user" :server="server" :isDisabled="user.User.disabled "></userDisable>
     </b-modal>
 </template>
 
 <script>
 import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
 import userPerms from "@/views/servers/elements/userPerms.vue"
+import userDisable from "@/views/servers/elements/mispRemoteAdministration/userAdministrationActions/userDisable.vue"
 
 export default {
     name: "UserAdministrationModal",
     components: {
         timeSinceRefresh,
-        userPerms
+        userPerms,
+        userDisable,
     },
     props: {
         user: {

@@ -191,7 +191,7 @@ export default {
                     },
                     {
                         key: "User.disabled",
-                        label: "State",
+                        label: "Disabled State",
                         sortable: true
                     },
                 ],

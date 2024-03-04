@@ -4,7 +4,7 @@
 
 <script>
 export default {
-    name: "UserResetAuthkey",
+    name: "UserAdd",
     components: {
     },
     props: {

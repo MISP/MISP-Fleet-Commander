@@ -22,18 +22,7 @@ def create_API_key():
     return apikey
 
 
-# def get_current_user(token, currentApp):
-#     data = jwt.decode(token, currentApp.config['SECRET_KEY'], algorithms=["HS256"])
-#     email = data.get('sub')
-#     user = User.query.filter_by(email=email).first()
-#     return user
-
 def get_email_from_token(token, currentApp):
     data = jwt.decode(token, currentApp.config['SECRET_KEY'], algorithms=["HS256"])
     email = data.get('sub')
     return email
-
-
-# def get_current_user_api(token):
-#     user = User.query.filter_by(apikey=token).first()
-#     return user
