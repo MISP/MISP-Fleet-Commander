@@ -4,7 +4,20 @@
         :title="`Generate Authentication Key for User`"
         @ok="genAuthkey"
     >
-        <p class="my-4">Confirm adding authentication key for user: <pre>{{ user.User.email }}</pre></p>
+        <div v-show="!generatedKey.length">
+            <p class="my-4">Confirm adding authentication key for user: <pre>{{ user.User.email }}</pre></p>
+        </div>
+        <div v-show="generatedKey.length">
+            <b-alert
+                variant="success"
+                show
+            >
+                <strong>The API Key has been refreshed.</strong>
+                <pre class="apikey">{{ generatedKey }}</pre>
+
+                <p class="mt-2 mb-0"><i class="fa fa-warning"></i> Note it down, it won't be showed again.</p>
+            </b-alert>
+        </div>
 
         <template v-slot:modal-footer="{ ok, cancel }">
             <div v-show="!generatedKey.length">
@@ -59,6 +72,7 @@ export default {
                 this.server.id,
                 this.user.User.id,
                 (data) => {
+                    console.log(data);
                     if (data.error !== undefined) {
                         this.$bvToast.toast(`Error while trying to generate authkey`, {
                             title: data.error,
@@ -71,7 +85,7 @@ export default {
                             variant: "success",
                             solid: true
                         })
-                        this.generatedKey = data
+                        this.generatedKey = data.AuthKey.authkey_raw
                     }
                     this.requestInProgress = false
                 },
@@ -89,6 +103,13 @@ export default {
 }
 </script>
 
-<style>
-
+<style scoped>
+.apikey {
+    background-color: #eee;
+    border: 1px solid #aaa;
+    padding: 0.5em 1em;
+    border-radius: 4px;
+    margin-bottom: 0;
+    margin-top: 0.25em;
+}
 </style>

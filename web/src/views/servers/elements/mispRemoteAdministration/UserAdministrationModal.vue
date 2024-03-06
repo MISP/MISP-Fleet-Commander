@@ -6,11 +6,11 @@
         :hide-footer="true"
     >
         <div class="mb-3">
-            <b-button size="sm" variant="warning" class="mr-1" v-b-modal="'modal-administration-user-reset-password'">
-                <i class="fas fa-lock"></i> Reset password
-            </b-button>
             <b-button size="sm" variant="warning" class="mr-1" v-b-modal="'modal-administration-user-gen-authkey'">
                 <i class="fas fa-key"></i> Generate authkey
+            </b-button>
+            <b-button size="sm" variant="warning" class="mr-1" v-b-modal="'modal-administration-user-reset-password'">
+                <i class="fas fa-lock"></i> Reset password
             </b-button>
             <b-button size="sm" variant="primary" class="mr-1" v-b-modal="'modal-administration-user-set-password'">
                 <i class="fas fa-lock"></i> Change password

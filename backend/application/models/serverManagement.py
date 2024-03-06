@@ -10,15 +10,36 @@ def addUser(server: Server, payload: dict) -> Union[dict, None]:
 
 
 def setPassword(server: Server, user_id: int, payload: dict) -> Union[dict, None]:
-    return
+    url = f"/admin/users/edit/{user_id}"
+    data = {
+        'enable_password': True,
+        'password': payload.get('password', None),
+        'confirm_password': payload.get('confirm_password', None),
+        'change_pw': 0,
+    }
+    response = mispPostRequest(server, url, data, rawResponse=True)
+    if response.status_code == 403:
+        return response.json()
+    return response.json()
 
 
 def resetPassword(server: Server, user_id: int) -> Union[dict, None]:
-    return
+    url = f"/users/initiatePasswordReset/{user_id}"
+    payload = {
+        'user_id': user_id,
+        'firstTime': 0,
+    }
+    response = mispPostRequest(server, url, payload)
+    return response
 
 
-def resetAuthkey(server: Server, user_id: int) -> Union[dict, None]:
-    return
+def genAuthkey(server: Server, user_id: int) -> Union[dict, None]:
+    url = f"/auth_keys/add/{user_id}"
+    payload = {
+        'user_id': user_id,
+    }
+    response = mispPostRequest(server, url, payload)
+    return response
 
 
 def disable(server: Server, user_id: int) -> Union[dict, None]:

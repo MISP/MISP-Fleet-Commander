@@ -53,14 +53,14 @@ export default {
                 this.user.User.id,
                 (data) => {
                     if (data.error !== undefined) {
-                        this.$bvToast.toast(`Error while trying to reset password for user`, {
+                        this.$bvToast.toast(`Error while trying to reset password of ${this.user.User.email}`, {
                             title: data.error,
                             variant: "danger",
                             solid: true
                         })
                     } else {
-                        this.$bvToast.toast(`Successfully reset password of user`, {
-                            title: data,
+                        this.$bvToast.toast(`Successfully reset password of ${this.user.User.email}`, {
+                            title: 'Password changed',
                             variant: "success",
                             solid: true
                         })
@@ -71,7 +71,7 @@ export default {
                     this.requestInProgress = false
                 },
                 (error) => {
-                    this.$bvToast.toast(`Error while trying to reset password of user`, {
+                    this.$bvToast.toast(`Error while trying to reset password of ${this.user.User.email}`, {
                         title: error,
                         variant: "danger",
                         solid: true

@@ -11,7 +11,7 @@
                 <label for="password">Password</label>
             </b-col>
             <b-col sm="9">
-                <b-form-input id="password" type="password" v-model="form.password"></b-form-input>
+                <b-form-input id="password" type="password" v-model="form.password" autocomplete="new-password"></b-form-input>
             </b-col>
         </b-row>
         <b-row class="my-1">
@@ -19,18 +19,18 @@
                 <label for="password_confirm">Confirm Password</label>
             </b-col>
             <b-col sm="9">
-                <b-form-input id="password_confirm" type="password" v-model="form.password_confirm"></b-form-input>
+                <b-form-input id="password_confirm" type="password" v-model="form.password_confirm" autocomplete="new-password"></b-form-input>
             </b-col>
         </b-row>
 
         <template v-slot:modal-footer="{ ok, cancel }">
-            <b-button variant="primary" @click="ok()" :disabled="requestInProgress">
+            <b-button variant="primary" @click="ok()" :disabled="requestInProgress || !passwordMatch">
                 <b-spinner 
                     small
                     v-if="requestInProgress"
                 ></b-spinner>
                 <span class="sr-only">Saving...</span>
-                <span v-if="!requestInProgress">Change password</span>
+                <span v-if="!requestInProgress">{{ saveText }}</span>
             </b-button>
             <b-button variant="secondary" @click="cancel()">Cancel</b-button>
         </template>
@@ -64,6 +64,12 @@ export default {
         }
     },
     computed: {
+        passwordMatch: function() {
+            return this.form.password == this.form.password_confirm
+        },
+        saveText: function() {
+            return this.passwordMatch ? 'Change password' : 'Password do not match'
+        }
     },
     methods: {
         setPassword(evt) {
@@ -72,15 +78,17 @@ export default {
             api.setPassword(
                 this.server.id,
                 this.user.User.id,
-                form,
+                JSON.parse(JSON.stringify(this.form)),
                 (data) => {
                     if (data.error !== undefined) {
-                        this.$bvToast.toast(`Error while trying to change password`, {
-                            title: data.error,
+                        this.$bvToast.toast(data.error, {
+                            title: `Error while trying to change password`,
                             variant: "danger",
                             solid: true
                         })
                     } else {
+                        this.form.password = ''
+                        this.form.password_confirm = ''
                         this.$bvToast.toast(`Successfully changed password`, {
                             title: data,
                             variant: "success",

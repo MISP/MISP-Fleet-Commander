@@ -28,8 +28,8 @@ export default {
                 common.handleError(error, errorCb)
             })
     },
-    setPassword(server_id, payload, cb, errorCb) {
-        const url = `${urls.setPassword}/${server_id}`
+    setPassword(server_id, user_id, payload, cb, errorCb) {
+        const url = `${urls.setPassword}/${server_id}/${user_id}`
         return common.getClient().post(url, payload)
             .then((response) => {
                 cb(response.data)
@@ -37,9 +37,9 @@ export default {
                 common.handleError(error, errorCb)
             })
     },
-    resetPassword(server_id, user_id, payload, cb, errorCb) {
+    resetPassword(server_id, user_id, cb, errorCb) {
         const url = `${urls.resetPassword}/${server_id}/${user_id}`
-        return common.getClient().post(url, payload)
+        return common.getClient().post(url)
             .then((response) => {
                 cb(response.data)
             }).catch(error => {

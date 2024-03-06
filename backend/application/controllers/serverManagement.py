@@ -19,31 +19,38 @@ def addUser(user, server_id):
     return jsonify({'error': 'Could not create user.'})
 
 
-@BPserverManagement.route('/server-management/user/set-password/<int:server_id>', methods=['POST'])
+@BPserverManagement.route('/server-management/user/set-password/<int:server_id>/<int:user_id>', methods=['POST'])
 @token_required
-def setPassword(user, server_id):
+def setPassword(user, server_id, user_id):
     """Set the password of a user on the MISP instance"""
-    result = serverManagement.setPassword()
+    server = serverModel.getForUser(user, server_id)
+    result = serverManagement.setPassword(server, user_id, request.json)
     if result is not None:
-        return jsonify(result)
+        if 'errors' in result:
+            return jsonify({'error': result['message'] + ' - ' + ', '.join(result['errors']['password'])})
+        else:
+            return jsonify(result)
     return jsonify({'error': 'Could not set password for user.'})
 
 
-@BPserverManagement.route('/server-management/user/reset-password/<int:server_id>', methods=['POST'])
+@BPserverManagement.route('/server-management/user/reset-password/<int:server_id>/<int:user_id>', methods=['POST'])
 @token_required
-def resetPassword(user, server_id):
+def resetPassword(user, server_id, user_id):
     """Reset password for a user on the MISP instance"""
-    result = serverManagement.resetPassword()
+    server = serverModel.getForUser(user, server_id)
+    result = serverManagement.resetPassword(server, user_id)
     if result is not None:
         return jsonify(result)
     return jsonify({'error': 'Could not reset password user.'})
 
 
-@BPserverManagement.route('/server-management/user/gen-authkey/<int:server_id>', methods=['POST'])
+@BPserverManagement.route('/server-management/user/gen-authkey/<int:server_id>/<int:user_id>', methods=['POST'])
 @token_required
-def genAuthkey(user, server_id):
+def genAuthkey(user, server_id, user_id):
     """Generate an authkey for a user on the MISP instance"""
-    result = serverManagement.resetAuthkey()
+    server = serverModel.getForUser(user, server_id)
+    result = serverManagement.genAuthkey(server, user_id)
+    print(result)
     if result is not None:
         return jsonify(result)
     return jsonify({'error': 'Could not generate authkey for user.'})
