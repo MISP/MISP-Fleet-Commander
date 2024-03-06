@@ -6,14 +6,14 @@
         :hide-footer="true"
     >
         <div class="mb-3">
-            <b-button size="sm" variant="warning" class="mr-1">
+            <b-button size="sm" variant="warning" class="mr-1" v-b-modal="'modal-administration-user-reset-password'">
                 <i class="fas fa-lock"></i> Reset password
             </b-button>
-            <b-button size="sm" variant="warning" class="mr-1">
-                <i class="fas fa-key"></i> Reset authkey
+            <b-button size="sm" variant="warning" class="mr-1" v-b-modal="'modal-administration-user-gen-authkey'">
+                <i class="fas fa-key"></i> Generate authkey
             </b-button>
-            <b-button size="sm" variant="primary" class="mr-1">
-                <i class="fas fa-lock"></i> Set password
+            <b-button size="sm" variant="primary" class="mr-1" v-b-modal="'modal-administration-user-set-password'">
+                <i class="fas fa-lock"></i> Change password
             </b-button>
             <b-button size="sm" variant="primary" class="mr-1" v-b-modal="'modal-administration-user-disable'">
                 <i :class="`fas fa-toggle-${user.disabled ? 'on' : 'off'}`"></i> {{ user.User.disabled ? 'Enable' : 'Disable' }} User
@@ -95,7 +95,10 @@
             </b-tbody>
         </b-table-simple>
 
-        <userDisable :user="user" :server="server" :isDisabled="user.User.disabled "></userDisable>
+        <userDisable :user="user" :server="server" :isDisabled="user.User.disabled"></userDisable>
+        <userGenAuthkey :user="user" :server="server"></userGenAuthkey>
+        <userResetPassword :user="user" :server="server"></userResetPassword>
+        <userSetPassword :user="user" :server="server"></userSetPassword>
     </b-modal>
 </template>
 
@@ -103,6 +106,9 @@
 import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
 import userPerms from "@/views/servers/elements/userPerms.vue"
 import userDisable from "@/views/servers/elements/mispRemoteAdministration/userAdministrationActions/userDisable.vue"
+import userGenAuthkey from "@/views/servers/elements/mispRemoteAdministration/userAdministrationActions/userGenAuthkey.vue"
+import userResetPassword from "@/views/servers/elements/mispRemoteAdministration/userAdministrationActions/userResetPassword.vue"
+import userSetPassword from "@/views/servers/elements/mispRemoteAdministration/userAdministrationActions/userSetPassword.vue"
 
 export default {
     name: "UserAdministrationModal",
@@ -110,6 +116,9 @@ export default {
         timeSinceRefresh,
         userPerms,
         userDisable,
+        userGenAuthkey,
+        userResetPassword,
+        userSetPassword,
     },
     props: {
         user: {

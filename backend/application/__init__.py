@@ -83,6 +83,7 @@ def create_app():
         from application.controllers.plugins import BPplugins
         from application.controllers.instance import BPinstance
         from application.controllers.pinLists import BPpinLists
+        from application.controllers.serverManagement import BPserverManagement
         from application.controllers.websocket import registerListeners as registerWSListeners
 
         flaskApp.register_blueprint(BPuser)
@@ -91,6 +92,7 @@ def create_app():
         flaskApp.register_blueprint(BPplugins)
         flaskApp.register_blueprint(BPpinLists)
         flaskApp.register_blueprint(BPinstance)
+        flaskApp.register_blueprint(BPserverManagement)
         registerWSListeners()
 
         # Add CLI commands

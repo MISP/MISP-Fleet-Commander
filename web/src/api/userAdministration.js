@@ -37,17 +37,17 @@ export default {
                 common.handleError(error, errorCb)
             })
     },
-    resetPassword(server_id, cb, errorCb) {
-        const url = `${urls.resetPassword}/${server_id}`
-        return common.getClient().post(url)
+    resetPassword(server_id, user_id, payload, cb, errorCb) {
+        const url = `${urls.resetPassword}/${server_id}/${user_id}`
+        return common.getClient().post(url, payload)
             .then((response) => {
                 cb(response.data)
             }).catch(error => {
                 common.handleError(error, errorCb)
             })
     },
-    genAuthkey(server_id, cb, errorCb) {
-        const url = `${urls.genAuthkey}/${server_id}`
+    genAuthkey(server_id, user_id, cb, errorCb) {
+        const url = `${urls.genAuthkey}/${server_id}/${user_id}`
         return common.getClient().post(url)
             .then((response) => {
                 cb(response.data)
