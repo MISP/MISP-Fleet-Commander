@@ -304,6 +304,12 @@
                 </loaderPlaceholder>
             </template>
 
+            <template v-slot:cell(usage)="row">
+                <loaderPlaceholder :loading="!server_query_in_progress[row.item.id]">
+                    <dataUsageShort :server_id="row.item.id"></dataUsageShort>
+                </loaderPlaceholder>
+            </template>
+
             <template v-for="field in pluginFields" v-slot:[`cell(${field.key})`]="row">
                 <loaderPlaceholder :loading="!fetching_plugin_index_in_progress" :key="field.key">
                     <pluginValueRenderer
@@ -372,6 +378,7 @@ import userPerms from "@/views/servers/elements/userPerms.vue"
 import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
 import proxyStatus from "@/views/servers/elements/proxyStatus.vue"
 import workersStatus from "@/views/servers/elements/workersStatus.vue"
+import dataUsageShort from "@/views/servers/elements/dataUsageShort.vue"
 import submodulesStatus from "@/views/servers/elements/submodulesStatus.vue"
 import zeroMQStatus from "@/views/servers/elements/zeroMQStatus.vue"
 import pluginValueRenderer from "@/views/servers/elements/pluginValueRenderer.vue"
@@ -403,6 +410,7 @@ export default {
         connectionsSummary,
         contextualMenu,
         workersStatus,
+        dataUsageShort,
         RowDetails,
         DeleteModal,
         AddModal,
@@ -509,6 +517,12 @@ export default {
                         formatter: (value, key, item) => {
                             return this.workers[item.id] || null
                         }
+                    },
+                    {
+                        key: "usage",
+                        label: "Usage",
+                        sortable: false,
+                        class: "align-middle d-none d-xxl-table-cell",
                     },
                     {
                         key: "last_refresh",
