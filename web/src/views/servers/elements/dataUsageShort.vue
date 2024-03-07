@@ -3,13 +3,13 @@
         v-if="hasUsage"
         class="usage-container"
     >
-        <div :title="`${usage.attribute_count} Attribute`">
-            <i class="fas fa-cube"></i>
-            <span>{{ genCount(usage.attribute_count) }}</span>
-        </div>
         <div :title="`${usage.event_count} Event`">
             <i class="fas fa-envelope"></i>
             <span>{{ genCount(usage.event_count) }}</span>
+        </div>
+        <div :title="`${usage.attribute_count} Attribute`">
+            <i class="fas fa-cube"></i>
+            <span>{{ genCount(usage.attribute_count) }}</span>
         </div>
         <div :title="`${usage.attributes_per_event} per Events`">
             <i class="fas fa-chart-pie"></i>
