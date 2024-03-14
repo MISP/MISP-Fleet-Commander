@@ -48,6 +48,7 @@ def loadAvailablePlugins(enabledPlugins = ['*']):
                 }
                 if (isPluginEnabled(enabledPlugins, instantiatedPlugin.id)):
                     plugins.append(plugin)
+                    flaskApp.logger.info('Plugin {0} loaded'.format(instantiatedPlugin.id))
     return plugins
 
 def isPluginEnabled(enabledPlugins, pluginName):

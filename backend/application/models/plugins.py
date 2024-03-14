@@ -215,7 +215,6 @@ def getViewValue(server: Server, plugin) -> dict:
 
 def doAction(server: Server, plugin, data: Optional[dict]) -> dict:
     pluginInstance = plugin['instance']
-    actionResult = pluginInstance.action(server, data)
     try:
         actionResult = pluginInstance.action(server, data)
     except Exception as e:
