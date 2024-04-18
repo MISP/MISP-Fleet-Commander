@@ -1,6 +1,6 @@
 import os
 from application import socketioApp
-from application.DBModels import Server
+from application.DBModels import Server, ServerMinimal
 from application.marshmallowSchemas import serverSchema
 import application.models.servers as serverModel
 from flask_socketio import SocketIO
@@ -11,7 +11,7 @@ def registerListeners():
 
     @socketioApp.on('refresh_server')
     def refresh_server(serverID):
-        server = Server.query.get(serverID)
+        server = ServerMinimal.query.get(serverID)
         fetchServerInfoTask.delay(serverSchema.dump(server))
 
     @socketioApp.on('refresh_fleet')

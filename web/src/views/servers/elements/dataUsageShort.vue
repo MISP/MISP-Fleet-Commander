@@ -22,7 +22,7 @@
 import { mapState, mapGetters } from "vuex"
 
 export default {
-    name: "zeroMQStatus",
+    name: "dataUsageShort",
     props: {
         server_id: {
             required: true,

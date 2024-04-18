@@ -12,7 +12,7 @@ from marshmallow import ValidationError
 
 from application.DBModels import db, User, Server
 from application.controllers.utils import mispGetRequest, mispPostRequest, batchRequest
-from application.marshmallowSchemas import ServerSchema, fleetSchema, serverQuerySchema, serverSchema, serversSchemaLighter, taskSchema, serverSchema, serversSchema
+from application.marshmallowSchemas import ServerSchema, serverSchemaLighter, fleetSchema, serverQuerySchema, serverSchema, serversSchemaLighter, taskSchema, serverSchema, serversSchema
 import application.models.servers as serverModel
 from application.workers.tasks import fetchServerInfoTask
 from application.controllers.instance import token_required
@@ -162,7 +162,7 @@ def queryInfo(user, server_id, no_cache):
 def queryInfoWS(user, server_id,):
     server = serverModel.getForUser(user, server_id)
     if server is not None:
-            server_query_task = fetchServerInfoTask.delay(serverSchema.dump(server))
+            server_query_task = fetchServerInfoTask.delay(serverSchemaLighter.dump(server))
             return taskSchema.dump({
                 'id': server_query_task.id,
                 'status': server_query_task.status,

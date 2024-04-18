@@ -140,6 +140,15 @@ class Server(BaseModel):
     def server_info(self, info):
         self._server_info = info
 
+class ServerMinimal(Server):
+    @hybrid_property
+    def server_info(self):
+        return {}
+
+    @server_info.setter
+    def server_info(self, info):
+        return
+
 
 
 class Fleet(BaseModel):
