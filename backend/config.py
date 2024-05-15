@@ -19,7 +19,7 @@ class Config:
     SQLALCHEMY_DATABASE_URI = environ.get('SQLALCHEMY_DATABASE_URI')
     SQLALCHEMY_TRACK_MODIFICATIONS = environ.get('SQLALCHEMY_TRACK_MODIFICATIONS')
 
-    ENABLED_PLUGINS = ['toggle-taxonomy', 'toggle-galaxy', 'galaxy-import', 'modify-sync-connection']
+    ENABLED_PLUGINS = ['toggle-taxonomy', 'toggle-galaxy', 'galaxy-import', 'modify-sync-connection', 'mass-user-import',]
 
 class ProductionConfig(Config):
     FLASK_DEBUG = False

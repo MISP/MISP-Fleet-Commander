@@ -23,6 +23,7 @@
                 <b-table-simple class="mb-0">
                     <b-thead>
                         <b-tr>
+                            <b-th>Enabled</b-th>
                             <b-th>Name</b-th>
                             <b-th>Index</b-th>
                             <b-th>View</b-th>
@@ -32,6 +33,12 @@
                     </b-thead>
                     <b-tbody>
                         <b-tr v-for="(plugin, index) in plugins" :key="index">
+                            <b-td class="text-nowrap">
+                                <b-form-checkbox switch
+                                    :checked="enabledPlugins.includes(plugin.name)"
+                                    @change="togglePlugin(plugin.id)"
+                                ></b-form-checkbox>
+                            </b-td>
                             <b-td class="text-nowrap">
                                 <i v-if="plugin.icon" :class="[plugin.icon, 'fa-fw mr-2']" style="width: 1rem;"></i>
                                 <b :title="plugin.description">{{ plugin.name }}</b>
@@ -84,8 +91,17 @@ export default {
         ...mapState({
             plugins: state => state.plugins.all
         }),
+        ...mapGetters({
+            userSettings: "auth/get_user_settings",
+        }),
         noPlugin() {
             return this.plugins.length == 0
+        },
+        enabledPlugins() {
+            if (this.userSettings && this.userSettings.enabled_plugins) {
+                return this.userSettings.enabled_plugins
+            }
+            return []
         }
     },
     methods: {
@@ -102,6 +118,9 @@ export default {
                     this.refreshInProgress = false
                 })
         },
+        togglePlugin(pluginName) {
+            console.log(pluginName);
+        }
     },
     mounted() {
         this.refreshPlugins(false)

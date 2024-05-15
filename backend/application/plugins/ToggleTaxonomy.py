@@ -729,5 +729,9 @@ ALL_TAXONOMIES = [
   {
     "namespace": "misp-workflow",
     "version": "3"
+  },
+  {
+    "namespace": "lockedshield24",
+    "version": "1"
   }
 ]

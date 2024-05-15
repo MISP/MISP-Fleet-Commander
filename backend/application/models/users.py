@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
+import json
 from typing import List, Union
 
 from application.DBModels import User
 from application.DBModels import db
 from application.marshmallowSchemas import userSchema
+import application.models.userSettings as userSettingsModel
 
 from application.models.auth import create_API_key
 
@@ -29,6 +31,8 @@ def add(user: dict) -> User:
                 password=user['password'])
     db.session.add(user)
     db.session.commit()
+    if 'user_settings' in user and len(user['user_settings']) > 0:
+        userSettingsModel.add(user.id, user['user_settings'])
     return user
 
 
@@ -39,6 +43,13 @@ def edit(user: dict) -> Union[User, None]:
             if field in editFields:
                 setattr(oldUser, field, value)
         db.session.commit()
+        if 'user_settings' in user:
+            # try:
+            #     user['user_settings'] = json.loads(user['user_settings'])
+            # except ValueError:
+            #     user['user_settings'] = {}
+            if len(user['user_settings']) > 0:
+                userSettingsModel.editForUser(user['id'], user['user_settings'])
         return oldUser
     return None
 

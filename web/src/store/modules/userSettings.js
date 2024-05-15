@@ -1,4 +1,4 @@
-import api from "@/api/users"
+import api from "@/api/userSettings"
 
 // initial state
 const state = {
@@ -7,29 +7,18 @@ const state = {
 
 // getters
 const getters = {
-    userCount: state => {
-        return state.all.length
-    },
-    getUserList: state => {
+    getUserSettingList: state => {
         return state.all
     },
 }
 
 // actions
 const actions = {
-    getUsers({ commit }, payload={}) {
+    getUserSettings({ commit }, payload={}) {
         return new Promise((resolve, reject) => {
             api.index(
-                users => {
-                    let allUserSettings = []
-                    users.forEach(user => {
-                        if (user.user_settings) {
-                            allUserSettings.push(user.user_settings)
-                            user.user_settings = user.user_settings.settings
-                        }
-                    });
-                    commit("setUsers", users)
-                    commit("userSettings/setUserSettings", allUserSettings, { root: true })
+                userSettings => {
+                    commit("setUserSettings", userSettings)
                     resolve()
                 },
                 (error) => { reject(error) }
@@ -69,23 +58,12 @@ const actions = {
             )
         })
     },
-    genAPIKey({ }, user_id) {
-        return new Promise((resolve, reject) => {
-            api.genAPIKey(
-                user_id,
-                (data) => {
-                    resolve(data)
-                },
-                (error) => { reject(error) }
-            )
-        })
-    },
 }
 
 // mutations
 const mutations = {
-    setUsers(state, users) {
-        state.all = users
+    setUserSettings(state, userSettings) {
+        state.all = userSettings
     },
 }
 

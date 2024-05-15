@@ -66,6 +66,21 @@
                 </div>
             </template>
 
+            <template v-slot:cell(user_settings)="row">
+                <span
+                    v-if="row.value && Object.keys(row.value).length > 0"
+                >
+                    <jsonViewer
+                        :item="row.value"
+                        rootKeyName="Settings"
+                        :open="true"
+                    ></jsonViewer>
+                </span>
+                <span v-else>
+                    <span class="text-muted" style="font-size: small;">- No settings -</span>
+                </span>
+            </template>
+
             <template v-slot:cell(action)="row">
                 <span class="d-block" style="width: 90px;">
                     <b-button-group size="sm">
@@ -118,6 +133,7 @@ import Layout from "@/components/layout/Layout.vue"
 import AddModal from "@/views/users/AddModal.vue"
 import DeleteModal from "@/views/users/DeleteModal.vue"
 import APIKeyModal from "@/views/users/APIKeyModal.vue"
+import jsonViewer from "@/components/ui/elements/jsonViewer.vue"
 
 export default {
     name: "UserIndex",
@@ -126,6 +142,7 @@ export default {
         AddModal,
         DeleteModal,
         APIKeyModal,
+        jsonViewer,
     },
     data: function () {
         return {
@@ -158,6 +175,10 @@ export default {
                         key: "apikey",
                         sortable: false,
                         tdClass: ['unblur-on-hover']
+                    },
+                    {
+                        key: "user_settings",
+                        sortable: false,
                     },
                     {
                         key: "action",

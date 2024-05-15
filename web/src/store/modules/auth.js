@@ -18,7 +18,8 @@ const getters = {
     },
     user: state => state.decoded_access_token?.data?.user || null,
     access_token: (state, getter) => getter.isAuthenticated ? state.access_token : null, 
-    access_token_type: (state, getter) => getter.isAuthenticated ? state.access_token_type : null, 
+    access_token_type: (state, getter) => getter.isAuthenticated ? state.access_token_type : null,
+    get_user_settings: (getter) => getter.user?.user_settings || null
 }
 
 // actions

@@ -7,7 +7,7 @@ from sqlalchemy import event
 from sqlalchemy.orm import mapper
 
 from application import db
-from application.DBModels import Server, Fleet, User, PinList, PinListEntry
+from application.DBModels import Server, Fleet, User, PinList, PinListEntry, UserSettings
 from application.baseModel import BaseModel
 
 
@@ -23,10 +23,20 @@ class UserSchema(BaseSchema):
 
     hashed_password = fields.Str(load_only=True)
     password = fields.Str(load_only=True)
+    # user_settings = mafields.Nested(lambda: UserSettingSchema(), many=True, dump_only=True)
+    user_settings = mafields.Nested(lambda: UserSettingSchema(), many=False, dump_only=True)
 
     class Meta(BaseSchema.Meta):
         include_relationships = False
         model = User
+        unknown = EXCLUDE
+
+
+class UserSettingSchema(BaseSchema):
+
+    class Meta(BaseSchema.Meta):
+        include_relationships = True
+        model = UserSettings
         unknown = EXCLUDE
 
 
@@ -112,6 +122,9 @@ serversSchemaLighter = ServerSchemaLighter(many=True)
 
 userSchema = UserSchema()
 usersSchema = UserSchema(many=True)
+
+userSettingSchema = UserSettingSchema()
+userSettingsSchema = UserSettingSchema(many=True)
 
 serverQuerySchema = ServerQuerySchema()
 serverQuerysSchema = ServerQuerySchema(many=True)

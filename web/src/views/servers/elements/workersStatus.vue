@@ -99,7 +99,7 @@ export default {
             }
             const deadCount = aliveNumber.dead
             return deadCount == 0 ? 
-                (workerType.jobCount <= 100 ? "" : (workerType <= 1000 ? "warning" : "danger")) :
+                (workerType.jobCount <= 10 ? "" : (workerType <= 100 ? "warning" : "danger")) :
                 (deadCount == workerType.workers.length ? "danger" : "warning")
         },
         getVariantFromAlive(workerType) {

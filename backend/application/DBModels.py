@@ -4,6 +4,7 @@ import json
 import uuid
 from sqlalchemy import func
 from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.dialects.sqlite import JSON
 # from application.baseModel import BaseModel
 from flask_sqlalchemy import SQLAlchemy
 
@@ -53,6 +54,8 @@ class User(BaseModel):
                       nullable=True,
                       default= create_API_key)
 
+    user_settings = db.relationship("UserSettings", uselist=False, back_populates="user", cascade="all, delete-orphan")
+
     @classmethod
     def authenticate(cls, email, password_candidate):
         user = User.query.filter_by(email=email).first()
@@ -73,19 +76,20 @@ class User(BaseModel):
         return bcrypt.check_password_hash(self.hashed_password, candidate)
 
 
-#class UserSettings(BaseModel):
-#    __tablename__ == 'user_settings'
-#    id = db.Column(db.Integer,
-#                    primary_key=True)
-#
-#    user_id = db.Column(db.Integer,
-#                        db.ForeignKey('users.id'),
-#                        nullable=False,
-#                        index=True)
-#
-#    user = db.relationship('User',
-#        backref=db.backref('user_settings', lazy='joined'))
-#
+class UserSettings(BaseModel):
+   __tablename__ = 'user_settings'
+   id = db.Column(db.Integer,
+                   primary_key=True)
+
+   user_id = db.Column(db.Integer,
+                       db.ForeignKey('users.id'),
+                       nullable=False,
+                       index=True)
+   
+   settings = db.Column(JSON)
+
+   user = db.relationship('User', back_populates='user_settings')
+
 
 
 class Server(BaseModel):

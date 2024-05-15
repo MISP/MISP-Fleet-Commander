@@ -78,6 +78,7 @@ def create_app():
         # Imports
         from . import routes
         from application.controllers.users import BPuser
+        from application.controllers.userSettings import BPuserSetting
         from application.controllers.servers import BPserver
         from application.controllers.fleets import BPfleet
         from application.controllers.plugins import BPplugins
@@ -87,6 +88,7 @@ def create_app():
         from application.controllers.websocket import registerListeners as registerWSListeners
 
         flaskApp.register_blueprint(BPuser)
+        flaskApp.register_blueprint(BPuserSetting)
         flaskApp.register_blueprint(BPserver)
         flaskApp.register_blueprint(BPfleet)
         flaskApp.register_blueprint(BPplugins)
