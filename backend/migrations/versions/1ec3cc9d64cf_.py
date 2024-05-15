@@ -90,6 +90,9 @@ def upgrade():
         batch_op.create_index(batch_op.f('ix_pin_list_entries_server_id'), ['server_id'], unique=False)
 
     # ### end Alembic commands ###
+    # Insert initial user
+    op.execute(f"INSERT INTO users (email, hashed_password, created, updated) VALUES ('admin@admin.test', '$2b$12$WdFPfMivSAvl1OSSnyjHfeOEjfn2HJQEW2KsLDiW20y36lc.6rWhu', '1970-01-01T01:00:00', '1970-01-01T01:00:00')")
+
 
 
 def downgrade():
