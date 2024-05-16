@@ -3,6 +3,7 @@ from datetime import datetime
 import json
 import uuid
 from sqlalchemy import func
+from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.dialects.sqlite import JSON
 # from application.baseModel import BaseModel
@@ -86,7 +87,9 @@ class UserSettings(BaseModel):
                        nullable=False,
                        index=True)
    
-   settings = db.Column(JSON)
+   setting_name = db.Column(db.String(120), nullable=False, index=True)
+   setting_value = db.Column(db.String)
+   UniqueConstraint(setting_name, setting_value)
 
    user = db.relationship('User', back_populates='user_settings')
 
