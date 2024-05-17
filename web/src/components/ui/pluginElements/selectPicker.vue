@@ -89,11 +89,14 @@ export default {
             type: Array,
             required: true
         },
+        value: {
+            type: Array,
+        },
     },
     data() {
         return {
             search: '',
-            selected_value: [],
+            selected_value: this.value.slice(),
         }
     },
     computed: {
@@ -146,6 +149,11 @@ export default {
             this.selected_value.forEach(value => {
                 removeTag(value)
             });
+        }
+    },
+    watch: {
+        value: function() {
+            this.selected_value = this.value
         }
     }
 }

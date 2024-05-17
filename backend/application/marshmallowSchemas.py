@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import json
 from pprint import pprint
 from marshmallow import EXCLUDE, INCLUDE, RAISE, Schema, ValidationError, fields, post_dump, pre_load, validates_schema
 from marshmallow_sqlalchemy import ModelConversionError, SQLAlchemyAutoSchema, fields as mafields
@@ -24,7 +25,7 @@ class UserSchema(BaseSchema):
     hashed_password = fields.Str(load_only=True)
     password = fields.Str(load_only=True)
     # user_settings = mafields.Nested(lambda: UserSettingSchema(), many=True, dump_only=True)
-    user_settings = mafields.Nested(lambda: UserSettingSchema(), many=False, dump_only=True)
+    user_settings = mafields.Nested(lambda: UserSettingSchema(), many=True, dump_only=True)
 
     class Meta(BaseSchema.Meta):
         include_relationships = False
@@ -34,6 +35,15 @@ class UserSchema(BaseSchema):
 
 class UserSettingSchema(BaseSchema):
 
+    _value = fields.Str(load_only=True)
+    # value = fields.Str()
+    value = fields.Method("json_or_string")
+
+    def json_or_string(self, obj):
+        if obj.name in UserSettings.settings_to_json:
+            return obj.value
+        else:
+            return str(obj.value)
     class Meta(BaseSchema.Meta):
         include_relationships = True
         model = UserSettings

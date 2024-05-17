@@ -1,3 +1,5 @@
+from pathlib import Path
+import tomllib
 from flask import Flask
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
@@ -45,6 +47,11 @@ redisClient = redis.Redis(host=os.environ.get('REDIS_URL', 'localhost'), port=os
 celery_app = None
 socketioApp = None
 bcrypt = None
+all_user_settings = []
+script_dir = Path(__file__).resolve().parent
+relative_path = Path('user-settings.toml')
+with open(script_dir / relative_path, 'rb') as f:
+    all_user_settings = tomllib.load(f)
 
 
 def create_app():

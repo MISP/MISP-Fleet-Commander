@@ -55,7 +55,7 @@ class User(BaseModel):
                       nullable=True,
                       default= create_API_key)
 
-    user_settings = db.relationship("UserSettings", uselist=False, back_populates="user", cascade="all, delete-orphan")
+    user_settings = db.relationship("UserSettings", uselist=True, back_populates="user", cascade="all, delete-orphan")
 
     @classmethod
     def authenticate(cls, email, password_candidate):
@@ -78,20 +78,38 @@ class User(BaseModel):
 
 
 class UserSettings(BaseModel):
-   __tablename__ = 'user_settings'
-   id = db.Column(db.Integer,
-                   primary_key=True)
+    __tablename__ = 'user_settings'
+    settings_to_json = ['Plugins.enabled_plugins']
 
-   user_id = db.Column(db.Integer,
-                       db.ForeignKey('users.id'),
-                       nullable=False,
-                       index=True)
-   
-   setting_name = db.Column(db.String(120), nullable=False, index=True)
-   setting_value = db.Column(db.String)
-   UniqueConstraint(setting_name, setting_value)
+    id = db.Column(db.Integer,
+                    primary_key=True)
 
-   user = db.relationship('User', back_populates='user_settings')
+    user_id = db.Column(db.Integer,
+                        db.ForeignKey('users.id'),
+                        nullable=False,
+                        index=True)
+    
+    name = db.Column(db.String(120), nullable=False, index=True)
+    _value = db.Column('value', db.String)
+    UniqueConstraint(user_id, name)
+
+    user = db.relationship('User', back_populates='user_settings')
+
+    @property
+    def value(self):
+        if self.name in self.settings_to_json:
+            try:
+                decoded = json.loads(self._value)
+            except:
+                decoded = []
+            return decoded
+        return self._value
+
+    @value.setter
+    def value(self, val):
+        if type(val) is list or type(val) is dict:
+            val = json.dumps(val)
+        self._value = val
 
 
 

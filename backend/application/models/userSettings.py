@@ -1,14 +1,27 @@
 #!/usr/bin/env python3
 
+from pathlib import Path
 from typing import List, Union
-from sqlalchemy.orm.attributes import flag_modified    
 
 from application.DBModels import UserSettings
 from application.DBModels import db
+from application import all_user_settings
+from application import loadedPlugins
 
-ALLOWED_SETTINGS = [
-    'enabled_plugins',
-]
+ALL_SETTINGS = all_user_settings
+VALID_SETTING_NAMES = set()
+for panel, panel_settings in ALL_SETTINGS.items():
+    for user_setting in panel_settings:
+        if 'name' in user_setting:
+
+            if user_setting['name'] == 'enabled_plugins':
+                user_setting['options'] = [{'text': plugin['name'], 'value': plugin['id']} for plugin in loadedPlugins]
+
+            full_setting_name = f"{panel}.{user_setting['name']}"
+            user_setting['full_setting_name'] = full_setting_name
+            VALID_SETTING_NAMES.add(full_setting_name)
+VALID_SETTING_NAMES = list(VALID_SETTING_NAMES)
+
 
 def index() -> List[UserSettings]:
     q = UserSettings.query
@@ -20,46 +33,39 @@ def get(id: int) -> Union[UserSettings, None]:
     return UserSettings.query.get(id)
 
 
-def getForUser(user_id: int) -> Union[UserSettings, None]:
+def getForUser(user_id: int, setting_name: str) -> Union[UserSettings, None]:
     q = UserSettings.query
-    q = q.filter_by(user_id=user_id)
+    q = q.filter_by(user_id=user_id, name=setting_name)
     user_settings = q.first()
     return user_settings
 
 
 def add(user_id: int, user_settings: dict) -> UserSettings:
     userSetting = UserSettings(user_id=user_id)
-    userSetting.settings = {}
-    for setting, value in user_settings.items():
-        if setting in ALLOWED_SETTINGS:
-            userSetting.settings[setting] = value
-    db.session.add(userSetting)
-    db.session.commit()
+    userSetting.name = user_settings['name']
+    userSetting.value = user_settings['value']
+    if userSetting.name in VALID_SETTING_NAMES:
+        db.session.add(userSetting)
+        db.session.commit()
     return userSetting
 
 
 def editForUser(user_id: int, user_settings: dict) -> Union[UserSettings, None]:
-    oldUserSettings = getForUser(user_id)
-    if oldUserSettings is not None:
-        newSettings = oldUserSettings.settings
-        for setting, value in user_settings.items():
-            if setting in ALLOWED_SETTINGS:
-                newSettings[setting] = value
-        oldUserSettings.settings = newSettings
-        flag_modified(oldUserSettings, 'settings')
-        db.session.commit()
-        return oldUserSettings
-    else:
-        return add(user_id, user_settings)
+    setting_name = user_settings['name']
+    if setting_name:
+        oldUserSettings = getForUser(user_id, setting_name)
+        if oldUserSettings is not None:
+            oldUserSettings.value = user_settings['value']
+            db.session.commit()
+            return oldUserSettings
+        else:
+            return add(user_id, user_settings)
 
 
 def edit(id: int, user_settings: dict) -> Union[UserSettings, None]:
     oldUserSettings = get(id)
     if oldUserSettings is not None:
-        for setting, value in user_settings.items():
-            if setting in ALLOWED_SETTINGS:
-                oldUserSettings.settings[setting] = value
-        flag_modified(oldUserSettings, 'settings')
+        oldUserSettings.value = user_settings['value']
         db.session.commit()
         return oldUserSettings
     return None
@@ -72,3 +78,10 @@ def delete(id: int) -> bool:
         db.session.commit()
         return True
     return False
+
+
+def getSettingConfig() -> dict:
+    return {
+        'all_settings': ALL_SETTINGS,
+        'all_setting_names': VALID_SETTING_NAMES,
+    }

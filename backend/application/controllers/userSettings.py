@@ -17,9 +17,9 @@ def view(loggedUser, id):
     return userSettingSchema.dump(userSetting)
 
 
-@BPuserSetting.route('/user-settings/view-for-user/<user_id>', methods=['GET'])
+@BPuserSetting.route('/user-settings/get-for-user/<int:user_id>/<string:setting_name>', methods=['GET'])
 @token_required
-def viewForUser(loggedUser, user_id):
+def getForUser(loggedUser, user_id, setting_name):
     if user_id == 'me':
         user_id = loggedUser.id
     else:
@@ -28,8 +28,25 @@ def viewForUser(loggedUser, user_id):
         except ValueError:
             abort(400)
             
-    userSetting = userSettingsModel.getForUser(user_id)
+    userSetting = userSettingsModel.getForUser(user_id, setting_name)
     return userSettingSchema.dump(userSetting)
+
+
+@BPuserSetting.route('/user-settings/edit-for-user/<int:user_id>', methods=['POST', 'PUT'])
+@token_required
+def editForUser(loggedUser, user_id):
+    if user_id == 'me':
+        user_id = loggedUser.id
+    else:
+        try:
+            user_id = int(user_id)
+        except ValueError:
+            abort(400)
+
+    if request.json is not None:
+        userSetting = userSettingsModel.editForUser(user_id, request.json)
+        return userSettingSchema.dump(userSetting)
+    return jsonify([])
 
 
 @BPuserSetting.route('/user-settings/index', methods=['GET'])
@@ -68,3 +85,10 @@ def delete(loggedUser, id):
         return jsonify([id])
     else:
         return jsonify({})
+
+
+@BPuserSetting.route('/user-settings/get-setting-config', methods=['GET'])
+@token_required
+def getSettingConfig(loggedUser):
+    """Get the configuration of all user settings"""
+    return jsonify(userSettingsModel.getSettingConfig())

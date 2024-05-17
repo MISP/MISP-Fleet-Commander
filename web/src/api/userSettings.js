@@ -3,10 +3,12 @@ import common from "./common"
 const urls = {
     index: `/user-settings/index`,
     view: `/user-settings/view`,
-    viewForUser: `/user-settings/view-for-user`,
+    viewForUser: `/user-settings/get-for-user`,
     add: `/user-settings/add`,
     edit: `/user-settings/edit`,
+    editForUser: `/user-settings/edit-for-user`,
     delete: `/user-settings/delete`,
+    getSettingConfig: `/user-settings/get-setting-config`,
 }
 
 export default {
@@ -55,9 +57,27 @@ export default {
                 common.handleError(error, errorCb)
             })
     },
+    editForUser(user_id, payload, cb, errorCb) {
+        const url = `${urls.editForUser}/${user_id}`
+        return common.getClient().post(url, payload)
+            .then((response) => {
+                cb(response.data)
+            }).catch(error => {
+                common.handleError(error, errorCb)
+            })
+    },
     delete(user_id, cb, errorCb) {
         const url = `${urls.delete}/${user_id}`
         return common.getClient().delete(url,)
+            .then((response) => {
+                cb(response.data)
+            }).catch(error => {
+                common.handleError(error, errorCb)
+            })
+    },
+    getSettingConfig(cb, errorCb) {
+        const url = `${urls.getSettingConfig}`
+        return common.getClient().get(url)
             .then((response) => {
                 cb(response.data)
             }).catch(error => {

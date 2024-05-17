@@ -25,7 +25,7 @@ const actions = {
                     users.forEach(user => {
                         if (user.user_settings) {
                             allUserSettings.push(user.user_settings)
-                            user.user_settings = user.user_settings.settings
+                            user.user_settings = user.user_settings
                         }
                     });
                     commit("setUsers", users)
