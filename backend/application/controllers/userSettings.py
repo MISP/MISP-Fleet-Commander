@@ -92,3 +92,11 @@ def delete(loggedUser, id):
 def getSettingConfig(loggedUser):
     """Get the configuration of all user settings"""
     return jsonify(userSettingsModel.getSettingConfig())
+
+
+@BPuserSetting.route('/user-settings/toggle-plugin/<pluginName>', methods=['POST', 'PUT'])
+@token_required
+def togglePlugin(loggedUser, pluginName):
+    """Enable the given plugin for the logged user"""
+    enabledPlugins = userSettingsModel.togglePlugin(loggedUser.id, pluginName)
+    return jsonify(enabledPlugins)

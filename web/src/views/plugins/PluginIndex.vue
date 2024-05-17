@@ -35,7 +35,7 @@
                         <b-tr v-for="(plugin, index) in plugins" :key="index">
                             <b-td class="text-nowrap">
                                 <b-form-checkbox switch
-                                    :checked="enabledPlugins.includes(plugin.name)"
+                                    :checked="enabledPlugins.includes(plugin.id)"
                                     @change="togglePlugin(plugin.id)"
                                 ></b-form-checkbox>
                             </b-td>
@@ -92,14 +92,14 @@ export default {
             plugins: state => state.plugins.all
         }),
         ...mapGetters({
-            userSettings: "auth/get_user_settings",
+            getLoggedUserSettingByName: "userSettings/getLoggedUserSettingsByName",
         }),
         noPlugin() {
             return this.plugins.length == 0
         },
         enabledPlugins() {
-            if (this.userSettings && this.userSettings.enabled_plugins) {
-                return this.userSettings.enabled_plugins
+            if (this.getLoggedUserSettingByName && this.getLoggedUserSettingByName['Plugins.enabled_plugins']) {
+                return this.getLoggedUserSettingByName['Plugins.enabled_plugins']
             }
             return []
         }
@@ -119,11 +119,26 @@ export default {
                 })
         },
         togglePlugin(pluginName) {
-            console.log(pluginName);
-        }
+            this.$store.dispatch('userSettings/togglePlugin', pluginName)
+                .catch(error => {
+                    this.$bvToast.toast(error, {
+                        title: `Could not enable plugin \`${pluginName}\``,
+                        variant: "danger",
+                    })
+                })
+                .finally(() => {
+                    this.refreshUserSettings()
+                })
+        },
+        refreshUserSettings() {
+            this.$store.dispatch('userSettings/getUserSettings')
+            .then(() => {
+                this.refreshPlugins(false)
+            })
+        },
     },
     mounted() {
-        this.refreshPlugins(false)
+        this.refreshUserSettings()
     }
 }
 </script>

@@ -2,15 +2,22 @@ import api from "@/api/userSettings"
 
 // initial state
 const state = {
-    all: [],
+    logged_user_settings: [],
     all_settings: {},
     all_settings_name: {},
 }
 
 // getters
 const getters = {
-    getUserSettingList: state => {
-        return state.all
+    getLoggedUserSetting: state => {
+        return state.logged_user_settings
+    },
+    getLoggedUserSettingsByName: (state, getter) => {
+        const settingByName = {}
+        getter.getLoggedUserSetting.forEach(setting => {
+            settingByName[setting.name] = setting.value
+        });
+        return settingByName
     },
     getAllUserSettings: state => {
         return state.all_settings
@@ -88,18 +95,33 @@ const actions = {
                 (error) => { reject(error) }
             )
         })
-    }
+    },
+    togglePlugin({ commit }, pluginName) {
+        return new Promise((resolve, reject) => {
+            api.togglePlugin(
+                pluginName,
+                enabled_plugins => {
+                    // commit("setAllSettings", settings)
+                    resolve()
+                },
+                (error) => { reject(error) }
+            )
+        })
+    },
 }
 
 // mutations
 const mutations = {
     setUserSettings(state, userSettings) {
-        state.all = userSettings
+        state.logged_user_settings = userSettings
     },
     setAllSettings(state, settings) {
         state.all_settings = settings.all_settings
         state.all_settings_name = settings.all_setting_names
     },
+    setEnabledPlugin(state, enabled_plugins) {
+        
+    }
 }
 
 export default {

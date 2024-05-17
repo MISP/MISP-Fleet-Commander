@@ -8,6 +8,7 @@ from application.DBModels import db
 from application import all_user_settings
 from application import loadedPlugins
 
+PLUGIN_SETTING_FULL_PATH = 'Plugins.enabled_plugins'
 ALL_SETTINGS = all_user_settings
 VALID_SETTING_NAMES = set()
 for panel, panel_settings in ALL_SETTINGS.items():
@@ -85,3 +86,16 @@ def getSettingConfig() -> dict:
         'all_settings': ALL_SETTINGS,
         'all_setting_names': VALID_SETTING_NAMES,
     }
+
+
+def togglePlugin(user_id: int, plugin_name: str) -> Union[list[str], None]:
+    plugin_settings = getForUser(user_id, PLUGIN_SETTING_FULL_PATH)
+    if plugin_settings is not None:
+        updated_value = plugin_settings.value
+        if plugin_name in plugin_settings.value:
+            updated_value.remove(plugin_name) # type: ignore
+        else:
+            updated_value.append(plugin_name) # type: ignore
+        plugin_settings.value = updated_value
+        db.session.commit()
+    return plugin_settings.value # type: ignore

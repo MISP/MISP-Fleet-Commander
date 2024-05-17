@@ -9,6 +9,7 @@ const urls = {
     editForUser: `/user-settings/edit-for-user`,
     delete: `/user-settings/delete`,
     getSettingConfig: `/user-settings/get-setting-config`,
+    togglePlugin: `/user-settings/toggle-plugin`,
 }
 
 export default {
@@ -78,6 +79,15 @@ export default {
     getSettingConfig(cb, errorCb) {
         const url = `${urls.getSettingConfig}`
         return common.getClient().get(url)
+            .then((response) => {
+                cb(response.data)
+            }).catch(error => {
+                common.handleError(error, errorCb)
+            })
+    },
+    togglePlugin(pluginName, cb, errorCb) {
+        const url = `${urls.togglePlugin}/${pluginName}`
+        return common.getClient().post(url, {})
             .then((response) => {
                 cb(response.data)
             }).catch(error => {
