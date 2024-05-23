@@ -1,5 +1,5 @@
 from datetime import timedelta
-from typing import Optional
+from typing import Optional, Union
 from requests_cache import CachedSession
 from application.DBModels import Server
 from application.controllers.utils import mispGetRequest
@@ -31,15 +31,15 @@ class UpToDate(BasePlugin):
 
 
     @classmethod
-    def queryVersion(cls, server: Server) -> dict:
+    def queryVersion(cls, server: Server) -> str:
         testConnection = mispGetRequest(server, '/servers/getVersion')
         if 'error' in testConnection:
-            return []
+            return '?'
         current_version = testConnection['version']
         return current_version
 
     @classmethod
-    def queryGithub(cls) -> dict:
+    def queryGithub(cls) -> str:
         github_version_r = requestGithubSession.get(cls.githubURL)
         # if github_version_r == 200:
         #     github_version = github_version_r.json()['tag_name']
@@ -51,7 +51,8 @@ class UpToDate(BasePlugin):
             github_version = '?'
         return github_version
 
-    def tokenizeMISPVersion(versionString: str) -> dict:
+    @classmethod
+    def tokenizeMISPVersion(cls, versionString: str) -> dict:
         version = {}
         if versionString == '?':
             version = {
@@ -85,7 +86,8 @@ class UpToDate(BasePlugin):
         }
         return data
 
-    def isUpToDate(github_version: str, current_version: str) -> bool:
+    @classmethod
+    def isUpToDate(cls, github_version: dict, current_version: dict) -> bool:
         return github_version['major'] == current_version['major'] and \
             github_version['minor'] == current_version['minor'] and \
             github_version['patch'] == current_version['patch']

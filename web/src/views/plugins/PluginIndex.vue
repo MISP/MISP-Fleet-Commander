@@ -41,7 +41,16 @@
                             </b-td>
                             <b-td class="text-nowrap">
                                 <i v-if="plugin.icon" :class="[plugin.icon, 'fa-fw mr-2']" style="width: 1rem;"></i>
-                                <b :title="plugin.description">{{ plugin.name }}</b>
+                                <b>{{ plugin.name }}</b>
+                                <span
+                                    v-if="plugin.description"
+                                    class="ml-1"
+                                >
+                                    <i :id="`tooltip-${index}`" class="fa fa-circle-question"></i>
+                                    <b-tooltip :target="`tooltip-${index}`" triggers="hover">
+                                        {{ plugin.description }}
+                                    </b-tooltip>
+                                </span>
                             </b-td>
                             <b-td>
                                 <i
@@ -88,11 +97,9 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            plugins: state => state.plugins.all
-        }),
         ...mapGetters({
             getLoggedUserSettingByName: "userSettings/getLoggedUserSettingsByName",
+            plugins: "plugins/allPlugins",
         }),
         noPlugin() {
             return this.plugins.length == 0

@@ -68,6 +68,7 @@
                             </b-dropdown-item-button>
                             <b-dropdown-item-button
                                 @click="fullRefresh(false)"
+                                disabled
                             >
                                 <iconButton
                                     text="Inline full refresh"

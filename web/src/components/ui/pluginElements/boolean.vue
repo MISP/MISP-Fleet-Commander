@@ -1,5 +1,6 @@
 <template>
-    <i :class="['fa', data ? 'fa-check' : 'fa-times']"></i>
+    <i v-if="data === null" class="fa fa-question"></i>
+    <i v-else :class="['fa', data ? 'fa-check' : 'fa-times']"></i>
 </template>
 
 <script>
@@ -7,8 +8,8 @@ export default {
     name: 'PluginElementBoolean',
     props: {
         data: {
-            type: Boolean,
-            required: true
+            type: [Boolean, null],
+            required: false
         },
         status: {
             required: false

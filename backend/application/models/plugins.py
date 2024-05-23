@@ -76,11 +76,11 @@ class PluginResponse:
 
 
 class SuccessPluginResponse(PluginResponse):
-    def __init__(self, data: dict, errors: Optional[List] = [], component: Optional[str] = None, request: Optional[requestsResponse] = None):
+    def __init__(self, data: Union[dict, list], errors: Optional[List] = [], component: Optional[str] = None, request: Optional[requestsResponse] = None):
         super().__init__('success', data, errors, component, request)
 
 class FailPluginResponse(PluginResponse):
-    def __init__(self, data: dict, errors: Optional[List] = [], component: Optional[str] = None, request: Optional[requestsResponse] = None):
+    def __init__(self, data: Union[dict, list], errors: Optional[List] = [], component: Optional[str] = None, request: Optional[requestsResponse] = None):
         super().__init__('fail', data, errors, component, request)
 
 class ErrorPluginResponse(PluginResponse):
@@ -131,6 +131,8 @@ class BasePlugin:
     name = 'Unamed plugin'
     description = ''
     icon = 'fas fa-plugin'
+    abstract_class = False
+    disabled = False
     action_parameters = []
 
     def __init__(self):
@@ -224,6 +226,7 @@ def doAction(server: Server, plugin, data: Optional[dict]) -> dict:
 
 def getNotificationForPlugin(server: Server, plugin) -> list:
     pluginInstance = plugin['instance']
+    notifications = pluginInstance.notifications(server)
     try:
         notifications = pluginInstance.notifications(server)
         notifications.data = [notificationData.to_dict() for notificationData in notifications.data]

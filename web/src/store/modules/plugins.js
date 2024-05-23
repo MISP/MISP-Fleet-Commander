@@ -17,19 +17,32 @@ const getters = {
     pluginCount: state => {
         return state.all.length
     },
-    indexPlugins: state => {
-        return state.all.filter(plugin => plugin.features.index)
+    allPlugins: state => {
+        return state.all
     },
-    viewPlugins: state => {
-        return state.all.filter(plugin => plugin.features.view)
+    enabledPlugins: (state, getter, rootState, rootGetter) => {
+        const userSettingsByName = rootGetter['userSettings/getLoggedUserSettingsByName']
+        let enabledPluginIDs = []
+        if (userSettingsByName && userSettingsByName['Plugins.enabled_plugins']) {
+            enabledPluginIDs = userSettingsByName['Plugins.enabled_plugins']
+        }
+        return getter.allPlugins.filter(plugin => {
+            return enabledPluginIDs.includes(plugin.id)
+        })
     },
-    actionPlugins: state => {
-        return state.all.filter(plugin => plugin.features.action)
+    indexPlugins: (state, getter) => {
+        return getter.enabledPlugins.filter(plugin => plugin.features.index)
     },
-    notificationPlugins: state => {
-        return state.all.filter(plugin => plugin.features.notifications)
+    viewPlugins: (state, getter) => {
+        return getter.enabledPlugins.filter(plugin => plugin.features.view)
     },
-    pluginNotificationFor: (state) => (server_id, plugin_id) => {
+    actionPlugins: (state, getter) => {
+        return getter.enabledPlugins.filter(plugin => plugin.features.action)
+    },
+    notificationPlugins: (state, getter) => {
+        return getter.enabledPlugins.filter(plugin => plugin.features.notifications)
+    },
+    pluginNotificationFor: (state, getter) => (server_id, plugin_id) => {
         return state.pluginNotifications[server_id] ? (state.pluginNotifications[server_id][plugin_id] ? state.pluginNotifications[server_id][plugin_id] : []) : []
     }
 }

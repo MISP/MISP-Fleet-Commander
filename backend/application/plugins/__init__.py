@@ -28,7 +28,7 @@ def loadPlugins():
     os.chdir(cwd)
     return phandlers, plugins
 
-def loadAvailablePlugins(enabledPlugins = ['*']):
+def loadAvailablePlugins():
     phandlers, _ = loadPlugins()
     plugins = []
     for name, _ in phandlers.items():
@@ -46,15 +46,12 @@ def loadAvailablePlugins(enabledPlugins = ['*']):
                     'features': instantiatedPlugin.introspection(),
                     'instance': instantiatedPlugin
                 }
-                if (isPluginEnabled(enabledPlugins, instantiatedPlugin.id)):
+                if (isPluginEnabled(instantiatedPlugin)):
                     plugins.append(plugin)
                     flaskApp.logger.info('Plugin {0} loaded'.format(instantiatedPlugin.id))
     return plugins
 
-def isPluginEnabled(enabledPlugins, pluginName):
-    if '*' in enabledPlugins:
-        return True
-    for plugin in enabledPlugins:
-        if pluginName == plugin:
-            return True
-    return False
+def isPluginEnabled(plugin):
+    if plugin.abstract_class or plugin.disabled:
+        return False
+    return True

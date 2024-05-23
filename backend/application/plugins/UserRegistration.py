@@ -12,16 +12,16 @@ class UserRegistration(BasePlugin):
 
     def notifications(self, server: Server, data: Optional[dict] = {}) -> PluginResponse:
         success, notifications = UserRegistration.doQuery(server)
-        pluginNotifications = [
-            PluginNotification(
-                notification['title'],
-                notification.get('severity', UserRegistration._default_severity),
-                notification.get('timestamp', None),
-                notification.get('origin', None),
-                notification.get('data', {}),
-            ) for notification in notifications
-        ]
         if success:
+            pluginNotifications = [
+                PluginNotification(
+                    notification['title'],
+                    notification.get('severity', UserRegistration._default_severity),
+                    notification.get('timestamp', None),
+                    notification.get('origin', None),
+                    notification.get('data', {}),
+                ) for notification in notifications
+            ]
             return SuccessPluginResponse(pluginNotifications, None, None)
         else:
             return FailPluginResponse([], notifications['error'])
@@ -32,7 +32,7 @@ class UserRegistration(BasePlugin):
         results = []
         registrations = mispGetRequest(server, '/users/registrations')
         if 'error' in registrations:
-            return False, results
+            return False, registrations
 
         for registration in registrations:
             registration = registration['Inbox']
