@@ -30,6 +30,11 @@ const actions = {
             dispatch("servers/commitAllQueryInfo", serverData, { root: true })
         }
     },
+    SOCKET_UPDATE_SERVER_CONNECTION({ dispatch }, serverData) {
+        if (serverData.server.fleet.id == store.getters["fleets/selectedFleet"].id)  {
+            dispatch("servers/commitConnectionTestInfo", serverData, { root: true })
+        }
+    },
     SOCKET_SERVER_UPDATING({ commit }, serverData) {
         const payload = {
             server_id: serverData,

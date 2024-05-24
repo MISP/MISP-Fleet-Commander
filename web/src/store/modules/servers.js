@@ -185,6 +185,14 @@ const actions = {
             resolve()
         })
     },
+    commitConnectionTestInfo({ commit }, payload) {
+        return new Promise((resolve, reject) => {
+            const serverID = payload.server.id
+            commit("setServerRefreshEnqueued", {server_id: serverID, is_enqueued: false})
+            commit("setConnectionState", {server_id: serverID, connectionState: payload})
+            resolve()
+        })
+    },
 
     /* ADD, EDIT & DELETE */
     add({ dispatch }, payload) {

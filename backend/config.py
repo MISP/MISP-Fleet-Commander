@@ -27,8 +27,6 @@ class ProductionConfig(Config):
     APIKEY_EXPIRATION_DAYS = environ.get('APIKEY_EXPIRATION_DAYS')
 
     # Database
-    # SQLALCHEMY_DATABASE_URI = 'mysql://user@localhost/foo'
-    # SQLALCHEMY_DATABASE_URI = 'sqlite:///' + osPath.join(basedir, 'app.db')
     SQLALCHEMY_DATABASE_URI = 'sqlite:///' + osPath.join(basedir,  environ.get('SQLALCHEMY_DATABASE_URI', 'app.db'))
     # SQLALCHEMY_DATABASE_URI = environ.get('SQLALCHEMY_DATABASE_URI', 'sqlite:///' + osPath.join(basedir, 'app.db'))
     SQLALCHEMY_TRACK_MODIFICATIONS = True

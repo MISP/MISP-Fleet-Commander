@@ -765,6 +765,9 @@ export default {
                     })
                 })
         },
+        wsRefreshAllServerOnlineStatus() {
+            this.wsFleetConnectionTest(this.selectedFleet.id)
+        },
         wsRefresh() {
             this.wsFleetRefresh(this.selectedFleet.id)
         },
@@ -772,14 +775,16 @@ export default {
             if (quick) {
                 this.refreshServerIndex(true)
                     .then(() => {
-                        this.refreshAllServerOnlineStatus()
+                        // this.refreshAllServerOnlineStatus()
+                        this.wsRefreshAllServerOnlineStatus()
                         this.refreshPluginIndexValues()
                         this.tableQuickRefresh()
                     })
             } else {
                 this.refreshServerIndex(true)
                     .then(() => {
-                        this.refreshAllServerOnlineStatus()
+                        // this.refreshAllServerOnlineStatus()
+                        this.wsRefreshAllServerOnlineStatus()
                         this.refreshPluginIndexValues(true)
                         this.refreshAllInfo(true)
                     })

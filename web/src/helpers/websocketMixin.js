@@ -13,6 +13,12 @@ export const websocketMixin = {
         wsFleetRefresh: function (fleetID) {
             this.$socket.emit("refresh_fleet", fleetID);
         },
+        wsServerConnectionTest: function (serverID) {
+            this.$socket.emit('server_connection_test', serverID);
+        },
+        wsFleetConnectionTest: function (fleetID) {
+            this.$socket.emit('fleet_connection_test', fleetID);
+        },
         wsServerPing: function (serverID) {
             this.$socket.emit('ping_server', serverID);
         },

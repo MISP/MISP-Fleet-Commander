@@ -82,7 +82,7 @@ class ServerSchemaLighter(ServerSchema):
             server['server_info']['query_result']['serverSettings'].pop('dbDiagnostics')
             server['server_info']['query_result']['serverSettings'].pop('dbSchemaDiagnostics')
             server['server_info']['query_result']['serverSettings'].pop('finalSettings')
-        except TypeError:
+        except KeyError:
             pass
         return server
 
