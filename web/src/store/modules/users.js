@@ -29,7 +29,7 @@ const actions = {
                         }
                     });
                     commit("setUsers", users)
-                    commit("userSettings/setUserSettings", allUserSettings, { root: true })
+                    commit("userSettings/setAllUserSettings", allUserSettings, { root: true })
                     resolve()
                 },
                 (error) => { reject(error) }

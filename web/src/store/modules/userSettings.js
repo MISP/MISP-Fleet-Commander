@@ -3,6 +3,7 @@ import api from "@/api/userSettings"
 // initial state
 const state = {
     logged_user_settings: [],
+    all_user_settings: {},
     all_settings: {},
     all_settings_name: {},
 }
@@ -114,6 +115,9 @@ const actions = {
 const mutations = {
     setUserSettings(state, userSettings) {
         state.logged_user_settings = userSettings
+    },
+    setAllUserSettings(state, allUserSettings) {
+        state.all_user_settings = allUserSettings
     },
     setAllSettings(state, settings) {
         state.all_settings = settings.all_settings

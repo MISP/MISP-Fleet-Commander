@@ -37,7 +37,8 @@
     <b-form-input
         v-else
         v-model="formData[input_key]"
-        type="text"
+        v-bind="validProps()"
+        :type="inputType"
         :placeholder="params.placeholder || ''"
         @input="emitInput(input_key, formData[input_key])"
     ></b-form-input>
@@ -83,6 +84,13 @@ export default {
             }
             return this.user_value
         },
+        inputType() {
+            const valid_types = ['color', 'date', 'datetime-local', 'email', 'number', 'password', 'url', ]
+            if (valid_types.includes(this.type)) {
+                return this.type
+            }
+            return 'text'
+        }
     },
     methods: {
         handleInput: function(formKey, value) {
@@ -92,6 +100,16 @@ export default {
         emitInput: function(input_key, value) {
             this.$emit('input', input_key, value)
         },
+        validProps: function() {
+            const accepted_props = ['min', 'max', 'step', 'pattern', 'value', 'placeholder']
+            const valid_props = {}
+            accepted_props.forEach((propName) => {
+                if (this.params[propName] !== undefined) {
+                    valid_props[propName] = this.params[propName]
+                }
+            })
+            return valid_props
+        }
     },
     created() {
         Vue.set(this.formData, this.input_key, this.valueCasted)

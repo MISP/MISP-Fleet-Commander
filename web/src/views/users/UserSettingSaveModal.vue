@@ -2,7 +2,7 @@
     <b-modal
         id="user-setting-modal"
         ref="user-setting-modal"
-        size="lg"
+        size="xl"
         ok-only
         ok-title="Close"
     >
@@ -32,9 +32,12 @@
                             <b-tbody>
                                 <b-tr v-for="setting in panelSettings" :key="setting.name">
                                     <b-td style="width: 0%;">
-                                        <code>{{ setting.full_setting_name }}</code>
+                                        <span class="d-flex flex-column">
+                                            <strong>{{ setting.text ? setting.text : setting.name }}</strong>
+                                            <code><small>{{ setting.full_setting_name }}</small></code>
+                                        </span>
                                     </b-td>
-                                    <b-td>
+                                    <b-td class="align-middle">
                                         <formInputFromConfig
                                             :type="setting.type"
                                             :input_key="setting.full_setting_name"
@@ -152,6 +155,7 @@ export default {
                     })
                     this.$emit("save-success", "done")
                     this.backupOriginalSettings[settingName] = this.changedSettings[settingName]
+                    this.reloadSettings()
                 })
                 .catch(error => {
                     this.$bvToast.toast(error, {
@@ -166,6 +170,9 @@ export default {
         resetSetting(settingName) {
             this.changedSettings[settingName] = this.backupOriginalSettings[settingName]
         },
+        reloadSettings() {
+            this.$store.dispatch('userSettings/getUserSettings')
+        }
     },
     mounted() {
     },

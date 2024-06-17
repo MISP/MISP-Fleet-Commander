@@ -17,3 +17,21 @@ options = ["default", "modern", "old"]
 name = "dark"
 type = "checkbox"
 text = "Dark theme"
+
+[[UI]]
+name = "server_index.worker_warning_threshold"
+type = "number"
+text = "Server Index - Worker Warning Threshold"
+description = "The threshold at which the number of pending job to be picked up by workers will be marked as a \"warning\"."
+min = 0
+step = 5
+placeholder = "10"
+
+[[UI]]
+name = "server_index.worker_danger_threshold"
+type = "number"
+text = "Server Index - Worker Danger Threshold"
+description = "The threshold at which the number of pending job to be picked up by workers will be marked as a \"danger\"."
+min = 0
+step = 5
+placeholder = "100"
