@@ -1,5 +1,8 @@
 <template>
-    <div v-if="hasValidConnections">
+    <div v-if="connectionCount == 0">
+        <small class="text-muted">- No connections -</small>
+    </div>
+    <div v-else-if="hasValidConnections">
         <div v-if="connectionCount > 0">
             <div :id="`badge-connections-${row_index}`" class="badge-list">
                 <template v-if="use_diode">

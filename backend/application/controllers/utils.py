@@ -82,7 +82,7 @@ def mispGetRequest(server, url, data={}, rawResponse=False, nocache=False):
     except requests.exceptions.ConnectionError:
         return { "error": "Server unreachable" }
     except Exception as e:
-        return { "error": "Unknown Exception " }
+        return { "error": "Exception " + str(e) }
 
 
 @timer
