@@ -45,6 +45,9 @@ export default {
         },
         reconnect() {
         },
+    },
+    mounted() {
+        this.$store.dispatch('userSettings/getUserSettings', true)
     }
 }
 </script>

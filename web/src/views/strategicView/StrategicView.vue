@@ -91,6 +91,7 @@
 <script>
 import Vue from "vue"
 import { mapState, mapGetters } from "vuex"
+import { websocketMixin } from "@/helpers/websocketMixin"
 import Layout from "@/components/layout/Layout.vue"
 import iconButton from "@/components/ui/elements/iconButton.vue"
 import ServerNodeGeneric from "@/views/strategicView/elements/ServerNodeGeneric.vue"
@@ -105,6 +106,7 @@ import d3Network from "@/helpers/d3Network.js"
 
 export default {
     name: "TheStrategicView",
+    mixins: [websocketMixin],
     components: {
         Layout,
         iconButton,
@@ -146,6 +148,7 @@ export default {
     },
     computed: {
         ...mapState({
+            selectedFleet: state => state.fleets.selected,
             remote_connections: state => state.servers.remote_connections,
         }),
         ...mapGetters({
@@ -298,23 +301,7 @@ export default {
             })
         },
         refreshAllServerOnlineStatus() {
-            this.refreshInProgress = true
-            return new Promise((resolve, reject) => {
-                this.$store.dispatch("servers/runAllConnectionTest")
-                    .then(() => {
-                        resolve()
-                    })
-                    .catch(error => {
-                        this.$bvToast.toast(error, {
-                            title: "Could not reach Server",
-                            variant: "danger",
-                        })
-                        reject()
-                    })
-                    .finally(() => {
-                        this.refreshInProgress = false
-                    })
-            })
+            this.wsFleetConnectionTest(this.selectedFleet.id)
         },
         syncWithStore() {
             this.d3data.nodes = JSON.parse(JSON.stringify(this.getServerList))

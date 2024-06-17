@@ -32,14 +32,6 @@ def registerListeners():
         for server in servers:
             doServerConnectionTestTask.delay(serverSchema.dump(server))
 
-    @socketioApp.on('ping_server')
-    def ping_server(serverID):
-        pass
-
-    @socketioApp.on('ping_fleet')
-    def ping_fleet(fleedID):
-        pass
-
 
 class SocketioEmitter:
 
@@ -57,4 +49,7 @@ class SocketioEmitter:
 
     def server_updating(self, serverID):
         self.socketio.emit('SERVER_UPDATING', serverID)
+
+    def server_status_updating(self, serverID):
+        self.socketio.emit('SERVER_STATUS_UPDATING', serverID)
 

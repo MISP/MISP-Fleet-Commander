@@ -9,6 +9,7 @@ const init_state = () => {
         server_status: {},
         server_query_in_progress: {},
         server_refresh_enqueued: {},
+        server_status_refresh_enqueued: {},
         server_query_error: {},
         server_user: {},
         remote_connections: {},
@@ -79,90 +80,6 @@ const actions = {
             }
         })
     },
-    runConnectionTest({ commit, state }, server_id) {
-        return new Promise((resolve, reject) => {
-            commit("resetConnectionState", { server_id: server_id })
-            api.testConnection(
-                server_id,
-                connectionState => {
-                    commit("setConnectionState", { server_id: server_id, connectionState: connectionState })
-                    resolve()
-                },
-                (error) => { reject(error) }
-            )
-        })
-    },
-    runAllConnectionTest({ commit }) {
-        return new Promise((resolve, reject) => {
-            commit("resetConnectionsState")
-            api.batchTestConnection(
-                connectionsState => {
-                    connectionsState.forEach(connection => {
-                        commit("setConnectionState", { server_id: connection.server_id, connectionState: connection })
-                    })
-                    resolve()
-                },
-                (error) => { reject(error) }
-            )
-        })
-    },
-    runSelectedConnectionTest({ dispatch }, payload) {
-        return new Promise((resolve, reject) => {
-            payload.selection.forEach(server_id => {
-                dispatch("runConnectionTest", server_id)
-                    .then(() => {
-                        resolve()
-                    })
-                    .catch(error => {
-                        reject(error)
-                    })
-            })
-        })
-    },
-    fetchServerInfo({ commit }, payload) {
-        return new Promise((resolve, reject) => {
-            commit("setQueryState", { server_id: payload.server_id, loading: true })
-            api.queryInfo(
-                payload,
-                (info) => {
-                    commit("setQueryState", { server_id: payload.server_id, info: info, loading: false })
-                    commitAllQueryInfo(commit, payload.server_id, info)
-                    resolve()
-                },
-                (error) => {
-                    commit("setQueryState", { server_id: payload.server_id, loading: false })
-                    commitAllQueryInfo(commit, payload.server_id)
-                    reject(error)
-                }
-            )
-        })
-    },
-    fetchAllServerInfo({ getters, commit, dispatch }, payload) {
-        return new Promise((resolve, reject) => {
-            getters.getServerList.forEach(server => {
-                dispatch("fetchServerInfo", { server_id: server.id, no_cache: payload.no_cache })
-                    .then(() => {
-                        resolve()
-                    })
-                    .catch(error => {
-                        reject(error)
-                    })
-            })
-        })
-    },
-    fetchSelectedServerInfo({ state, dispatch }, payload) {
-        return new Promise((resolve, reject) => {
-            payload.selection.forEach(server_id => {
-                dispatch("fetchServerInfo", { server_id: server_id, no_cache: payload.no_cache })
-                    .then(() => {
-                        resolve()
-                    })
-                    .catch(error => {
-                        reject(error)
-                    })
-            })
-        })
-    },
     getUsers({ commit }, server_id) {
         return new Promise((resolve, reject) => {
             api.queryGetUsers(
@@ -188,7 +105,7 @@ const actions = {
     commitConnectionTestInfo({ commit }, payload) {
         return new Promise((resolve, reject) => {
             const serverID = payload.server.id
-            commit("setServerRefreshEnqueued", {server_id: serverID, is_enqueued: false})
+            commit("setServerStatusRefreshEnqueued", {server_id: serverID, is_enqueued: false})
             commit("setConnectionState", {server_id: serverID, connectionState: payload})
             resolve()
         })
@@ -259,6 +176,7 @@ const mutations = {
             server.canBeUpdated = false
             Vue.set(state.server_query_in_progress, server.id, false)
             Vue.set(state.server_refresh_enqueued, server.id, false)
+            Vue.set(state.server_status_refresh_enqueued, server.id, false)
             Vue.set(state.server_query_error, server.id, false)
             Vue.set(state.server_status, server.id, {})
             if (server.server_info && server.server_info.query_result !== undefined) {
@@ -266,14 +184,6 @@ const mutations = {
                 delete server.server_info.query_result
             }
             Vue.set(state.servers, server.id, server)
-        })
-    },
-    resetConnectionState(state, payload) {
-        Vue.set(state.server_status, payload.server_id, {_loading: true})
-    },
-    resetConnectionsState(state) {
-        Object.values(state.servers).forEach(server => {
-            Vue.set(state.server_status, server.id, {_loading: true})
         })
     },
     setConnectionState(state, payload) {
@@ -309,6 +219,11 @@ const mutations = {
         const server_id = payload.server_id
         const is_enqueued = payload.is_enqueued
         state.server_refresh_enqueued[server_id] = is_enqueued
+    },
+    setServerStatusRefreshEnqueued(state, payload) {
+        const server_id = payload.server_id
+        const is_enqueued = payload.is_enqueued
+        state.server_status_refresh_enqueued[server_id] = is_enqueued
     },
     setServerUser(state, payload) {
         if (state.server_user[payload.server_id] === undefined) {

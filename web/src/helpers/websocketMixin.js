@@ -27,28 +27,6 @@ export const websocketMixin = {
         },
 
         // emit with ack
-        wsServerPingWithAck: async function (serverID, callback) {
-            try {
-                const response = await socket.timeout(this.socket_ack_timeout).emitWithAck('ping_server', serverID);
-                this.handleSuccess(response)
-                if (callback !== undefined) {
-                    callback(response)
-                }
-            } catch (err) {
-                this.handleError(err)
-            }
-        },
-        wsFleetPingWithAck: async function (fleetID, callback) {
-            try {
-                const response = await socket.timeout(this.socket_ack_timeout).emitWithAck('ping_fleet', fleetID);
-                this.handleSuccess(response)
-                if (callback !== undefined) {
-                    callback(response)
-                }
-            } catch (err) {
-                this.handleError(err)
-            }
-        },
         wsServerRefreshWithAck: async function (serverID, callback) {
             try {
                 const response = await socket.timeout(this.socket_ack_timeout).emitWithAck('refresh_server', serverID);

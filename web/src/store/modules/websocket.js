@@ -21,10 +21,6 @@ const actions = {
     SOCKET_DISCONNECT(state) {
         commit("setConnected", false)
     },
-    SOCKET_DOACTION({ commit }, message) {
-        console.log('wsaction ' + message);
-        Vue.prototype.$socket.emit('xname2', 'test-from-client')
-    },
     SOCKET_UPDATE_SERVER({ dispatch }, serverData) {
         if (serverData.server.fleet.id == store.getters["fleets/selectedFleet"].id)  {
             dispatch("servers/commitAllQueryInfo", serverData, { root: true })
@@ -42,6 +38,13 @@ const actions = {
         }
         commit("servers/setServerRefreshEnqueued", payload, { root: true })
     },
+    SOCKET_SERVER_STATUS_UPDATING({ commit }, serverData) {
+        const payload = {
+            server_id: serverData,
+            is_enqueued: true,
+        }
+        commit("servers/setServerStatusRefreshEnqueued", payload, { root: true })
+    },
 }
 
 // mutations
@@ -49,9 +52,6 @@ const mutations = {
     setConnected: function (state, connectionState) {
         state.isConnected = connectionState;
     },
-    SOCKET_UPDATE(state, message) {
-        console.log('wsmutation  ' + message);
-    }
 }
 
 export default {

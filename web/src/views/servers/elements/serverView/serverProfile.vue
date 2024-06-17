@@ -24,32 +24,35 @@
                             ({{ (getServerStatus.latency*1000).toFixed(0) }}ms)
                         </small>
                     </span>
-                    <b-button
-                        class="ml-auto mr-1 p-0"
-                        variant="link"
-                        size="sm"
-                        title="Inline full refresh"
-                        @click="fullRefresh()"
-                    >
-                        <i class="fas fa-sync-alt"></i>
-                    </b-button>
-                    <b-button
-                        :variant="getRefreshEnqueued ? 'dark' : 'primary'"
-                        :disabled="getRefreshEnqueued"
-                        size="sm"
-                        title="Enqueue full refresh"
-                        href="#"
-                        @click="wsRefresh()"
-                    >
-                        <span v-if="getRefreshEnqueued">
-                            <i class="fas fa-sync-alt fa-spin"></i>
-                            Refresh in progress
-                        </span>
-                        <span v-else>
-                            <i class="fas fa-clock"></i>
-                            Enqueue refresh
-                        </span>
-                    </b-button>
+                    <b-button-group class="ml-2">
+                        <b-button
+                            variant="primary"
+                            class="ml-auto"
+                            size="sm"
+                            title="Inline full refresh"
+                            @click="wsStatusRefresh()"
+                        >
+                            <i class="fas fa-redo-alt"></i>
+                            Quick
+                        </b-button>
+                        <b-button
+                            :variant="getRefreshEnqueued ? 'dark' : 'primary'"
+                            :disabled="getRefreshEnqueued"
+                            size="sm"
+                            title="Enqueue full refresh"
+                            href="#"
+                            @click="fullRefresh()"
+                        >
+                            <span v-if="getRefreshEnqueued">
+                                <i class="fas fa-sync-alt fa-spin"></i>
+                                Refresh in progress
+                            </span>
+                            <span v-else>
+                                <i class="fas fa-sync-alt"></i>
+                                Full refresh
+                            </span>
+                        </b-button>
+                    </b-button-group>
                 </span>
             </h5>
 
@@ -136,10 +139,6 @@ export default {
             required: true,
             type: Number,
         },
-        // info_refresh_in_progress: {
-        //     required: true,
-        //     type: Boolean,
-        // }
     },
     data: function () {
         return {
@@ -289,8 +288,8 @@ export default {
         fullRefresh() {
             this.$emit("fullRefresh")
         },
-        wsRefresh() {
-            this.$emit("wsRefresh")
+        wsStatusRefresh() {
+            this.$emit("wsStatusRefresh")
         }
     }
 }

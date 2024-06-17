@@ -14,7 +14,7 @@ socketioEmitter = SocketioEmitter()
 def fetchServerInfoTask(serverDict):
     server = serverSchemaLighter.load(serverDict)
     socketioEmitter.server_updating(server.id)
-    serverInfo = serverModel.fetchServerInfo(server)
+    serverInfo = serverModel.fetchServerInfo(server, use_cache=False)
     serverInfo['server'] = serverDict
     socketioEmitter.udpate_server(serverInfo)
 
@@ -22,8 +22,8 @@ def fetchServerInfoTask(serverDict):
 @celery_app.task(name="doServerConnectionTestTask")
 def doServerConnectionTestTask(serverDict):
     server = serverSchemaLighter.load(serverDict)
-    socketioEmitter.server_updating(server.id)
-    connectionInfo = serverModel.testConnection(server.id)
+    socketioEmitter.server_status_updating(server.id)
+    connectionInfo = serverModel.testConnection(server.id, use_cache=False)
     if connectionInfo is not None:
         # connectionInfo['server'] = {'uuid': server.uuid, 'id': server.id}
         connectionInfo['server'] = serverSchemaLighter.dump(server)
