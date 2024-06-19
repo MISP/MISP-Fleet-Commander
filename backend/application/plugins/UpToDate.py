@@ -1,10 +1,10 @@
 from datetime import timedelta
-from typing import Optional, Union
+from typing import List, Optional, Union
 from requests_cache import CachedSession
 from application.DBModels import Server
-from application.controllers.utils import mispGetRequest
+from application.controllers.utils import mispGetRequest, mispPostRequest
 from application.models.plugins import BasePlugin, PluginResponse, SuccessPluginResponse, FailPluginResponse
-import requests
+from requests import Response
 
 
 requestGithubSession = CachedSession(cache_name='github_cache', expire_after=timedelta(minutes=10))
@@ -14,6 +14,9 @@ class UpToDate(BasePlugin):
     description = 'Check if the server is up-to-date based on the latest GitHub release'
     icon = 'far fa-arrow-alt-circle-up'
     githubURL = "https://api.github.com/repos/MISP/MISP/releases/latest"
+    quickActionName = 'Run Updates'
+    quickActionIcon = 'arrow-up'
+    quickActionVariant = 'outline-primary'
 
     def view(self, server: Server, data: Optional[dict] = {}) -> PluginResponse:
         upToDateStatus = UpToDate.getStatus(server)
@@ -28,6 +31,14 @@ class UpToDate(BasePlugin):
 
     def index(self, server: Server, data: Optional[dict] = {}) -> PluginResponse:
         return self.view(server, data)
+
+    def quickAction(self, server: Server, data: Optional[dict] = {}) -> Union[PluginResponse, List[PluginResponse]]:
+        updateResult = UpToDate.doUpdate(server)
+        if 'error' in updateResult:
+            return FailPluginResponse({}, updateResult['error'])
+        data = updateResult.json()
+        data['message'] = f"Server `{server.name}` updated"
+        return SuccessPluginResponse(data, None, None, updateResult)
 
 
     @classmethod
@@ -91,3 +102,8 @@ class UpToDate(BasePlugin):
         return github_version['major'] == current_version['major'] and \
             github_version['minor'] == current_version['minor'] and \
             github_version['patch'] == current_version['patch']
+
+    @classmethod
+    def doUpdate(cls, server: Server) -> Union[dict, Response]:
+        # return mispPostRequest(server, '/servers/update', rawResponse=True, nocache=True)
+        return mispGetRequest(server, '/servers/getVersion', rawResponse=True, nocache=True)

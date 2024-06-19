@@ -173,7 +173,6 @@ const mutations = {
         servers.forEach(server => {
             server._showDetails = false
             server._loading = false
-            server.canBeUpdated = false
             Vue.set(state.server_query_in_progress, server.id, false)
             Vue.set(state.server_refresh_enqueued, server.id, false)
             Vue.set(state.server_status_refresh_enqueued, server.id, false)

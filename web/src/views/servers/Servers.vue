@@ -116,6 +116,11 @@
                                     icon="trash"
                                 ></iconButton>
                             </b-dropdown-item-button>
+
+                            <contextualMenu
+                                :menu="genContextualMenuSelectionDropDown()"
+                                @exec-quick-action-on-selected="execQuickActionOnSelected"
+                            ></contextualMenu>
                         </b-dropdown>
                     </b-button-group>
                 </b-button-toolbar>
@@ -239,12 +244,12 @@
                                     ></i>
                                 </template>
                                 <contextualMenu
-                                    :menu="genContextualMenu(row.item.id)"
+                                    :menu="genContextualMenuRow(row.item.id)"
                                     @handle-wsrefresh-info="handleRefreshInfoWS"
                                     @view-connections="viewConnections"
                                     @view-in-network="viewInNetwork"
                                     @open-deletion-modal="openDeletionModal"
-                                    @run-updates="runUpdates"
+                                    @exec-quick-action="execQuickAction"
                                     @handle-discover-servers-add="handleDiscoverServersAdd"
                                 ></contextualMenu>
                             </b-dropdown>
@@ -283,7 +288,7 @@
 
             <template v-slot:cell(workers)="row">
                 <loaderPlaceholder :loading="!server_query_in_progress[row.item.id]">
-                    <workersStatus :workersX="row.value" :server_id="row.item.id"></workersStatus>
+                    <workersStatus :workers="row.value" :server_id="row.item.id"></workersStatus>
                 </loaderPlaceholder>
             </template>
 
@@ -353,6 +358,7 @@
 
 <script>
 import store from "@/store/index"
+import pluginAPI from "@/api/plugins"
 import { websocketMixin } from "@/helpers/websocketMixin"
 import { mapState, mapGetters } from "vuex"
 import Layout from "@/components/layout/Layout.vue"
@@ -548,6 +554,7 @@ export default {
             serverCount: "servers/serverCount",
             getServerList: "servers/getServerList",
             indexPlugins: "plugins/indexPlugins",
+            quickActionPlugins: "plugins/quickActionPlugins",
         }),
         getIndex() {
             return (this.getServerList || []).map(server => ({ ...server }))
@@ -591,8 +598,8 @@ export default {
         onSorted() {
             this.table.currentPage = 1
         },
-        genContextualMenu(server_id) {
-            return [
+        genContextualMenuRow(server_id) {
+            const contextualMenu = [
                 {
                     variant: "",
                     text: "Refresh",
@@ -624,14 +631,6 @@ export default {
                     callbackData: {server_id: server_id}
                 },
                 {
-                    variant: "outline-primary",
-                    disabled: !this.servers[server_id].canBeUpdated,
-                    text: "Run updates",
-                    icon: "arrow-up",
-                    eventName: "run-updates",
-                    callbackData: {server_id: server_id}
-                },
-                {
                     variant: "outline-danger",
                     text: "Delete server",
                     icon: "trash",
@@ -639,6 +638,47 @@ export default {
                     callbackData: {server_id: server_id}
                 },
             ]
+
+            contextualMenu.push(
+                {
+                    is_header: true,
+                    text: 'Plugin Quick Action',
+                    icon: "bolt",
+                }
+            )
+            this.quickActionPlugins.forEach((plugin) => {
+                contextualMenu.push(
+                    {
+                        variant: plugin.quickActionMeta.quickActionVariant,
+                        text: plugin.quickActionMeta.quickActionName,
+                        icon: plugin.quickActionMeta.quickActionIcon,
+                        eventName: "exec-quick-action",
+                        callbackData: {server_id: server_id, plugin: plugin}
+                    }
+                )
+            })
+            return contextualMenu
+        },
+        genContextualMenuSelectionDropDown() {
+            const contextualMenu = [
+                {
+                    is_header: true,
+                    text: 'Plugin Quick Action',
+                    icon: "bolt",
+                }
+            ]
+            this.quickActionPlugins.forEach((plugin) => {
+                contextualMenu.push(
+                    {
+                        variant: plugin.quickActionMeta.quickActionVariant,
+                        text: plugin.quickActionMeta.quickActionName,
+                        icon: plugin.quickActionMeta.quickActionIcon,
+                        eventName: "exec-quick-action-on-selected",
+                        callbackData: {plugin: plugin}
+                    }
+                )
+            })
+            return contextualMenu
         },
         rowClass(item, type) {
             let classes = ["no-outline"]
@@ -778,6 +818,78 @@ export default {
                 this.pluginFields.push(field)
                 this.table.fields.splice(lastRefreshPosition - 1, 0, field)
             })
+        },
+        getToastVariant(state) {
+            if (state == 'success') {
+                return 'success'
+            } else if (state == 'fail' || state == 'error') {
+                return 'danger'
+            }
+            return 'primary'
+        },
+        execQuickAction({server_id, plugin}) {
+            const form_data = {}
+            pluginAPI.submitQuickAction(server_id, plugin.id, form_data)
+                .then((response) => {
+                    if (response.data.error) {
+                        const errorMessage = Array.isArray(response.data.error) ? response.data.error.join(', ') : response.data.error
+                        this.$bvToast.toast(errorMessage, {
+                            title: `Failure while executing quick action ${plugin.quickActionMeta.quickActionName}`,
+                            variant: "danger",
+                        })
+                    } else {
+                        const successMessage = response.data.data.message
+                        this.$bvToast.toast(successMessage, {
+                            title: `Successfully executed quick action ${plugin.quickActionMeta.quickActionName}`,
+                            variant: this.getToastVariant(response.data.status),
+                        })
+                    }
+                })
+                .catch(error => {
+                    const errorMessage = error.toJson()
+                    this.$bvToast.toast(errorMessage, {
+                        title: `Could not perform quick action ${plugin.quickActionMeta.quickActionName}`,
+                        variant: "danger",
+                    })
+                })
+        },
+        execQuickActionOnSelected({plugin}) {
+            const promises = []
+            this.getSelectedServer.forEach((server) => {
+                const form_data = {}
+                const prom = pluginAPI.submitQuickAction(server.id, plugin.id, form_data)
+                promises.push(prom)
+            })
+            return Promise.all(promises)
+                .then((responses) => {
+                    const successes = responses.filter(response => {
+                        return !response.data.error
+                    });
+                    const failures = responses.filter(response => {
+                        return response.data.error
+                    });
+                    if (successes.length > 0) {
+                        const successMessage = successes[0].data.data.message
+                        this.$bvToast.toast(successMessage, {
+                            title: `Successfully performed ${successes.length} quick action${successes.length > 1 ? 's' : ''}`,
+                            variant: "success",
+                        })
+                    }
+                    if (failures.length > 0) {
+                        const errorMessage = Array.isArray(failures[0].data.error) ? failures[0].data.error.join(', ') : failures[0].data.error
+                        this.$bvToast.toast(errorMessage, {
+                            title: `Could not perform ${failures.length} quick action${failures.length > 1 ? 's' : ''}`,
+                            variant: "danger",
+                        })
+                    }
+                })
+                .catch(error => {
+                    const errorMessage = error.toJSON().message
+                    this.$bvToast.toast(errorMessage, {
+                        title: "Could not perform quick action",
+                        variant: "danger",
+                    })
+                })
         },
         exportSelected() {
             let csv = ''

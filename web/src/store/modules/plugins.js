@@ -39,6 +39,9 @@ const getters = {
     actionPlugins: (state, getter) => {
         return getter.enabledPlugins.filter(plugin => plugin.features.action)
     },
+    quickActionPlugins: (state, getter) => {
+        return getter.enabledPlugins.filter(plugin => plugin.features.quickAction)
+    },
     notificationPlugins: (state, getter) => {
         return getter.enabledPlugins.filter(plugin => plugin.features.notifications)
     },

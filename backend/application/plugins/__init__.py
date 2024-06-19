@@ -44,7 +44,12 @@ def loadAvailablePlugins():
                     'action_parameters': instantiatedPlugin.action_parameters,
                     'filename': name,
                     'features': instantiatedPlugin.introspection(),
-                    'instance': instantiatedPlugin
+                    'instance': instantiatedPlugin,
+                    'quickActionMeta': {
+                        'quickActionName': instantiatedPlugin.quickActionName,
+                        'quickActionIcon': instantiatedPlugin.quickActionIcon,
+                        'quickActionVariant': instantiatedPlugin.quickActionVariant,
+                    }
                 }
                 if (isPluginEnabled(instantiatedPlugin)):
                     plugins.append(plugin)

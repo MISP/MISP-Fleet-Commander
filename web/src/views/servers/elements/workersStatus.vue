@@ -32,7 +32,7 @@ import { mapState, mapGetters } from "vuex"
 export default {
     name: "workersStatus",
     props: {
-        workersX: {
+        workers: {
         },
         server_id: {
             type: Number,
@@ -40,14 +40,6 @@ export default {
         }
     },
     computed: {
-        workers() {
-            const w = this.workersX
-            w.cache.jobCount = 0
-            w.default.jobCount = 9
-            w.prio.jobCount = 20
-            w.email.jobCount = 150
-            return w
-        },
         ...mapState({
             final_settings: state => state.servers.final_settings,
         }),

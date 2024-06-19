@@ -25,10 +25,10 @@
                         <b-tr>
                             <b-th>Enabled</b-th>
                             <b-th>Name</b-th>
-                            <b-th>Index</b-th>
-                            <b-th>View</b-th>
-                            <b-th>Action</b-th>
-                            <b-th>Notifications</b-th>
+                            <b-th title="Can this plugin add a column in the server index">Index</b-th>
+                            <b-th title="Can this plugin add a row in the server view">View</b-th>
+                            <b-th title="Can this plugin perform action on one or multiple MISP instances">Action</b-th>
+                            <b-th title="Can this plugin generate entries in the server notification board">Notifications</b-th>
                         </b-tr>
                     </b-thead>
                     <b-tbody>
@@ -54,25 +54,27 @@
                             </b-td>
                             <b-td>
                                 <i
-                                    title="Can this plugin create an column in the server index"
                                     :class="['fa', plugin.features.index ? 'fa-check text-success' : 'fa-times text-danger']"
                                 ></i>
                             </b-td>
                             <b-td>
                                 <i
-                                    title="Can this plugin create an row in the server view"
                                     :class="['fa', plugin.features.view ? 'fa-check text-success' : 'fa-times text-danger']"
                                 ></i>
                             </b-td>
                             <b-td>
                                 <i
-                                    title="Can this plugin perform action on one or multiple MISP instances"
-                                    :class="['fa', plugin.features.action ? 'fa-check text-success' : 'fa-times text-danger']"
+                                    :title="plugin.features.quickAction ? 'This plugin supports quick actions' : ''"
+                                    :class="{
+                                        'fa': true,
+                                        'fa-check-double text-success': plugin.features.quickAction,
+                                        'fa-check text-success': !plugin.features.quickAction && plugin.features.action,
+                                        'fa-times text-danger': !plugin.features.quickAction && !plugin.features.action,
+                                    }"
                                 ></i>
                             </b-td>
                             <b-td>
                                 <i
-                                    title="Can this plugin generate entries in the server notification board"
                                     :class="['fa', plugin.features.notifications ? 'fa-check text-success' : 'fa-times text-danger']"
                                 ></i>
                             </b-td>

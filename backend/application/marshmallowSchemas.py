@@ -119,6 +119,7 @@ class PluginSchema(Schema):
     description = fields.Str()
     features = fields.Dict()
     action_parameters = fields.List(fields.Dict())
+    quickActionMeta = fields.Dict()
 
 
 class TaskSchema(Schema):
