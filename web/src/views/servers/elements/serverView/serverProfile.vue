@@ -24,60 +24,32 @@
                             ({{ (getServerStatus.latency*1000).toFixed(0) }}ms)
                         </small>
                     </span>
-                    <b-button
-                        class="ml-auto mr-1 p-0"
-                        variant="link"
-                        size="sm"
-                        title="Inline full refresh"
-                        @click="fullRefresh()"
-                    >
-                        <i class="fas fa-sync-alt"></i>
-                    </b-button>
-                    <b-button
-                        :variant="getRefreshEnqueued ? 'dark' : 'primary'"
-                        :disabled="getRefreshEnqueued"
-                        size="sm"
-                        title="Enqueue full refresh"
-                        href="#"
-                        @click="wsRefresh()"
-                    >
-                        <span v-if="getRefreshEnqueued">
-                            <i class="fas fa-sync-alt fa-spin"></i>
-                            Refresh in progress
-                        </span>
-                        <span v-else>
-                            <i class="fas fa-clock"></i>
-                            Enqueue refresh
-                        </span>
-                    </b-button>
                 </span>
             </h5>
 
-            <b-overlay :show="getQueryInProgress || getRefreshEnqueued" rounded="sm">
-                <template v-if="isOnline">
-                    <b-table-simple
-                    small
-                    class="mb-0"
-                    :bordered="false"
-                    :borderless="true"
-                    :outlined="false"
-                    >
-                        <b-tbody>
-                            <b-tr v-for="(v, k) in statusData" v-bind:key="k">
-                                <b-th class="text-nowrap text-right pr-3">{{ k }}</b-th>
-                                <b-td>
-                                    <template v-if="v.text">
-                                        {{ v.text }}
-                                    </template>
-                                    <template v-if="v.component">
-                                        <component :is="v.component" v-bind="v.data"></component>
-                                    </template>
-                                </b-td>
-                            </b-tr>
-                        </b-tbody>
-                    </b-table-simple>
-                </template>
-            </b-overlay>
+            <template v-if="isOnline">
+                <b-table-simple
+                small
+                class="mb-0"
+                :bordered="false"
+                :borderless="true"
+                :outlined="false"
+                >
+                    <b-tbody>
+                        <b-tr v-for="(v, k) in statusData" v-bind:key="k">
+                            <b-th class="text-nowrap text-right pr-3">{{ k }}</b-th>
+                            <b-td>
+                                <template v-if="v.text">
+                                    {{ v.text }}
+                                </template>
+                                <template v-if="v.component">
+                                    <component :is="v.component" v-bind="v.data"></component>
+                                </template>
+                            </b-td>
+                        </b-tr>
+                    </b-tbody>
+                </b-table-simple>
+            </template>
         </b-card-body>
         <hr v-if="isOnline" class="my-0" />
 
@@ -85,32 +57,30 @@
             <h5 class="card-title mb-0 mx-3 my-2">
                 Server Info
             </h5>
-            <b-overlay :show="getQueryInProgress || getRefreshEnqueued" rounded="sm" class="table-server-info">
-                <b-table-simple
-                striped small
-                class="mb-0"
-                :bordered="false"
-                :borderless="true"
-                :outlined="false"
-                >
-                    <b-tbody>
-                        <b-tr v-for="(v, k) in infoData" v-bind:key="k">
-                            <b-th class="text-nowrap text-right pr-3">{{ k }}</b-th>
-                            <b-td>
-                                <template v-if="Object.keys(defaultInfoData).includes(k)">{{ v }}</template>
-                                <template v-else>
-                                    <pluginValueRenderer
-                                        v-if="v !== undefined"
-                                        :server_id="server_id"
-                                        :plugin_name="k" 
-                                        :plugin_response="v" 
-                                    ></pluginValueRenderer>
-                                </template>
-                            </b-td>
-                        </b-tr>
-                    </b-tbody>
-                </b-table-simple>
-            </b-overlay>
+            <b-table-simple
+            striped small
+            class="mb-0"
+            :bordered="false"
+            :borderless="true"
+            :outlined="false"
+            >
+                <b-tbody>
+                    <b-tr v-for="(v, k) in infoData" v-bind:key="k">
+                        <b-th class="text-nowrap text-right pr-3">{{ k }}</b-th>
+                        <b-td>
+                            <template v-if="Object.keys(defaultInfoData).includes(k)">{{ v }}</template>
+                            <template v-else>
+                                <pluginValueRenderer
+                                    v-if="v !== undefined"
+                                    :server_id="server_id"
+                                    :plugin_name="k" 
+                                    :plugin_response="v" 
+                                ></pluginValueRenderer>
+                            </template>
+                        </b-td>
+                    </b-tr>
+                </b-tbody>
+            </b-table-simple>
         </b-card-body>
     </b-card>
 </template>
@@ -136,10 +106,6 @@ export default {
             required: true,
             type: Number,
         },
-        // info_refresh_in_progress: {
-        //     required: true,
-        //     type: Boolean,
-        // }
     },
     data: function () {
         return {
@@ -289,8 +255,8 @@ export default {
         fullRefresh() {
             this.$emit("fullRefresh")
         },
-        wsRefresh() {
-            this.$emit("wsRefresh")
+        wsStatusRefresh() {
+            this.$emit("wsStatusRefresh")
         }
     }
 }

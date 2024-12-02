@@ -1,3 +1,5 @@
+from pathlib import Path
+import tomllib
 from flask import Flask
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
@@ -18,8 +20,8 @@ def celery_init_app(app: Flask) -> Celery:
                 return self.run(*args, **kwargs)
 
     celery_app = Celery(app.name, task_cls=FlaskTask,
-            broker_url = os.environ.get('CELERY_BROKER_URL', 'redis://localhost'),
-            result_backend = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost'),
+            broker_url = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6380/1'),
+            result_backend = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6380/1'),
             enable_utc = True,
             include=['application.workers.tasks']
     )
@@ -41,10 +43,15 @@ db = None
 migrate = Migrate()
 loadedPlugins = None
 flaskApp = None
-redisClient = redis.Redis(host=os.environ.get('REDIS_URL', 'localhost'), port=os.environ.get('REDIS_PORT', 6379), db=os.environ.get('REDIS_DB', 1))
+redisClient = redis.Redis(host=os.environ.get('REDIS_URL', 'localhost'), port=int(os.environ.get('REDIS_PORT', 6380)), db=int(os.environ.get('REDIS_DB', 1)))
 celery_app = None
 socketioApp = None
 bcrypt = None
+all_user_settings = []
+script_dir = Path(__file__).resolve().parent
+relative_path = Path('user-settings.toml')
+with open(script_dir / relative_path, 'rb') as f:
+    all_user_settings = tomllib.load(f)
 
 
 def create_app():
@@ -66,18 +73,19 @@ def create_app():
     celery_app = celery_init_app(flaskApp)
 
     from application.plugins import loadAvailablePlugins
-    loadedPlugins = loadAvailablePlugins(flaskApp.config['ENABLED_PLUGINS'])
+    loadedPlugins = loadAvailablePlugins()
 
     # app.config.from_object('config.Config')
     # app.config.from_object('config.DevelopmentConfig')
 
     with flaskApp.app_context():
 
-        socketioApp = SocketIO(flaskApp, cors_allowed_origins='*', message_queue=os.environ.get('SOCKETIO_MESSAGE_QUEUE', 'redis://localhost:6379/3'))
+        socketioApp = SocketIO(flaskApp, cors_allowed_origins='*', message_queue=os.environ.get('SOCKETIO_MESSAGE_QUEUE', f'redis://localhost:{str(os.environ.get('REDIS_PORT', 6380))}/3'))
 
         # Imports
         from . import routes
         from application.controllers.users import BPuser
+        from application.controllers.userSettings import BPuserSetting
         from application.controllers.servers import BPserver
         from application.controllers.fleets import BPfleet
         from application.controllers.plugins import BPplugins
@@ -87,6 +95,7 @@ def create_app():
         from application.controllers.websocket import registerListeners as registerWSListeners
 
         flaskApp.register_blueprint(BPuser)
+        flaskApp.register_blueprint(BPuserSetting)
         flaskApp.register_blueprint(BPserver)
         flaskApp.register_blueprint(BPfleet)
         flaskApp.register_blueprint(BPplugins)

@@ -37,6 +37,25 @@
                         <b-form-invalid-feedback v-for="(error, index) in validationContext.errors" v-bind:key="index">{{ error }}</b-form-invalid-feedback>
                     </ValidationProvider>
                 </b-form-group>
+
+                <b-form-group
+                    label="User Settings"
+                    label-for="input-user-setting"
+                >
+                    <ValidationProvider v-slot="validationContext" :rules="`isJSON`" name="User Settings">
+                        <b-form-textarea
+                            v-model="userSettings"
+                            :state="getValidationState(validationContext)"
+                            type="textarea"
+                            placeholder="{
+    // user settings
+}"
+                            rows="8"
+                        ></b-form-textarea>
+                        <b-form-invalid-feedback v-for="(error, index) in validationContext.errors" v-bind:key="index">{{ error }}</b-form-invalid-feedback>
+                    </ValidationProvider>
+                </b-form-group>
+
             </b-form>
         </ValidationObserver>
 
@@ -62,6 +81,17 @@ extend("required", required)
 extend("min", min)
 extend("max", max)
 extend("email", email)
+extend('isJSON', value => {
+    if (typeof value === 'object') {
+        return true
+    }
+    try {
+        JSON.parse(value)
+    } catch (e) {
+        return e.message
+    }
+    return true
+})
 
 export default {
     name: "AddModal",
@@ -85,6 +115,18 @@ export default {
         },
         actionType() {
             return this.modalAction == "Add" ? "add" : "edit"
+        },
+        userSettings: {
+            get: function() {
+                return this.form.user_settings !== null && typeof this.form.user_settings === 'object' ? JSON.stringify(this.form.user_settings) : this.form.user_settings
+            },
+            set: function(update) {
+                try {
+                    const parsed = JSON.parse(update);
+                    this.form.user_settings = parsed
+                } catch (e) {
+                }
+            }
         }
     },
     data: function() {
@@ -101,6 +143,7 @@ export default {
             delete(this.form.id)
             this.form.email = ""
             this.form.password = ""
+            this.form.user_settings = ""
             this.$emit("update:modalAction", "Add")
         },
         handleSubmission(evt) {
@@ -114,7 +157,8 @@ export default {
         },
         submitForm() {
             this.postInProgress = true
-            this.$store.dispatch(`users/${this.actionType}`, this.form)
+            const payload = JSON.parse(JSON.stringify(this.form))
+            this.$store.dispatch(`users/${this.actionType}`, payload)
                 .then(() => {
                     this.$nextTick(() => {
                         this.$refs.observer.reset()

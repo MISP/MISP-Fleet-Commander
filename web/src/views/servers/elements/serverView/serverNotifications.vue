@@ -95,13 +95,13 @@
                         </template>
 
                         <template v-slot:cell(action)="">
-                            <b-button class="ml-1" size="xs" variant="light" title="Accept">
+                            <b-button class="ml-1" size="xs" variant="light" title="Accept" disabled>
                                 <i class="fas fa-check"></i>
                             </b-button>
-                            <b-button class="ml-1" size="xs" variant="light">
+                            <b-button class="ml-1" size="xs" variant="light" disabled>
                                 <i class="fas fa-cogs"></i>
                             </b-button>
-                            <b-button class="ml-1" size="xs" variant="outline-danger" title="Delete notification">
+                            <b-button class="ml-1" size="xs" variant="outline-danger" title="Delete notification" disabled>
                                 <i class="fas fa-trash"></i>
                             </b-button>
                         </template>

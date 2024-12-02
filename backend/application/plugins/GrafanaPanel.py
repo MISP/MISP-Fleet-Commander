@@ -8,6 +8,7 @@ class GrafanaPanel(BasePlugin):
     description = 'Display a panel from Grafana using an iFrame'
     icon = 'fas fa-chart-area'
     component = 'htmlElement'
+    disabled = True
     
     grafana_dashboard_URL = 'http://localhost:3000/d-solo/Th4djOs7k/misp?orgId=1'
     grafana_bucket = 'var-bucket=misp-training'

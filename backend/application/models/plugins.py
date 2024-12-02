@@ -9,7 +9,6 @@ import json
 from application import flaskApp
 from application.DBModels import Server
 from requests import Response as requestsResponse
-# from application import loadedPlugins
 
 
 class PluginResponse:
@@ -76,11 +75,11 @@ class PluginResponse:
 
 
 class SuccessPluginResponse(PluginResponse):
-    def __init__(self, data: dict, errors: Optional[List] = [], component: Optional[str] = None, request: Optional[requestsResponse] = None):
+    def __init__(self, data: Union[dict, list], errors: Optional[List] = [], component: Optional[str] = None, request: Optional[requestsResponse] = None):
         super().__init__('success', data, errors, component, request)
 
 class FailPluginResponse(PluginResponse):
-    def __init__(self, data: dict, errors: Optional[List] = [], component: Optional[str] = None, request: Optional[requestsResponse] = None):
+    def __init__(self, data: Union[dict, list], errors: Optional[List] = [], component: Optional[str] = None, request: Optional[requestsResponse] = None):
         super().__init__('fail', data, errors, component, request)
 
 class ErrorPluginResponse(PluginResponse):
@@ -131,7 +130,12 @@ class BasePlugin:
     name = 'Unamed plugin'
     description = ''
     icon = 'fas fa-plugin'
+    abstract_class = False
+    disabled = False
     action_parameters = []
+    quickActionName = 'Unamed quick action'
+    quickActionIcon = 'question-mark'
+    quickActionVariant = ''
 
     def __init__(self):
         self.name = type(self).name if type(self).name != BasePlugin.name else BasePlugin.name
@@ -152,12 +156,16 @@ class BasePlugin:
     def action(self, servers: List[Server], data: Optional[dict]) -> PluginResponse:
         pass
 
+    def quickAction(self, servers: List[Server], data: Optional[dict]) -> PluginResponse:
+        pass
+
     def introspection(self):
         return {
             'view': type(self).view != BasePlugin.view,
             'index': type(self).index != BasePlugin.index,
             'notifications': type(self).notifications != BasePlugin.notifications,
             'action': type(self).action != BasePlugin.action,
+            'quickAction': type(self).quickAction != BasePlugin.quickAction,
         }
 
 
@@ -222,8 +230,18 @@ def doAction(server: Server, plugin, data: Optional[dict]) -> dict:
         actionResult = FailPluginResponse({}, [str(e)])
     return actionResult.response()
 
+def doQuickAction(server: Server, plugin, data: Optional[dict]) -> dict:
+    pluginInstance = plugin['instance']
+    try:
+        actionResult = pluginInstance.quickAction(server, data)
+    except Exception as e:
+        flaskApp.logger.error('doQuickAction failed for plugin {0}. Error: {1}'.format(plugin['id'], str(e)))
+        actionResult = FailPluginResponse({}, [str(e)])
+    return actionResult.response()
+
 def getNotificationForPlugin(server: Server, plugin) -> list:
     pluginInstance = plugin['instance']
+    notifications = pluginInstance.notifications(server)
     try:
         notifications = pluginInstance.notifications(server)
         notifications.data = [notificationData.to_dict() for notificationData in notifications.data]

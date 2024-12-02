@@ -3,7 +3,9 @@ from datetime import datetime
 import json
 import uuid
 from sqlalchemy import func
+from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.dialects.sqlite import JSON
 # from application.baseModel import BaseModel
 from flask_sqlalchemy import SQLAlchemy
 
@@ -53,6 +55,8 @@ class User(BaseModel):
                       nullable=True,
                       default= create_API_key)
 
+    user_settings = db.relationship("UserSettings", uselist=True, back_populates="user", cascade="all, delete-orphan")
+
     @classmethod
     def authenticate(cls, email, password_candidate):
         user = User.query.filter_by(email=email).first()
@@ -73,19 +77,40 @@ class User(BaseModel):
         return bcrypt.check_password_hash(self.hashed_password, candidate)
 
 
-#class UserSettings(BaseModel):
-#    __tablename__ == 'user_settings'
-#    id = db.Column(db.Integer,
-#                    primary_key=True)
-#
-#    user_id = db.Column(db.Integer,
-#                        db.ForeignKey('users.id'),
-#                        nullable=False,
-#                        index=True)
-#
-#    user = db.relationship('User',
-#        backref=db.backref('user_settings', lazy='joined'))
-#
+class UserSettings(BaseModel):
+    __tablename__ = 'user_settings'
+    settings_to_json = ['Plugins.enabled_plugins']
+
+    id = db.Column(db.Integer,
+                    primary_key=True)
+
+    user_id = db.Column(db.Integer,
+                        db.ForeignKey('users.id'),
+                        nullable=False,
+                        index=True)
+    
+    name = db.Column(db.String(120), nullable=False, index=True)
+    _value = db.Column('value', db.String)
+    UniqueConstraint(user_id, name)
+
+    user = db.relationship('User', back_populates='user_settings')
+
+    @property
+    def value(self):
+        if self.name in self.settings_to_json:
+            try:
+                decoded = json.loads(self._value)
+            except:
+                decoded = []
+            return decoded
+        return self._value
+
+    @value.setter
+    def value(self, val):
+        if type(val) is list or type(val) is dict:
+            val = json.dumps(val)
+        self._value = val
+
 
 
 class Server(BaseModel):

@@ -23,40 +23,58 @@
                 <b-table-simple class="mb-0">
                     <b-thead>
                         <b-tr>
+                            <b-th>Enabled</b-th>
                             <b-th>Name</b-th>
-                            <b-th>Index</b-th>
-                            <b-th>View</b-th>
-                            <b-th>Action</b-th>
-                            <b-th>Notifications</b-th>
+                            <b-th title="Can this plugin add a column in the server index">Index</b-th>
+                            <b-th title="Can this plugin add a row in the server view">View</b-th>
+                            <b-th title="Can this plugin perform action on one or multiple MISP instances">Action</b-th>
+                            <b-th title="Can this plugin generate entries in the server notification board">Notifications</b-th>
                         </b-tr>
                     </b-thead>
                     <b-tbody>
                         <b-tr v-for="(plugin, index) in plugins" :key="index">
                             <b-td class="text-nowrap">
+                                <b-form-checkbox switch
+                                    :checked="enabledPlugins.includes(plugin.id)"
+                                    @change="togglePlugin(plugin.id)"
+                                ></b-form-checkbox>
+                            </b-td>
+                            <b-td class="text-nowrap">
                                 <i v-if="plugin.icon" :class="[plugin.icon, 'fa-fw mr-2']" style="width: 1rem;"></i>
-                                <b :title="plugin.description">{{ plugin.name }}</b>
+                                <b>{{ plugin.name }}</b>
+                                <span
+                                    v-if="plugin.description"
+                                    class="ml-1"
+                                >
+                                    <i :id="`tooltip-${index}`" class="fa fa-circle-question"></i>
+                                    <b-tooltip :target="`tooltip-${index}`" triggers="hover">
+                                        {{ plugin.description }}
+                                    </b-tooltip>
+                                </span>
                             </b-td>
                             <b-td>
                                 <i
-                                    title="Can this plugin create an column in the server index"
                                     :class="['fa', plugin.features.index ? 'fa-check text-success' : 'fa-times text-danger']"
                                 ></i>
                             </b-td>
                             <b-td>
                                 <i
-                                    title="Can this plugin create an row in the server view"
                                     :class="['fa', plugin.features.view ? 'fa-check text-success' : 'fa-times text-danger']"
                                 ></i>
                             </b-td>
                             <b-td>
                                 <i
-                                    title="Can this plugin perform action on one or multiple MISP instances"
-                                    :class="['fa', plugin.features.action ? 'fa-check text-success' : 'fa-times text-danger']"
+                                    :title="plugin.features.quickAction ? 'This plugin supports quick actions' : ''"
+                                    :class="{
+                                        'fa': true,
+                                        'fa-check-double text-success': plugin.features.quickAction,
+                                        'fa-check text-success': !plugin.features.quickAction && plugin.features.action,
+                                        'fa-times text-danger': !plugin.features.quickAction && !plugin.features.action,
+                                    }"
                                 ></i>
                             </b-td>
                             <b-td>
                                 <i
-                                    title="Can this plugin generate entries in the server notification board"
                                     :class="['fa', plugin.features.notifications ? 'fa-check text-success' : 'fa-times text-danger']"
                                 ></i>
                             </b-td>
@@ -81,11 +99,18 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            plugins: state => state.plugins.all
+        ...mapGetters({
+            getLoggedUserSettingByName: "userSettings/getLoggedUserSettingsByName",
+            plugins: "plugins/allPlugins",
         }),
         noPlugin() {
             return this.plugins.length == 0
+        },
+        enabledPlugins() {
+            if (this.getLoggedUserSettingByName && this.getLoggedUserSettingByName['Plugins.enabled_plugins']) {
+                return this.getLoggedUserSettingByName['Plugins.enabled_plugins']
+            }
+            return []
         }
     },
     methods: {
@@ -102,9 +127,27 @@ export default {
                     this.refreshInProgress = false
                 })
         },
+        togglePlugin(pluginName) {
+            this.$store.dispatch('userSettings/togglePlugin', pluginName)
+                .catch(error => {
+                    this.$bvToast.toast(error, {
+                        title: `Could not enable plugin \`${pluginName}\``,
+                        variant: "danger",
+                    })
+                })
+                .finally(() => {
+                    this.refreshUserSettings()
+                })
+        },
+        refreshUserSettings() {
+            this.$store.dispatch('userSettings/getUserSettings')
+            .then(() => {
+                this.refreshPlugins(false)
+            })
+        },
     },
     mounted() {
-        this.refreshPlugins(false)
+        this.refreshUserSettings()
     }
 }
 </script>

@@ -1,8 +1,8 @@
 <template>
 <div>
     <span v-if="tree">
-        <ul class="pl-0">
-            <li class="ml-3">
+        <ul class="pl-0 mb-1">
+            <li class="ml-1">
                 <span 
                     variant="link"
                     :class="['p-0', canBeOpened && hasChild ? 'useCursorPointer' : '']"

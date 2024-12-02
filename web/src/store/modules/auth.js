@@ -18,7 +18,15 @@ const getters = {
     },
     user: state => state.decoded_access_token?.data?.user || null,
     access_token: (state, getter) => getter.isAuthenticated ? state.access_token : null, 
-    access_token_type: (state, getter) => getter.isAuthenticated ? state.access_token_type : null, 
+    access_token_type: (state, getter) => getter.isAuthenticated ? state.access_token_type : null,
+    get_user_settings: (state, getter) => state.decoded_access_token?.data?.user?.user_settings || [],
+    get_user_settings_by_name: (state, getter) => {
+        const settingByName = {}
+        getter.get_user_settings.forEach(setting => {
+            settingByName[setting.name] = setting.value
+        });
+        return settingByName
+    }
 }
 
 // actions

@@ -27,7 +27,7 @@
 </template>
 
 <script>
-import { mapState } from "vuex"
+import { mapState, mapGetters } from "vuex"
 
 export default {
     name: "workersStatus",
@@ -43,6 +43,21 @@ export default {
         ...mapState({
             final_settings: state => state.servers.final_settings,
         }),
+        ...mapGetters({
+            getLoggedUserSettingByName: "userSettings/getLoggedUserSettingsByName",
+        }),
+        workerWarningThreshold() {
+            if (this.getLoggedUserSettingByName && this.getLoggedUserSettingByName['UI.server_index.worker_warning_threshold']) {
+                return parseInt(this.getLoggedUserSettingByName['UI.server_index.worker_warning_threshold'])
+            }
+            return 10
+        },
+        workerDangerThreshold() {
+            if (this.getLoggedUserSettingByName && this.getLoggedUserSettingByName['UI.server_index.worker_danger_threshold']) {
+                return parseInt(this.getLoggedUserSettingByName['UI.server_index.worker_danger_threshold'])
+            }
+            return 100
+        },
         backgroundJobEnabled() {
             return this.final_settings[this.server_id]['MISP.background_jobs']
         },
@@ -55,7 +70,7 @@ export default {
         workerCache() {
             return {
                 jobCount: this.workers?.cache?.jobCount,
-                variant: this.getVariantFromAlive(this.workers?.cache),
+                variant: this.getVariantFromAliveAndJobCount(this.workers?.cache),
                 ...this.getAliveNumbers(this.workers?.cache)
             }
         },
@@ -83,7 +98,7 @@ export default {
         workerMail() {
             return {
                 jobCount: this.workers?.email?.jobCount,
-                variant: this.getVariantFromAlive(this.workers?.email),
+                variant: this.getVariantFromAliveAndJobCount(this.workers?.email),
                 ...this.getAliveNumbers(this.workers?.email)
             }
         }
@@ -99,7 +114,7 @@ export default {
             }
             const deadCount = aliveNumber.dead
             return deadCount == 0 ? 
-                (workerType.jobCount <= 100 ? "" : (workerType <= 1000 ? "warning" : "danger")) :
+                (workerType.jobCount <= this.workerWarningThreshold ? "" : (workerType.jobCount <= this.workerDangerThreshold ? "warning" : "danger")) :
                 (deadCount == workerType.workers.length ? "danger" : "warning")
         },
         getVariantFromAlive(workerType) {
@@ -127,9 +142,9 @@ export default {
         getTitle(workerName, workerType) {
             let title = ''
             if (workerType.total == 0) {
-                title = `Worker <strong>${workerName}</strong>:<div class="text-left">${workerType.jobCount} in queue</br>No worker running</div>`
+                title = `Worker <strong>${workerName}</strong><div class="text-left">${workerType.jobCount} in queue</br>No worker running</div>`
             } else [
-                title = `Worker <strong>${workerName}</strong>:<div class="text-left">${workerType.jobCount} in queue</br>${workerType.alive}/${workerType.total} alive</div>`
+                title = `Worker <strong>${workerName}</strong><div class="text-left">${workerType.jobCount} in queue</br>${workerType.alive}/${workerType.total} alive</div>`
             ]
             return {
                 title: title

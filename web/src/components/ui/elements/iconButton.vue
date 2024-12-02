@@ -9,7 +9,7 @@
             />
             <i 
                 v-else
-                :class="[`fas fa-${icon}`, tight ? 'mr-1' : 'mr-2']"
+                :class="[`fas fa-${icon}`, tight ? 'mr-1' : 'mr-2', 'fa-fw']"
             ></i>
         </span>
         <span :class="['text-nowrap', forceWhite ? 'text-white' : '']">

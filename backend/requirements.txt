@@ -4,6 +4,7 @@ flask_sqlalchemy
 flask_migrate
 flask_socketio
 flask-bcrypt
+gevent
 requests
 redis
 celery

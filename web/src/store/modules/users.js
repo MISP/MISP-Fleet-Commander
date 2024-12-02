@@ -21,7 +21,15 @@ const actions = {
         return new Promise((resolve, reject) => {
             api.index(
                 users => {
+                    let allUserSettings = []
+                    users.forEach(user => {
+                        if (user.user_settings) {
+                            allUserSettings.push(user.user_settings)
+                            user.user_settings = user.user_settings
+                        }
+                    });
                     commit("setUsers", users)
+                    commit("userSettings/setAllUserSettings", allUserSettings, { root: true })
                     resolve()
                 },
                 (error) => { reject(error) }

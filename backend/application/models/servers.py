@@ -51,10 +51,10 @@ def searchAll(text: str, user) -> List:
     servers = q.limit(10).all()
     return servers
 
-def testConnection(server_id: int) -> Union[dict, None]:
+def testConnection(server_id: int, use_cache=True) -> Union[dict, None]:
     server = Server.query.get(server_id)
     if server is not None:
-        testConnection = mispGetRequest(server, '/servers/getVersion')
+        testConnection = mispGetRequest(server, '/servers/getVersion', nocache=not use_cache)
         testConnection['timestamp'] = int(time.time())
         return testConnection
     else:
@@ -105,11 +105,11 @@ def getServerInfo(server_id, cache=True) -> Union[dict, None]:
         return None
 
 
-def fetchServerInfo(server):
-    serverSettings = mispGetRequest(server, '/servers/serverSettings/diagnostics/light:1')
-    serverUsage = mispGetRequest(server, '/users/statistics')
-    serverUser = mispGetRequest(server, '/users/view/me')
-    connectedServers = mispGetRequest(server, '/servers/index')
+def fetchServerInfo(server, use_cache=True):
+    serverSettings = mispGetRequest(server, '/servers/serverSettings/diagnostics/light:1', nocache=not use_cache)
+    serverUsage = mispGetRequest(server, '/users/statistics', nocache=not use_cache)
+    serverUser = mispGetRequest(server, '/users/view/me', nocache=not use_cache)
+    connectedServers = mispGetRequest(server, '/servers/index', nocache=not use_cache)
     connectedServers = attachConnectedServerStatus(server, connectedServers)
     serverContent = []
     server_query = {

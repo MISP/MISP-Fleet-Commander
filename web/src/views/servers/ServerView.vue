@@ -6,17 +6,23 @@
             <div class="container-fuild mb-3">
                 <div class="row">
                     <div class="col col-md-5 col-xl-4">
-                        <b-overlay :show="statusRefreshInProgress" rounded="sm">
+                        <b-overlay :show="server_status_refresh_enqueued[server_id] || server_refresh_enqueued[server_id]" rounded="sm" opacity="0.6">
                             <ServerViewProfile
                                 :server_id="server_id"
-                                :info_refresh_in_progress="infoRefreshInProgress"
-                                @fullRefresh="fullRefresh()"
-                                @wsRefresh="wsRefresh()"
                             ></ServerViewProfile>
                         </b-overlay>
                     </div>
                     <div class="col col-md-7 col-xl-8 pl-0">
-                        <b-overlay :show="infoRefreshInProgress" rounded="sm">
+                        <b-overlay :show="server_refresh_enqueued[server_id]" rounded="sm" class="mb-2" opacity="0.6">
+                            <b-card no-body>
+                                <ServerQuickActions
+                                    :server="getServer"
+                                    @wsStatusRefresh="wsStatusRefresh()"
+                                    @fullRefresh="fullRefresh()"
+                                ></ServerQuickActions>
+                            </b-card>
+                        </b-overlay>
+                        <b-overlay :show="server_refresh_enqueued[server_id]" rounded="sm" opacity="0.6">
                             <b-card no-body>
                                 <ServerNotifications :server="getServer"></ServerNotifications>
                             </b-card>
@@ -27,7 +33,7 @@
 
             <div class="container-fuild mb-3 server-extra">
                 <b-card no-body>
-                    <b-overlay :show="infoRefreshInProgress" rounded="sm">
+                    <b-overlay :show="server_refresh_enqueued[server_id]" rounded="sm">
                         <serverInfoAndManagements 
                             :server_id="server_id"
                             max_content_size="80vh"
@@ -54,6 +60,7 @@ import Layout from "@/components/layout/Layout.vue"
 import { websocketMixin } from "@/helpers/websocketMixin"
 import ServerViewProfile from "@/views/servers/elements/serverView/serverProfile.vue"
 import ServerNotifications from "@/views/servers/elements/serverView/serverNotifications.vue"
+import ServerQuickActions from "@/views/servers/elements/serverView/serverQuickActions.vue"
 import serverInfoAndManagements from "@/views/servers/elements/serverInfoAndManagements.vue"
 
 export default {
@@ -63,6 +70,7 @@ export default {
         Layout,
         ServerViewProfile,
         ServerNotifications,
+        ServerQuickActions,
         serverInfoAndManagements
     },
     props: {
@@ -77,6 +85,7 @@ export default {
             server_status: state => state.servers.server_status,
             server_query_in_progress: state => state.servers.server_query_in_progress,
             server_refresh_enqueued: state => state.servers.server_refresh_enqueued,
+            server_status_refresh_enqueued: state => state.servers.server_status_refresh_enqueued,
         }),
         getServer: function() {
             return this.servers[this.server_id] || null
@@ -94,59 +103,16 @@ export default {
     data: function () {
         return {
             statusRefreshInProgress: false,
-            infoRefreshInProgress: false,
         }
     },
     methods: {
-        getOnlineStatus() {
-            return new Promise((resolve, reject) => {
-                this.$store.dispatch("servers/runConnectionTest", this.server_id)
-                    .then(() => {
-                        resolve()
-                    })
-                    .catch(error => {
-                        this.$bvToast.toast(error, {
-                            title: "Could not reach Server",
-                            variant: "danger",
-                        })
-                    })
-                    .finally(() => {
-                        this.statusRefreshInProgress = false
-                    })
-            })
-        },
-        fetchServerInfo() {
-            this.infoRefreshInProgress = true
-            return new Promise((resolve, reject) => {
-                this.$store.dispatch("servers/fetchServerInfo", {server_id: this.server_id, no_cache: true})
-                    .then(() => {
-                        resolve()
-                    })
-                    .catch(error => {
-                        console.log(error)
-                        this.$bvToast.toast(error, {
-                            title: "Could not fetch server info",
-                            variant: "danger",
-                        })
-                    })
-                    .finally(() => {
-                        this.infoRefreshInProgress = false
-                    })
-            })
-        },
-        quickRefresh() {
-            this.getOnlineStatus()
-            this.refreshPluginViewValues()
-        },
-        wsRefresh() {
-            this.wsServerRefresh(this.server_id)
+        wsStatusRefresh() {
+            this.wsServerConnectionTest(this.server_id)
         },
         fullRefresh() {
-            this.getOnlineStatus()
+            this.wsServerConnectionTest(this.server_id)
             this.refreshPluginViewValues()
-            if (!this.infoRefreshInProgress) {
-                this.fetchServerInfo()
-            }
+            this.wsServerRefresh(this.server_id)
         },
         refreshPluginViewValues(no_cache=false) {
             this.$store.dispatch("plugins/fetchViewValues", {no_cache: no_cache, serverID: this.server_id})
@@ -159,7 +125,8 @@ export default {
         },
     },
     mounted() {
-        this.quickRefresh()
+        this.wsStatusRefresh()
+        this.refreshPluginViewValues()
         this.$store.dispatch("plugins/getPlugins", {use_cache: true})
     },
     beforeRouteEnter(to, from, next) {

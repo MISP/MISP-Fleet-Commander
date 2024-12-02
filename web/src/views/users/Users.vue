@@ -66,6 +66,17 @@
                 </div>
             </template>
 
+            <template v-slot:cell(user_settings)="row">
+                <div class="d-flex flex-column">
+                    <b-button
+                        @click="openUserSettingModal(row.item)"
+                        variant="primary"
+                        size="xs"
+                    >Edit user settings</b-button>
+                    <span class="text-muted text-center" style="font-size: 0.66rem;">{{ Object.keys(row.value).length }} settings set</span>
+                </div>
+            </template>
+
             <template v-slot:cell(action)="row">
                 <span class="d-block" style="width: 90px;">
                     <b-button-group size="sm">
@@ -108,6 +119,10 @@
             :userIDToGenAPIKey="userIDToGenAPIKey"
             @deletion-success="handleDelete"
        ></APIKeyModal>
+        <UserSettingSaveModal
+            :selectedUser="selectedUser"
+            @save-success="handleSaveSettings"
+        ></UserSettingSaveModal>
     </div>
 </Layout>
 </template>
@@ -118,6 +133,9 @@ import Layout from "@/components/layout/Layout.vue"
 import AddModal from "@/views/users/AddModal.vue"
 import DeleteModal from "@/views/users/DeleteModal.vue"
 import APIKeyModal from "@/views/users/APIKeyModal.vue"
+import UserSettingSaveModal from "@/views/users/UserSettingSaveModal.vue"
+import jsonViewer from "@/components/ui/elements/jsonViewer.vue"
+import formInputFromConfig from "@/components/ui/elements/formInputFromConfig.vue"
 
 export default {
     name: "UserIndex",
@@ -126,6 +144,9 @@ export default {
         AddModal,
         DeleteModal,
         APIKeyModal,
+        UserSettingSaveModal,
+        jsonViewer,
+        formInputFromConfig,
     },
     data: function () {
         return {
@@ -160,11 +181,17 @@ export default {
                         tdClass: ['unblur-on-hover']
                     },
                     {
+                        key: "user_settings",
+                        sortable: false,
+                    },
+                    {
                         key: "action",
                         sortable: false,
                     }
                 ]
-            }
+            },
+            selectedUser: {},
+            input_valid_type: ['text', 'password', 'email', 'number', 'url', 'tel', 'search', 'date', 'datetime', 'datetime-local', 'month', 'week', 'time', 'range', 'color']
         }
     },
     computed: {
@@ -206,6 +233,19 @@ export default {
                     this.refreshInProgress = false
                 })
         },
+        fetchAllUserSettings() {
+            this.refreshInProgress = true
+            this.$store.dispatch("userSettings/getSettingConfig")
+                .catch(error => {
+                    this.$bvToast.toast(error, {
+                        title: "Could not fetch all user settings",
+                        variant: "danger",
+                    })
+                })
+                .finally(() => {
+                    this.refreshInProgress = false
+                })
+        },
         resetModalAction() {
             this.modalAddAction = "Add"
         },
@@ -235,9 +275,17 @@ export default {
             this.userToDelete.formData = {}
             this.refreshUsers()
         },
+        handleSaveSettings() {
+            this.refreshUsers()
+        },
+        openUserSettingModal(user) {
+            this.selectedUser = user
+            this.$bvModal.show("user-setting-modal")
+        }
     },
     mounted() {
         this.refreshUsers()
+        this.fetchAllUserSettings()
     }
 }
 </script>

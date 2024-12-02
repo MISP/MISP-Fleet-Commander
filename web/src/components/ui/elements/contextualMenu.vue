@@ -1,20 +1,34 @@
 <template>
     <b-list-group>
-        <b-dropdown-item-button
+        <template
             v-for="(entry, index) in getMenu"
-            v-bind:key="index"
-            :disabled="entry.disabled"
-            :class="['compact rounded-0', entry.variant ? entry.variant : '', entry.disabled ? 'disabled' : '']"
-            @click.stop="emitClick(entry.eventName, entry.callbackData)"
         >
-            <iconButton
-                :text="entry.text"
-                :title="entry.title"
-                :icon="entry.icon"
-                :useAsset="entry.useAsset"
-                :forceWhite="entry.forceWhite"
-            ></iconButton>
-        </b-dropdown-item-button>
+            <b-dropdown-item-button
+                v-if="!entry.is_header"
+                :key="index"
+                :disabled="entry.disabled"
+                :class="['compact rounded-0', entry.variant ? entry.variant : '', entry.disabled ? 'disabled' : '']"
+                @click.stop="emitClick(entry.eventName, entry.callbackData)"
+            >
+                <iconButton
+                    :text="entry.text"
+                    :title="entry.title"
+                    :icon="entry.icon"
+                    :useAsset="entry.useAsset"
+                    :forceWhite="entry.forceWhite"
+                ></iconButton>
+            </b-dropdown-item-button>
+
+            <b-dropdown-header
+                v-else
+                :key="index"
+                style="margin-left: -0.75em"
+            >
+                <i :class="`fa fa-${entry.icon} fa-fw mr-1`"></i>
+                <span>{{ entry.text }}</span>
+            </b-dropdown-header>
+
+        </template>
     </b-list-group>
 </template>
 

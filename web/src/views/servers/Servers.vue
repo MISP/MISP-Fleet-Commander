@@ -62,15 +62,7 @@
                                 @click="wsRefresh()"
                             >
                                 <iconButton
-                                    text="Enqueue full refresh"
-                                    icon="clock"
-                                ></iconButton>
-                            </b-dropdown-item-button>
-                            <b-dropdown-item-button
-                                @click="fullRefresh(false)"
-                            >
-                                <iconButton
-                                    text="Inline full refresh"
+                                    text="Refresh All Servers"
                                     icon="sync-alt"
                                 ></iconButton>
                             </b-dropdown-item-button>
@@ -80,19 +72,11 @@
                                 <i class="fas fa-tasks"></i> Selection
                             </template>
                             <b-dropdown-item-button
-                                @click="refreshSelected"
+                                @click="wsRefreshSelected"
                             >
                                 <iconButton
                                     text="Refresh"
                                     icon="sync-alt"
-                                ></iconButton>
-                            </b-dropdown-item-button>
-                            <b-dropdown-item-button
-                                @click="refreshSelected"
-                            >
-                                <iconButton
-                                    text="Enqueue for refresh"
-                                    icon="clock"
                                 ></iconButton>
                             </b-dropdown-item-button>
                             <b-dropdown-item-button
@@ -132,6 +116,11 @@
                                     icon="trash"
                                 ></iconButton>
                             </b-dropdown-item-button>
+
+                            <contextualMenu
+                                :menu="genContextualMenuSelectionDropDown()"
+                                @exec-quick-action-on-selected="execQuickActionOnSelected"
+                            ></contextualMenu>
                         </b-dropdown>
                     </b-button-group>
                 </b-button-toolbar>
@@ -255,13 +244,12 @@
                                     ></i>
                                 </template>
                                 <contextualMenu
-                                    :menu="genContextualMenu(row.item.id)"
-                                    @handle-refresh-info="handleRefreshInfo"
+                                    :menu="genContextualMenuRow(row.item.id)"
                                     @handle-wsrefresh-info="handleRefreshInfoWS"
                                     @view-connections="viewConnections"
                                     @view-in-network="viewInNetwork"
                                     @open-deletion-modal="openDeletionModal"
-                                    @run-updates="runUpdates"
+                                    @exec-quick-action="execQuickAction"
                                     @handle-discover-servers-add="handleDiscoverServersAdd"
                                 ></contextualMenu>
                             </b-dropdown>
@@ -324,7 +312,7 @@
             <template v-slot:row-details="row">
                 <RowDetails
                     :server_id="row.item.id"
-                    @actionRefresh="handleRefreshInfo({server_id: row.item.id, method: $event})"
+                    @actionRefresh="handleRefreshInfoWS({server_id: row.item.id})"
                     @actionClose="row.toggleDetails"
                 ></RowDetails>
             </template>
@@ -339,7 +327,7 @@
 
         <DeleteSelectedModal
             :servers="selectedServers"
-            @deletion-success="refreshServerIndex"
+            @deletion-success="getServerIndex"
         ></DeleteSelectedModal>
 
         <AddModal
@@ -370,6 +358,7 @@
 
 <script>
 import store from "@/store/index"
+import pluginAPI from "@/api/plugins"
 import { websocketMixin } from "@/helpers/websocketMixin"
 import { mapState, mapGetters } from "vuex"
 import Layout from "@/components/layout/Layout.vue"
@@ -565,6 +554,7 @@ export default {
             serverCount: "servers/serverCount",
             getServerList: "servers/getServerList",
             indexPlugins: "plugins/indexPlugins",
+            quickActionPlugins: "plugins/quickActionPlugins",
         }),
         getIndex() {
             return (this.getServerList || []).map(server => ({ ...server }))
@@ -608,19 +598,12 @@ export default {
         onSorted() {
             this.table.currentPage = 1
         },
-        genContextualMenu(server_id) {
-            return [
+        genContextualMenuRow(server_id) {
+            const contextualMenu = [
                 {
                     variant: "",
                     text: "Refresh",
                     icon: "sync-alt",
-                    eventName: "handle-refresh-info",
-                    callbackData: {server_id: server_id, method: "no_cache"}
-                },
-                {
-                    variant: "",
-                    text: "Enqueue refresh",
-                    icon: "clock",
                     eventName: "handle-wsrefresh-info",
                     callbackData: {server_id: server_id}
                 },
@@ -648,14 +631,6 @@ export default {
                     callbackData: {server_id: server_id}
                 },
                 {
-                    variant: "outline-primary",
-                    disabled: !this.servers[server_id].canBeUpdated,
-                    text: "Run updates",
-                    icon: "arrow-up",
-                    eventName: "run-updates",
-                    callbackData: {server_id: server_id}
-                },
-                {
                     variant: "outline-danger",
                     text: "Delete server",
                     icon: "trash",
@@ -663,6 +638,47 @@ export default {
                     callbackData: {server_id: server_id}
                 },
             ]
+
+            contextualMenu.push(
+                {
+                    is_header: true,
+                    text: 'Plugin Quick Action',
+                    icon: "bolt",
+                }
+            )
+            this.quickActionPlugins.forEach((plugin) => {
+                contextualMenu.push(
+                    {
+                        variant: plugin.quickActionMeta.quickActionVariant,
+                        text: plugin.quickActionMeta.quickActionName,
+                        icon: plugin.quickActionMeta.quickActionIcon,
+                        eventName: "exec-quick-action",
+                        callbackData: {server_id: server_id, plugin: plugin}
+                    }
+                )
+            })
+            return contextualMenu
+        },
+        genContextualMenuSelectionDropDown() {
+            const contextualMenu = [
+                {
+                    is_header: true,
+                    text: 'Plugin Quick Action',
+                    icon: "bolt",
+                }
+            ]
+            this.quickActionPlugins.forEach((plugin) => {
+                contextualMenu.push(
+                    {
+                        variant: plugin.quickActionMeta.quickActionVariant,
+                        text: plugin.quickActionMeta.quickActionName,
+                        icon: plugin.quickActionMeta.quickActionIcon,
+                        eventName: "exec-quick-action-on-selected",
+                        callbackData: {plugin: plugin}
+                    }
+                )
+            })
+            return contextualMenu
         },
         rowClass(item, type) {
             let classes = ["no-outline"]
@@ -679,13 +695,13 @@ export default {
         },
         handleDelete() {
             this.serverToDelete = {}
-            this.refreshServerIndex()
+            this.getServerIndex()
         },
         handleAdd() {
-            this.refreshServerIndex()
+            this.getServerIndex()
         },
         handleBatchAdd() {
-            this.refreshServerIndex()
+            this.getServerIndex()
         },
         resetModalAction() {
             this.modalAddAction = "Add"
@@ -723,7 +739,7 @@ export default {
         runUpdates(data) {
             return data
         },
-        refreshServerIndex(full=false) {
+        getServerIndex() {
             this.table.isBusy = true
             return new Promise((resolve, reject) => {
                 this.$store.dispatch("servers/fetchServers", {force: true})
@@ -743,46 +759,24 @@ export default {
                     })
             })
         },
-        refreshSelected() {
-            this.$store.dispatch("servers/runSelectedConnectionTest", {selection: this.getSelectedServerIDs})
-                .catch(error => {
-                    this.$bvToast.toast(error, {
-                        title: "Could not reach Server",
-                        variant: "danger",
-                    })
-                })
+        wsRefreshSelected() {
             this.getSelectedServerIDs.forEach((serverID) => {
                 this.wsServerRefresh(serverID)
             })
         },
-        refreshAllServerOnlineStatus() {
-            this.$store.dispatch("servers/runAllConnectionTest")
-                .catch(error => {
-                    this.$bvToast.toast(error, {
-                        title: "Could not reach Server",
-                        variant: "danger",
-                    })
-                })
+        wsRefreshAllServerOnlineStatus() {
+            this.wsFleetConnectionTest(this.selectedFleet.id)
         },
         wsRefresh() {
             this.wsFleetRefresh(this.selectedFleet.id)
         },
-        fullRefresh(quick=true) {
-            if (quick) {
-                this.refreshServerIndex(true)
-                    .then(() => {
-                        this.refreshAllServerOnlineStatus()
-                        this.refreshPluginIndexValues()
-                        this.tableQuickRefresh()
-                    })
-            } else {
-                this.refreshServerIndex(true)
-                    .then(() => {
-                        this.refreshAllServerOnlineStatus()
-                        this.refreshPluginIndexValues(true)
-                        this.refreshAllInfo(true)
-                    })
-            }
+        fullRefresh() {
+            this.getServerIndex()
+                .then(() => {
+                    this.wsRefreshAllServerOnlineStatus()
+                    this.refreshPluginIndexValues()
+                    this.tableQuickRefresh()
+                })
         },
         fullRefreshIfNeeded() {
             if (this.serverCount === 0) {
@@ -794,36 +788,9 @@ export default {
                 this.$refs.serverTable.refresh()
             }
         },
-        handleRefreshInfo(data) {
-            const server_id = data.server_id
-            const method = data.method
-            let server = this.servers[server_id]
-            this.$store.dispatch("servers/runConnectionTest", server.id)
-            this.refreshInfo(server, method == "no_cache")
-        },
         handleRefreshInfoWS(data) {
             const server_id = data.server_id
-            let server = this.servers[server_id]
-            this.$store.dispatch("servers/runConnectionTest", server.id)
             this.wsServerRefresh(server_id)
-        },
-        refreshInfo(server, no_cache=false) {
-            this.$store.dispatch("servers/fetchServerInfo", {server_id: server.id, no_cache: no_cache})
-                .catch(error => {
-                    this.$bvToast.toast(error, {
-                        title: "Could not fetch server info",
-                        variant: "danger",
-                    })
-                })
-        },
-        refreshAllInfo(no_cache=false) {
-            this.$store.dispatch("servers/fetchAllServerInfo", {no_cache: no_cache})
-                .catch(error => {
-                    this.$bvToast.toast(error, {
-                        title: "Could not fetch server info",
-                        variant: "danger",
-                    })
-                })
         },
         refreshPluginIndexValues(no_cache=false) {
             this.$store.dispatch("plugins/fetchIndexValues", {no_cache: no_cache})
@@ -851,6 +818,78 @@ export default {
                 this.pluginFields.push(field)
                 this.table.fields.splice(lastRefreshPosition - 1, 0, field)
             })
+        },
+        getToastVariant(state) {
+            if (state == 'success') {
+                return 'success'
+            } else if (state == 'fail' || state == 'error') {
+                return 'danger'
+            }
+            return 'primary'
+        },
+        execQuickAction({server_id, plugin}) {
+            const form_data = {}
+            pluginAPI.submitQuickAction(server_id, plugin.id, form_data)
+                .then((response) => {
+                    if (response.data.error) {
+                        const errorMessage = Array.isArray(response.data.error) ? response.data.error.join(', ') : response.data.error
+                        this.$bvToast.toast(errorMessage, {
+                            title: `Failure while executing quick action ${plugin.quickActionMeta.quickActionName}`,
+                            variant: "danger",
+                        })
+                    } else {
+                        const successMessage = response.data.data.message
+                        this.$bvToast.toast(successMessage, {
+                            title: `Successfully executed quick action ${plugin.quickActionMeta.quickActionName}`,
+                            variant: this.getToastVariant(response.data.status),
+                        })
+                    }
+                })
+                .catch(error => {
+                    const errorMessage = error.toJson()
+                    this.$bvToast.toast(errorMessage, {
+                        title: `Could not perform quick action ${plugin.quickActionMeta.quickActionName}`,
+                        variant: "danger",
+                    })
+                })
+        },
+        execQuickActionOnSelected({plugin}) {
+            const promises = []
+            this.getSelectedServer.forEach((server) => {
+                const form_data = {}
+                const prom = pluginAPI.submitQuickAction(server.id, plugin.id, form_data)
+                promises.push(prom)
+            })
+            return Promise.all(promises)
+                .then((responses) => {
+                    const successes = responses.filter(response => {
+                        return !response.data.error
+                    });
+                    const failures = responses.filter(response => {
+                        return response.data.error
+                    });
+                    if (successes.length > 0) {
+                        const successMessage = successes[0].data.data.message
+                        this.$bvToast.toast(successMessage, {
+                            title: `Successfully performed ${successes.length} quick action${successes.length > 1 ? 's' : ''}`,
+                            variant: "success",
+                        })
+                    }
+                    if (failures.length > 0) {
+                        const errorMessage = Array.isArray(failures[0].data.error) ? failures[0].data.error.join(', ') : failures[0].data.error
+                        this.$bvToast.toast(errorMessage, {
+                            title: `Could not perform ${failures.length} quick action${failures.length > 1 ? 's' : ''}`,
+                            variant: "danger",
+                        })
+                    }
+                })
+                .catch(error => {
+                    const errorMessage = error.toJSON().message
+                    this.$bvToast.toast(errorMessage, {
+                        title: "Could not perform quick action",
+                        variant: "danger",
+                    })
+                })
         },
         exportSelected() {
             let csv = ''

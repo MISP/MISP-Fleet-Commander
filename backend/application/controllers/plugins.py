@@ -49,6 +49,18 @@ def doAction(user, server_id, plugin_id):
     else:
         return jsonify([])
 
+@BPplugins.route('/plugins/doQuickAction/<int:server_id>/<plugin_id>', methods=['POST'])
+@token_required
+def doQuickAction(user, server_id, plugin_id):
+    server = serverModel.getForUser(user, server_id)
+    if server:
+        plugin = pluginsModel.getPluginFromID(loadedPlugins, plugin_id)
+        actionData = request.json
+        actionResult = pluginsModel.doQuickAction(server, plugin, actionData)
+        return actionResult
+    else:
+        return jsonify([])
+
 @BPplugins.route('/plugins/notifications/<int:server_id>', methods=['GET'])
 @token_required
 def notifications(user, server_id):

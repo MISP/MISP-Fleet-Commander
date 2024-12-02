@@ -7,6 +7,7 @@ const urls = {
     getViewValues: `/plugins/viewValues`,
     notifications: `/plugins/notifications`,
     submitAction: `/plugins/doAction`,
+    submitQuickAction: `/plugins/doQuickAction`,
 }
 
 
@@ -40,6 +41,10 @@ export default {
     },
     submitAction(serverID, pluginID, data) {
         const url = `${urls.submitAction}/${serverID}/${pluginID}`
+        return common.getClient().post(url, data)
+    },
+    submitQuickAction(serverID, pluginID, data) {
+        const url = `${urls.submitQuickAction}/${serverID}/${pluginID}`
         return common.getClient().post(url, data)
     },
     getNotifications(serverID, cb, errorCb) {

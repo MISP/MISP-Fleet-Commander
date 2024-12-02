@@ -4,6 +4,7 @@ import ui from "./modules/ui"
 import config from "./modules/config"
 import auth from "./modules/auth"
 import users from "./modules/users"
+import userSettings from "./modules/userSettings"
 import servers from "./modules/servers"
 import connections from "./modules/connections"
 import fleets from "./modules/fleets"
@@ -23,6 +24,7 @@ export default new Vuex.Store({
         config,
         auth,
         users,
+        userSettings,
         servers,
         connections,
         fleets,
