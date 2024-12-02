@@ -14,8 +14,10 @@ socketioEmitter = SocketioEmitter()
 def fetchServerInfoTask(serverDict):
     server = serverSchemaLighter.load(serverDict)
     socketioEmitter.server_updating(server.id)
-    serverInfo = serverModel.fetchServerInfo(server, use_cache=False)
-    serverInfo['server'] = serverDict
+    # serverInfo = serverModel.fetchServerInfo(server)
+    serverInfo = serverModel.fetchServerInfoAsync(server)
+    if serverInfo is not None:
+        serverInfo['server'] = serverDict
     socketioEmitter.udpate_server(serverInfo)
 
 
@@ -23,7 +25,8 @@ def fetchServerInfoTask(serverDict):
 def doServerConnectionTestTask(serverDict):
     server = serverSchemaLighter.load(serverDict)
     socketioEmitter.server_status_updating(server.id)
-    connectionInfo = serverModel.testConnection(server.id, use_cache=False)
+    # connectionInfo = serverModel.testConnection(server.id)
+    connectionInfo = serverModel.testConnectionAsync(server.id)
     if connectionInfo is not None:
         # connectionInfo['server'] = {'uuid': server.uuid, 'id': server.id}
         connectionInfo['server'] = serverSchemaLighter.dump(server)

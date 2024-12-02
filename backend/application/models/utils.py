@@ -6,6 +6,9 @@ from random import randint
 import time
 import os
 from pathlib import Path
+from urllib.parse import urljoin
+import aiohttp
+import asyncio
 
 
 class AvatarGenerator:
@@ -98,3 +101,23 @@ class AvatarGenerator:
             colorG = int(uuidPortion[2:4], 16)
             colorB = int(uuidPortion[4:6], 16)
         return (colorR, colorG, colorB,)
+
+
+async def asyncFetcher(server, urls):
+    headers = {
+        "Authorization": server.authkey,
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+    }
+
+    async def fetch(session, url, headers):
+        async with session.get(url, headers=headers, ssl=False) as response:
+            try:
+                return await response.json()
+            except aiohttp.ContentTypeError:
+                return await response.text()
+
+    async with aiohttp.ClientSession() as session:
+        tasks = [fetch(session, urljoin(server.url, url), headers) for url in urls]
+        results = await asyncio.gather(*tasks)
+        return results

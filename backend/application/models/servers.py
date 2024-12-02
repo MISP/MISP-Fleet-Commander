@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import asyncio
 import time
 from typing import List, Union
 import concurrent.futures
@@ -9,6 +10,7 @@ from application.DBModels import db, User, Server
 from application.controllers.utils import mispGetRequest
 from application.marshmallowSchemas import ServerSchema, serverQuerySchema
 
+from application.models.utils import asyncFetcher
 from application.workers.tasks import fetchServerInfoTask
 
 
@@ -55,6 +57,19 @@ def testConnection(server_id: int, use_cache=True) -> Union[dict, None]:
     server = Server.query.get(server_id)
     if server is not None:
         testConnection = mispGetRequest(server, '/servers/getVersion', nocache=not use_cache)
+        testConnection['timestamp'] = int(time.time())
+        return testConnection
+    else:
+        return None
+
+def testConnectionAsync(server_id: int) -> Union[dict, None]:
+    server = Server.query.get(server_id)
+    if server is not None:
+        urls = [
+            '/servers/getVersion',
+        ]
+        results = asyncio.run(asyncFetcher(server, urls))
+        testConnection = results[0]
         testConnection['timestamp'] = int(time.time())
         return testConnection
     else:
@@ -126,6 +141,36 @@ def fetchServerInfo(server, use_cache=True):
     saveInfo(server, fullQuery)
     return fullQuery
 
+
+def fetchServerInfoAsync(server):
+    urls = [
+        '/servers/serverSettings/diagnostics/light:1',
+        '/users/statistics',
+        '/users/view/me',
+        '/servers/index',
+    ]
+    results = asyncio.run(asyncFetcher(server, urls))
+    serverSettings = results[0]
+    serverUsage = results[1]
+    serverUser = results[2]
+    connectedServers = results[3]
+    connectedServers = attachConnectedServerStatusAsync(server, connectedServers)
+    serverContent = []
+    server_query = {
+        'serverSettings': serverSettings,
+        'serverUsage': serverUsage,
+        'serverUser': serverUser,
+        'connectedServers': connectedServers,
+        'serverContent': serverContent
+    }
+    fullQuery = {
+        'timestamp': int(time.time()),
+        'query_result': server_query,
+    }
+    saveInfo(server, fullQuery)
+    return fullQuery
+
+
 def attachConnectedServerStatus(server, connectedServers):
     if type(connectedServers) is list:
         with concurrent.futures.ThreadPoolExecutor(max(len(connectedServers), 1)) as executor:
@@ -139,6 +184,12 @@ def attachConnectedServerStatus(server, connectedServers):
                     print('%r generated an exception: %s' % (connectedServers[j], exc))
     return connectedServers
 
+async def attachConnectedServerStatusAsync(server, connectedServers):
+    for i, connectedServer in enumerate(connectedServers):
+        serverStatus = getConnectedServerStatusAsync(server, connectedServer)
+        connectedServers[i] = serverStatus
+    return connectedServers
+
 
 def saveInfo(server, fullQuery: dict) -> bool:
     return redisModel.saveServerInfo(server.uuid, fullQuery)
@@ -147,6 +198,21 @@ def saveInfo(server, fullQuery: dict) -> bool:
 def getConnectedServerStatus(server, connectedServer):
     connectionTest = mispGetRequest(server, f'/servers/testConnection/{connectedServer["Server"]["id"]}')
     connectionUser = mispGetRequest(server, f'/servers/getRemoteUser/{connectedServer["Server"]["id"]}')
+    connectionTest['timestamp'] = int(time.time())
+    connectedServer['connectionTest'] = parseMISPConnectionOutput(connectionTest)
+    connectedServer['connectionUser'] = parseMISPUserConnectionOutput(connectionUser)
+    connectedServer['vid'] = f"{server.id}-{connectedServer['Server']['id']}"
+    return connectedServer
+
+
+async def getConnectedServerStatusAsync(server, connectedServer):
+    urls = [
+        f'/servers/testConnection/{connectedServer["Server"]["id"]}',
+        f'/servers/getRemoteUser/{connectedServer["Server"]["id"]}',
+    ]
+    results = asyncio.run(asyncFetcher(server, urls))
+    connectionTest = results[0]
+    connectionUser = results[1]
     connectionTest['timestamp'] = int(time.time())
     connectedServer['connectionTest'] = parseMISPConnectionOutput(connectionTest)
     connectedServer['connectionUser'] = parseMISPUserConnectionOutput(connectionUser)
