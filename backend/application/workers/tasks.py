@@ -15,7 +15,8 @@ def fetchServerInfoTask(serverDict):
     server = serverSchemaLighter.load(serverDict)
     socketioEmitter.server_updating(server.id)
     serverInfo = serverModel.fetchServerInfo(server, use_cache=False)
-    serverInfo['server'] = serverDict
+    if serverInfo is not None:
+        serverInfo['server'] = serverDict
     socketioEmitter.udpate_server(serverInfo)
 
 
