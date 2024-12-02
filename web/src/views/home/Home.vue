@@ -21,14 +21,14 @@
                                     <i class="fa fa-warning"></i>
                                     Temporarily disabling Content Security Policy headers may be necessary for the bookmark to execute.
                                 </small>
-                                <div class="d-flex justify-content-center">
-                                    <b-button :href="bookmarkJS" variant="primary" style="cursor: grab;">
+                                <div class="d-flex justify-content-center bg-">
+                                    <b-button :href="bookmarkJS" variant="outline-primary" style="cursor: grab;">
                                         <i class="fas fa-link"></i>
                                         Import to MFC
                                     </b-button>
                                 </div>
                             </div>
-                            <div class="col border-left border-info">
+                            <div class="col border-left border-primary">
                                 <h6><i class="fa fa-puzzle-piece"></i> Browser Extension</h6>
                                 <p class="m-0">
                                     <i class="fa fa-info-circle"></i>
