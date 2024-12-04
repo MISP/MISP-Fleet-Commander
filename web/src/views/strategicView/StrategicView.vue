@@ -66,7 +66,8 @@
         >
             <TheLinkInfoCard
                 v-if="selectedLinkID"
-                :server_id="selectedLinkID"
+                :link_id="selectedLinkID"
+                :link="selectedLink"
                 :open.sync="linkInfoCard.show"
             ></TheLinkInfoCard>
         </DraggableComponent>
@@ -248,7 +249,7 @@ export default {
         },
         selectLink(link) {
             this.selectedLink = link
-            this.selectedLinkID = link.source.id
+            this.selectedLinkID = link.vid
         },
         constructNetwork() {
             const vm = this

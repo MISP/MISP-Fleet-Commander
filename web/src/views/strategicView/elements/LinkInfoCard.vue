@@ -8,7 +8,68 @@
         <b-tabs
             card fill small
         >
-            <b-tab title="Info" no-body active>
+            <b-tab title="Connection Info" active>
+                <div class="d-flex flex-column align-items-center mb-4">
+                    <h6 class="mb-0">{{ getSourceServer.name }}</h6>
+                    <a
+                        :href="getSourceServer.url"
+                        target="_blank"
+                        class="text-muted font-weight-light text-wrap"
+                        style="font-size: 0.8em;"
+                    >
+                        {{ getSourceServer.url }}
+                        <sup class="fa fa-external-link-alt text-muted"></sup>
+                    </a>
+                    <i class="fa fa-arrow-down" style="font-size: 1.5em;"></i>
+                    <h6 class="mb-0">{{ getTargetServer.name }}</h6>
+                    <a
+                        :href="getTargetServer.url"
+                        target="_blank"
+                        class="text-muted font-weight-light text-wrap"
+                        style="font-size: 0.8em;"
+                    >
+                        {{ getTargetServer.url }}
+                        <sup class="fa fa-external-link-alt text-muted"></sup>
+                    </a>
+                </div>
+
+                <b-table-simple small>
+                    <b-tbody>
+                        <b-tr>
+                            <b-th>Status</b-th>
+                            <b-td>123</b-td>
+                        </b-tr>
+                        <b-tr>
+                            <b-th>Local Version</b-th>
+                            <b-td>123</b-td>
+                        </b-tr>
+                        <b-tr>
+                            <b-th>Remote Version</b-th>
+                            <b-td>123</b-td>
+                        </b-tr>
+                        <b-tr>
+                            <b-th>Compatibility</b-th>
+                            <b-td>123</b-td>
+                        </b-tr>
+                        <b-tr>
+                            <b-th>POST Test</b-th>
+                            <b-td>123</b-td>
+                        </b-tr>
+                        <b-tr>
+                            <b-th>User</b-th>
+                            <b-td>123</b-td>
+                        </b-tr>
+                        <b-tr>
+                            <b-th>User Role</b-th>
+                            <b-td>123</b-td>
+                        </b-tr>
+                        <b-tr>
+                            <b-th>Sync Status</b-th>
+                            <b-td>123</b-td>
+                        </b-tr>
+                    </b-tbody>
+                </b-table-simple>
+
                 <b-table
                     striped small
                     class="mb-0"
@@ -20,11 +81,11 @@
                 >
                 </b-table>
             </b-tab>
-            <b-tab title="Diagnostic">
-                Diagnostic
+            <b-tab title="Rules">
+                Rules
             </b-tab>
-            <b-tab title="Content">
-                Event pic and data
+            <b-tab title="Sync. Strategies">
+                Sync. Strategies
             </b-tab>
             <template v-slot:tabs-end>
                 <b-btn-close
@@ -35,11 +96,11 @@
         </b-tabs>
 
         <template v-slot:footer>
-            <timeSinceRefresh
+            <!-- <timeSinceRefresh
                 v-if="getServer && getServer.status"
                 :key="getServer.id"
                 :timestamp="getServerStatus.timestamp"
-            ></timeSinceRefresh>
+            ></timeSinceRefresh> -->
             <!-- <timeSinceRefresh
                 :timestamp="server.server_info.query_result.timestamp"
             ></timeSinceRefresh> -->
@@ -52,14 +113,17 @@ import { mapState, mapGetters } from "vuex"
 import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
 
 export default {
-    name: "TheNodeInfoCard",
+    name: "TheLinkInfoCard",
     components: {
         timeSinceRefresh
     },
     props: {
-        server_id: {
-            type: Number,
+        link_id: {
+            type: String,
             required: true
+        },
+        link: {
+            type: Object,
         },
         open: {
             type: Boolean,
@@ -83,17 +147,16 @@ export default {
             server_user: state => state.servers.server_user,
             remote_connections: state => state.servers.remote_connections,
         }),
-        getServer: function() {
-            return this.servers[this.server_id] || null
+        getConnection: function() {
+            return this.connections.filter((connection) => {
+                return connection.vid == this.link_id
+            })[0] || null
         },
-        getServerStatus: function() {
-            return this.server_status[this.server_id] || null
+        getSourceServer: function() {
+            return this.getConnection.source || null
         },
-        getServerUsage: function() {
-            return this.server_usage[this.server_id] || null
-        },
-        getQueryInProgress: function() {
-            return this.server_query_in_progress[this.server_id] || null
+        getTargetServer: function() {
+            return this.link.target || null
         },
         getServerUser: function() {
             return this.server_user[this.server_id] || null
@@ -101,64 +164,70 @@ export default {
         isOnline: function() {
             return !this.getServerStatus.error
         },
+        // hasSelection() {
+        //     return Object.keys(this.getServer).length > 0
+        // },
         hasSelection() {
-            return Object.keys(this.getServer).length > 0
+            return false
         },
         serverInfoTable() {
-            let items = []
-            if (!this.getServer) {
-                return items
-            }
-            items = items.concat([
-                {
-                    property: "Name",
-                    value: this.getServer.name
-                },
-                {
-                    property: "URL",
-                    value: this.getServer.url
-                },
-                {
-                    property: "Auth key",
-                    value: this.getServer.authkey
-                }
-            ])
-            if (
-                this.getServer.server_info !== undefined &&
-                this.getServerUser.Organisation !== undefined
-            ) {
-                items = items.concat([
-                    {
-                        property: "Org. name",
-                        value: this.getServerUser.Organisation.name
-                    },
-                    {
-                        property: "Org. uuid",
-                        value: this.getServerUser.Organisation.uuid
-                    },
-                    {
-                        property: "Org. type",
-                        value: this.getServerUser.Organisation.type
-                    }
-                ])
-            } else {
-                items = items.concat([
-                    {
-                        property: "Org. name",
-                        value: ""
-                    },
-                    {
-                        property: "Org. uuid",
-                        value: ""
-                    },
-                    {
-                        property: "Org. type",
-                        value: ""
-                    }
-                ])
-            }
-            return items
+            return []
         },
+        // serverInfoTable() {
+        //     let items = []
+        //     if (!this.getServer) {
+        //         return items
+        //     }
+        //     items = items.concat([
+        //         {
+        //             property: "Name",
+        //             value: this.getServer.name
+        //         },
+        //         {
+        //             property: "URL",
+        //             value: this.getServer.url
+        //         },
+        //         {
+        //             property: "Auth key",
+        //             value: this.getServer.authkey
+        //         }
+        //     ])
+        //     if (
+        //         this.getServer.server_info !== undefined &&
+        //         this.getServerUser.Organisation !== undefined
+        //     ) {
+        //         items = items.concat([
+        //             {
+        //                 property: "Org. name",
+        //                 value: this.getServerUser.Organisation.name
+        //             },
+        //             {
+        //                 property: "Org. uuid",
+        //                 value: this.getServerUser.Organisation.uuid
+        //             },
+        //             {
+        //                 property: "Org. type",
+        //                 value: this.getServerUser.Organisation.type
+        //             }
+        //         ])
+        //     } else {
+        //         items = items.concat([
+        //             {
+        //                 property: "Org. name",
+        //                 value: ""
+        //             },
+        //             {
+        //                 property: "Org. uuid",
+        //                 value: ""
+        //             },
+        //             {
+        //                 property: "Org. type",
+        //                 value: ""
+        //             }
+        //         ])
+        //     }
+        //     return items
+        // },
     },
     methods: {
         close() {
