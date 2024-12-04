@@ -47,15 +47,28 @@
         </div>
         <DraggableComponent
             class="right-panel"
-            :positions.sync="infoCard.position"
-            draggableContainer="networkInfoPanel"
+            :positions.sync="nodeInfoCard.position"
+            draggableContainer="networkNodeInfoPanel"
             handleClass=".card-header"
         >
-            <TheInfoCard
+            <TheNodeInfoCard
                 v-if="selectedNodeID"
                 :server_id="selectedNodeID"
-                :open.sync="infoCard.show"
-            ></TheInfoCard>
+                :open.sync="nodeInfoCard.show"
+            ></TheNodeInfoCard>
+        </DraggableComponent>
+
+        <DraggableComponent
+            class="right-panel"
+            :positions.sync="linkInfoCard.position"
+            draggableContainer="networkLinkInfoPanel"
+            handleClass=".card-header"
+        >
+            <TheLinkInfoCard
+                v-if="selectedLinkID"
+                :server_id="selectedLinkID"
+                :open.sync="linkInfoCard.show"
+            ></TheLinkInfoCard>
         </DraggableComponent>
 
         <DraggableComponent
@@ -99,7 +112,8 @@ import ServerNode from "@/views/strategicView/elements/ServerNode.vue"
 import ServerNodeMini from "@/views/strategicView/elements/ServerNodeMini.vue"
 import ServerNodeMicro from "@/views/strategicView/elements/ServerNodeMicro.vue"
 // import NetworkMinimap from "@/views/strategicView/elements/NetworkMinimap.vue"
-import TheInfoCard from "@/views/strategicView/elements/InfoCard.vue"
+import TheNodeInfoCard from "@/views/strategicView/elements/NodeInfoCard.vue"
+import TheLinkInfoCard from "@/views/strategicView/elements/LinkInfoCard.vue"
 import ThePinCard from "@/views/strategicView/elements/PinCard.vue"
 import DraggableComponent from "@/components/ui/DraggableComponent.vue"
 import d3Network from "@/helpers/d3Network.js"
@@ -110,7 +124,8 @@ export default {
     components: {
         Layout,
         iconButton,
-        TheInfoCard,
+        TheNodeInfoCard,
+        TheLinkInfoCard,
         ThePinCard,
         DraggableComponent,
         // NetworkMinimap
@@ -119,7 +134,11 @@ export default {
         return {
             scope: "administration",
             refreshInProgress: false,
-            infoCard: {
+            nodeInfoCard: {
+                show: false,
+                position: {top: "4em", left: "unset", right: "1em"}
+            },
+            linkInfoCard: {
                 show: false,
                 position: {top: "4em", left: "unset", right: "1em"}
             },
@@ -129,6 +148,8 @@ export default {
             },
             selectedNode: {},
             selectedNodeID: null,
+            selectedLink: {},
+            selectedLinkID: null,
             availableScopes: [
                 { text: "Administration", value: "administration" },
             ],
@@ -160,17 +181,27 @@ export default {
         }),
     },
     methods: {
-        toggleInfoSideBar(show) {
+        toggleNodeInfoSideBar(show) {
             if (show === undefined) {
-                this.infoCard.show = !this.infoCard.show
+                this.nodeInfoCard.show = !this.nodeInfoCard.show
             } else {
-                this.infoCard.show = show
+                this.nodeInfoCard.show = show
+            }
+        },
+        toggleLinkInfoSideBar(show) {
+            if (show === undefined) {
+                this.linkInfoCard.show = !this.linkInfoCard.show
+            } else {
+                this.linkInfoCard.show = show
             }
         },
         resetPositionsInfo() {
-            this.infoCard.position.top = "4em"
-            this.infoCard.position.left = "unset"
-            this.infoCard.position.right = "1em"
+            this.nodeInfoCard.position.top = "4em"
+            this.nodeInfoCard.position.left = "unset"
+            this.nodeInfoCard.position.right = "1em"
+            this.linkInfoCard.position.top = "4em"
+            this.linkInfoCard.position.left = "unset"
+            this.linkInfoCard.position.right = "1em"
         },
         resetPositionsPin() {
             this.pinCard.position.top = "4em"
@@ -215,12 +246,16 @@ export default {
             this.selectedNode = node
             // this.selectedNodeID = node.id
         },
+        selectLink(link) {
+            this.selectedLink = link
+            this.selectedLinkID = link.source.id
+        },
         constructNetwork() {
             const vm = this
             let eventHandlers = {
                 nodeClick: function(node) {
                     vm.selectNode(node)
-                    vm.toggleInfoSideBar(true)
+                    vm.toggleNodeInfoSideBar(true)
                 },
                 refreshMinimap: function() {
                     vm.minimapRedrawCount++
@@ -230,7 +265,11 @@ export default {
                 },
                 updateScale: function(scaleInfo) {
                     vm.scaleInfo = Object.assign(vm.scaleInfo, scaleInfo)
-                }
+                },
+                linkClicked: function(link) {
+                    vm.selectLink(link)
+                    vm.toggleLinkInfoSideBar(true)
+                },
             }
             let componentGenerator = {
                 nodeComponent: function(node, htmlNode, d3Node, d3SVGNode) {

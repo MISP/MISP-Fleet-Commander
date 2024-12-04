@@ -88,6 +88,9 @@ export default {
             .data(d3data.links)
             .enter().append("path")
             .attr('id', (d) => `line_${d.id}`)
+            .on("click", function(e, d){
+                eventHandlers.linkClicked(d)
+            })
             .attr("class", function (d) {
                 let classes = ['link']
                 if (!d._managed_server) {

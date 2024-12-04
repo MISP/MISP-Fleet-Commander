@@ -3,7 +3,7 @@
         v-show="open && (hasSelection || true)"
         bg-variant=""
         text-variant=""
-        id="networkInfoPanel"
+        id="networkNodeInfoPanel"
     >
         <b-tabs
             card fill small
@@ -52,7 +52,7 @@ import { mapState, mapGetters } from "vuex"
 import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
 
 export default {
-    name: "TheInfoCard",
+    name: "TheNodeInfoCard",
     components: {
         timeSinceRefresh
     },
