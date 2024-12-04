@@ -323,7 +323,6 @@ export default {
                     link._managed_server = true
                     if (link.filtering_rules.pull_rule_number > 0 || link.filtering_rules.push_rule_number > 0) {
                         link._has_rules = true
-                        link.weight = 4
                     }
                 } else {
                     link.target = 'v' + link.destination.Server.id

@@ -85,9 +85,9 @@ export default {
 </script>
 
 <style>
-line.link.has_rules {
-    stroke: #ff0000;
-    stroke-opacity: 0.8;
+path.link:hover {
+    stroke: #00f;
+    cursor: pointer;
 }
 </style>
 

@@ -12,7 +12,8 @@
     --var-color-main-dark-blue: #003a5a;
     --var-color-giantorganedarker: #d9510d;
     --var-color-light-grey: #dfe1e2;
-    --var-color-misp-blue: #2ca1db
+    --var-color-misp-blue: #2ca1db;
+    --var-color-misp-gray: #616263;
 }
 
 body {

@@ -8,6 +8,12 @@ export default {
         const width = boundingRect.width
         const height = boundingRect.height
 
+        const linkColor = '#bcc0c2'
+        const movingMarkerColor = '#2ca1db'
+        const linkColorRules = '#f5854d'
+        const movingMarkerColorRules = '#fff000'
+        const endMarkerSize = 4
+
         const svg = d3.select(svgNode)
             .attr("width", width)
             .attr("height", height)
@@ -41,11 +47,46 @@ export default {
             })
         svg.call(zoom)
 
+        const defs = svg.append('defs')
+
+        const markerDef = defs.append('marker')
+        setAttrs(markerDef, {
+            'id': 'triangle',
+            'viewBox': '0 0 10 10',
+            'markerWidth': endMarkerSize,
+            'markerHeight': endMarkerSize,
+            'refX': '1',
+            'refY': '5',
+            'markerUnits': 'strokeWidth',
+            'orient': 'auto',
+        })
+        markerDef.append('path')
+            .attr('d', 'M 0 0 L 10 5 L 0 10 z')
+            .attr('fill', linkColor)
+            .attr('opacity', 1)
+
+        const markerDefRule = defs.append('marker')
+        setAttrs(markerDefRule, {
+            'id': 'triangle-rule',
+            'viewBox': '0 0 10 10',
+            'markerWidth': endMarkerSize,
+            'markerHeight': endMarkerSize,
+            'refX': '1',
+            'refY': '5',
+            'markerUnits': 'strokeWidth',
+            'orient': 'auto',
+        })
+        markerDefRule.append('path')
+            .attr('d', 'M 0 0 L 10 5 L 0 10 z')
+            .attr('fill', linkColorRules)
+            .attr('opacity', 1)
+
         const link = container.append("g")
             .attr("class", "links")
-            .selectAll("line")
+            .selectAll("path")
             .data(d3data.links)
-            .enter().append("line")
+            .enter().append("path")
+            .attr('id', (d) => `line_${d.id}`)
             .attr("class", function (d) {
                 let classes = ['link']
                 if (!d._managed_server) {
@@ -56,9 +97,77 @@ export default {
                 }
                 return classes.join(' ')
             })
-            .attr("stroke", "#999")
-            .attr("stroke-opacity", 0.6)
-            .style("stroke-width", function(d) { return Math.sqrt(d.weight ? d.weight : 1) })
+            .attr("fill", "none")
+            .attr("stroke", (d) => d._has_rules ? linkColorRules : linkColor)
+            .attr("stroke-opacity", 1)
+            .attr("marker-end", 'url(#triangle)')
+            .attr("marker-end", (d) => d._has_rules ? 'url(#triangle-rule)' : 'url(#triangle)')
+            .style("stroke-width", function(d) { return d.weight ? d.weight : 5 })
+
+        const markerSelector =
+            container.append("g")
+            .attr("class", "markers")
+            .selectAll("rect")
+            .data(d3data.links)
+            .enter()
+
+        const markers = markerSelector
+            .append("path")
+                .attr("class", function (d) {
+                    let classes = ['marker']
+                    if (!d._managed_server) {
+                        classes.push('unmanaged_server')
+                    }
+                    if (d._has_rules) {
+                        classes.push('has_rules')
+                    }
+                    return classes.join(' ')
+                })
+                .attr('fill', "none")
+                .attr('stroke', (d) => d._has_rules ? movingMarkerColorRules : movingMarkerColor)
+                .attr('stroke-linecap', "round")
+                .attr('stroke-width', "8")
+                .attr('stroke-dashoffset', "0")
+                .attr('stroke-dasharray', "0,200")
+        markers
+            .append('animate')
+                .attr('attributeName', 'stroke-dashoffset')
+                .attr('repeatCount', 'indefinite')
+                .attr('dur', '60s')
+                .attr('values', '100%;0')
+
+
+
+        /* Moving circle markers along a path - Got replaced with stroke-dashoffset/dasharray */
+        // const markerSelector =
+        //     container.append("g")
+        //     .attr("class", "markers")
+        //     .selectAll("circle")
+        //     .data(d3data.links)
+        //     .enter()
+
+        // markerSelector
+        //     .append("circle")
+        //         .attr('id', (d) => `marker_${d.id}`)
+        //         .attr("r", "4")
+        //         .attr("fill", "#999")
+        //         .append('animateMotion')
+        //             .attr('repeatCount', 'indefinite')
+        //             .attr('dur', '10s')
+        //             .append('mpath')
+        //                 .attr('xlink:href', (d) => `#line_${d.id}`)
+        // markerSelector
+        //     .append("circle")
+        //         .attr('id', (d) => `marker_${d.id}`)
+        //         .attr("r", "4")
+        //         .attr("fill", "#999")
+        //         .append('animateMotion')
+        //             .attr('repeatCount', 'indefinite')
+        //             .attr('dur', '10s')
+        //             .attr('begin', '5s')
+        //             .append('mpath')
+        //                 .attr('xlink:href', (d) => `#line_${d.id}`)
+
 
         const node = container.append("g")
             .attr("class", "nodes")
@@ -88,10 +197,26 @@ export default {
             .nodes(d3data.nodes)
             .on("tick", () => {
                 link
-                    .attr("x1", d => d.source.x + getNodeHalfDimension(d3.select(`#node-${d.source.id}`).node(), "width"))
-                    .attr("y1", d => d.source.y + getNodeHalfDimension(d3.select(`#node-${d.source.id}`).node(), "height"))
-                    .attr("x2", d => d.target.x + getNodeHalfDimension(d3.select(`#node-${d.target.id}`).node(), "width"))
-                    .attr("y2", d => d.target.y + getNodeHalfDimension(d3.select(`#node-${d.target.id}`).node(), "height"))
+                    .attr("d", function(d) {
+                        const { x1, y1, x2, y2, dr } = calcEdgePathCoordinate(d.source, d.target)
+                        return "M" + x1 + "," + y1 + "A" + dr + "," + dr + " 0 0,1 " + x2 + "," + y2;
+                    })
+                link
+                    .attr("d", function(d) {
+                        const intersection = getIntersection(d.source, d.target)
+                        const { x1, y1, x2, y2, dr } = calcEdgePathCoordinate(d.source, d.target)
+                        return "M" + x1 + "," + y1 + "A" + dr + "," + dr + " 0 0,1 " + intersection.x2 + "," + intersection.y2;
+                    })
+                markers
+                    .attr("d", function(d) {
+                        const { x1, y1, x2, y2, dr } = calcEdgePathCoordinate(d.source, d.target)
+                        return "M" + x1 + "," + y1 + "A" + dr + "," + dr + " 0 0,1 " + x2 + "," + y2;
+                    })
+                    .attr("d", function(d) {
+                        const intersection = getIntersection(d.source, d.target)
+                        const { x1, y1, x2, y2, dr } = calcEdgePathCoordinate(d.source, d.target)
+                        return "M" + x1 + "," + y1 + "A" + dr + "," + dr + " 0 0,1 " + intersection.x2 + "," + intersection.y2;
+                    })
 
                 node.attr("transform", d => "translate(" + d.x + "," + d.y + ")")
             })
@@ -108,6 +233,23 @@ export default {
             svgSelection: svg,
             simulation: simulation,
             zoom: zoom
+        }
+
+        function calcEdgePathCoordinate(source, target) {
+            const dx = target.x - source.x,
+                dy = target.y - source.y,
+                dr = Math.sqrt(dx * dx + dy * dy)*2;
+            const x1 = source.x + getNodeHalfDimension(d3.select(`#node-${source.id}`).node(), "width")
+            const y1 = source.y + getNodeHalfDimension(d3.select(`#node-${source.id}`).node(), "height")
+            const x2 = target.x + getNodeHalfDimension(d3.select(`#node-${target.id}`).node(), "width")
+            const y2 = target.y + getNodeHalfDimension(d3.select(`#node-${target.id}`).node(), "height")
+            return {
+                x1: x1,
+                x2: x2,
+                y1: y1,
+                y2: y2,
+                dr: dr,
+            }
         }
 
         function drag(simulation) {
@@ -168,6 +310,125 @@ export default {
 
         function getNodeHalfDimension(node, dimension) {
             return node.getBBox()[dimension] / 2
+        }
+
+        function setAttrs(elem, attrs) {
+            for (const k in attrs) {
+                if (Object.prototype.hasOwnProperty.call(attrs, k)) {
+                    const v = attrs[k];
+                    elem.attr(k, v)
+                }
+            }
+        }
+
+        /*
+            Functions below help compute the intersection between the link and the server's box.
+            This is needed to ensure the path stops at the box's border instead of going to the center.
+        */
+        function Point(x, y) {
+            if (!(this instanceof Point)) {
+              return new Point(x, y)
+            }
+            this.x = x
+            this.y = y
+            Point.add = function (a, b) {
+              return Point(a.x + b.x, a.y + b.y)
+            }
+            Point.sub = function (a, b) {
+              return Point(a.x - b.x, a.y - b.y)
+            }
+            Point.cross = function (a, b) {
+              return a.x * b.y - a.y * b.x;
+            }
+            Point.scale = function (a, k) {
+              return Point(a.x * k, a.y * k)
+            }
+            Point.unit = function (a) {
+              return Point.scale(a, 1 / Point.norm(a))
+            }
+            Point.norm = function (a) {
+              return Math.sqrt(a.x * a.x + a.y * a.y)
+            }
+        }
+
+        function pointInSegment([a, b], p) {
+            return (
+                Math.abs(Point.cross(Point.sub(p, a), Point.sub(b, a))) < 1e-6 &&
+                Math.min(a.x, b.x) <= p.x && p.x <= Math.max(a.x, b.x) &&
+                Math.min(a.y, b.y) <= p.y && p.y <= Math.max(a.y, b.y)
+            );
+        }
+        
+        function lineLineIntersection([a, b], [c, d]) {
+            const v1 = Point.sub(b, a);
+            const v2 = Point.sub(d, c);
+            const kNum = Point.cross(Point.sub(c, a), Point.sub(d, c));
+            const kDen = Point.cross(v1, v2);
+
+            if (Math.abs(kDen) < 1e-6) return null; // Lines are parallel or coincident
+
+            const scale = kNum / kDen;
+            return Point.add(a, Point.scale(v1, Math.abs(scale)));
+        }
+        
+        function segmentSegmentIntersection(s1, s2) {
+            const ip = lineLineIntersection(s1, s2);
+            return ip && pointInSegment(s1, ip) && pointInSegment(s2, ip) ? ip : null;
+        }
+        
+        function boxSegmentIntersection(box, lineSegment) {
+            const topLeft = new Point(box.x, box.y);
+            const topRight = new Point(box.x + box.width, box.y);
+            const bottomLeft = new Point(box.x, box.y + box.height);
+            const bottomRight = new Point(box.x + box.width, box.y + box.height);
+
+            const boxEdges = [
+                [topLeft, topRight],  // Top
+                [bottomLeft, bottomRight], // Bottom
+                [topLeft, bottomLeft], // Left
+                [topRight, bottomRight] // Right
+            ];
+        
+            for (const edge of boxEdges) {
+                const ip = segmentSegmentIntersection(edge, lineSegment);
+                if (ip) return ip;
+            }
+
+            return null;
+        }
+        
+        function boxCenter(box) {
+            return new Point(box.x + box.width / 2, box.y + box.height / 2);
+        }
+        
+        function buildSegmentThroughCenters(a, b) {
+            return [boxCenter(a), boxCenter(b)];
+        }
+        
+        function getIntersection(a, b) {
+            a.width = getNodeHalfDimension(d3.select(`#node-${a.id}`).node(), "width") * 2;
+            a.height = getNodeHalfDimension(d3.select(`#node-${a.id}`).node(), "height") * 2;
+            b.width = getNodeHalfDimension(d3.select(`#node-${b.id}`).node(), "width") * 2;
+            b.height = getNodeHalfDimension(d3.select(`#node-${b.id}`).node(), "height") * 2;
+
+            const segment = buildSegmentThroughCenters(a, b);
+            const ia = boxSegmentIntersection(a, segment);
+            const ib = boxSegmentIntersection(b, segment);
+
+            if (ia && ib) {
+                const unitV = Point.unit(Point.sub(ib, ia));
+                const k = 18; // Arrow width
+                const adjustedIb = Point.sub(ib, Point.scale(unitV, k));
+
+                return {
+                    x1: ia.x,
+                    y1: ia.y,
+                    x2: adjustedIb.x,
+                    y2: adjustedIb.y
+                };
+            }
+
+            return null;
         }
     }
 }
