@@ -85,8 +85,14 @@ export default {
 </script>
 
 <style>
+path.link {
+    filter: drop-shadow(0px 1px 1px rgba(0, 0, 0, .7));
+    cursor: pointer;
+    transition: stroke-width .1s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
 path.link:hover {
-    stroke: #00f;
+    filter: drop-shadow(0px 2px 2px rgba(0, 0, 0, .7));
+    stroke-width: 8px !important;
     cursor: pointer;
 }
 </style>

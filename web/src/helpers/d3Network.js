@@ -35,6 +35,7 @@ export default {
         const simulation = d3.forceSimulation(d3data.nodes)
             .alphaDecay(0.35)
             .force("link", d3.forceLink(d3data.links).id(function(d) { return d.id }).distance(nodeWidth/2))
+            .force("charge", d3.forceManyBody().strength(-3000))
             .force("collide", d3.forceCollide((d) => d._managed_server ? 1.2*nodeWidth : 0.1).iterations(3))
             .force("center", d3.forceCenter(width / 2, height / 2))
 
