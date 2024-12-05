@@ -36,7 +36,8 @@ export default {
             .alphaDecay(0.35)
             .force("link", d3.forceLink(d3data.links).id(function(d) { return d.id }).distance(nodeWidth/2))
             .force("charge", d3.forceManyBody().strength(-3000))
-            .force("collide", d3.forceCollide((d) => d._managed_server ? 1.2*nodeWidth : 0.1).iterations(3))
+            // .force("collide", d3.forceCollide((d) => d._managed_server ? 1.2*nodeWidth : 0.1).iterations(3))
+            .force("collide", d3.forceCollide((d) => d._managed_server ? 0.9*nodeWidth : 0.3).iterations(3))
             .force("center", d3.forceCenter(width / 2, height / 2))
 
         const zoom = d3.zoom()
@@ -129,48 +130,17 @@ export default {
                 })
                 .attr('fill', "none")
                 .attr('stroke', (d) => d._has_rules ? movingMarkerColorRules : movingMarkerColor)
+                .attr('stroke-opacity', 0.7)
                 .attr('stroke-linecap', "round")
-                .attr('stroke-width', "8")
+                .attr('stroke-width', "5")
                 .attr('stroke-dashoffset', "0")
-                .attr('stroke-dasharray', "0,200")
+                .attr('stroke-dasharray', "16,150")
         markers
             .append('animate')
                 .attr('attributeName', 'stroke-dashoffset')
                 .attr('repeatCount', 'indefinite')
-                .attr('dur', '60s')
+                .attr('dur', '30s')
                 .attr('values', '100%;0')
-
-
-
-        /* Moving circle markers along a path - Got replaced with stroke-dashoffset/dasharray */
-        // const markerSelector =
-        //     container.append("g")
-        //     .attr("class", "markers")
-        //     .selectAll("circle")
-        //     .data(d3data.links)
-        //     .enter()
-
-        // markerSelector
-        //     .append("circle")
-        //         .attr('id', (d) => `marker_${d.id}`)
-        //         .attr("r", "4")
-        //         .attr("fill", "#999")
-        //         .append('animateMotion')
-        //             .attr('repeatCount', 'indefinite')
-        //             .attr('dur', '10s')
-        //             .append('mpath')
-        //                 .attr('xlink:href', (d) => `#line_${d.id}`)
-        // markerSelector
-        //     .append("circle")
-        //         .attr('id', (d) => `marker_${d.id}`)
-        //         .attr("r", "4")
-        //         .attr("fill", "#999")
-        //         .append('animateMotion')
-        //             .attr('repeatCount', 'indefinite')
-        //             .attr('dur', '10s')
-        //             .attr('begin', '5s')
-        //             .append('mpath')
-        //                 .attr('xlink:href', (d) => `#line_${d.id}`)
 
 
         const node = container.append("g")
@@ -208,8 +178,10 @@ export default {
                 link
                     .attr("d", function(d) {
                         const intersection = getIntersection(d.source, d.target)
-                        const { x1, y1, x2, y2, dr } = calcEdgePathCoordinate(d.source, d.target)
-                        return "M" + x1 + "," + y1 + "A" + dr + "," + dr + " 0 0,1 " + intersection.x2 + "," + intersection.y2;
+                        const { x1, y1, dr } = calcEdgePathCoordinate(d.source, d.target)
+                        if (intersection !== null) {
+                            return "M" + x1 + "," + y1 + "A" + dr + "," + dr + " 0 0,1 " + intersection.x2 + "," + intersection.y2;
+                        }
                     })
                 markers
                     .attr("d", function(d) {
@@ -218,8 +190,10 @@ export default {
                     })
                     .attr("d", function(d) {
                         const intersection = getIntersection(d.source, d.target)
-                        const { x1, y1, x2, y2, dr } = calcEdgePathCoordinate(d.source, d.target)
-                        return "M" + x1 + "," + y1 + "A" + dr + "," + dr + " 0 0,1 " + intersection.x2 + "," + intersection.y2;
+                        const { x1, y1, dr } = calcEdgePathCoordinate(d.source, d.target)
+                        if (intersection !== null) {
+                            return "M" + x1 + "," + y1 + "A" + dr + "," + dr + " 0 0,1 " + intersection.x2 + "," + intersection.y2;
+                        }
                     })
 
                 node.attr("transform", d => "translate(" + d.x + "," + d.y + ")")
