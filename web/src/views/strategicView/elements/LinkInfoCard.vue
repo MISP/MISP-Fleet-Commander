@@ -1,111 +1,99 @@
 <template>
-    <b-card no-body
-        v-show="open && (hasSelection || true)"
-        bg-variant=""
-        text-variant=""
-        id="networkLinkInfoPanel"
-    >
-        <b-tabs
-            card fill
+    <div>
+        <b-card no-body
+            v-show="(hasSelection || true)"
+            bg-variant=""
+            text-variant=""
+            id="networkLinkInfoPanel"
+            style="box-shadow: rgba(0, 0, 0, 0.07) 0px 1px 1px, rgba(0, 0, 0, 0.07) 0px 2px 2px, rgba(0, 0, 0, 0.07) 0px 4px 4px, rgba(0, 0, 0, 0.07) 0px 8px 8px, rgba(0, 0, 0, 0.07) 0px 16px 16px;"
         >
-            <b-tab title="Connection Info" active no-body>
-                <div class="d-flex flex-column align-items-center mx-2 my-3">
-                    <h6 class="mb-0">{{ getSourceServer.name }}</h6>
-                    <a
-                        :href="getSourceServer.url"
-                        target="_blank"
-                        class="text-muted font-weight-light text-wrap"
-                        style="font-size: 0.8em;"
+            <b-tabs
+                card fill pills
+                nav-wrapper-class="px-3 py-1"
+            >
+                <b-tab title="Connection Info" active no-body>
+                    <div class="d-flex flex-column align-items-center mx-2 my-3">
+                        <h6 class="mb-0">{{ getSourceServer.name }}</h6>
+                        <a
+                            :href="getSourceServer.url"
+                            target="_blank"
+                            class="text-muted font-weight-light text-wrap"
+                            style="font-size: 0.8em;"
+                        >
+                            {{ getSourceServer.url }}
+                            <sup class="fa fa-external-link-alt text-muted"></sup>
+                        </a>
+                        <i class="fa fa-arrow-down my-1" style="font-size: 1.5em; color: #2ca1db; filter: drop-shadow(0px 1px 1px rgba(0, 0, 0, .7));"></i>
+                        <h6 class="mb-0">{{ getTargetServer.name }}</h6>
+                        <a
+                            :href="getTargetServer.url"
+                            target="_blank"
+                            class="text-muted font-weight-light text-wrap"
+                            style="font-size: 0.8em;"
+                        >
+                            {{ getTargetServer.url }}
+                            <sup class="fa fa-external-link-alt text-muted"></sup>
+                        </a>
+                    </div>
+
+                    <b-table-simple striped small class="mb-0">
+                        <b-tbody>
+                            <b-tr>
+                                <b-th>Status</b-th>
+                                <b-td>123</b-td>
+                            </b-tr>
+                            <b-tr>
+                                <b-th>Local Version</b-th>
+                                <b-td>123</b-td>
+                            </b-tr>
+                            <b-tr>
+                                <b-th>Remote Version</b-th>
+                                <b-td>123</b-td>
+                            </b-tr>
+                            <b-tr>
+                                <b-th>Compatibility</b-th>
+                                <b-td>123</b-td>
+                            </b-tr>
+                            <b-tr>
+                                <b-th>POST Test</b-th>
+                                <b-td>123</b-td>
+                            </b-tr>
+                            <b-tr>
+                                <b-th>User</b-th>
+                                <b-td>123</b-td>
+                            </b-tr>
+                            <b-tr>
+                                <b-th>User Role</b-th>
+                                <b-td>123</b-td>
+                            </b-tr>
+                            <b-tr>
+                                <b-th>Sync Status</b-th>
+                                <b-td>123</b-td>
+                            </b-tr>
+                        </b-tbody>
+                    </b-table-simple>
+
+                    <b-table
+                        striped small
+                        class="mb-0"
+                        :bordered="false"
+                        :borderless="true"
+                        :outlined="false"
+                        :items="serverInfoTable"
+                        :fields="fields"
                     >
-                        {{ getSourceServer.url }}
-                        <sup class="fa fa-external-link-alt text-muted"></sup>
-                    </a>
-                    <i class="fa fa-arrow-down my-1" style="font-size: 1.5em; color: #afb4b6; filter: drop-shadow(0px 1px 1px rgba(0, 0, 0, .7));"></i>
-                    <h6 class="mb-0">{{ getTargetServer.name }}</h6>
-                    <a
-                        :href="getTargetServer.url"
-                        target="_blank"
-                        class="text-muted font-weight-light text-wrap"
-                        style="font-size: 0.8em;"
-                    >
-                        {{ getTargetServer.url }}
-                        <sup class="fa fa-external-link-alt text-muted"></sup>
-                    </a>
-                </div>
+                    </b-table>
+                </b-tab>
+                <b-tab title="Rules">
+                    Rules
+                </b-tab>
+                <b-tab title="Sync. Strategies">
+                    Sync. Strategies
+                </b-tab>
+            </b-tabs>
 
-                <b-table-simple striped small class="mb-0">
-                    <b-tbody>
-                        <b-tr>
-                            <b-th>Status</b-th>
-                            <b-td>123</b-td>
-                        </b-tr>
-                        <b-tr>
-                            <b-th>Local Version</b-th>
-                            <b-td>123</b-td>
-                        </b-tr>
-                        <b-tr>
-                            <b-th>Remote Version</b-th>
-                            <b-td>123</b-td>
-                        </b-tr>
-                        <b-tr>
-                            <b-th>Compatibility</b-th>
-                            <b-td>123</b-td>
-                        </b-tr>
-                        <b-tr>
-                            <b-th>POST Test</b-th>
-                            <b-td>123</b-td>
-                        </b-tr>
-                        <b-tr>
-                            <b-th>User</b-th>
-                            <b-td>123</b-td>
-                        </b-tr>
-                        <b-tr>
-                            <b-th>User Role</b-th>
-                            <b-td>123</b-td>
-                        </b-tr>
-                        <b-tr>
-                            <b-th>Sync Status</b-th>
-                            <b-td>123</b-td>
-                        </b-tr>
-                    </b-tbody>
-                </b-table-simple>
-
-                <b-table
-                    striped small
-                    class="mb-0"
-                    :bordered="false"
-                    :borderless="true"
-                    :outlined="false"
-                    :items="serverInfoTable"
-                    :fields="fields"
-                >
-                </b-table>
-            </b-tab>
-            <b-tab title="Rules">
-                Rules
-            </b-tab>
-            <b-tab title="Sync. Strategies">
-                Sync. Strategies
-            </b-tab>
-            <template v-slot:tabs-end>
-                <b-btn-close
-                    class="position-absolute close-button"
-                    @click.prevent="close"
-                ></b-btn-close>
-            </template>
-        </b-tabs>
-
-        <template v-slot:footer>
-            <!-- <timeSinceRefresh
-                v-if="getServer && getServer.status"
-                :key="getServer.id"
-                :timestamp="getServerStatus.timestamp"
-            ></timeSinceRefresh> -->
-            <!-- <timeSinceRefresh
-                :timestamp="server.server_info.query_result.timestamp"
-            ></timeSinceRefresh> -->
-        </template>
-    </b-card>
+        </b-card>
+    </div>
 </template>
 
 <script>
@@ -124,10 +112,6 @@ export default {
         },
         link: {
             type: Object,
-        },
-        open: {
-            type: Boolean,
-            required: true
         },
     },
     data: function() {
@@ -230,9 +214,6 @@ export default {
         // },
     },
     methods: {
-        close() {
-            this.$emit("update:open", false)
-        },
     }
 }
 </script>

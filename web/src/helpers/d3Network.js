@@ -13,11 +13,15 @@ export default {
         const movingMarkerColor = '#2ca1db'
         const linkColorRules = '#f5854d'
         const movingMarkerColorRules = '#fff000'
+        const linkColorSelected = '#2ca1db'
         const endMarkerSize = 4
 
         const svg = d3.select(svgNode)
             .attr("width", width)
             .attr("height", height)
+            .on("click", function(e, d){
+                eventHandlers.canvasClicked()
+            })
         d3.select(window).on('resize.updatesvg', () => {
             const x = networkContainer.getBoundingClientRect().width
             const y = networkContainer.getBoundingClientRect().height
@@ -63,45 +67,18 @@ export default {
 
         const defs = svg.append('defs')
 
-        const markerDef = defs.append('marker')
-        setAttrs(markerDef, {
-            'id': 'triangle',
-            'viewBox': '0 0 10 10',
-            'markerWidth': endMarkerSize,
-            'markerHeight': endMarkerSize,
-            'refX': '1',
-            'refY': '5',
-            'markerUnits': 'strokeWidth',
-            'orient': 'auto',
-        })
-        markerDef.append('path')
-            .attr('d', 'M 0 0 L 10 5 L 0 10 z')
-            .attr('fill', linkColor)
-            .attr('opacity', 1)
-
-        const markerDefRule = defs.append('marker')
-        setAttrs(markerDefRule, {
-            'id': 'triangle-rule',
-            'viewBox': '0 0 10 10',
-            'markerWidth': endMarkerSize,
-            'markerHeight': endMarkerSize,
-            'refX': '1',
-            'refY': '5',
-            'markerUnits': 'strokeWidth',
-            'orient': 'auto',
-        })
-        markerDefRule.append('path')
-            .attr('d', 'M 0 0 L 10 5 L 0 10 z')
-            .attr('fill', linkColorRules)
-            .attr('opacity', 1)
+        const markerDef = generateMarker('triangle', linkColor)
+        const markerDefRule = generateMarker('triangle-rule', linkColorRules)
+        const markerDefSelected = generateMarker('triangle-selected', linkColorSelected)
 
         const link = container.append("g")
             .attr("class", "links")
             .selectAll("path")
             .data(d3data.links)
             .enter().append("path")
-            .attr('id', (d) => `line_${d.id}`)
-            .on("click", function(e, d){
+            .attr('id', (d) => `line_${d.vid}`)
+            .on("click", function(event, d){
+                event.stopPropagation()
                 eventHandlers.linkClicked(d)
             })
             .attr("class", function (d) {
@@ -130,6 +107,7 @@ export default {
 
         const markers = markerSelector
             .append("path")
+                .attr('id', (d) => `marker_${d.vid}`)
                 .attr("class", function (d) {
                     let classes = ['marker']
                     if (!d._managed_server) {
@@ -162,6 +140,7 @@ export default {
             .enter().append("g")
             // eslint-disable-next-line no-unused-vars
             .on("click", function(event, node) {
+                event.stopPropagation()
                 eventHandlers.nodeClick(node)
             })
             .call(drag(simulation))
@@ -312,6 +291,25 @@ export default {
                     elem.attr(k, v)
                 }
             }
+        }
+
+        function generateMarker(id, fillColor) {
+            const definition = defs.append('marker')
+            setAttrs(definition, {
+                'id': id,
+                'viewBox': '0 0 10 10',
+                'markerWidth': endMarkerSize,
+                'markerHeight': endMarkerSize,
+                'refX': '1',
+                'refY': '5',
+                'markerUnits': 'strokeWidth',
+                'orient': 'auto',
+            })
+            definition.append('path')
+                .attr('d', 'M 0 0 L 10 5 L 0 10 z')
+                .attr('fill', fillColor)
+                .attr('opacity', 1)
+            return definition
         }
 
         /*

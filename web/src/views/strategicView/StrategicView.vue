@@ -14,70 +14,51 @@
                 </b-dropdown-item>
             </b-dropdown>
 
-            <b-dropdown variant="primary" size="sm" text="" class="ml-auto">
-                <template #button-content>
-                    <i class="fa-solid fa-table-columns"></i> Show Pannels
+            <b-button variant="primary" v-b-toggle.sidebar-network size="sm" class="ml-auto">
+                <template v-if="!showSidebar">
+                    <i class="fa-solid fa-table-columns"></i> Show Sidebar
                 </template>
-                <b-dropdown-item
-                    @click="toggleNodeInfoSideBar(true)"
-                    >
-                    <iconButton
-                    text="Show Info Panel"
-                    icon="info-circle"
-                    ></iconButton>
-                </b-dropdown-item>
-                <b-dropdown-item
-                    @click="togglePinPanel"
-                >
-                    <iconButton
-                        text="Show Pinned Entries"
-                        icon="thumbtack"
-                    ></iconButton>
-                </b-dropdown-item>
-            </b-dropdown>
-
+                <template v-else>
+                    <i class="fa-solid fa-table-columns"></i> Hide Sidebar
+                </template>
+            </b-button>
         </div>
         <div ref="networkContainer" class="w-100 h-100 network-container">
             <svg ref="networkSVG"></svg>
         </div>
-        <DraggableComponent
-            class="right-panel"
-            :positions.sync="nodeInfoCard.position"
-            draggableContainer="networkNodeInfoPanel"
-            handleClass=".card-header"
-        >
-            <TheNodeInfoCard
-                v-if="selectedNodeID"
-                :server_id="selectedNodeID"
-                :open.sync="nodeInfoCard.show"
-            ></TheNodeInfoCard>
-        </DraggableComponent>
 
-        <DraggableComponent
-            class="right-panel"
-            :positions.sync="linkInfoCard.position"
-            draggableContainer="networkLinkInfoPanel"
-            handleClass=".card-header"
+        <b-sidebar
+            id="sidebar-network"
+            v-model="showSidebar"
+            body-class="px-2 py-3"
+            shadow="lg"
+            right
+            width="400px"
+            no-header
         >
-            <TheLinkInfoCard
-                v-if="selectedLinkID"
-                :link_id="selectedLinkID"
-                :link="selectedLink"
-                :open.sync="linkInfoCard.show"
-            ></TheLinkInfoCard>
-        </DraggableComponent>
-
-        <DraggableComponent
-            class="right-panel"
-            :positions.sync="pinCard.position"
-            draggableContainer="pinPanel"
-            handleClass=".card-header"
-        >
-            <ThePinCard
-                :open.sync="pinCard.show"
-                @showPinnedContentOnNodes="showPinnedContentOnNodes"
-            ></ThePinCard>
-        </DraggableComponent>
+            <div class="d-flex flex-column h-100" style="row-gap: 1em; overflow-x: hidden;">
+                <transition name="slide-fade" mode="out-in">
+                    <TheNodeInfoCard
+                        v-if="selectedNodeID"
+                        :server_id="selectedNodeID"
+                    ></TheNodeInfoCard>
+        
+                    <TheLinkInfoCard
+                        v-if="selectedLinkID"
+                        :link_id="selectedLinkID"
+                        :link="selectedLink"
+                        class=""
+                    ></TheLinkInfoCard>
+                </transition>
+    
+                <ThePinCard
+                    :open.sync="pinCard.show"
+                    @showPinnedContentOnNodes="showPinnedContentOnNodes"
+                    class="mt-auto"
+                    style="max-height: 50%;"
+                ></ThePinCard>
+            </div>
+        </b-sidebar>
 
         <div
             class="position-absolute border overflow-hidden p-1 bg-white"
@@ -130,6 +111,7 @@ export default {
     data: function () {
         return {
             refreshInProgress: false,
+            showSidebar: false,
             nodeInfoCard: {
                 show: false,
                 position: {top: "4em", left: "unset", right: "1em"}
@@ -172,6 +154,9 @@ export default {
             serversByUUID: "servers/serversByUUID",
             getConnectionList: "connections/getConnectionList",
         }),
+        hasActiveSelection() {
+            return this.selectedNodeID !== null || this.selectedLinkID !== null
+        }
     },
     methods: {
         toggleNodeInfoSideBar(show) {
@@ -236,12 +221,20 @@ export default {
             return nodeInstance
         },
         selectNode(node) {
+            this.unselectAll()
             this.selectedNode = node
             this.selectedNodeID = node.id
         },
         selectLink(link) {
+            this.unselectAll()
             this.selectedLink = link
             this.selectedLinkID = link.vid
+        },
+        unselectAll() {
+            this.selectedNode = null
+            this.selectedNodeID = null
+            this.selectedLink = null
+            this.selectedLinkID = null
         },
         constructNetwork() {
             const vm = this
@@ -262,6 +255,9 @@ export default {
                 linkClicked: function(link) {
                     vm.selectLink(link)
                     vm.toggleLinkInfoSideBar(true)
+                },
+                canvasClicked: function() {
+                    vm.unselectAll()
                 },
             }
             let componentGenerator = {
@@ -399,9 +395,70 @@ export default {
         this.allNodeInstances.forEach(nodeInstance => {
             nodeInstance.$destroy() // We have to manually destroy the mounted nodes as it's not done automatically
         })
+    },
+    watch: {
+        selectedLinkID: function(id) {
+            const allPaths = this.$refs["networkSVG"].querySelectorAll(`path.link`)
+            const selectedPath = this.$refs["networkSVG"].querySelector(`path#line_${id}.link`)
+            const allMakers = this.$refs["networkSVG"].querySelectorAll(`path.marker`)
+            const selectedMaker = this.$refs["networkSVG"].querySelector(`path#marker_${id}.marker`)
+            if (allPaths !== null) {
+                allPaths.forEach((path) => {
+                    path.classList.remove('selected')
+                    if (path.classList.contains('has_rules')) {
+                        path.setAttribute('marker-end', 'url(#triangle-rule)')
+                    } else {
+                        path.setAttribute('marker-end', 'url(#triangle)')
+                    }
+                })
+            }
+            if (selectedPath !== null) {
+                selectedPath.classList.add('selected')
+                selectedPath.setAttribute('marker-end', 'url(#triangle-selected)')
+            }
+            if (allMakers !== null)
+                allMakers.forEach((marker) => {
+                    marker.classList.remove('selected')
+                })
+            if (selectedMaker !== null)
+                selectedMaker.classList.add('selected')
+        },
+        hasActiveSelection: function(isActive) {
+            this.showSidebar = isActive || this.showSidebar
+        }
     }
 }
 </script>
+
+
+<style>
+#sidebar-network.b-sidebar {
+    top: calc(40px + 1px);
+    height: calc(100vh - 41px);
+}
+
+path.link {
+    filter: drop-shadow(0px 1px 1px rgba(0, 0, 0, .7));
+    cursor: pointer;
+    transition: stroke-width .1s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+path.link.selected {
+    filter: drop-shadow(0px 2px 2px #2ca1db77) !important;
+    stroke: #2ca1db !important;
+    stroke-width: 8px !important;
+}
+path.marker.selected {
+    stroke: #e4e6e7 !important;
+}
+path.marker.has_rules.selected {
+    stroke: #ffdf0a !important;
+}
+path.link:hover {
+    filter: drop-shadow(0px 2px 2px rgba(0, 0, 0, .7));
+    stroke-width: 8px !important;
+    cursor: pointer;
+}
+</style>
 
 <style scoped>
 
@@ -419,10 +476,6 @@ export default {
     z-index: 10;
 }
 
-.link {
-  stroke: #aaa;
-}
-
 .node text {
     stroke:#333;
     cursor:pointer;
@@ -438,5 +491,16 @@ export default {
     top: 2em;
     right: 0;
     width: 30em;
+}
+
+.slide-fade-enter-active {
+  transition: all .3s cubic-bezier(0, 0, 0.23, 0.96)
+}
+.slide-fade-leave-active {
+  transition: all .3s cubic-bezier(0, 0, 0.23, 0.96)
+}
+.slide-fade-enter, .slide-fade-leave-to {
+  transform: translateX(10px);
+  opacity: 0;
 }
 </style>

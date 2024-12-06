@@ -1,50 +1,59 @@
 <template>
-    <b-card no-body
-        v-show="open && (hasSelection || true)"
-        bg-variant=""
-        text-variant=""
-        id="networkNodeInfoPanel"
-    >
-        <b-tabs
-            card fill
+    <div>
+        
+        <b-card no-body
+            v-show="(hasSelection || true)"
+            bg-variant=""
+            text-variant=""
+            id="networkNodeInfoPanel"
+            style="box-shadow: rgba(0, 0, 0, 0.07) 0px 1px 1px, rgba(0, 0, 0, 0.07) 0px 2px 2px, rgba(0, 0, 0, 0.07) 0px 4px 4px, rgba(0, 0, 0, 0.07) 0px 8px 8px, rgba(0, 0, 0, 0.07) 0px 16px 16px;"
         >
-            <b-tab title="Info" no-body active>
-                <b-table
-                    striped small
-                    class="mb-0"
-                    :bordered="false"
-                    :borderless="true"
-                    :outlined="false"
-                    :items="serverInfoTable"
-                    :fields="fields"
-                >
-                </b-table>
-            </b-tab>
-            <b-tab title="Diagnostic">
-                Diagnostic
-            </b-tab>
-            <b-tab title="Content">
-                Event pic and data
-            </b-tab>
-            <template v-slot:tabs-end>
-                <b-btn-close
-                    class="position-absolute close-button"
-                    @click.prevent="close"
-                ></b-btn-close>
-            </template>
-        </b-tabs>
+            <b-card-title class="px-2 pt-1 mb-0" style="background-color: rgba(0, 0, 0, 0.03);">
+                <h5 id="sidebar-no-header-title" class="mb-0 d-flex">
+                    <span>{{ getServer.name }}</span>
+                    <span style="font-size: 0.66em;" class="ml-auto">
+                        <timeSinceRefresh :timestamp="lastRefreshTimestamp" :clockNoMargin="true"></timeSinceRefresh>
+                        <b-button
+                            variant="primary"
+                            class="ml-auto"
+                            size="sm"
+                            title="Quick refresh"
+                            @click="wsStatusRefresh()"
+                        >
+                            <i class="fas fa-redo-alt"></i>
+                        </b-button>
+                    </span>
+                </h5>
+                <div class="font-weight-light mb-2" style="font-size: 0.6em;">
+                    {{ getServer.url }}
+                </div>
+            </b-card-title>
+            <b-tabs
+                card fill pills
+                nav-wrapper-class="px-3 py-1"
+            >
+                <b-tab title="Info" no-body active>
+                    <b-table
+                        striped small
+                        class="mb-0"
+                        :bordered="false"
+                        :borderless="true"
+                        :outlined="false"
+                        :items="serverInfoTable"
+                        :fields="fields"
+                    >
+                    </b-table>
+                </b-tab>
+                <b-tab title="Diagnostic">
+                    Diagnostic
+                </b-tab>
+                <b-tab title="Content">
+                    Event pic and data
+                </b-tab>
+            </b-tabs>
 
-        <template v-slot:footer>
-            <timeSinceRefresh
-                v-if="getServer && getServer.status"
-                :key="getServer.id"
-                :timestamp="getServerStatus.timestamp"
-            ></timeSinceRefresh>
-            <!-- <timeSinceRefresh
-                :timestamp="server.server_info.query_result.timestamp"
-            ></timeSinceRefresh> -->
-        </template>
-    </b-card>
+        </b-card>
+    </div>
 </template>
 
 <script>
@@ -59,10 +68,6 @@ export default {
     props: {
         server_id: {
             type: Number,
-            required: true
-        },
-        open: {
-            type: Boolean,
             required: true
         },
     },
@@ -101,6 +106,9 @@ export default {
         isOnline: function() {
             return !this.getServerStatus.error
         },
+        lastRefreshTimestamp: function() {
+            return this.getServer?.server_info?.timestamp || null
+        },
         hasSelection() {
             return Object.keys(this.getServer).length > 0
         },
@@ -118,10 +126,6 @@ export default {
                     property: "URL",
                     value: this.getServer.url
                 },
-                {
-                    property: "Auth key",
-                    value: this.getServer.authkey
-                }
             ])
             if (
                 this.getServer.server_info !== undefined &&
@@ -161,9 +165,6 @@ export default {
         },
     },
     methods: {
-        close() {
-            this.$emit("update:open", false)
-        },
     }
 }
 </script>
