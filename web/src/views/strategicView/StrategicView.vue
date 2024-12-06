@@ -1,15 +1,7 @@
 <template>
 <Layout name="LayoutStretch" class="position-relative">
     <div>
-        <div class="network-toolbar position-absolute px-3 py-1 mx-5 bg-light shadow-sm">
-            <b-form-radio-group
-                id="btn-radios-2"
-                v-model="scope"
-                :options="availableScopes"
-                buttons
-                button-variant="outline-primary"
-                size="sm"
-            ></b-form-radio-group>
+        <div class="network-toolbar position-absolute d-flex px-3 py-1 mx-5 bg-light shadow-sm">
 
             <b-dropdown variant="primary" size="sm" text="Layout" class="ml-1">
                  <b-dropdown-item
@@ -22,20 +14,23 @@
                 </b-dropdown-item>
             </b-dropdown>
 
-            <b-dropdown variant="primary" size="sm" text="Pinned data" class="ml-1">
+            <b-dropdown variant="primary" size="sm" text="" class="ml-auto">
+                <template #button-content>
+                    <i class="fa-solid fa-table-columns"></i> Show Pannels
+                </template>
                 <b-dropdown-item
-                    @click="showPinnedContentOnNodes"
-                >
+                    @click="toggleNodeInfoSideBar(true)"
+                    >
                     <iconButton
-                        text="Show pinned content on all nodes"
-                        icon="eye"
+                    text="Show Info Panel"
+                    icon="info-circle"
                     ></iconButton>
                 </b-dropdown-item>
                 <b-dropdown-item
                     @click="togglePinPanel"
                 >
                     <iconButton
-                        text="Toggle pin panel"
+                        text="Show Pinned Entries"
                         icon="thumbtack"
                     ></iconButton>
                 </b-dropdown-item>
@@ -80,6 +75,7 @@
         >
             <ThePinCard
                 :open.sync="pinCard.show"
+                @showPinnedContentOnNodes="showPinnedContentOnNodes"
             ></ThePinCard>
         </DraggableComponent>
 
@@ -133,7 +129,6 @@ export default {
     },
     data: function () {
         return {
-            scope: "administration",
             refreshInProgress: false,
             nodeInfoCard: {
                 show: false,
@@ -151,9 +146,6 @@ export default {
             selectedNodeID: null,
             selectedLink: {},
             selectedLinkID: null,
-            availableScopes: [
-                { text: "Administration", value: "administration" },
-            ],
             d3data: {
                 nodes: [],
                 links: []
@@ -245,7 +237,7 @@ export default {
         },
         selectNode(node) {
             this.selectedNode = node
-            // this.selectedNodeID = node.id
+            this.selectedNodeID = node.id
         },
         selectLink(link) {
             this.selectedLink = link
@@ -292,7 +284,7 @@ export default {
                 }
                 const network = d3Network.constructNetwork(
                     this.$refs["networkSVG"],
-                    this.$refs["networkContainer"].getBoundingClientRect(),
+                    this.$refs["networkContainer"],
                     this.d3data,
                     componentGenerator,
                     eventHandlers,

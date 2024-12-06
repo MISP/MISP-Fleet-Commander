@@ -1,7 +1,8 @@
 import * as d3 from "d3"
 
 export default {
-    constructNetwork(svgNode, containerBoundingRect, d3data, componentGenerator, eventHandlers, callbacks) {
+    constructNetwork(svgNode, networkContainer, d3data, componentGenerator, eventHandlers, callbacks) {
+        const containerBoundingRect = networkContainer.getBoundingClientRect()
         const boundingRect = containerBoundingRect
         const nodeHeight = 300
         const nodeWidth = 350
@@ -17,6 +18,13 @@ export default {
         const svg = d3.select(svgNode)
             .attr("width", width)
             .attr("height", height)
+        d3.select(window).on('resize.updatesvg', () => {
+            const x = networkContainer.getBoundingClientRect().width
+            const y = networkContainer.getBoundingClientRect().height
+            svg
+                .attr("width", x)
+                .attr("height", y)
+        })
         const container = svg.append("g").attr("class", "zoomContainer")
 
         // const simulation = d3.forceSimulation(d3data.nodes)
@@ -46,6 +54,10 @@ export default {
             .on("end", function (event) {
                 eventHandlers.refreshMinimap()
                 eventHandlers.updateScale(event.transform)
+                simulation.alphaTarget(0.001).restart()
+                setTimeout(() => {
+                    simulation.alphaTarget(0)
+                }, 1)
             })
         svg.call(zoom)
 
@@ -287,7 +299,10 @@ export default {
         }
 
         function getNodeHalfDimension(node, dimension) {
-            return node.getBBox()[dimension] / 2
+            if (node !== null) {
+                return node.getBBox()[dimension] / 2
+            }
+            return 100
         }
 
         function setAttrs(elem, attrs) {

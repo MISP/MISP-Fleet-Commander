@@ -19,7 +19,10 @@
                     <i :class="pinTab.icon"></i> {{ pinTab.name }}
                 </template>
 
-                <div class="m-2">
+                <div class="m-2 d-flex flex-column">
+                    <b-button variant="primary" @click="showPinnedContentOnNodes()" size="sm" block class="mb-1 ml-auto">
+                        <i class="fa fa-eye"></i> Show pinned content on all nodes
+                    </b-button>
                     <ValidationProvider v-slot="validationContext" rules="validUUID" :name="`${pinTab.name} UUID`">
                         <b-input-group size="sm">
                             <b-input-group-prepend>
@@ -87,6 +90,7 @@
                             :disabled="loadingInProgressForID == row.item.id"
                         >
                             <i class="fas fa-eraser"></i>
+                            <i class="fa-solid fa-thumbtack-slash"></i>
                         </b-button>
                         <b-button
                             variant="link" size="xs" class="ml-1 p-0 text-danger"
@@ -188,6 +192,9 @@ export default {
         },
         close() {
             this.$emit("update:open", false)
+        },
+        showPinnedContentOnNodes() {
+            this.$emit("showPinnedContentOnNodes", true)
         },
         pinEntry(model) {
             this.doPinning(model, this.form.uuid)

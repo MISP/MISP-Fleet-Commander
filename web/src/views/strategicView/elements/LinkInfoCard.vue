@@ -6,10 +6,10 @@
         id="networkLinkInfoPanel"
     >
         <b-tabs
-            card fill small
+            card fill
         >
-            <b-tab title="Connection Info" active>
-                <div class="d-flex flex-column align-items-center mb-4">
+            <b-tab title="Connection Info" active no-body>
+                <div class="d-flex flex-column align-items-center mx-2 my-3">
                     <h6 class="mb-0">{{ getSourceServer.name }}</h6>
                     <a
                         :href="getSourceServer.url"
@@ -20,7 +20,7 @@
                         {{ getSourceServer.url }}
                         <sup class="fa fa-external-link-alt text-muted"></sup>
                     </a>
-                    <i class="fa fa-arrow-down" style="font-size: 1.5em;"></i>
+                    <i class="fa fa-arrow-down my-1" style="font-size: 1.5em; color: #afb4b6; filter: drop-shadow(0px 1px 1px rgba(0, 0, 0, .7));"></i>
                     <h6 class="mb-0">{{ getTargetServer.name }}</h6>
                     <a
                         :href="getTargetServer.url"
@@ -33,7 +33,7 @@
                     </a>
                 </div>
 
-                <b-table-simple small>
+                <b-table-simple striped small class="mb-0">
                     <b-tbody>
                         <b-tr>
                             <b-th>Status</b-th>
@@ -242,39 +242,5 @@ export default {
         right: 4px;
         top: 0;
         user-select: none;
-    }
-</style>
-
-<style>
-    .right-panel {
-        z-index: 2;
-    }
-
-    .right-panel .card-header {
-        padding: 0.5rem 0.5rem;
-        cursor: move;
-    }
-    
-    .right-panel .card-header > ul.card-header-tabs {
-        margin-left: 0;
-        margin-right: 0;
-        margin-bottom: -0.5rem;
-    }
-    
-    .right-panel .card-header > ul.card-header-tabs > li.nav-item {
-    
-    }
-    
-    .right-panel .card-header > ul.card-header-tabs > li.nav-item > a.nav-link {
-        padding: 0.3rem 0;
-        user-select: none;
-    }
-    
-    .right-panel .card-footer {
-        padding: 0.2rem 1rem;
-    }
-
-    .right-panel table {
-        font-size: 0.7rem;
     }
 </style>

@@ -1,6 +1,6 @@
 <template>
     <div class="nodeServer">
-        <div class="node-container shadow-sm d-inline-block">
+        <div class="node-container d-inline-block">
             <b-card no-body>
                 <template v-slot:header>
                     <div class="top-header d-flex flex-wrap">
@@ -149,6 +149,12 @@ export default {
 }
 </script>
 
+<style>
+foreignObject.nodeFO {
+    overflow: visible;
+}
+</style>
+
 <style scoped>
 .nodeServer {
     width: min-content;
@@ -160,6 +166,8 @@ export default {
 
 .node-container > .card {
     font-size: 75%;
+    box-shadow: rgba(0, 0, 0, 0.16) 0px 3px 6px, rgba(0, 0, 0, 0.23) 0px 3px 6px;
+    
 }
 
 .node-container > .card > .card-header {

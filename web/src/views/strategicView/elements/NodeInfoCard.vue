@@ -6,7 +6,7 @@
         id="networkNodeInfoPanel"
     >
         <b-tabs
-            card fill small
+            card fill
         >
             <b-tab title="Info" no-body active>
                 <b-table
@@ -206,6 +206,6 @@ export default {
     }
 
     .right-panel table {
-        font-size: 0.7rem;
+        /* font-size: 0.7rem; */
     }
 </style>
