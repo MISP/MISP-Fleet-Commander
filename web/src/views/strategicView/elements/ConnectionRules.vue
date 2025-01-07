@@ -1,0 +1,260 @@
+<template>
+    <div class="p-2">
+        <div><strong>PUSH Rules</strong> <b-badge variant="secondary">{{ pushRuleNumber }}</b-badge></div>
+        <JsonEditorVue
+            v-model="editorValuePush"
+            :mode="editorMode"
+            :mainMenuBar="true"
+            :navigationBar="false"
+            :onRenderMenu="onRenderMenuItemFunctionPush"
+            :validator="getJsonValidator('push')"
+        />
+
+        <div class="mt-4"><strong>PULL Rules</strong> <b-badge variant="secondary">{{ pullRuleNumber }}</b-badge></div>
+        <JsonEditorVue
+            v-model="editorValuePull"
+            :mode="editorMode"
+            :mainMenuBar="true"
+            :navigationBar="false"
+            :onRenderMenu="onRenderMenuItemFunctionPull"
+            :validator="getJsonValidator('pull')"
+        />
+    </div>
+
+</template>
+
+<script>
+import jsonViewer from "@/components/ui/elements/jsonViewer.vue"
+import JsonEditorVue from 'json-editor-vue'
+import { Mode, createAjvValidator } from 'vanilla-jsoneditor'
+
+const faFloppyDisk = {
+    prefix: "fas",
+    iconName: "save",
+    "icon": [512, 512,
+        [
+            "floppy-disk"
+        ],
+        "f0c7",
+        "M64 32C28.7 32 0 60.7 0 96L0 416c0 35.3 28.7 64 64 64l320 0c35.3 0 64-28.7 64-64l0-242.7c0-17-6.7-33.3-18.7-45.3L352 50.7C340 38.7 323.7 32 306.7 32L64 32zm0 96c0-17.7 14.3-32 32-32l192 0c17.7 0 32 14.3 32 32l0 64c0 17.7-14.3 32-32 32L96 224c-17.7 0-32-14.3-32-32l0-64zM224 288a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"
+    ]
+}
+
+const serverConnectionRuleSchemaBase = {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+        "orgs": {
+            "type": "object",
+            "properties": {
+                "NOT": {
+                    "type": "array",
+                    "items": {}
+                },
+                "OR": {
+                    "type": "array",
+                    "items": {}
+                }
+            },
+            "required": ["NOT", "OR"],
+            "additionalProperties": false
+        },
+        "tags": {
+            "type": "object",
+            "properties": {
+                "NOT": {
+                    "type": "array",
+                    "items": {}
+                },
+                "OR": {
+                    "type": "array",
+                    "items": {}
+                }
+            },
+            "required": ["NOT", "OR"],
+            "additionalProperties": false
+        },
+        "type_attributes": {
+            "type": "object",
+            "properties": {
+                "NOT": {
+                    "type": "array",
+                    "items": {}
+                }
+            },
+            "required": ["NOT"],
+            "additionalProperties": false
+        },
+        "type_objects": {
+            "type": "object",
+            "properties": {
+                "NOT": {
+                    "type": "array",
+                    "items": {}
+                }
+            },
+            "required": ["NOT"],
+            "additionalProperties": false
+        },
+    },
+    "required": ["orgs", "tags"],
+    "additionalProperties": false
+}
+const serverConnectionRuleSchemaPush = JSON.parse(JSON.stringify(serverConnectionRuleSchemaBase))
+const serverConnectionRuleSchemaPull = JSON.parse(JSON.stringify(serverConnectionRuleSchemaBase))
+serverConnectionRuleSchemaPull.properties['url_params'] = { "type": "string" }
+serverConnectionRuleSchemaPull.required.push('url_params')
+
+export default {
+    name: "strategicViewConnectionRules",
+    components: {
+        jsonViewer,
+        JsonEditorVue
+    },
+    props: {
+        connection: {
+            type: Object,
+            required: true
+        }
+    },
+    data: function() {
+        return {
+            editorValuePush: {},
+            editorValuePull: {},
+            editorMode: Mode.text,
+        }
+    },
+    computed: {
+        pushRuleNumber: function() {
+            return this.pushRules?.orgs?.NOT?.length + this.pushRules?.orgs?.OR?.length +
+                this.pushRules?.tags?.NOT?.length + this.pushRules?.orgs?.OR?.length
+        },
+        pushRules: function() {
+            return this.connection.filtering_rules.push_rules
+        },
+        pullRuleNumber: function() {
+            return this.pullRules?.orgs?.NOT?.length + this.pullRules?.orgs?.OR?.length +
+                this.pullRules?.tags?.NOT?.length + this.pullRules?.orgs?.OR?.length +
+                (this.pullRules?.url_params?.length > 0 ? this.pullRules?.url_params.split('/').length : 0)
+        },
+        pullRules: function() {
+            return this.connection.filtering_rules.pull_rules
+        },
+    },
+    methods: {
+        onRenderMenuItemFunction(items, context, modal, readOnly) {
+            const newItems = items.filter((item) => {
+                return item.className !== undefined ?
+                    item.className.startsWith('jse-group-button') ||
+                    item.className.startsWith('jse-format') ||
+                    item.className.startsWith('jse-compact') ||
+                    item.className.startsWith('jse-sort')
+                : false
+            })
+            newItems.push({type: 'separator'})
+            return newItems
+        },
+        onRenderMenuItemFunctionPush(items, context, modal, readOnly) {
+            const newItems = this.onRenderMenuItemFunction(items, context, modal, readOnly)
+            newItems.push({
+                type: "button",
+                icon: faFloppyDisk,
+                title: "Save",
+                className: "jse-save",
+                onClick: this.savePushRule
+            })
+            return newItems
+        },
+        onRenderMenuItemFunctionPull(items, context, modal, readOnly) {
+            const newItems = this.onRenderMenuItemFunction(items, context, modal, readOnly)
+            newItems.push({
+                type: "button",
+                icon: faFloppyDisk,
+                title: "Save",
+                className: "jse-save",
+                onClick: this.savePullRule
+            })
+            return newItems
+        },
+        savePushRule() {
+            const payload = {
+            }
+            this.$store.dispatch('connections/savePushRules', payload)
+                .then(() => {
+                })
+                .catch(error => {
+                    this.$bvToast.toast(error.message !== undefined ? error.message : error, {
+                        title: `Could not save push rules`,
+                        variant: "danger",
+                    })
+                })
+                .finally(() => {
+                })
+            
+        },
+        savePullRule() {
+            const payload = {
+            }
+            this.$store.dispatch('connections/savePullRules', payload)
+                .then(() => {
+                })
+                .catch(error => {
+                    this.$bvToast.toast(error.message !== undefined ? error.message : error, {
+                        title: `Could not save pull rules`,
+                        variant: "danger",
+                    })
+                })
+                .finally(() => {
+                })
+            
+        },
+        getJsonValidator(method) {
+            if (method == 'push') {
+                return createAjvValidator({ schema: serverConnectionRuleSchemaPush, schemaDefinitions: {} })
+            } else {
+                return createAjvValidator({ schema: serverConnectionRuleSchemaPull, schemaDefinitions: {} })
+            }
+        }
+    },
+    watch: {
+        pushRules: function() {
+            this.editorValuePush = JSON.parse(JSON.stringify(this.pushRules))
+        },
+        pullRules: function() {
+            this.editorValuePull = JSON.parse(JSON.stringify(this.pullRules))
+        },
+    },
+    mounted: function() {
+        // Maybe prefil empty rules with correct format?!?!
+        // Maybe prefil empty rules with correct format?!?!
+        // Maybe prefil empty rules with correct format?!?!
+        // Maybe prefil empty rules with correct format?!?!
+        if (this.pushRuleNumber > 0) {
+            this.editorValuePush = JSON.parse(JSON.stringify(this.pushRules))
+        } else {
+            this.editorValuePush = {
+                orgs: {
+                    NOT: [],
+                    OR: []
+                },
+                tags: {
+                    NOT: [],
+                    OR: []
+                },
+            }
+        }
+        this.editorValuePull = JSON.parse(JSON.stringify(this.pullRules))
+    },
+}
+</script>
+
+<style scoped>
+strong {
+    font-size: 1.2em;
+}
+</style>
+<style>
+.jse-main .jse-save {
+    margin-left: auto !important;
+}
+</style>

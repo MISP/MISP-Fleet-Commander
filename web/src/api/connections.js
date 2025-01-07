@@ -3,7 +3,8 @@ import store from "@/store/index"
 
 const urls = {
     index: `/servers/network`,
-    get: `/servers/getConnection`
+    get: `/servers/getConnection`,
+    edit: `/servers/editConnection/`
 }
 
 export default {
@@ -27,5 +28,33 @@ export default {
             }).catch(error => {
                 common.handleError(error, errorCb)
             })
+    },
+    setPushRules(server_id, remove_server_id, payload, cb, errorCb) {
+        const url = `${urls.edit}/${server_id}/${remove_server_id}`
+        const pushPayload = {
+            Server: {
+                push_rules: JSON.stringify(payload)
+            }
+        }
+        return common.getClient().post(url, pushPayload)
+            .then((response) => {
+                    cb(response.data)
+                }).catch(error => {
+                    common.handleError(error, errorCb)
+                })
+    },
+    setPullRules(server_id, remove_server_id, payload, cb, errorCb) {
+        const url = `${urls.edit}/${server_id}/${remove_server_id}`
+        const pullPayload = {
+            Server: {
+                pull_rules: JSON.stringify(payload)
+            }
+        }
+        return common.getClient().post(url, pullPayload)
+            .then((response) => {
+                    cb(response.data)
+                }).catch(error => {
+                    common.handleError(error, errorCb)
+                })
     },
 }

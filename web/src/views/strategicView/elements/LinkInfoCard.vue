@@ -23,7 +23,9 @@
                             {{ getSourceServer.url }}
                             <sup class="fa fa-external-link-alt text-muted"></sup>
                         </a>
-                        <i class="fa fa-arrow-down my-1" style="font-size: 1.5em; color: #2ca1db; filter: drop-shadow(0px 1px 1px rgba(0, 0, 0, .7));"></i>
+                        <i class="fa fa-arrow-down my-1" style="font-size: 1.5em;"
+                            :style="{color: !connectionHasRules ? '#2ca1db' : '#f5854d', filter: !connectionHasRules ? 'drop-shadow(0px 1px 1px rgba(0, 0, 0, .7))' : 'drop-shadow(0px 1px 1px #5b4a4299)'}"
+                        ></i>
                         <h6 class="mb-0">{{ getTargetServer.name }}</h6>
                         <a
                             :href="getTargetServer.url"
@@ -40,35 +42,67 @@
                         <b-tbody>
                             <b-tr>
                                 <b-th>Status</b-th>
-                                <b-td>123</b-td>
+                                <b-td>
+                                    <connectionStatus
+                                        :connection="getConnection"
+                                    ></connectionStatus>
+                                </b-td>
                             </b-tr>
                             <b-tr>
                                 <b-th>Local Version</b-th>
-                                <b-td>123</b-td>
+                                <b-td>
+                                    <ConnectionLocalVersion
+                                        :connection="getConnection"
+                                    ></ConnectionLocalVersion>
+                                </b-td>
                             </b-tr>
                             <b-tr>
                                 <b-th>Remote Version</b-th>
-                                <b-td>123</b-td>
+                                <b-td>
+                                    <ConnectionRemoteVersion
+                                        :connection="getConnection"
+                                    ></ConnectionRemoteVersion>
+                                </b-td>
                             </b-tr>
                             <b-tr>
                                 <b-th>Compatibility</b-th>
-                                <b-td>123</b-td>
+                                <b-td>
+                                    <ConnectionCompatibility
+                                        :connection="getConnection"
+                                    ></ConnectionCompatibility>
+                                </b-td>
                             </b-tr>
                             <b-tr>
                                 <b-th>POST Test</b-th>
-                                <b-td>123</b-td>
+                                <b-td>
+                                    <ConnectionPostTest
+                                        :connection="getConnection"
+                                    ></ConnectionPostTest>
+                                </b-td>
                             </b-tr>
                             <b-tr>
                                 <b-th>User</b-th>
-                                <b-td>123</b-td>
+                                <b-td>
+                                    <ConnectionUser
+                                        :connection="getConnection"
+                                    ></ConnectionUser>
+                                </b-td>
                             </b-tr>
                             <b-tr>
                                 <b-th>User Role</b-th>
-                                <b-td>123</b-td>
+                                <b-td>
+                                    <ConnectionUserRole
+                                        :connection="getConnection"
+                                    ></ConnectionUserRole>
+                                </b-td>
                             </b-tr>
                             <b-tr>
-                                <b-th>Sync Status</b-th>
-                                <b-td>123</b-td>
+                                <b-th>User Sync Flag</b-th>
+                                <b-td>
+                                    <ConnectionSyncStatus
+                                        :connection="getConnection"
+                                    ></ConnectionSyncStatus>
+                                </b-td>
                             </b-tr>
                         </b-tbody>
                     </b-table-simple>
@@ -84,8 +118,14 @@
                     >
                     </b-table>
                 </b-tab>
-                <b-tab title="Rules">
-                    Rules
+                <b-tab title="Rules" no-body>
+                    <template #title>
+                        Rules <b-badge :variant="connectionHasRules ? 'primary' : 'secondary'">{{ connectionRuleNumber }}</b-badge>
+                    </template>
+                    
+                    <ConnectionRules
+                        :connection="getConnection"
+                    ></ConnectionRules>
                 </b-tab>
                 <b-tab title="Sync. Strategies">
                     Sync. Strategies
@@ -99,11 +139,29 @@
 <script>
 import { mapState, mapGetters } from "vuex"
 import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
+import connectionStatus from "@/views/servers/elements/connectionStates/connectionStatus.vue"
+import ConnectionLocalVersion from "@/views/servers/elements/connectionStates/connectionLocalVersion.vue";
+import ConnectionRemoteVersion from "@/views/servers/elements/connectionStates/connectionRemoteVersion.vue";
+import ConnectionSyncStatus from "@/views/servers/elements/connectionStates/connectionSyncStatus.vue";
+import ConnectionUser from "@/views/servers/elements/connectionStates/connectionUser.vue";
+import ConnectionUserRole from "@/views/servers/elements/connectionStates/connectionUserRole.vue";
+import ConnectionCompatibility from "@/views/servers/elements/connectionStates/connectionCompatibility.vue";
+import ConnectionPostTest from "@/views/servers/elements/connectionStates/connectionPostTest.vue";
+import ConnectionRules from "@/views/strategicView/elements/ConnectionRules.vue";
 
 export default {
     name: "TheLinkInfoCard",
     components: {
-        timeSinceRefresh
+        timeSinceRefresh,
+        connectionStatus,
+        ConnectionLocalVersion,
+        ConnectionRemoteVersion,
+        ConnectionSyncStatus,
+        ConnectionUser,
+        ConnectionUserRole,
+        ConnectionCompatibility,
+        ConnectionPostTest,
+        ConnectionRules,
     },
     props: {
         link_id: {
@@ -144,6 +202,12 @@ export default {
         },
         getServerUser: function() {
             return this.server_user[this.server_id] || null
+        },
+        connectionHasRules: function() {
+            return this.connectionRuleNumber > 0
+        },
+        connectionRuleNumber: function() {
+            return !this.getConnection.filtering_rules ? 0 : this.getConnection.filtering_rules.pull_rule_number + this.getConnection.filtering_rules.push_rule_number
         },
         isOnline: function() {
             return !this.getServerStatus.error

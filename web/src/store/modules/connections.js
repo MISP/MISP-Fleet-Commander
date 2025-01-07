@@ -47,7 +47,31 @@ const actions = {
                 (error) => { reject(error) }
             )
         })
-    }
+    },
+    savePushRules({commit}, server_id, remove_server_id, payload={}) {
+        return new Promise((resolve, reject) => {
+            api.setPushRules(
+                server_id, remove_server_id, payload,
+                connection => {
+                    commit("setConnection", connection)
+                    resolve()
+                },
+                (error) => { reject(error) }
+            )
+        })
+    },
+    savePullRules({commit}, server_id, remove_server_id, payload={}) {
+        return new Promise((resolve, reject) => {
+            api.setPullRules(
+                server_id, remove_server_id, payload,
+                connection => {
+                    commit("setConnection", connection)
+                    resolve()
+                },
+                (error) => { reject(error) }
+            )
+        })
+    },
 }
 
 // mutations

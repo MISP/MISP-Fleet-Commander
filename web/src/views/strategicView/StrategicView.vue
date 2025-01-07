@@ -397,32 +397,6 @@ export default {
         })
     },
     watch: {
-        selectedLinkID: function(id) {
-            const allPaths = this.$refs["networkSVG"].querySelectorAll(`path.link`)
-            const selectedPath = this.$refs["networkSVG"].querySelector(`path#line_${id}.link`)
-            const allMakers = this.$refs["networkSVG"].querySelectorAll(`path.marker`)
-            const selectedMaker = this.$refs["networkSVG"].querySelector(`path#marker_${id}.marker`)
-            if (allPaths !== null) {
-                allPaths.forEach((path) => {
-                    path.classList.remove('selected')
-                    if (path.classList.contains('has_rules')) {
-                        path.setAttribute('marker-end', 'url(#triangle-rule)')
-                    } else {
-                        path.setAttribute('marker-end', 'url(#triangle)')
-                    }
-                })
-            }
-            if (selectedPath !== null) {
-                selectedPath.classList.add('selected')
-                selectedPath.setAttribute('marker-end', 'url(#triangle-selected)')
-            }
-            if (allMakers !== null)
-                allMakers.forEach((marker) => {
-                    marker.classList.remove('selected')
-                })
-            if (selectedMaker !== null)
-                selectedMaker.classList.add('selected')
-        },
         hasActiveSelection: function(isActive) {
             this.showSidebar = isActive || this.showSidebar
         }
@@ -441,22 +415,30 @@ path.link {
     filter: drop-shadow(0px 1px 1px rgba(0, 0, 0, .7));
     cursor: pointer;
     transition: stroke-width .1s cubic-bezier(0.22, 0.61, 0.36, 1);
+    stroke: #bcc0c2;
+}
+path.link:hover {
+    filter: drop-shadow(0px 2px 2px rgba(0, 0, 0, .7));
+    stroke-width: 7px !important;
+    cursor: pointer;
+}
+path.link.has_rules {
+    stroke: #fbcab2;
+    filter: drop-shadow(0px 1px 1px #5b4a4299) !important;
 }
 path.link.selected {
-    filter: drop-shadow(0px 2px 2px #2ca1db77) !important;
-    stroke: #2ca1db !important;
-    stroke-width: 8px !important;
+    stroke: #2ca1db;
+    stroke-width: 7px !important;
 }
+path.link.has_rules.selected {
+    stroke: #f5854d;
+}
+
 path.marker.selected {
     stroke: #e4e6e7 !important;
 }
 path.marker.has_rules.selected {
     stroke: #ffdf0a !important;
-}
-path.link:hover {
-    filter: drop-shadow(0px 2px 2px rgba(0, 0, 0, .7));
-    stroke-width: 8px !important;
-    cursor: pointer;
 }
 </style>
 

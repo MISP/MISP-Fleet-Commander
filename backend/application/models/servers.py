@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 
+import json
 import time
 from typing import List, Union
 import concurrent.futures
 
 from application import redisClient, redisModel
 from application.DBModels import db, User, Server
-from application.controllers.utils import mispGetRequest
+from application.controllers.utils import mispGetRequest, mispPostRequest
 from application.marshmallowSchemas import ServerSchema, serverQuerySchema
 
 from application.workers.tasks import fetchServerInfoTask
@@ -101,6 +102,30 @@ def getServerInfo(server_id, cache=True) -> Union[dict, None]:
                 fetchServerInfoTask.delay(schema.dump(server))
                 return None
         return serverQuerySchema.load(server_query_db)
+    else:
+        return None
+
+def editConnection(user, server_id, remote_server_id, payload):
+    url = f'/servers/edit/{remote_server_id}'
+    server = getForUser(user, server_id)
+    if server is not None:
+        response = mispPostRequest(server, url, data=payload, rawResponse=True, nocache=True)
+        responseData = ""
+        try:
+            responseData = response.json()
+        except json.decoder.JSONDecodeError as e:
+            responseData = response.text
+
+        return {
+            'timestamp': int(time.time()),
+            'data': responseData,
+            'headers': dict(response.headers),
+            'status_code': response.status_code,
+            'reason': response.reason,
+            'elapsed_time': str(response.elapsed),
+            'url': response.url,
+            'server_id': server_id,
+        }
     else:
         return None
 

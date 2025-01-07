@@ -120,6 +120,17 @@ def delete(user):
             return jsonify([])
 
 
+@BPserver.route('/servers/editConnection/<int:server_id>/<int:remote_server_id>', methods=['POST'])
+@token_required
+def editConnection(user, server_id, remote_server_id):
+    payload = request.json
+    updatedConnection = serverModel.editConnection(user, server_id, remote_server_id, payload)
+    if updatedConnection:
+        return jsonify(updatedConnection)
+    else:
+        return jsonify({'error': 'Something went wrong'})
+
+
 @BPserver.route('/servers/testConnection/<int:server_id>', methods=['GET'])
 @token_required
 def ping_server(user, server_id):
