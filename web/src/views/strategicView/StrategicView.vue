@@ -423,7 +423,7 @@ path.link:hover {
     cursor: pointer;
 }
 path.link.has_rules {
-    stroke: #fbcab2;
+    stroke: #f8a57c;
     filter: drop-shadow(0px 1px 1px #5b4a4299) !important;
 }
 path.link.selected {

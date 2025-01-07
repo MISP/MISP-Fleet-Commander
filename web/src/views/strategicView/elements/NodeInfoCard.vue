@@ -58,10 +58,12 @@
 
 <script>
 import { mapState, mapGetters } from "vuex"
+import { websocketMixin } from "@/helpers/websocketMixin"
 import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
 
 export default {
     name: "TheNodeInfoCard",
+    mixins: [websocketMixin],
     components: {
         timeSinceRefresh
     },
@@ -165,6 +167,9 @@ export default {
         },
     },
     methods: {
+        wsStatusRefresh() {
+            this.wsServerRefresh(this.server_id)
+        },
     }
 }
 </script>

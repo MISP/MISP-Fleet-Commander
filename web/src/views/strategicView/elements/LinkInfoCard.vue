@@ -107,16 +107,6 @@
                         </b-tbody>
                     </b-table-simple>
 
-                    <b-table
-                        striped small
-                        class="mb-0"
-                        :bordered="false"
-                        :borderless="true"
-                        :outlined="false"
-                        :items="serverInfoTable"
-                        :fields="fields"
-                    >
-                    </b-table>
                 </b-tab>
                 <b-tab title="Rules" no-body>
                     <template #title>
@@ -126,9 +116,6 @@
                     <ConnectionRules
                         :connection="getConnection"
                     ></ConnectionRules>
-                </b-tab>
-                <b-tab title="Sync. Strategies">
-                    Sync. Strategies
                 </b-tab>
             </b-tabs>
 
@@ -212,70 +199,12 @@ export default {
         isOnline: function() {
             return !this.getServerStatus.error
         },
-        // hasSelection() {
-        //     return Object.keys(this.getServer).length > 0
-        // },
         hasSelection() {
             return false
         },
         serverInfoTable() {
             return []
         },
-        // serverInfoTable() {
-        //     let items = []
-        //     if (!this.getServer) {
-        //         return items
-        //     }
-        //     items = items.concat([
-        //         {
-        //             property: "Name",
-        //             value: this.getServer.name
-        //         },
-        //         {
-        //             property: "URL",
-        //             value: this.getServer.url
-        //         },
-        //         {
-        //             property: "Auth key",
-        //             value: this.getServer.authkey
-        //         }
-        //     ])
-        //     if (
-        //         this.getServer.server_info !== undefined &&
-        //         this.getServerUser.Organisation !== undefined
-        //     ) {
-        //         items = items.concat([
-        //             {
-        //                 property: "Org. name",
-        //                 value: this.getServerUser.Organisation.name
-        //             },
-        //             {
-        //                 property: "Org. uuid",
-        //                 value: this.getServerUser.Organisation.uuid
-        //             },
-        //             {
-        //                 property: "Org. type",
-        //                 value: this.getServerUser.Organisation.type
-        //             }
-        //         ])
-        //     } else {
-        //         items = items.concat([
-        //             {
-        //                 property: "Org. name",
-        //                 value: ""
-        //             },
-        //             {
-        //                 property: "Org. uuid",
-        //                 value: ""
-        //             },
-        //             {
-        //                 property: "Org. type",
-        //                 value: ""
-        //             }
-        //         ])
-        //     }
-        //     return items
-        // },
     },
     methods: {
     }

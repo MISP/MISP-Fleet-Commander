@@ -1,6 +1,6 @@
 <template>
     <div class="p-2">
-        <div><strong>PUSH Rules</strong> <b-badge variant="secondary">{{ pushRuleNumber }}</b-badge></div>
+        <div><strong>PUSH Rules</strong> <b-badge :variant="hasPushRules ? 'primary' : 'secondary'">{{ pushRuleNumber }}</b-badge></div>
         <JsonEditorVue
             v-model="editorValuePush"
             :mode="editorMode"
@@ -10,7 +10,7 @@
             :validator="getJsonValidator('push')"
         />
 
-        <div class="mt-4"><strong>PULL Rules</strong> <b-badge variant="secondary">{{ pullRuleNumber }}</b-badge></div>
+        <div class="mt-4"><strong>PULL Rules</strong> <b-badge :variant="hasPullRules ? 'primary' : 'secondary'">{{ pullRuleNumber }}</b-badge></div>
         <JsonEditorVue
             v-model="editorValuePull"
             :mode="editorMode"
@@ -126,19 +126,29 @@ export default {
     },
     computed: {
         pushRuleNumber: function() {
-            return this.pushRules?.orgs?.NOT?.length + this.pushRules?.orgs?.OR?.length +
-                this.pushRules?.tags?.NOT?.length + this.pushRules?.orgs?.OR?.length
+            return (this.pushRules?.orgs?.NOT !== undefined ? this.pushRules.orgs.NOT.length : 0) +
+                (this.pushRules?.orgs?.OR !== undefined ? this.pushRules.orgs.OR.length : 0) +
+                (this.pushRules?.tags?.NOT !== undefined ? this.pushRules.tags.NOT.length : 0) +
+                (this.pushRules?.orgs?.OR !== undefined ? this.pushRules.orgs.OR.length : 0)
         },
         pushRules: function() {
             return this.connection.filtering_rules.push_rules
         },
+        hasPushRules: function() {
+            return this.pushRuleNumber > 0
+        },
         pullRuleNumber: function() {
-            return this.pullRules?.orgs?.NOT?.length + this.pullRules?.orgs?.OR?.length +
-                this.pullRules?.tags?.NOT?.length + this.pullRules?.orgs?.OR?.length +
+            return (this.pullRules?.orgs?.NOT !== undefined ? this.pullRules.orgs.NOT.length : 0) +
+                (this.pullRules?.orgs?.OR !== undefined ? this.pullRules.orgs.OR.length : 0) +
+                (this.pullRules?.tags?.NOT !== undefined ? this.pullRules.tags.NOT.length : 0) +
+                (this.pullRules?.orgs?.OR !== undefined ? this.pullRules.orgs.OR.length : 0) +
                 (this.pullRules?.url_params?.length > 0 ? this.pullRules?.url_params.split('/').length : 0)
         },
         pullRules: function() {
             return this.connection.filtering_rules.pull_rules
+        },
+        hasPullRules: function() {
+            return this.pullRuleNumber > 0
         },
     },
     methods: {
@@ -214,36 +224,54 @@ export default {
             } else {
                 return createAjvValidator({ schema: serverConnectionRuleSchemaPull, schemaDefinitions: {} })
             }
-        }
+        },
+        setPushRules() {
+            if (this.pushRuleNumber > 0) {
+                this.editorValuePush = JSON.parse(JSON.stringify(this.pushRules))
+            } else {
+                this.editorValuePush = {
+                    orgs: {
+                        NOT: [],
+                        OR: []
+                    },
+                    tags: {
+                        NOT: [],
+                        OR: []
+                    },
+                }
+            }
+        },
+        setPullRules() {
+            if (this.pullRuleNumber > 0) {
+                this.editorValuePull = JSON.parse(JSON.stringify(this.pullRules))
+            } else {
+                this.editorValuePull = {
+                    orgs: {
+                        NOT: [],
+                        OR: []
+                    },
+                    tags: {
+                        NOT: [],
+                        OR: []
+                    },
+                    url_params: ""
+                }
+            }
+        },
     },
     watch: {
         pushRules: function() {
-            this.editorValuePush = JSON.parse(JSON.stringify(this.pushRules))
+            // this.editorValuePush = JSON.parse(JSON.stringify(this.pushRules))
+            this.setPushRules()
         },
         pullRules: function() {
-            this.editorValuePull = JSON.parse(JSON.stringify(this.pullRules))
+            // this.editorValuePull = JSON.parse(JSON.stringify(this.pullRules))
+            this.setPullRules()
         },
     },
     mounted: function() {
-        // Maybe prefil empty rules with correct format?!?!
-        // Maybe prefil empty rules with correct format?!?!
-        // Maybe prefil empty rules with correct format?!?!
-        // Maybe prefil empty rules with correct format?!?!
-        if (this.pushRuleNumber > 0) {
-            this.editorValuePush = JSON.parse(JSON.stringify(this.pushRules))
-        } else {
-            this.editorValuePush = {
-                orgs: {
-                    NOT: [],
-                    OR: []
-                },
-                tags: {
-                    NOT: [],
-                    OR: []
-                },
-            }
-        }
-        this.editorValuePull = JSON.parse(JSON.stringify(this.pullRules))
+        this.setPushRules()
+        this.setPullRules()
     },
 }
 </script>
