@@ -341,9 +341,6 @@ export default {
                 if (knownDestination) {
                     link.target = parseInt(knownDestination.id)
                     link._managed_server = true
-                    if (link.filtering_rules.pull_rule_number > 0 || link.filtering_rules.push_rule_number > 0) {
-                        link._has_rules = true
-                    }
                 } else {
                     link.target = 'v' + link.destination.Server.id
                     link.remote_sync_server = link.destination.Server
@@ -352,6 +349,9 @@ export default {
                     })
                     link.remote_sync_server.status = targetServer[0].connectionTest
                     link._managed_server = false
+                }
+                if (link.filtering_rules.pull_rule_number > 0 || link.filtering_rules.push_rule_number > 0) {
+                    link._has_rules = true
                 }
                 link.id = `${link.source}-${link.target}`
                 link.vid = `${link.source}-${link.destination.Server.id}`
