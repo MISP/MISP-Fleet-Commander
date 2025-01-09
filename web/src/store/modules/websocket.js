@@ -31,6 +31,11 @@ const actions = {
             dispatch("servers/commitConnectionTestInfo", serverData, { root: true })
         }
     },
+    UPDATE_SERVER_PARTIAL_DATA({ dispatch }, payload) {
+        if (serverData.server.fleet.id == store.getters["fleets/selectedFleet"].id)  {
+            dispatch("servers/commitPartialServerData", payload, { root: true })
+        }
+    },
     SOCKET_SERVER_UPDATING({ commit }, serverData) {
         const payload = {
             server_id: serverData,

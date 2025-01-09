@@ -28,5 +28,12 @@ def doServerConnectionTestTask(serverDict):
     if connectionInfo is not None:
         # connectionInfo['server'] = {'uuid': server.uuid, 'id': server.id}
         connectionInfo['server'] = serverSchemaLighter.dump(server)
-    socketioEmitter.udpate_server_connection(connectionInfo)
+    socketioEmitter.udpate_server_connection(server.id, connectionInfo)
 
+
+@celery_app.task(name="fetchServerConnectionList")
+def fetchServerConnectionList(serverDict):
+    server = serverSchemaLighter.load(serverDict)
+    serverConnectionList = serverModel.fetchServerConnectionList(server, use_cache=False)
+    if serverConnectionList is not None:
+        socketioEmitter.udpate_server_connection_list(server.id, serverConnectionList)

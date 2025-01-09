@@ -86,9 +86,11 @@ export default {
             servers: state => state.servers.servers,
             connections: state => state.connections.all,
             server_status: state => state.servers.server_status,
+            server_query_in_progress: state => state.servers.server_query_in_progress,
             server_usage: state => state.servers.server_usage,
             server_user: state => state.servers.server_user,
             remote_connections: state => state.servers.remote_connections,
+            last_refresh: state => state.servers.last_refresh,
         }),
         getServer: function() {
             return this.servers[this.server_id] || null
@@ -109,7 +111,7 @@ export default {
             return !this.getServerStatus.error
         },
         lastRefreshTimestamp: function() {
-            return this.getServer?.server_info?.timestamp || null
+            return this.last_refresh[this.server_id] || null
         },
         hasSelection() {
             return Object.keys(this.getServer).length > 0
@@ -169,6 +171,7 @@ export default {
     methods: {
         wsStatusRefresh() {
             this.wsServerRefresh(this.server_id)
+            this.wsServerConnectionTest(this.server_id)
         },
     }
 }

@@ -71,6 +71,19 @@ def testConnectionForUser(user, server_id: int) -> Union[dict, None]:
         return None
 
 
+def refreshServerConnectionList(server_id: int, remote_server_id=None) -> Union[dict, None]:
+    server = Server.query.get(server_id)
+    if server is not None:
+        connectedServers = mispGetRequest(server, '/servers/index', nocache=True)
+        if connectedServers is not None:
+            if remote_server_id is None:
+                connectedServers = attachConnectedServerStatus(server, connectedServers)
+            else:
+                connectedServers = attachConnectedServerStatusFor(server, connectedServers, remote_server_id)
+            savePartialInfo(server, 'connectedServers', connectedServers)
+            return connectedServers
+    return None
+
 def getServerInfoForUser(user, server_id, cache=True) -> Union[dict, None]:
     server = getForUser(user, server_id)
     if server is not None:
@@ -164,10 +177,34 @@ def attachConnectedServerStatus(server, connectedServers):
                     print('%r generated an exception: %s' % (connectedServers[j], exc))
     return connectedServers
 
+def attachConnectedServerStatusFor(server, connectedServers, remote_server_id):
+    '''Recover old connection states for all other remote servers but refresh the one that has been requested'''
+    fullQuery = redisModel.getServerInfo(server.uuid)
+    if fullQuery is not None:
+        oldConnectionStatus = fullQuery['query_result']['connectedServers']
+        oldConnectionStatusByID = {oldServerStatus["Server"]["id"]: oldServerStatus for oldServerStatus in oldConnectionStatus}
+        for i, connectedServer in enumerate(connectedServers):
+            if int(connectedServer["Server"]["id"]) == int(remote_server_id):
+                connectedServers[i] = getConnectedServerStatus(server, connectedServer)
+            else:
+                theOldConnectionStatus = oldConnectionStatusByID[connectedServer["Server"]["id"]]
+                connectedServers[i]['connectionTest'] = theOldConnectionStatus['connectionTest']
+                connectedServers[i]['connectionUser'] = theOldConnectionStatus['connectionUser']
+                connectedServers[i]['vid'] = theOldConnectionStatus['vid']
+    else:
+         connectedServers = attachConnectedServerStatus(server, connectedServers)
+    return connectedServers
+
 
 def saveInfo(server, fullQuery: dict) -> bool:
     return redisModel.saveServerInfo(server.uuid, fullQuery)
 
+def savePartialInfo(server, key: str, partialQuery: dict) -> bool:
+    fullQuery = redisModel.getServerInfo(server.uuid)
+    if fullQuery is not None:
+        fullQuery['query_result'][key] = partialQuery
+        return redisModel.saveServerInfo(server.uuid, fullQuery)
+    return False
 
 def getConnectedServerStatus(server, connectedServer):
     connectionTest = mispGetRequest(server, f'/servers/testConnection/{connectedServer["Server"]["id"]}')

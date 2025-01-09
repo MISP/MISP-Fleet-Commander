@@ -4,7 +4,7 @@ import store from "@/store/index"
 const urls = {
     index: `/servers/network`,
     get: `/servers/getConnection`,
-    edit: `/servers/editConnection/`
+    edit: `/servers/editConnection`
 }
 
 export default {
@@ -29,8 +29,20 @@ export default {
                 common.handleError(error, errorCb)
             })
     },
-    setPushRules(server_id, remove_server_id, payload, cb, errorCb) {
-        const url = `${urls.edit}/${server_id}/${remove_server_id}`
+    editRemoteConnection(server_id, remote_server_id, payload, cb, errorCb) {
+        const url = `${urls.edit}/${server_id}/${remote_server_id}`
+        const pushPayload = {
+            Server: payload
+        }
+        return common.getClient().post(url, pushPayload)
+            .then((response) => {
+                    cb(response.data)
+                }).catch(error => {
+                    common.handleError(error, errorCb)
+                })
+    },
+    setPushRules(server_id, remote_server_id, payload, cb, errorCb) {
+        const url = `${urls.edit}/${server_id}/${remote_server_id}`
         const pushPayload = {
             Server: {
                 push_rules: JSON.stringify(payload)

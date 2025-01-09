@@ -85,6 +85,7 @@ export default {
             server_status: state => state.servers.server_status,
             server_usage: state => state.servers.server_usage,
             remote_connections: state => state.servers.remote_connections,
+            last_refresh: state => state.servers.last_refresh,
         }),
         getServer: function() {
             return this.servers[this.server_id] || null
@@ -102,7 +103,7 @@ export default {
             return !this.getServerStatus.error
         },
         lastRefreshTimestamp: function() {
-            return this.getServer?.server_info?.timestamp || null
+            return this.last_refresh[this.server_id] || null
         },
     },
     methods: {

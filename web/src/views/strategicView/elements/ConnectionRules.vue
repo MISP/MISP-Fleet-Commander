@@ -1,24 +1,28 @@
 <template>
     <div class="p-2">
-        <div><strong>PUSH Rules</strong> <b-badge :variant="hasPushRules ? 'primary' : 'secondary'">{{ pushRuleNumber }}</b-badge></div>
-        <JsonEditorVue
-            v-model="editorValuePush"
-            :mode="editorMode"
-            :mainMenuBar="true"
-            :navigationBar="false"
-            :onRenderMenu="onRenderMenuItemFunctionPush"
-            :validator="getJsonValidator('push')"
-        />
+        <b-overlay :show="showOverlay" rounded="sm">
+            <div><strong>PUSH Rules</strong> <b-badge :variant="hasPushRules ? 'primary' : 'secondary'">{{ pushRuleNumber }}</b-badge></div>
+            <JsonEditorVue
+                v-model="editorValuePush"
+                :mode="editorMode"
+                :mainMenuBar="true"
+                :navigationBar="false"
+                :onRenderMenu="onRenderMenuItemFunctionPush"
+                :validator="getJsonValidator('push')"
+                :stringified="false"
+            />
 
-        <div class="mt-4"><strong>PULL Rules</strong> <b-badge :variant="hasPullRules ? 'primary' : 'secondary'">{{ pullRuleNumber }}</b-badge></div>
-        <JsonEditorVue
-            v-model="editorValuePull"
-            :mode="editorMode"
-            :mainMenuBar="true"
-            :navigationBar="false"
-            :onRenderMenu="onRenderMenuItemFunctionPull"
-            :validator="getJsonValidator('pull')"
-        />
+            <div class="mt-4"><strong>PULL Rules</strong> <b-badge :variant="hasPullRules ? 'primary' : 'secondary'">{{ pullRuleNumber }}</b-badge></div>
+            <JsonEditorVue
+                v-model="editorValuePull"
+                :mode="editorMode"
+                :mainMenuBar="true"
+                :navigationBar="false"
+                :onRenderMenu="onRenderMenuItemFunctionPull"
+                :validator="getJsonValidator('pull')"
+                :stringified="false"
+            />
+        </b-overlay>
     </div>
 
 </template>
@@ -122,6 +126,7 @@ export default {
             editorValuePush: {},
             editorValuePull: {},
             editorMode: Mode.text,
+            showOverlay: false,
         }
     },
     computed: {
@@ -129,10 +134,10 @@ export default {
             return (this.pushRules?.orgs?.NOT !== undefined ? this.pushRules.orgs.NOT.length : 0) +
                 (this.pushRules?.orgs?.OR !== undefined ? this.pushRules.orgs.OR.length : 0) +
                 (this.pushRules?.tags?.NOT !== undefined ? this.pushRules.tags.NOT.length : 0) +
-                (this.pushRules?.orgs?.OR !== undefined ? this.pushRules.orgs.OR.length : 0)
+                (this.pushRules?.tags?.OR !== undefined ? this.pushRules.tags.OR.length : 0)
         },
         pushRules: function() {
-            return this.connection.filtering_rules.push_rules
+            return typeof this.connection.filtering_rules.push_rules === 'string' ? JSON.parse(this.connection.filtering_rules.push_rules) : this.connection.filtering_rules.push_rules
         },
         hasPushRules: function() {
             return this.pushRuleNumber > 0
@@ -141,14 +146,20 @@ export default {
             return (this.pullRules?.orgs?.NOT !== undefined ? this.pullRules.orgs.NOT.length : 0) +
                 (this.pullRules?.orgs?.OR !== undefined ? this.pullRules.orgs.OR.length : 0) +
                 (this.pullRules?.tags?.NOT !== undefined ? this.pullRules.tags.NOT.length : 0) +
-                (this.pullRules?.orgs?.OR !== undefined ? this.pullRules.orgs.OR.length : 0) +
+                (this.pullRules?.tags?.OR !== undefined ? this.pullRules.tags.OR.length : 0) +
                 (this.pullRules?.url_params?.length > 0 ? this.pullRules?.url_params.split('/').length : 0)
         },
         pullRules: function() {
-            return this.connection.filtering_rules.pull_rules
+            return typeof this.connection.filtering_rules.pull_rules === 'string' ? JSON.parse(this.connection.filtering_rules.pull_rules) : this.connection.filtering_rules.pull_rules
         },
         hasPullRules: function() {
             return this.pullRuleNumber > 0
+        },
+        server_id: function() {
+            return this.connection.source.id
+        },
+        remote_server_id: function() {
+            return this.connection.destination.Server.id
         },
     },
     methods: {
@@ -188,7 +199,11 @@ export default {
         },
         savePushRule() {
             const payload = {
+                server_id: this.server_id,
+                remote_server_id: this.remote_server_id,
+                payload: this.editorValuePush
             }
+            this.showOverlay = true
             this.$store.dispatch('connections/savePushRules', payload)
                 .then(() => {
                 })
@@ -199,12 +214,17 @@ export default {
                     })
                 })
                 .finally(() => {
+                    this.showOverlay = false
                 })
             
         },
         savePullRule() {
             const payload = {
+                server_id: this.server_id,
+                remote_server_id: this.remote_server_id,
+                payload: this.editorValuePull
             }
+            this.showOverlay = true
             this.$store.dispatch('connections/savePullRules', payload)
                 .then(() => {
                 })
@@ -215,8 +235,8 @@ export default {
                     })
                 })
                 .finally(() => {
+                    this.showOverlay = false
                 })
-            
         },
         getJsonValidator(method) {
             if (method == 'push') {
@@ -261,11 +281,9 @@ export default {
     },
     watch: {
         pushRules: function() {
-            // this.editorValuePush = JSON.parse(JSON.stringify(this.pushRules))
             this.setPushRules()
         },
         pullRules: function() {
-            // this.editorValuePull = JSON.parse(JSON.stringify(this.pullRules))
             this.setPullRules()
         },
     },

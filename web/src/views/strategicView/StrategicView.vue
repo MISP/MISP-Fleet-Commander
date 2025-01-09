@@ -136,6 +136,7 @@ export default {
             svg: null,
             svgSelection: null,
             zoom: null,
+            updateData: null,
             scaleInfo: {x: 0, y: 0, k: 1},
             minimapPosition: {top: "unset", right: "unset", left: "20px", bottom: "20px"},
             minimapRedrawCount: 0,
@@ -152,11 +153,12 @@ export default {
             getServerList: "servers/getServerList",
             serversByURL: "servers/serversByURL",
             serversByUUID: "servers/serversByUUID",
+            getServerRefreshEnqueued: "servers/getServerRefreshEnqueued",
             getConnectionList: "connections/getConnectionList",
         }),
         hasActiveSelection() {
             return this.selectedNodeID !== null || this.selectedLinkID !== null
-        }
+        },
     },
     methods: {
         toggleNodeInfoSideBar(show) {
@@ -288,6 +290,7 @@ export default {
                 )
                 this.svgSelection = network.svgSelection
                 this.zoom = network.zoom
+                this.updateData = network.updateData
             }
         },
         refreshServers(force=true) {
@@ -362,6 +365,7 @@ export default {
                     link._managed_server = false
                 }
                 link.id = `${link.source}-${link.target}`
+                link.vid = `${link.source}-${link.destination.Server.id}`
                 link._has_rules = link._has_rules ? true : false
             })
             // Add fake nodes
@@ -377,6 +381,19 @@ export default {
                 node._managed_server = node._managed_server === undefined ? true : node._managed_server;
                 return node
             })
+        },
+        updateWithStore() {
+            this.getConnectionList.forEach((newConnectionLink, index) => {
+                for (let i = 0; i < this.d3data.links.length; i++) {
+                    if (this.d3data.links[i].vid == newConnectionLink.vid) {
+                        const newConnectionLinkHasRules = newConnectionLink.filtering_rules.push_rule_number > 0 || newConnectionLink.filtering_rules.pull_rule_number > 0
+                        this.d3data.links[i]._has_rules = newConnectionLinkHasRules
+                    }
+                }
+            })
+            if (typeof this.updateData === 'function') {
+                this.updateData(this.d3data)
+            }
         }
     },
     mounted() {
@@ -399,6 +416,9 @@ export default {
     watch: {
         hasActiveSelection: function(isActive) {
             this.showSidebar = isActive || this.showSidebar
+        },
+        getConnectionList: function() {
+            this.updateWithStore()
         }
     }
 }

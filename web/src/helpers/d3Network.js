@@ -16,6 +16,8 @@ export default {
         const linkColorSelected = '#2ca1db'
         const endMarkerSize = 4
 
+        let selectedLink = null
+
         const generatedMarkerColors = []
 
         const allowLinkAnimation = false
@@ -72,51 +74,96 @@ export default {
 
         const defs = svg.append('defs')
 
+        const linkGroup = container.append("g")
+            .attr("class", "links")
+        const markerGroup = container.append("g")
+            .attr("class", "markers")
+        const nodeGroup = container.append("g")
+            .attr("class", "nodes")
+
         const markerDef = generateMarker('triangle', linkColor)
 
-        const link = container.append("g")
-            .attr("class", "links")
-            .selectAll("path")
-            .data(d3data.links)
-            .enter().append("path")
-            .attr('id', (d) => `line_${d.vid}`)
-            .attr('vid', (d) => d.vid)
-            .on("click", function(event, d){
-                event.stopPropagation()
-                selectLink(event, d)
-                eventHandlers.linkClicked(d)
-            })
-            .attr("class", function (d) {
-                let classes = ['link']
-                if (!d._managed_server) {
-                    classes.push('unmanaged_server')
-                }
-                if (d._has_rules) {
-                    classes.push('has_rules')
-                }
-                return classes.join(' ')
-            })
-            .attr("fill", "none")
-            .attr("stroke", linkColor)
-            .attr("stroke-opacity", 1)
-            .attr("marker-end", 'url(#triangle)')
-            .style("stroke-width", function(d) { return d.weight ? d.weight : 5 })
-
+        let link
         let markers
-        if (allowLinkAnimation) {
-            const markerSelector =
-                container.append("g")
-                .attr("class", "markers")
-                .selectAll("rect")
-                .data(d3data.links)
-                .enter()
+        let node
+        let text
 
-            markers = markerSelector
-                .append("path")
-                    .attr('id', (d) => `marker_${d.vid}`)
-                    .attr('vid', (d) => d.vid)
+        updateData(d3data)
+        genMarkersForAllKnownPathColor()
+
+        function updateData(newData) {
+            link = linkGroup
+                .selectAll("path")
+                .data(newData.links)
+                .attr("class", function (d) {
+                    let classes = ['link']
+                    if (d.vid == selectedLink) {
+                        classes.push('selected')
+                    }
+                    if (!d._managed_server) {
+                        classes.push('unmanaged_server')
+                    }
+                    if (d._has_rules) {
+                        classes.push('has_rules')
+                    }
+                    return classes.join(' ')
+                })
+                .style("stroke-width", function(d) { return d.weight ? d.weight : 5 })
+                .attr("data-fake-update-callback", (d) => {
+                    const pathNode = svgNode.querySelector(`.links path.link#line_${d.vid}`)
+                    updateMarker({target: pathNode})
+                })
+
+            const linkEnter = link
+                .enter().append("path")
+                .attr('id', (d) => `line_${d.vid}`)
+                .attr('vid', (d) => d.vid)
+                .on("click", function(event, d){
+                    event.stopPropagation()
+                    selectLink(event, d)
+                    eventHandlers.linkClicked(d)
+                })
+                .attr("fill", "none")
+                .attr("stroke", linkColor)
+                .attr("stroke-opacity", 1)
+                .attr("marker-end", 'url(#triangle)')
+                .attr("class", function (d) {
+                    let classes = ['link']
+                    if (!d._managed_server) {
+                        classes.push('unmanaged_server')
+                    }
+                    if (d._has_rules) {
+                        classes.push('has_rules')
+                    }
+                    return classes.join(' ')
+                })
+                .style("stroke-width", function(d) { return d.weight ? d.weight : 5 })
+
+                /** text on path  **/
+                // text = link.enter().append("text")
+                //     .attr("font-family", "Arial, Helvetica, sans-serif")
+                //     .attr("fill", "Black")
+                //     .style("font", "normal 12px Arial")
+                //     .attr("dy", ".35em")
+                //     .attr("text-anchor", "middle")
+                //     .text(function(d) {
+                //         return d.vid;
+                //     });
+                /** text on path  **/
+
+
+            link.exit().remove();
+            link = linkEnter.merge(link)
+
+            if (allowLinkAnimation) {
+                markers = markerGroup
+                    .selectAll("path")
+                    .data(newData.links)
                     .attr("class", function (d) {
                         let classes = ['marker']
+                        if (d.vid == selectedLink) {
+                            classes.push('selected')
+                        }
                         if (!d._managed_server) {
                             classes.push('unmanaged_server')
                         }
@@ -125,6 +172,12 @@ export default {
                         }
                         return classes.join(' ')
                     })
+
+                const markersEnter = markers
+                    .enter().append("path")
+                    .attr('id', (d) => `marker_${d.vid}`)
+                    .attr('vid', (d) => d.vid)
+                    
                     .attr('fill', "none")
                     .attr('stroke', (d) => movingMarkerColor)
                     .attr('stroke-opacity', 0.7)
@@ -132,63 +185,47 @@ export default {
                     .attr('stroke-width', "5")
                     .attr('stroke-dashoffset', "0")
                     .attr('stroke-dasharray', "16,150")
-            markers
-                .append('animate')
+                markers
+                    .append('animate')
                     .attr('attributeName', 'stroke-dashoffset')
                     .attr('repeatCount', 'indefinite')
                     .attr('dur', '30s')
                     .attr('values', '100%;0')
-        }
+                markers = markersEnter.merge(markers)
+            }
 
+            node = nodeGroup
+                .selectAll("foreignObject")
+                .data(newData.nodes)
+            const nodeEnter = node.enter()
+                .append("foreignObject")
+                .attr("id", d => `node-${d.id}`)
+                .attr("height", nodeHeight)
+                .attr("width", nodeWidth)
+                .classed("nodeFO", true)
+                .on("click", function(event, node) {
+                    event.stopPropagation()
+                    eventHandlers.nodeClick(node)
+                })
+                .call(drag(simulation))
+            nodeEnter.append("xhtml:div")
+                .attr("data-vue-component", (selection, index, htmlNodes) => {
+                    const d3Node = d3.select(`#node-${selection.id}`)
+                    const d3SVGNode = svg.node()
+                    const htmlNode = htmlNodes[index]
+                    componentGenerator.genericNodeComponent(selection, htmlNode, d3Node, d3SVGNode)
+                })
+            node = nodeEnter.merge(node)
 
-        const node = container.append("g")
-            .attr("class", "nodes")
-            .selectAll("div")
-            .data(d3data.nodes)
-            .enter().append("g")
-            .on("click", function(event, node) {
-                event.stopPropagation()
-                eventHandlers.nodeClick(node)
-            })
-            .call(drag(simulation))
-
-        node.append("foreignObject")
-            .attr("id", d => `node-${d.id}`)
-            .attr("height", nodeHeight)
-            .attr("width", nodeWidth)
-            .classed("nodeFO", true)
-            .append("xhtml:div")
-            .attr("data-vue-component", (selection, index, htmlNodes) => {
-                const d3Node = d3.select(`#node-${selection.id}`)
-                const d3SVGNode = svg.node()
-                const htmlNode = htmlNodes[index]
-                componentGenerator.genericNodeComponent(selection, htmlNode, d3Node, d3SVGNode)
-            })
-
-        genMarkersForAllKnownPathColor()
-
-        simulation
-            .nodes(d3data.nodes)
-            .on("tick", () => {
-                link
-                    .attr("d", function(d) {
-                        const { x1, y1, x2, y2, dr } = calcEdgePathCoordinate(d.source, d.target)
-                        return "M" + x1 + "," + y1 + "A" + dr + "," + dr + " 0 0,1 " + x2 + "," + y2;
-                    })
-                link
-                    .attr("d", function(d) {
-                        const intersection = getIntersection(d.source, d.target)
-                        const { x1, y1, dr } = calcEdgePathCoordinate(d.source, d.target)
-                        if (intersection !== null) {
-                            return "M" + x1 + "," + y1 + "A" + dr + "," + dr + " 0 0,1 " + intersection.x2 + "," + intersection.y2;
-                        }
-                    })
-                if (allowLinkAnimation) {
-                    markers
+            simulation 
+                .nodes(newData.nodes)
+                .on("tick", () => {
+                    link
                         .attr("d", function(d) {
                             const { x1, y1, x2, y2, dr } = calcEdgePathCoordinate(d.source, d.target)
                             return "M" + x1 + "," + y1 + "A" + dr + "," + dr + " 0 0,1 " + x2 + "," + y2;
                         })
+                    link
                         .attr("d", function(d) {
                             const intersection = getIntersection(d.source, d.target)
                             const { x1, y1, dr } = calcEdgePathCoordinate(d.source, d.target)
@@ -196,23 +233,47 @@ export default {
                                 return "M" + x1 + "," + y1 + "A" + dr + "," + dr + " 0 0,1 " + intersection.x2 + "," + intersection.y2;
                             }
                         })
-                }
+                    if (allowLinkAnimation) {
+                        markers
+                            .attr("d", function(d) {
+                                const { x1, y1, x2, y2, dr } = calcEdgePathCoordinate(d.source, d.target)
+                                return "M" + x1 + "," + y1 + "A" + dr + "," + dr + " 0 0,1 " + x2 + "," + y2;
+                            })
+                            .attr("d", function(d) {
+                                const intersection = getIntersection(d.source, d.target)
+                                const { x1, y1, dr } = calcEdgePathCoordinate(d.source, d.target)
+                                if (intersection !== null) {
+                                    return "M" + x1 + "," + y1 + "A" + dr + "," + dr + " 0 0,1 " + intersection.x2 + "," + intersection.y2;
+                                }
+                            })
+                    }
 
-                node.attr("transform", d => "translate(" + d.x + "," + d.y + ")")
-            })
-            .on("end", () => {
-                eventHandlers.refreshMinimap()
-            })
-            .on("end.init_simulation", () => {
-                eventHandlers.zoomFit()
-                simulation.on("end.init_simulation", null)
-                callbacks.simulationDone()
-            })
+                    /** text on path  **/
+                    // text.attr("transform", function(d) {
+                    //     return "translate(" +
+                    //         ((d.source.x + d.target.x)/2) + "," + 
+                    //         ((d.source.y + d.target.y)/2) + ")";
+                    // })
+                    /** text on path  **/
+
+                    node.attr("transform", d => "translate(" + d.x + "," + d.y + ")")
+                })
+                .on("end", () => {
+                    eventHandlers.refreshMinimap()
+                })
+                .on("end.init_simulation", () => {
+                    eventHandlers.zoomFit()
+                    simulation.on("end.init_simulation", null)
+                    callbacks.simulationDone()
+                })
+
+        }
 
         return {
             svgSelection: svg,
             simulation: simulation,
-            zoom: zoom
+            zoom: zoom,
+            updateData: updateData,
         }
 
         function genMarkersForAllKnownPathColor() {
@@ -245,6 +306,7 @@ export default {
         }
 
         function unselectLink() {
+            selectedLink = null
             svgNode.querySelectorAll('.links path.link').forEach(pathNode => {
                 pathNode.classList.remove('selected')
                 unselectMarker(pathNode)
@@ -252,8 +314,9 @@ export default {
             updateMarkers()
         }
 
-        function selectLink(event) {
+        function selectLink(event, d) {
             unselectLink(event)
+            selectedLink = d.vid
             const targetElement = event.target
             targetElement.classList.add('selected')
             updateMarker(event)
