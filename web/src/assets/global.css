@@ -77,6 +77,12 @@ body {
     transition-timing-function: cubic-bezier(.23,1,.32,1);
 }
 
+.main-body .layout-stretch {
+    height: calc(100vh - 54px);
+    margin-top: 54px;
+    overflow: hidden;
+}
+
 .app-body.strech {
     height:100vh;
     width: calc(100% - 3.5em);

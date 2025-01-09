@@ -1,26 +1,10 @@
 <template>
-<Layout name="LayoutStretch" class="position-relative">
+<Layout name="LayoutStretch" class="position-relative h-100">
     <div>
-        <div class="network-toolbar position-absolute d-flex px-3 py-1 mx-5 bg-light shadow-sm">
+        <div class="network-toolbar position-absolute d-flex flex-column px-3 py-1 bg-light shadow-sm">
 
-            <b-dropdown variant="primary" size="sm" text="Layout" class="ml-1">
-                 <b-dropdown-item
-                    @click="zoomFit"
-                >
-                    <iconButton
-                        text="Fit network in the view"
-                        icon="expand"
-                    ></iconButton>
-                </b-dropdown-item>
-            </b-dropdown>
-
-            <b-button variant="primary" v-b-toggle.sidebar-network size="sm" class="ml-auto">
-                <template v-if="!showSidebar">
-                    <i class="fa-solid fa-table-columns"></i> Show Sidebar
-                </template>
-                <template v-else>
-                    <i class="fa-solid fa-table-columns"></i> Hide Sidebar
-                </template>
+            <b-button v-show="!showSidebar" variant="link" v-b-toggle.sidebar-network size="sm" class="ml-auto text-nowrap text-decoration-none">
+                <i class="fa-solid fa-table-columns"></i> Show Sidebar
             </b-button>
         </div>
         <div ref="networkContainer" class="w-100 h-100 network-container">
@@ -30,13 +14,18 @@
         <b-sidebar
             id="sidebar-network"
             v-model="showSidebar"
-            body-class="px-2 py-3"
+            body-class="px-2 py-1"
             shadow="lg"
             right
             width="400px"
             no-header
         >
-            <div class="d-flex flex-column h-100" style="row-gap: 1em; overflow-x: hidden;">
+            <b-button variant="link" v-b-toggle.sidebar-network size="xs" class="ml-auto position-absolute text-decoration-none" style="right: 0;"
+                @click="$event.target.blur()"
+            >
+                <i class="fa-solid fa-close"></i> Hide Sidebar
+            </b-button>
+            <div class="d-flex flex-column pt-4" style="row-gap: 1em; overflow-x: hidden; height: calc(100% - 1.5rem)">
                 <transition name="slide-fade" mode="out-in">
                     <TheNodeInfoCard
                         v-if="selectedNodeID"
@@ -427,7 +416,7 @@ export default {
 
 <style>
 #sidebar-network.b-sidebar {
-    top: calc(40px + 1px);
+    top: calc(54px + 1px);
     height: calc(100vh - 41px);
 }
 
@@ -470,11 +459,12 @@ path.marker.has_rules.selected {
     background-color: white;
 }
 .network-toolbar {
-    width: calc(100% - 6.5em);
-    border-bottom-left-radius: 1em;
-    border-bottom-right-radius: 1em;
+    top: 2em;
+    right: 0em;
+    /* max-width: 8em; */
+    border-top-left-radius: 3px;
+    border-bottom-left-radius: 3px;
     border: rgba(0, 0, 0, 0.125) 1px solid;
-    border-top: 0;
     z-index: 10;
 }
 
