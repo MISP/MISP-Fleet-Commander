@@ -89,10 +89,6 @@ export default {
         const nodeGroup = container.append("g")
             .attr("class", "nodes")
 
-        defs.append('filter')
-            .attr('id', 'badge-filters')
-            .html('<feFlood flood-color="#ffffffbb" flood-opacity="1"></feFlood><feMerge><feMergeNode in="OUTLINE"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge>')
-
         const markerDef = generateMarker('triangle', linkColor)
 
         let link
@@ -108,17 +104,7 @@ export default {
                 .selectAll("path")
                 .data(newData.links)
                 .attr("class", function (d) {
-                    let classes = ['link']
-                    if (d.vid == selectedLink) {
-                        classes.push('selected')
-                    }
-                    if (!d._managed_server) {
-                        classes.push('unmanaged_server')
-                    }
-                    if (d._has_rules) {
-                        classes.push('has_rules')
-                    }
-                    return classes.join(' ')
+                    return updateClassList('link', d)
                 })
                 .style("stroke-width", function(d) { return d.weight ? d.weight : 5 })
                 .attr("data-fake-update-callback", (d) => {
@@ -140,14 +126,7 @@ export default {
                 .attr("stroke-opacity", 1)
                 .attr("marker-end", 'url(#triangle)')
                 .attr("class", function (d) {
-                    let classes = ['link']
-                    if (!d._managed_server) {
-                        classes.push('unmanaged_server')
-                    }
-                    if (d._has_rules) {
-                        classes.push('has_rules')
-                    }
-                    return classes.join(' ')
+                    return updateClassList('link', d)
                 })
                 .style("stroke-width", function(d) { return d.weight ? d.weight : 5 })
 
@@ -159,24 +138,16 @@ export default {
                     .selectAll("path")
                     .data(newData.links)
                     .attr("class", function (d) {
-                        let classes = ['marker']
-                        if (d.vid == selectedLink) {
-                            classes.push('selected')
-                        }
-                        if (!d._managed_server) {
-                            classes.push('unmanaged_server')
-                        }
-                        if (d._has_rules) {
-                            classes.push('has_rules')
-                        }
-                        return classes.join(' ')
+                        return updateClassList('marker', d)
                     })
 
                 const markersEnter = markers
                     .enter().append("path")
                     .attr('id', (d) => `marker_${d.vid}`)
                     .attr('vid', (d) => d.vid)
-                    
+                    .attr("class", function (d) {
+                        return updateClassList('marker', d)
+                    })
                     .attr('fill', "none")
                     .attr('stroke', (d) => movingMarkerColor)
                     .attr('stroke-opacity', 0.7)
@@ -184,7 +155,7 @@ export default {
                     .attr('stroke-width', "5")
                     .attr('stroke-dashoffset', "0")
                     .attr('stroke-dasharray', "16,150")
-                markers
+                markersEnter
                     .append('animate')
                     .attr('attributeName', 'stroke-dashoffset')
                     .attr('repeatCount', 'indefinite')
@@ -198,17 +169,7 @@ export default {
                 .selectAll("foreignObject")
                 .data(newData.links)
                 .attr("class", function (d) {
-                    let classes = ['link-badge']
-                    if (d.vid == selectedLink) {
-                        classes.push('selected')
-                    }
-                    if (!d._managed_server) {
-                        classes.push('unmanaged_server')
-                    }
-                    if (d._has_rules) {
-                        classes.push('has_rules')
-                    }
-                    return classes.join(' ')
+                    return updateClassList('link-badge', d)
                 })
             const badgeEnter = badge
                 .enter().append("foreignObject")
@@ -217,17 +178,7 @@ export default {
                 .attr("height", '24px')
                 .attr("width", '80px')
                 .attr("class", function (d) {
-                    let classes = ['link-badge']
-                    if (d.vid == selectedLink) {
-                        classes.push('selected')
-                    }
-                    if (!d._managed_server) {
-                        classes.push('unmanaged_server')
-                    }
-                    if (d._has_rules) {
-                        classes.push('has_rules')
-                    }
-                    return classes.join(' ')
+                    return updateClassList('link-badge', d)
                 })
             badgeEnter
                 .append('xhtml:div')
@@ -397,6 +348,20 @@ export default {
                 const vid = linkElement.getAttribute('vid')
                 svgNode.querySelector(`path.marker#marker_${vid}`).classList.remove('selected')
             }
+        }
+
+        function updateClassList(elemBaseClass, d) {
+            let classes = [elemBaseClass]
+            if (d.vid == selectedLink) {
+                classes.push('selected')
+            }
+            if (!d._managed_server) {
+                classes.push('unmanaged_server')
+            }
+            if (d._has_rules) {
+                classes.push('has_rules')
+            }
+            return classes.join(' ')
         }
 
         function getFAIconFromLinkConfig(d) {
