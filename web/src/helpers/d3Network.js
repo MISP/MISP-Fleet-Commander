@@ -18,6 +18,7 @@ export default {
         const linkBadgeStartOffset = 35
 
         let selectedLink = null
+        let zoomLevel = 1
 
         const generatedMarkerColors = []
 
@@ -62,7 +63,11 @@ export default {
 
         const zoom = d3.zoom()
             .scaleExtent([.08, 4])
-            .on("zoom", function (event) { container.attr("transform", event.transform) })
+            .on("zoom", function (event) {
+                container.attr("transform", event.transform)
+                zoomLevel = event.transform.k
+                
+            })
             .on("end", function (event) {
                 eventHandlers.refreshMinimap()
                 eventHandlers.updateScale(event.transform)
@@ -190,20 +195,43 @@ export default {
             }
 
             badge = badgeGroup
-                .selectAll("text")
+                .selectAll("foreignObject")
                 .data(newData.links)
+                .attr("class", function (d) {
+                    let classes = ['link-badge']
+                    if (d.vid == selectedLink) {
+                        classes.push('selected')
+                    }
+                    if (!d._managed_server) {
+                        classes.push('unmanaged_server')
+                    }
+                    if (d._has_rules) {
+                        classes.push('has_rules')
+                    }
+                    return classes.join(' ')
+                })
             const badgeEnter = badge
-                .enter().append("text")
+                .enter().append("foreignObject")
                 .attr('id', (d) => `badge_${d.vid}`)
                 .attr('vid', (d) => d.vid)
+                .attr("height", '24px')
+                .attr("width", '80px')
+                .attr("class", function (d) {
+                    let classes = ['link-badge']
+                    if (d.vid == selectedLink) {
+                        classes.push('selected')
+                    }
+                    if (!d._managed_server) {
+                        classes.push('unmanaged_server')
+                    }
+                    if (d._has_rules) {
+                        classes.push('has_rules')
+                    }
+                    return classes.join(' ')
+                })
+            badgeEnter
+                .append('xhtml:div')
                 .attr('class', 'badge-container')
-                .attr('fill', '#000')
-                .attr('filter', 'url(#badge-filters)')
-            badgeEnter.append('textPath')
-                .attr('startOffset', `${linkBadgeStartOffset}%`)
-                .attr('dominant-baseline', 'middle')
-                .attr('text-anchor', 'middle')
-                .attr('xlink:href', (d) => `#line_${d.vid}`)
                 .text(getFAIconFromLinkConfig)
 
             badge.exit().remove();
@@ -250,22 +278,32 @@ export default {
                         })
                     link
                         .attr('fake', (d, i, allPath) => {
-                            const path = allPath[i]
-                            // Update text rotation to keep it always up
-                            const pathLength = path.getTotalLength();
-                            // const midpoint = pathLength / 2;
-                            const midpoint = pathLength * (linkBadgeStartOffset/100);
-
-                            // Get position and tangent angle at the midpoint
-                            const point = path.getPointAtLength(midpoint);
-                            const tangent = path.getPointAtLength(midpoint + 1);
-                            const angle = -Math.atan2(tangent.y - point.y, tangent.x - point.x) * (180 / Math.PI);
-
-                            // Adjust angle to keep text upright
-                            const correctedAngle = angle > 90 || angle < -90 ? angle + 180 : angle;
-                            const textToRotate = d3.select(`#badge_${d.vid}`)
-                            textToRotate.attr("transform", `rotate(${correctedAngle} ${point.x} ${point.y})`)
+                            try {
+                                const path = allPath[i]
+                                const originNode = d3.select(`#node-${d.origin.id}`).node()
+                                const nodeBoxWith = getNodeHalfDimension(originNode, "width")*2
+                                const nodeBoxHeight = getNodeHalfDimension(originNode, "height")*2
+    
+                                const pathLength = path.getTotalLength();
+                                let midpointLength = pathLength * (linkBadgeStartOffset/100);
+                                if (pathLength <= 1*nodeBoxHeight || pathLength <= 1.5*nodeBoxWith) {
+                                    midpointLength = 0.55*pathLength
+                                }
+                                const pointAtLength = path.getPointAtLength(midpointLength)
+    
+                                const theBadge = d3.select(`#badge_${d.vid}`)
+                                const badgeBoxTrueSize = theBadge.selectChildren().node().getBoundingClientRect()
+                                
+                                const adjustedBasedOnBadgeContaier = {
+                                    x: pointAtLength.x - (1/zoomLevel)*badgeBoxTrueSize.width/2,
+                                    y: pointAtLength.y - (1/zoomLevel)*badgeBoxTrueSize.height/2,
+                                }
+                                theBadge.attr("transform", d => "translate(" + adjustedBasedOnBadgeContaier.x + "," + adjustedBasedOnBadgeContaier.y + ")")
+                            } catch (InvalidStateError) {
+                                // no big deal. Simply ignore
+                            }
                         })
+
                     if (allowLinkAnimation) {
                         markers
                             .attr("d", function(d) {

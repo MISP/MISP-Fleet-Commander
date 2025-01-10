@@ -436,8 +436,9 @@ path.link.has_rules {
     filter: drop-shadow(0px 1px 1px #5b4a4299) !important;
 }
 path.link.selected {
-    stroke: #2ca1db;
     stroke-width: 7px !important;
+    stroke: #2ca1db;
+    filter: drop-shadow(0px 1px 1px #2ca1db99);
 }
 path.link.has_rules.selected {
     stroke: #f5854d;
@@ -451,9 +452,30 @@ path.marker.has_rules.selected {
 }
 
 .badge-container {
+    cursor: default;
     font-family: FontAwesome;
     padding: 2px 4px;
-    box-shadow: 0px 0px 1px 1px #fff;
+    background-color: #ffffffaa;
+    border: 1px solid #828383;
+    border-radius: 3px;
+    width: min-content;
+    line-height: calc(24px - 4px - 2px);
+    text-wrap: nowrap;
+}
+
+.link-badge {
+    overflow: visible;
+}
+.link-badge.selected .badge-container {
+    border-color: #2ca1dbaa;
+    filter: drop-shadow(0px 1px 1px #2ca1db99);
+}
+.link-badge.has_rules .badge-container {
+    border-color: #f8a57c;
+    filter: drop-shadow(0px 1px 1px #5b4a4299);
+}
+.link-badge.has_rules.selected .badge-container {
+    filter: drop-shadow(0px 1px 1px #5b4a4299);
 }
 </style>
 
