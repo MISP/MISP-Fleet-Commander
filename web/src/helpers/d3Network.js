@@ -15,6 +15,7 @@ export default {
         const movingMarkerColorRules = '#fff000'
         const linkColorSelected = '#2ca1db'
         const endMarkerSize = 4
+        const linkBadgeStartOffset = 35
 
         let selectedLink = null
 
@@ -78,15 +79,21 @@ export default {
             .attr("class", "links")
         const markerGroup = container.append("g")
             .attr("class", "markers")
+        const badgeGroup = container.append("g")
+            .attr("class", "badges")
         const nodeGroup = container.append("g")
             .attr("class", "nodes")
+
+        defs.append('filter')
+            .attr('id', 'badge-filters')
+            .html('<feFlood flood-color="#ffffffbb" flood-opacity="1"></feFlood><feMerge><feMergeNode in="OUTLINE"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge>')
 
         const markerDef = generateMarker('triangle', linkColor)
 
         let link
         let markers
         let node
-        let text
+        let badge
 
         updateData(d3data)
         genMarkersForAllKnownPathColor()
@@ -139,19 +146,6 @@ export default {
                 })
                 .style("stroke-width", function(d) { return d.weight ? d.weight : 5 })
 
-                /** text on path  **/
-                // text = link.enter().append("text")
-                //     .attr("font-family", "Arial, Helvetica, sans-serif")
-                //     .attr("fill", "Black")
-                //     .style("font", "normal 12px Arial")
-                //     .attr("dy", ".35em")
-                //     .attr("text-anchor", "middle")
-                //     .text(function(d) {
-                //         return d.vid;
-                //     });
-                /** text on path  **/
-
-
             link.exit().remove();
             link = linkEnter.merge(link)
 
@@ -191,8 +185,29 @@ export default {
                     .attr('repeatCount', 'indefinite')
                     .attr('dur', '30s')
                     .attr('values', '100%;0')
+                markers.exit().remove();
                 markers = markersEnter.merge(markers)
             }
+
+            badge = badgeGroup
+                .selectAll("text")
+                .data(newData.links)
+            const badgeEnter = badge
+                .enter().append("text")
+                .attr('id', (d) => `badge_${d.vid}`)
+                .attr('vid', (d) => d.vid)
+                .attr('class', 'badge-container')
+                .attr('fill', '#000')
+                .attr('filter', 'url(#badge-filters)')
+            badgeEnter.append('textPath')
+                .attr('startOffset', `${linkBadgeStartOffset}%`)
+                .attr('dominant-baseline', 'middle')
+                .attr('text-anchor', 'middle')
+                .attr('xlink:href', (d) => `#line_${d.vid}`)
+                .text(getFAIconFromLinkConfig)
+
+            badge.exit().remove();
+            badge = badgeEnter.merge(badge)
 
             node = nodeGroup
                 .selectAll("foreignObject")
@@ -233,6 +248,24 @@ export default {
                                 return "M" + x1 + "," + y1 + "A" + dr + "," + dr + " 0 0,1 " + intersection.x2 + "," + intersection.y2;
                             }
                         })
+                    link
+                        .attr('fake', (d, i, allPath) => {
+                            const path = allPath[i]
+                            // Update text rotation to keep it always up
+                            const pathLength = path.getTotalLength();
+                            // const midpoint = pathLength / 2;
+                            const midpoint = pathLength * (linkBadgeStartOffset/100);
+
+                            // Get position and tangent angle at the midpoint
+                            const point = path.getPointAtLength(midpoint);
+                            const tangent = path.getPointAtLength(midpoint + 1);
+                            const angle = -Math.atan2(tangent.y - point.y, tangent.x - point.x) * (180 / Math.PI);
+
+                            // Adjust angle to keep text upright
+                            const correctedAngle = angle > 90 || angle < -90 ? angle + 180 : angle;
+                            const textToRotate = d3.select(`#badge_${d.vid}`)
+                            textToRotate.attr("transform", `rotate(${correctedAngle} ${point.x} ${point.y})`)
+                        })
                     if (allowLinkAnimation) {
                         markers
                             .attr("d", function(d) {
@@ -247,14 +280,6 @@ export default {
                                 }
                             })
                     }
-
-                    /** text on path  **/
-                    // text.attr("transform", function(d) {
-                    //     return "translate(" +
-                    //         ((d.source.x + d.target.x)/2) + "," + 
-                    //         ((d.source.y + d.target.y)/2) + ")";
-                    // })
-                    /** text on path  **/
 
                     node.attr("transform", d => "translate(" + d.x + "," + d.y + ")")
                 })
@@ -334,6 +359,26 @@ export default {
                 const vid = linkElement.getAttribute('vid')
                 svgNode.querySelector(`path.marker#marker_${vid}`).classList.remove('selected')
             }
+        }
+
+        function getFAIconFromLinkConfig(d) {
+            let text = []
+            const serverConnection = d.destination.Server
+            if (serverConnection.push) {
+                if (serverConnection.push_sightings && serverConnection.push_galaxy_clusters && serverConnection.push_analyst_data) {
+                    text.push('\uf35b')
+                } else {
+                    text.push('\uf062')
+                }
+            }
+            if (serverConnection.pull) {
+                if (serverConnection.pull_galaxy_clusters && serverConnection.pull_analyst_data) {
+                    text.push('\uf358')
+                } else {
+                    text.push('\uf063')
+                }
+            }
+            return text.join(' ')
         }
 
         function calcEdgePathCoordinate(source, target) {

@@ -449,6 +449,12 @@ path.marker.selected {
 path.marker.has_rules.selected {
     stroke: #ffdf0a !important;
 }
+
+.badge-container {
+    font-family: FontAwesome;
+    padding: 2px 4px;
+    box-shadow: 0px 0px 1px 1px #fff;
+}
 </style>
 
 <style scoped>
