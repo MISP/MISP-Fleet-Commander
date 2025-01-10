@@ -152,6 +152,9 @@ def doFleetInfoTask(servers: list, clientSocketEmitterUpdateFun):
     allResults = asyncio.run(doFleetInfoTaskAsync(servers, clientSocketEmitterUpdateFun))
     return allResults
 
+def dofetchServerInfoAsync(servers: list, clientSocketEmitterUpdateFun):
+    return asyncio.run(fetchServerInfoAsync(servers, clientSocketEmitterUpdateFun))
+
 async def doFleetInfoTaskAsync(servers: list, clientSocketEmitterUpdateFun):
     tasks = []
     for server in servers:
@@ -206,9 +209,10 @@ def attachConnectedServerStatus(server, connectedServers):
     return connectedServers
 
 async def attachConnectedServerStatusAsync(server, connectedServers):
-    for i, connectedServer in enumerate(connectedServers):
-        serverStatus = await getConnectedServerStatusAsync(server, connectedServer)
-        connectedServers[i] = serverStatus
+    if type(connectedServers) is list:
+        for i, connectedServer in enumerate(connectedServers):
+            serverStatus = await getConnectedServerStatusAsync(server, connectedServer)
+            connectedServers[i] = serverStatus
     return connectedServers
 
 

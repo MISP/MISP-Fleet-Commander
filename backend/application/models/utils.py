@@ -112,15 +112,18 @@ async def asyncFetcher(server, urls):
 
     async def fetch(session, url, headers):
         timer = time.perf_counter()
-        async with session.get(url, headers=headers, ssl=False) as response:
-            try:
-                result =  await response.json()
-                if type(result) is dict:
-                    result['_latency'] = time.perf_counter() - timer
-                    result['_status_code'] = response.status
-            except aiohttp.ContentTypeError:
-                result = await response.text()
-            return result
+        try:
+            async with session.get(url, headers=headers, ssl=False) as response:
+                try:
+                    result =  await response.json()
+                    if type(result) is dict:
+                        result['_latency'] = time.perf_counter() - timer
+                        result['_status_code'] = response.status
+                except aiohttp.ContentTypeError:
+                    result = await response.text()
+                return result
+        except Exception as e:
+            result = { "error": "Exception " + str(e) }
 
     async with aiohttp.ClientSession() as session:
         tasks = [fetch(session, urljoin(server.url, url), headers) for url in urls]
@@ -136,17 +139,20 @@ async def asyncFetcherManyServer(servers, url, resultCallback):
     }
     async def fetch(session, url, headers, server_id, resultCallback):
         timer = time.perf_counter()
-        async with session.get(url, headers=headers, ssl=False) as response:
-            result = None
-            try:
-                result = await response.json()
-                if type(result) is dict:
-                    result['_latency'] = time.perf_counter() - timer
-                    result['_status_code'] = response.status
-            except aiohttp.ContentTypeError:
-                result = await response.text()
-            resultCallback(server_id, result)
-            return result
+        try:
+            async with session.get(url, headers=headers, ssl=False) as response:
+                result = None
+                try:
+                    result = await response.json()
+                    if type(result) is dict:
+                        result['_latency'] = time.perf_counter() - timer
+                        result['_status_code'] = response.status
+                except aiohttp.ContentTypeError:
+                    result = await response.text()
+                resultCallback(server_id, result)
+                return result
+        except Exception as e:
+            return { "error": "Exception " + str(e) }
 
     async with aiohttp.ClientSession() as session:
         tasks = []

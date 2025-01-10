@@ -14,10 +14,10 @@ socketioEmitter = SocketioEmitter()
 def fetchServerInfoTask(serverDict):
     server = serverSchemaLighter.load(serverDict)
     socketioEmitter.server_updating(server.id)
-    serverInfo = serverModel.fetchServerInfoAsync(server)
-    if serverInfo is not None:
-        serverInfo['server'] = serverDict
-    socketioEmitter.udpate_server(serverInfo)
+    def clientSocketEmitterUpdateFun(server_id, testResult):
+        testResult['server'] = serverSchemaLighter.dump(server)
+        socketioEmitter.udpate_server(testResult)
+    serverModel.dofetchServerInfoAsync(server, clientSocketEmitterUpdateFun)
 
 
 @celery_app.task(name="doFleetInfoTask")
