@@ -10,7 +10,7 @@ from application.DBModels import db, User, Server
 from application.controllers.utils import mispGetRequest
 from application.marshmallowSchemas import ServerSchema, serverQuerySchema
 
-from application.models.utils import asyncFetcher
+from application.models.utils import asyncFetcher, asyncFetcherManyServer
 from application.workers.tasks import fetchServerInfoTask
 
 
@@ -74,6 +74,12 @@ def testConnectionAsync(server_id: int) -> Union[dict, None]:
         return testConnection
     else:
         return None
+
+def testAllConnectionAsync(servers: list, clientSocketEmitterUpdateFun):
+    url = '/servers/getVersion'
+    allResults = asyncio.run(asyncFetcherManyServer(servers, url, clientSocketEmitterUpdateFun))
+    return allResults
+        
 
 def testConnectionForUser(user, server_id: int) -> Union[dict, None]:
     server = getForUser(user, server_id)
@@ -142,19 +148,31 @@ def fetchServerInfo(server, use_cache=True):
     return fullQuery
 
 
-def fetchServerInfoAsync(server):
+def doFleetInfoTask(servers: list, clientSocketEmitterUpdateFun):
+    allResults = asyncio.run(doFleetInfoTaskAsync(servers, clientSocketEmitterUpdateFun))
+    return allResults
+
+async def doFleetInfoTaskAsync(servers: list, clientSocketEmitterUpdateFun):
+    tasks = []
+    for server in servers:
+        tasks.append(fetchServerInfoAsync(server, clientSocketEmitterUpdateFun))
+    return await asyncio.gather(*tasks)
+
+
+async def fetchServerInfoAsync(server, clientSocketEmitterUpdateFun):
     urls = [
         '/servers/serverSettings/diagnostics/light:1',
         '/users/statistics',
         '/users/view/me',
         '/servers/index',
     ]
-    results = asyncio.run(asyncFetcher(server, urls))
+    # results = asyncio.run(asyncFetcher(server, urls))
+    results = await asyncFetcher(server, urls)
     serverSettings = results[0]
     serverUsage = results[1]
     serverUser = results[2]
     connectedServers = results[3]
-    connectedServers = attachConnectedServerStatusAsync(server, connectedServers)
+    connectedServers = await attachConnectedServerStatusAsync(server, connectedServers)
     serverContent = []
     server_query = {
         'serverSettings': serverSettings,
@@ -167,6 +185,9 @@ def fetchServerInfoAsync(server):
         'timestamp': int(time.time()),
         'query_result': server_query,
     }
+    fullQueryWithServer = dict(fullQuery)
+    fullQueryWithServer['server'] = server
+    clientSocketEmitterUpdateFun(server.id, fullQueryWithServer)
     saveInfo(server, fullQuery)
     return fullQuery
 
@@ -186,7 +207,7 @@ def attachConnectedServerStatus(server, connectedServers):
 
 async def attachConnectedServerStatusAsync(server, connectedServers):
     for i, connectedServer in enumerate(connectedServers):
-        serverStatus = getConnectedServerStatusAsync(server, connectedServer)
+        serverStatus = await getConnectedServerStatusAsync(server, connectedServer)
         connectedServers[i] = serverStatus
     return connectedServers
 
@@ -210,7 +231,7 @@ async def getConnectedServerStatusAsync(server, connectedServer):
         f'/servers/testConnection/{connectedServer["Server"]["id"]}',
         f'/servers/getRemoteUser/{connectedServer["Server"]["id"]}',
     ]
-    results = asyncio.run(asyncFetcher(server, urls))
+    results = await asyncFetcher(server, urls)
     connectionTest = results[0]
     connectionUser = results[1]
     connectionTest['timestamp'] = int(time.time())

@@ -1,7 +1,7 @@
 import os
 from application import socketioApp
 from application.DBModels import Server, ServerMinimal
-from application.marshmallowSchemas import serverSchema
+from application.marshmallowSchemas import serverSchema, serversSchema
 import application.models.servers as serverModel
 from flask_socketio import SocketIO
 
@@ -9,6 +9,8 @@ from flask_socketio import SocketIO
 def registerListeners():
     from application.workers.tasks import fetchServerInfoTask
     from application.workers.tasks import doServerConnectionTestTask
+    from application.workers.tasks import doFleetConnectionTestTask
+    from application.workers.tasks import doFleetInfoTask
 
     @socketioApp.on('refresh_server')
     def refresh_server(serverID):
@@ -18,8 +20,7 @@ def registerListeners():
     @socketioApp.on('refresh_fleet')
     def refresh_fleet(fleedID):
         servers = serverModel.index(fleedID)
-        for server in servers:
-            fetchServerInfoTask.delay(serverSchema.dump(server))
+        doFleetInfoTask.delay(serversSchema.dump(servers))
 
     @socketioApp.on('server_connection_test')
     def serverConnectionTest(serverID):
@@ -29,8 +30,8 @@ def registerListeners():
     @socketioApp.on('fleet_connection_test')
     def fleetConnectionTest(fleedID):
         servers = serverModel.index(fleedID)
-        for server in servers:
-            doServerConnectionTestTask.delay(serverSchema.dump(server))
+        doFleetConnectionTestTask.delay(serversSchema.dump(servers))
+
 
 
 class SocketioEmitter:

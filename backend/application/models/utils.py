@@ -111,13 +111,48 @@ async def asyncFetcher(server, urls):
     }
 
     async def fetch(session, url, headers):
+        timer = time.perf_counter()
         async with session.get(url, headers=headers, ssl=False) as response:
             try:
-                return await response.json()
+                result =  await response.json()
+                if type(result) is dict:
+                    result['_latency'] = time.perf_counter() - timer
+                    result['_status_code'] = response.status
             except aiohttp.ContentTypeError:
-                return await response.text()
+                result = await response.text()
+            return result
 
     async with aiohttp.ClientSession() as session:
         tasks = [fetch(session, urljoin(server.url, url), headers) for url in urls]
+        results = await asyncio.gather(*tasks)
+        return results
+
+
+async def asyncFetcherManyServer(servers, url, resultCallback):
+    base_headers = {
+        "Authorization": '---',
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+    }
+    async def fetch(session, url, headers, server_id, resultCallback):
+        timer = time.perf_counter()
+        async with session.get(url, headers=headers, ssl=False) as response:
+            result = None
+            try:
+                result = await response.json()
+                if type(result) is dict:
+                    result['_latency'] = time.perf_counter() - timer
+                    result['_status_code'] = response.status
+            except aiohttp.ContentTypeError:
+                result = await response.text()
+            resultCallback(server_id, result)
+            return result
+
+    async with aiohttp.ClientSession() as session:
+        tasks = []
+        for server in servers:
+            headers = dict(base_headers)
+            headers['Authorization'] = server.authkey
+            tasks.append(fetch(session, urljoin(server.url, url), headers, server.id, resultCallback))
         results = await asyncio.gather(*tasks)
         return results
