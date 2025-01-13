@@ -47,7 +47,6 @@ export default {
         },
     },
     mounted() {
-        this.$store.dispatch('userSettings/getUserSettings', true)
     }
 }
 </script>
