@@ -182,7 +182,8 @@
                         :class="{'text-nowrap': true, 'text-danger': row.value.error, 'text-success': !row.value.error}"
                     >
                         <b-icon v-if="row.value.data !== undefined" icon="circle-fill"></b-icon>
-                        {{ row.value.data }}
+                        <template v-if="row.value.error"> {{ formatErrorMessage(row.value.data) }}</template>
+                        <template v-else> {{ row.value.data }}</template>
                         <small
                              v-if="row.value.latency !== undefined"
                              :class="{'text-success': row.value.latency < 0.3, 'text-warning': row.value.latency >= 0.3 && row.value.latency < 2, 'text-danger': row.value.latency >= 2}"
@@ -692,6 +693,11 @@ export default {
         },
         clearForcedHidden() {
             this.forcedHidden = -1
+        },
+        formatErrorMessage(message) {
+            if (message.includes('Connection Error:')) {
+                return message.match(/\[([^\]]+)\]/)?.[1] || message
+            }
         },
         handleDelete() {
             this.serverToDelete = {}

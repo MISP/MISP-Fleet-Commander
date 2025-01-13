@@ -162,12 +162,14 @@ def queryInfo(user, server_id, no_cache):
 def queryInfoWS(user, server_id,):
     server = serverModel.getForUser(user, server_id)
     if server is not None:
-            server_query_task = fetchServerInfoTask.delay(serverSchemaLighter.dump(server))
-            return taskSchema.dump({
-                'id': server_query_task.id,
-                'status': server_query_task.status,
-                'message': f"Queued Server({server_id}).queryInfo",
-            })
+        server_query_task = fetchServerInfoTask.delay(serverSchemaLighter.dump(server))
+        return taskSchema.dump(
+            {
+                "id": server_query_task.id,
+                "status": server_query_task.status,
+                "message": f"Queued Server({server_id}).queryInfo",
+            }
+        )
     else:
         return jsonify({'error': 'Unkown server'})
 
@@ -497,7 +499,7 @@ def countJsonLeaves(json_obj, ignore_empty_string=True):
 #             ruleNumber += len(rules['tags']['NOT'])
 #         if 'OR' in rules['tags']:
 #             ruleNumber += len(rules['tags']['OR'])
-    
+
 #     {
 #   "orgs": {
 #     "NOT": [],

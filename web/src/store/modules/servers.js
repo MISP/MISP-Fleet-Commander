@@ -318,30 +318,42 @@ const mutations = {
 
 function setAllQueryInfo(state, server_id, server_info) {
     const query_info = server_info.query_result
-    mutations.setServerUser(state, { server_id: server_id, perms: query_info["serverUser"] })
-    mutations.setRemoteConnections(state, { server_id: server_id, connections: query_info["connectedServers"] })
-    mutations.setSubmodules(state, { server_id: server_id, submodules: query_info["serverSettings"]["moduleStatus"] })
-    mutations.setProxy(state, { server_id: server_id, proxy: query_info["serverSettings"]["proxyStatus"] })
-    mutations.setZMQ(state, { server_id: server_id, zmq: query_info["serverSettings"]["zmqStatus"] })
-    mutations.setWorkers(state, { server_id: server_id, workers: query_info["serverSettings"]["workers"] })
-    mutations.setLastRefresh(state, { server_id: server_id, last_refresh: server_info["timestamp"] })
-    mutations.setServerUsage(state, { server_id: server_id, server_usage: query_info["serverUsage"] })
-    mutations.setFinalSettings(state, { server_id: server_id, final_settings: query_info["serverSettings"]["finalSettings"] })
-    mutations.setDiagnosticFull(state, { server_id: server_id, diagnostic_full: query_info["serverSettings"] })
+    if (query_info["serverUser"])
+        mutations.setServerUser(state, { server_id: server_id, perms: query_info["serverUser"] })
+    if (query_info["connectedServers"])
+        mutations.setRemoteConnections(state, { server_id: server_id, connections: query_info["connectedServers"] })
+    if (query_info["serverSettings"]) {
+        mutations.setSubmodules(state, { server_id: server_id, submodules: query_info["serverSettings"]["moduleStatus"] })
+        mutations.setProxy(state, { server_id: server_id, proxy: query_info["serverSettings"]["proxyStatus"] })
+        mutations.setZMQ(state, { server_id: server_id, zmq: query_info["serverSettings"]["zmqStatus"] })
+        mutations.setWorkers(state, { server_id: server_id, workers: query_info["serverSettings"]["workers"] })
+        mutations.setFinalSettings(state, { server_id: server_id, final_settings: query_info["serverSettings"]["finalSettings"] })
+        mutations.setDiagnosticFull(state, { server_id: server_id, diagnostic_full: query_info["serverSettings"] })
+    }
+    if (server_info["timestamp"])
+        mutations.setLastRefresh(state, { server_id: server_id, last_refresh: server_info["timestamp"] })
+    if (query_info["serverUsage"])
+        mutations.setServerUsage(state, { server_id: server_id, server_usage: query_info["serverUsage"] })
 }
 
 function commitAllQueryInfo(commit, server_id, info) {
     const queryResult = info["query_result"]
-    commit("setServerUser", { server_id: server_id, perms: queryResult["serverUser"] })
-    commit("setRemoteConnections", { server_id: server_id, connections: queryResult["connectedServers"] })
-    commit("setSubmodules", { server_id: server_id, submodules: queryResult["serverSettings"]["moduleStatus"] })
-    commit("setProxy", { server_id: server_id, proxy: queryResult["serverSettings"]["proxyStatus"] })
-    commit("setZMQ", { server_id: server_id, zmq: queryResult["serverSettings"]["zmqStatus"] })
-    commit("setWorkers", { server_id: server_id, workers: queryResult["serverSettings"]["workers"] })
-    commit("setLastRefresh", { server_id: server_id, last_refresh: info["timestamp"] })
-    commit("setServerUsage", { server_id: server_id, server_usage: queryResult["serverUsage"] })
-    commit("setFinalSettings", { server_id: server_id, final_settings: queryResult["serverSettings"]["finalSettings"]})
-    commit("setDiagnosticFull", { server_id: server_id, diagnostic_full: queryResult["serverSettings"] })
+    if (queryResult["serverUser"])
+        commit("setServerUser", { server_id: server_id, perms: queryResult["serverUser"] })
+    if (queryResult["connectedServers"])
+        commit("setRemoteConnections", { server_id: server_id, connections: queryResult["connectedServers"] })
+    if (queryResult["serverSettings"]) {
+        commit("setSubmodules", { server_id: server_id, submodules: queryResult["serverSettings"]["moduleStatus"] })
+        commit("setProxy", { server_id: server_id, proxy: queryResult["serverSettings"]["proxyStatus"] })
+        commit("setZMQ", { server_id: server_id, zmq: queryResult["serverSettings"]["zmqStatus"] })
+        commit("setWorkers", { server_id: server_id, workers: queryResult["serverSettings"]["workers"] })
+        commit("setFinalSettings", { server_id: server_id, final_settings: queryResult["serverSettings"]["finalSettings"]})
+        commit("setDiagnosticFull", { server_id: server_id, diagnostic_full: queryResult["serverSettings"] })
+    }
+    if (info["timestamp"])
+        commit("setLastRefresh", { server_id: server_id, last_refresh: info["timestamp"] })
+    if (queryResult["serverUsage"])
+        commit("setServerUsage", { server_id: server_id, server_usage: queryResult["serverUsage"] })
 }
 
 export default {

@@ -27,14 +27,13 @@ class LiveMode(BasePlugin):
         selectedState = bool(data.get('enabled', True))
         return LiveMode.toggleLiveMode(server, selectedState)
 
-
     @classmethod
     def getLiveModeFromServer(cls, server: Server) -> Union[bool, None]:
         if server.server_info is None:
             return None
         try:
             finalSettings = server.server_info['query_result']['serverSettings']['finalSettings']
-        except KeyError:
+        except TypeError:
             return None
         liveModeSetting = [setting for setting in finalSettings if setting['setting'] == 'MISP.live'][0]
         liveMode = liveModeSetting['value']

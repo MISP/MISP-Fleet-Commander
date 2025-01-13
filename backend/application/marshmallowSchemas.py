@@ -12,7 +12,6 @@ from application.DBModels import Server, Fleet, User, PinList, PinListEntry, Use
 from application.baseModel import BaseModel
 
 
-
 class BaseSchema(SQLAlchemyAutoSchema):
     class Meta:
         sqla_session = db.session
@@ -78,7 +77,9 @@ class ServerSchemaLighter(ServerSchema):
 
     @post_dump
     def cull_settings_from_server_info(self, server, **kwargs):
-        if server['server_info'] is None:
+        if server["server_info"] is None:
+            return server
+        if 'serverSettings' not in server["server_info"]:
             return server
 
         try:

@@ -79,7 +79,7 @@ def testAllConnectionAsync(servers: list, clientSocketEmitterUpdateFun):
     url = '/servers/getVersion'
     allResults = asyncio.run(asyncFetcherManyServer(servers, url, clientSocketEmitterUpdateFun))
     return allResults
-        
+
 
 def testConnectionForUser(user, server_id: int) -> Union[dict, None]:
     server = getForUser(user, server_id)
@@ -100,9 +100,6 @@ def getServerInfoForUser(user, server_id, cache=True) -> Union[dict, None]:
         else:
             server_query_db = redisModel.getServerInfo(server_uuid)
             if server_query_db is None: # No query associated to the server
-                # server_query_db = fetchServerInfo(server)
-                schema = ServerSchema(exclude=['server_info'])
-                fetchServerInfoTask.delay(schema.dump(server))
                 return None
         return serverQuerySchema.load(server_query_db)
     else:
@@ -117,9 +114,6 @@ def getServerInfo(server_id, cache=True) -> Union[dict, None]:
         else:
             server_query_db = redisModel.getServerInfo(server_uuid)
             if server_query_db is None: # No query associated to the server
-                # server_query_db = fetchServerInfo(server)
-                schema = ServerSchema(exclude=['server_info'])
-                fetchServerInfoTask.delay(schema.dump(server))
                 return None
         return serverQuerySchema.load(server_query_db)
     else:
@@ -132,7 +126,7 @@ def fetchServerInfo(server, use_cache=True):
     serverUser = mispGetRequest(server, '/users/view/me', nocache=not use_cache)
     connectedServers = mispGetRequest(server, '/servers/index', nocache=not use_cache)
     connectedServers = attachConnectedServerStatus(server, connectedServers)
-    serverContent = []
+    serverContent = None
     server_query = {
         'serverSettings': serverSettings,
         'serverUsage': serverUsage,
@@ -169,14 +163,13 @@ async def fetchServerInfoAsync(server, clientSocketEmitterUpdateFun):
         '/users/view/me',
         '/servers/index',
     ]
-    # results = asyncio.run(asyncFetcher(server, urls))
     results = await asyncFetcher(server, urls)
     serverSettings = results[0]
     serverUsage = results[1]
     serverUser = results[2]
     connectedServers = results[3]
     connectedServers = await attachConnectedServerStatusAsync(server, connectedServers)
-    serverContent = []
+    serverContent = None
     server_query = {
         'serverSettings': serverSettings,
         'serverUsage': serverUsage,

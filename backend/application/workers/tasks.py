@@ -64,4 +64,3 @@ def doFleetConnectionTestTask(servers):
         testResult['server'] = serverSchemaLighter.dump(serverByID[server_id])
         socketioEmitter.udpate_server_connection(testResult)
     serverModel.testAllConnectionAsync(serversDict, clientSocketEmitterUpdateFun)
-

@@ -122,8 +122,10 @@ async def asyncFetcher(server, urls):
                 except aiohttp.ContentTypeError:
                     result = await response.text()
                 return result
+        except aiohttp.ClientConnectorError as e:
+            result = {"error": "Connection Error: " + str(e)}
         except Exception as e:
-            result = { "error": "Exception " + str(e) }
+            result = {"error": "Unhandled Exception: " + str(e)}
 
     async with aiohttp.ClientSession() as session:
         tasks = [fetch(session, urljoin(server.url, url), headers) for url in urls]
@@ -139,9 +141,9 @@ async def asyncFetcherManyServer(servers, url, resultCallback):
     }
     async def fetch(session, url, headers, server_id, resultCallback):
         timer = time.perf_counter()
+        result = None
         try:
             async with session.get(url, headers=headers, ssl=False) as response:
-                result = None
                 try:
                     result = await response.json()
                     if type(result) is dict:
@@ -149,10 +151,12 @@ async def asyncFetcherManyServer(servers, url, resultCallback):
                         result['_status_code'] = response.status
                 except aiohttp.ContentTypeError:
                     result = await response.text()
-                resultCallback(server_id, result)
-                return result
+        except aiohttp.ClientConnectorError as e:
+            result = {"error": "Connection Error: " + str(e)}
         except Exception as e:
-            return { "error": "Exception " + str(e) }
+            result = { "error": "Unhandled Exception: " + str(e) }
+        resultCallback(server_id, result)
+        return result
 
     async with aiohttp.ClientSession() as session:
         tasks = []
