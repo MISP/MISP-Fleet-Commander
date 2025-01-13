@@ -699,6 +699,7 @@ export default {
             if (message.includes('Connection Error:')) {
                 return message.match(/\[([^\]]+)\]/)?.[1] || message
             }
+            return message
         },
         handleDelete() {
             this.serverToDelete = {}
