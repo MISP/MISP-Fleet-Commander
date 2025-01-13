@@ -126,9 +126,9 @@
                 </b-button-toolbar>
            </div>
         </div>
-        <b-table 
+        <b-table
             striped outlined show-empty selectable
-            :small="table.totalRows > 16"
+            :small="serverCount > 16"
             table-class="table-auto-hide-action"
             selected-variant="table-none"
             :tbody-tr-class="rowClass"
@@ -206,7 +206,7 @@
             </template>
 
             <template v-slot:cell(last_refresh)="row">
-                <span class="d-block" style="width: 100px;">
+                <span class="d-block" style="width: 105px;">
                     <span :class="forcedHidden == row.index ? 'd-none' : 'hide-on-hover'">
                         <span>
                             <loaderPlaceholder :loading="!server_query_in_progress[row.item.id]">
@@ -319,7 +319,19 @@
                 ></RowDetails>
             </template>
 
-            <template v-slot:table-caption>Showing {{ table.totalRows }} out of {{ serverCount }} Servers</template>
+            <template v-slot:table-caption>
+                <div class="d-flex align-items-center" style="gap: 0.5em;">
+                    <span>Showing {{ displayedTotalRows }} out of {{ serverCount }} Servers</span>
+                    <b-pagination
+                        class="mb-0"
+                        v-model="table.currentPage"
+                        size="sm"
+                        :per-page="table.perPage"
+                        :total-rows="table.totalRows"
+                        aria-controls="server-table"
+                    ></b-pagination>
+                </div>
+            </template>
         </b-table>
 
         <DeleteModal
@@ -573,6 +585,9 @@ export default {
         getSelectedServerIDs() {
             return Array.from(this.selectedServerIDs)
         },
+        displayedTotalRows() {
+            return Math.min(this.table.totalRows, this.table.perPage)
+        }
     },
     methods: {
         setCheckOnServers(checked) {
