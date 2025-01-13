@@ -183,7 +183,8 @@ export default {
             badgeEnter
                 .append('xhtml:div')
                 .attr('class', 'badge-container')
-                .text(getFAIconFromLinkConfig)
+                .append('div')
+                .html(getHTMLIconsFromLinkConfig)
 
             badge.exit().remove();
             badge = badgeEnter.merge(badge)
@@ -362,6 +363,35 @@ export default {
                 classes.push('has_rules')
             }
             return classes.join(' ')
+        }
+
+        function getHTMLIconsFromLinkConfig(d) {
+            let icons = []
+            const serverConnection = d.destination.Server
+            if (serverConnection.push) {
+                const enabledMechanism = [
+                    '- Sightings: ' + (serverConnection.push_sightings ? '✓' : '×') + '\n',
+                    '- Galaxy Clusters: ' + (serverConnection.push_galaxy_clusters ? '✓' : '×') + '\n',
+                    '- Analyst data: ' + (serverConnection.push_analyst_data ? '✓' : '×'),
+                ]
+                if (serverConnection.push_sightings && serverConnection.push_galaxy_clusters && serverConnection.push_analyst_data) {
+                    icons.push(`<span title="All PUSH mechanisms are enabled.\n${enabledMechanism.join('')}">\uf35b</span>`)
+                } else {
+                    icons.push(`<span title="PUSH is enabled. The following other elements will also be synchronized:\n${enabledMechanism.join('')}">\uf062</span>`)
+                }
+            }
+            if (serverConnection.pull) {
+                const enabledMechanism = [
+                    '- Galaxy Clusters: ' + (serverConnection.pull_galaxy_clusters ? '✓' : '×') + '\n',
+                    '- Analyst data: ' + (serverConnection.pull_analyst_data ? '✓' : '×'),
+                ]
+                if (serverConnection.pull_galaxy_clusters && serverConnection.pull_analyst_data) {
+                    icons.push(`<span title="All PULL mechanisms are enabled.s\n${enabledMechanism.join('')}">\uf358</span>`)
+                } else {
+                    icons.push(`<span title="PULL is enabled. The following other elements will also be synchronized:\n${enabledMechanism.join('')}">\uf063</span>`)
+                }
+            }
+            return icons.join(' ')
         }
 
         function getFAIconFromLinkConfig(d) {
