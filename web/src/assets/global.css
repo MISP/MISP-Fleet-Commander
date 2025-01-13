@@ -12,7 +12,8 @@
     --var-color-main-dark-blue: #003a5a;
     --var-color-giantorganedarker: #d9510d;
     --var-color-light-grey: #dfe1e2;
-    --var-color-misp-blue: #2ca1db
+    --var-color-misp-blue: #2ca1db;
+    --var-color-misp-gray: #616263;
 }
 
 body {
@@ -74,6 +75,12 @@ body {
     -webkit-transition: margin-left .2s;
     transition: margin-left .2s;
     transition-timing-function: cubic-bezier(.23,1,.32,1);
+}
+
+.main-body .layout-stretch {
+    height: calc(100vh - 54px);
+    margin-top: 54px;
+    overflow: hidden;
 }
 
 .app-body.strech {

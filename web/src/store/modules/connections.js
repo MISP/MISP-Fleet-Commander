@@ -47,7 +47,49 @@ const actions = {
                 (error) => { reject(error) }
             )
         })
-    }
+    },
+    editRemoteConnection({ dispatch }, payload) {
+        return new Promise((resolve, reject) => {
+            const server_id = payload.server_id
+            const remote_server_id = payload.remote_server_id
+            const payload_to_send = payload.payload
+            api.editRemoteConnection(
+                server_id, remote_server_id, payload_to_send,
+                (response) => {
+                    helpers.reloadServerConnectionList(dispatch, resolve, server_id, remote_server_id)
+                },
+                (error) => { reject(error) }
+            )
+        })
+    },
+    savePushRules({ dispatch }, payload) {
+        return new Promise((resolve, reject) => {
+            const server_id = payload.server_id
+            const remote_server_id = payload.remote_server_id
+            const payload_to_send = payload.payload
+            api.setPushRules(
+                server_id, remote_server_id, payload_to_send,
+                connection => {
+                    helpers.reloadServerConnectionList(dispatch, resolve, server_id, remote_server_id)
+                },
+                (error) => { reject(error) }
+            )
+        })
+    },
+    savePullRules({ dispatch }, payload) {
+        return new Promise((resolve, reject) => {
+            const server_id = payload.server_id
+            const remote_server_id = payload.remote_server_id
+            const payload_to_send = payload.payload
+            api.setPullRules(
+                server_id, remote_server_id, payload_to_send,
+                connection => {
+                    helpers.reloadServerConnectionList(dispatch, resolve, server_id, remote_server_id)
+                },
+                (error) => { reject(error) }
+            )
+        })
+    },
 }
 
 // mutations
@@ -61,12 +103,23 @@ const mutations = {
     setConnection(state, connection) {
         for (let i = 0; i < state.all.length; i++) {
             if (state.all[i].vid == connection.vid) {
-                const updatedConnection = state.all[i] = {...state.all[i], connection}
-                Vue.set(state.all, i, updatedConnection)
+                Vue.set(state.all, i, connection)
                 break
             }
         }
     },
+}
+
+const helpers = {
+    reloadServerConnectionList(dispatch, resolve, server_id, remote_server_id) {
+        const fakeConnectionForAPI = {
+            source: {id: server_id},
+            destination: {Server: {id: remote_server_id}}
+        }
+        dispatch("getConnection", fakeConnectionForAPI).then(() => {
+            resolve()
+        })
+    }
 }
 
 export default {

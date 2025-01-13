@@ -127,7 +127,8 @@
            </div>
         </div>
         <b-table 
-            striped outlined show-empty small selectable
+            striped outlined show-empty selectable
+            :small="table.totalRows > 16"
             table-class="table-auto-hide-action"
             selected-variant="table-none"
             :tbody-tr-class="rowClass"

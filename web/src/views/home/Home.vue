@@ -8,23 +8,40 @@
             </div>
             <div class="row">
                 <div class="col">
-                    <b-alert show variant="primary">
-                        <h5 class="alert-heading">Instant Fleet Expansion: Simplify server encoding in a click!</h5>
-                        <p class="m-0">
-                            <i class="fa fa-info-circle"></i>
-                            Drag and Drop this import link as a browser bookmark, Go to a MISP instance and click on your bookmarked link.
-                        </p>
-                        <small class="text-danger">
-                            <i class="fa fa-warning"></i>
-                            Temporarily disabling Content Security Policy headers may be necessary for the bookmark to execute.
-                        </small>
-                        <hr>
-                        <b-alert show variant="light" class="d-flex justify-content-center mb-0 p-2">
-                            <b-button :href="bookmarkJS" variant="primary">
-                                <i class="fas fa-link"></i>
-                                Import to MFC
-                            </b-button>
-                        </b-alert>
+                    <b-alert show variant="primary" dismissible>
+                        <h5 class="alert-heading text-center">Simplify server enrolment</h5>
+                        <div class="row">
+                            <div class="col">
+                                <h6><i class="fa fa-bookmark"></i> Browser Bookmark</h6>
+                                <p class="m-0">
+                                    <i class="fa fa-info-circle"></i>
+                                    Drag and Drop this import link as a browser bookmark, Go to a MISP instance and click on your bookmarked link.
+                                </p>
+                                <small class="text-danger">
+                                    <i class="fa fa-warning"></i>
+                                    Temporarily disabling Content Security Policy headers may be necessary for the bookmark to execute.
+                                </small>
+                                <div class="d-flex justify-content-center bg-">
+                                    <b-button :href="bookmarkJS" variant="outline-primary" style="cursor: grab;">
+                                        <i class="fas fa-link"></i>
+                                        Import to MFC
+                                    </b-button>
+                                </div>
+                            </div>
+                            <div class="col border-left border-primary">
+                                <h6><i class="fa fa-puzzle-piece"></i> Browser Extension</h6>
+                                <p class="m-0">
+                                    <i class="fa fa-info-circle"></i>
+                                    Install the MISP Fleet Commander Chrome Extension, Go to a MISP instance and click on the extension.
+                                </p>
+                                <p class="text-center mt-2">
+                                    <a class="" href="https://github.com/mokaddem/MISP-Fleet-Commander-Browser-Extension">
+                                        <i class="fas fa-link"></i>
+                                        https://github.com/mokaddem/MISP-Fleet-Commander-Browser-Extension
+                                    </a>
+                                </p>
+                            </div>
+                        </div>
                     </b-alert>
                 </div>
             </div>

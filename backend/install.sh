@@ -7,4 +7,5 @@ python3 -m venv venv
 . ./venv/bin/activate
 
 pip3 install -U -r requirements.txt
+flask db upgrade
 

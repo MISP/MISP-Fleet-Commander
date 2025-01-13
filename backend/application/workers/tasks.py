@@ -45,7 +45,7 @@ def doServerConnectionTestTask(serverDict):
     connectionInfo = serverModel.testConnectionAsync(server.id)
     if connectionInfo is not None:
         connectionInfo['server'] = serverSchemaLighter.dump(server)
-    socketioEmitter.udpate_server_connection(connectionInfo)
+    socketioEmitter.udpate_server_connection(server.id, connectionInfo)
 
 
 @celery_app.task(name="doFleetConnectionTestTask")

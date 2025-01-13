@@ -120,6 +120,25 @@ def delete(user):
             return jsonify([])
 
 
+@BPserver.route('/servers/editConnection/<int:server_id>/<int:remote_server_id>', methods=['POST'])
+@token_required
+def editConnection(user, server_id, remote_server_id):
+    payload = request.json
+    updatedConnection = serverModel.editConnection(user, server_id, remote_server_id, payload)
+    if updatedConnection:
+        server = serverModel.getForUser(user, server_id)
+        if server is not None:
+            serverConnectionList = serverModel.refreshServerConnectionList(server.id, remote_server_id)
+            if serverConnectionList is not None:
+                return jsonify(updatedConnection)
+            else:
+                return jsonify({'error': 'Something went wrong when getting updated connection lits'})
+        else:
+            return jsonify({'error': 'Server does not exist'})
+    else:
+        return jsonify({'error': 'Something went wrong when trying to update connection'})
+
+
 @BPserver.route('/servers/testConnection/<int:server_id>', methods=['GET'])
 @token_required
 def ping_server(user, server_id):
@@ -277,8 +296,7 @@ def getConnection(user, server_id, connection_id):
         connection = [ d for d in destinations if int(d['Server']['id']) == connection_id]
         if len(connection) > 0:
             connection = connection[0]
-            if 'vid' not in connection:
-                connection['vid'] = f"{server_id}-{connection['Server']['id']}"
+            connection = updateConnectionForNetwork(server, connection)
             return jsonify(connection)
         else:
             return jsonify({})
@@ -393,27 +411,32 @@ def buildNetwork(servers):
             link = {}
             if isinstance(destinations, list):
                 for connectedServer in destinations:
-                    link = {
-                        'source': ServerSchema(exclude=('server_info', )).dump(server),
-                        'last_refresh': server.server_info['timestamp'],
-                    }
-                    link['destination'] = connectedServer
-                    link['vid'] = f"{link['source']['id']}-{connectedServer['Server']['id']}"
-                    link['status'] = connectedServer['connectionTest']
-                    link['pull'] = connectedServer['Server']['pull']
-                    link['push'] = connectedServer['Server']['push']
-                    pull_rules = json.loads(connectedServer['Server']['pull_rules'])
-                    if not isinstance(destinations, list) and pull_rules.get('url_params', '') != '':
-                        pull_rules['url_params'] = json.loads(pull_rules['url_params'])
-                    push_rules = json.loads(connectedServer['Server']['push_rules'])
-                    link['filtering_rules'] = {
-                        'pull_rules': pull_rules,
-                        'pull_rule_number': countJsonLeaves(pull_rules),
-                        'push_rules': push_rules,
-                        'push_rule_number': countJsonLeaves(push_rules)
-                    }
+                    link = updateConnectionForNetwork(server, connectedServer)
                     network.append(link)
     return network
+
+def updateConnectionForNetwork(server, connectedServer):
+    link = {
+        'source': ServerSchema(exclude=('server_info', )).dump(server),
+        'last_refresh': server.server_info['timestamp'],
+    }
+    link['destination'] = connectedServer
+    link['vid'] = f"{link['source']['id']}-{connectedServer['Server']['id']}"
+    link['status'] = connectedServer['connectionTest']
+    link['pull'] = connectedServer['Server']['pull']
+    link['push'] = connectedServer['Server']['push']
+    pull_rules = json.loads(connectedServer['Server']['pull_rules'])
+    if pull_rules.get('url_params', '') != '':
+        pull_rules['url_params'] = json.loads(pull_rules['url_params'])
+    push_rules = json.loads(connectedServer['Server']['push_rules'])
+    link['filtering_rules'] = {
+        'pull_rules': pull_rules,
+        'pull_rule_number': countJsonLeaves(pull_rules),
+        'push_rules': push_rules,
+        'push_rule_number': countJsonLeaves(push_rules)
+    }
+    return link
+
 
 def parseGetSyncOvertime(syncLogs, afterTime=None):
     if afterTime is None:

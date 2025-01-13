@@ -1,73 +1,53 @@
 <template>
-<Layout name="LayoutStretch" class="position-relative">
+<Layout name="LayoutStretch" class="position-relative h-100">
     <div>
-        <div class="network-toolbar position-absolute px-3 py-1 mx-5 bg-light shadow-sm">
-            <b-form-radio-group
-                id="btn-radios-2"
-                v-model="scope"
-                :options="availableScopes"
-                buttons
-                button-variant="outline-primary"
-                size="sm"
-            ></b-form-radio-group>
+        <div class="network-toolbar position-absolute d-flex flex-column px-3 py-1 bg-light shadow-sm">
 
-            <b-dropdown variant="primary" size="sm" text="Layout" class="ml-1">
-                 <b-dropdown-item
-                    @click="zoomFit"
-                >
-                    <iconButton
-                        text="Fit network in the view"
-                        icon="expand"
-                    ></iconButton>
-                </b-dropdown-item>
-            </b-dropdown>
-
-            <b-dropdown variant="primary" size="sm" text="Pinned data" class="ml-1">
-                <b-dropdown-item
-                    @click="showPinnedContentOnNodes"
-                >
-                    <iconButton
-                        text="Show pinned content on all nodes"
-                        icon="eye"
-                    ></iconButton>
-                </b-dropdown-item>
-                <b-dropdown-item
-                    @click="togglePinPanel"
-                >
-                    <iconButton
-                        text="Toggle pin panel"
-                        icon="thumbtack"
-                    ></iconButton>
-                </b-dropdown-item>
-            </b-dropdown>
-
+            <b-button v-show="!showSidebar" variant="link" v-b-toggle.sidebar-network size="sm" class="ml-auto text-nowrap text-decoration-none">
+                <i class="fa-solid fa-table-columns"></i> Show Sidebar
+            </b-button>
         </div>
         <div ref="networkContainer" class="w-100 h-100 network-container">
             <svg ref="networkSVG"></svg>
         </div>
-        <DraggableComponent
-            class="right-panel"
-            :positions.sync="infoCard.position"
-            draggableContainer="networkInfoPanel"
-            handleClass=".card-header"
-        >
-            <TheInfoCard
-                v-if="selectedNodeID"
-                :server_id="selectedNodeID"
-                :open.sync="infoCard.show"
-            ></TheInfoCard>
-        </DraggableComponent>
 
-        <DraggableComponent
-            class="right-panel"
-            :positions.sync="pinCard.position"
-            draggableContainer="pinPanel"
-            handleClass=".card-header"
+        <b-sidebar
+            id="sidebar-network"
+            v-model="showSidebar"
+            body-class="px-2 py-1"
+            shadow="lg"
+            right
+            width="400px"
+            no-header
         >
-            <ThePinCard
-                :open.sync="pinCard.show"
-            ></ThePinCard>
-        </DraggableComponent>
+            <b-button variant="link" v-b-toggle.sidebar-network size="xs" class="ml-auto position-absolute text-decoration-none" style="right: 0.25em;"
+                @click="$event.target.blur()"
+            >
+                <i class="fa-solid fa-close"></i> Hide Sidebar
+            </b-button>
+            <div class="d-flex flex-column pt-4" style="row-gap: 1em; overflow-x: hidden; height: calc(100% - 1.5rem)">
+                <transition name="slide-fade" mode="out-in">
+                    <TheNodeInfoCard
+                        v-if="selectedNodeID"
+                        :server_id="selectedNodeID"
+                    ></TheNodeInfoCard>
+        
+                    <TheLinkInfoCard
+                        v-if="selectedLinkID"
+                        :link_id="selectedLinkID"
+                        :link="selectedLink"
+                        class=""
+                    ></TheLinkInfoCard>
+                </transition>
+    
+                <ThePinCard
+                    :open.sync="pinCard.show"
+                    @showPinnedContentOnNodes="showPinnedContentOnNodes"
+                    class="mt-auto"
+                    style="max-height: 50%;"
+                ></ThePinCard>
+            </div>
+        </b-sidebar>
 
         <div
             class="position-absolute border overflow-hidden p-1 bg-white"
@@ -99,7 +79,8 @@ import ServerNode from "@/views/strategicView/elements/ServerNode.vue"
 import ServerNodeMini from "@/views/strategicView/elements/ServerNodeMini.vue"
 import ServerNodeMicro from "@/views/strategicView/elements/ServerNodeMicro.vue"
 // import NetworkMinimap from "@/views/strategicView/elements/NetworkMinimap.vue"
-import TheInfoCard from "@/views/strategicView/elements/InfoCard.vue"
+import TheNodeInfoCard from "@/views/strategicView/elements/NodeInfoCard.vue"
+import TheLinkInfoCard from "@/views/strategicView/elements/LinkInfoCard.vue"
 import ThePinCard from "@/views/strategicView/elements/PinCard.vue"
 import DraggableComponent from "@/components/ui/DraggableComponent.vue"
 import d3Network from "@/helpers/d3Network.js"
@@ -110,16 +91,21 @@ export default {
     components: {
         Layout,
         iconButton,
-        TheInfoCard,
+        TheNodeInfoCard,
+        TheLinkInfoCard,
         ThePinCard,
         DraggableComponent,
         // NetworkMinimap
     },
     data: function () {
         return {
-            scope: "administration",
             refreshInProgress: false,
-            infoCard: {
+            showSidebar: false,
+            nodeInfoCard: {
+                show: false,
+                position: {top: "4em", left: "unset", right: "1em"}
+            },
+            linkInfoCard: {
                 show: false,
                 position: {top: "4em", left: "unset", right: "1em"}
             },
@@ -129,9 +115,8 @@ export default {
             },
             selectedNode: {},
             selectedNodeID: null,
-            availableScopes: [
-                { text: "Administration", value: "administration" },
-            ],
+            selectedLink: {},
+            selectedLinkID: null,
             d3data: {
                 nodes: [],
                 links: []
@@ -140,6 +125,7 @@ export default {
             svg: null,
             svgSelection: null,
             zoom: null,
+            updateData: null,
             scaleInfo: {x: 0, y: 0, k: 1},
             minimapPosition: {top: "unset", right: "unset", left: "20px", bottom: "20px"},
             minimapRedrawCount: 0,
@@ -156,21 +142,35 @@ export default {
             getServerList: "servers/getServerList",
             serversByURL: "servers/serversByURL",
             serversByUUID: "servers/serversByUUID",
+            getServerRefreshEnqueued: "servers/getServerRefreshEnqueued",
             getConnectionList: "connections/getConnectionList",
         }),
+        hasActiveSelection() {
+            return this.selectedNodeID !== null || this.selectedLinkID !== null
+        },
     },
     methods: {
-        toggleInfoSideBar(show) {
+        toggleNodeInfoSideBar(show) {
             if (show === undefined) {
-                this.infoCard.show = !this.infoCard.show
+                this.nodeInfoCard.show = !this.nodeInfoCard.show
             } else {
-                this.infoCard.show = show
+                this.nodeInfoCard.show = show
+            }
+        },
+        toggleLinkInfoSideBar(show) {
+            if (show === undefined) {
+                this.linkInfoCard.show = !this.linkInfoCard.show
+            } else {
+                this.linkInfoCard.show = show
             }
         },
         resetPositionsInfo() {
-            this.infoCard.position.top = "4em"
-            this.infoCard.position.left = "unset"
-            this.infoCard.position.right = "1em"
+            this.nodeInfoCard.position.top = "4em"
+            this.nodeInfoCard.position.left = "unset"
+            this.nodeInfoCard.position.right = "1em"
+            this.linkInfoCard.position.top = "4em"
+            this.linkInfoCard.position.left = "unset"
+            this.linkInfoCard.position.right = "1em"
         },
         resetPositionsPin() {
             this.pinCard.position.top = "4em"
@@ -212,15 +212,27 @@ export default {
             return nodeInstance
         },
         selectNode(node) {
+            this.unselectAll()
             this.selectedNode = node
-            // this.selectedNodeID = node.id
+            this.selectedNodeID = node.id
+        },
+        selectLink(link) {
+            this.unselectAll()
+            this.selectedLink = link
+            this.selectedLinkID = link.vid
+        },
+        unselectAll() {
+            this.selectedNode = null
+            this.selectedNodeID = null
+            this.selectedLink = null
+            this.selectedLinkID = null
         },
         constructNetwork() {
             const vm = this
             let eventHandlers = {
                 nodeClick: function(node) {
                     vm.selectNode(node)
-                    vm.toggleInfoSideBar(true)
+                    vm.toggleNodeInfoSideBar(true)
                 },
                 refreshMinimap: function() {
                     vm.minimapRedrawCount++
@@ -230,7 +242,14 @@ export default {
                 },
                 updateScale: function(scaleInfo) {
                     vm.scaleInfo = Object.assign(vm.scaleInfo, scaleInfo)
-                }
+                },
+                linkClicked: function(link) {
+                    vm.selectLink(link)
+                    vm.toggleLinkInfoSideBar(true)
+                },
+                canvasClicked: function() {
+                    vm.unselectAll()
+                },
             }
             let componentGenerator = {
                 nodeComponent: function(node, htmlNode, d3Node, d3SVGNode) {
@@ -252,7 +271,7 @@ export default {
                 }
                 const network = d3Network.constructNetwork(
                     this.$refs["networkSVG"],
-                    this.$refs["networkContainer"].getBoundingClientRect(),
+                    this.$refs["networkContainer"],
                     this.d3data,
                     componentGenerator,
                     eventHandlers,
@@ -260,6 +279,7 @@ export default {
                 )
                 this.svgSelection = network.svgSelection
                 this.zoom = network.zoom
+                this.updateData = network.updateData
             }
         },
         refreshServers(force=true) {
@@ -321,10 +341,6 @@ export default {
                 if (knownDestination) {
                     link.target = parseInt(knownDestination.id)
                     link._managed_server = true
-                    if (link.filtering_rules.pull_rule_number > 0 || link.filtering_rules.push_rule_number > 0) {
-                        link._has_rules = true
-                        link.weight = 4
-                    }
                 } else {
                     link.target = 'v' + link.destination.Server.id
                     link.remote_sync_server = link.destination.Server
@@ -334,7 +350,11 @@ export default {
                     link.remote_sync_server.status = targetServer[0].connectionTest
                     link._managed_server = false
                 }
+                if (link.filtering_rules.pull_rule_number > 0 || link.filtering_rules.push_rule_number > 0) {
+                    link._has_rules = true
+                }
                 link.id = `${link.source}-${link.target}`
+                link.vid = `${link.source}-${link.destination.Server.id}`
                 link._has_rules = link._has_rules ? true : false
             })
             // Add fake nodes
@@ -350,6 +370,19 @@ export default {
                 node._managed_server = node._managed_server === undefined ? true : node._managed_server;
                 return node
             })
+        },
+        updateWithStore() {
+            this.getConnectionList.forEach((newConnectionLink, index) => {
+                for (let i = 0; i < this.d3data.links.length; i++) {
+                    if (this.d3data.links[i].vid == newConnectionLink.vid) {
+                        const newConnectionLinkHasRules = newConnectionLink.filtering_rules.push_rule_number > 0 || newConnectionLink.filtering_rules.pull_rule_number > 0
+                        this.d3data.links[i]._has_rules = newConnectionLinkHasRules
+                    }
+                }
+            })
+            if (typeof this.updateData === 'function') {
+                this.updateData(this.d3data)
+            }
         }
     },
     mounted() {
@@ -368,9 +401,83 @@ export default {
         this.allNodeInstances.forEach(nodeInstance => {
             nodeInstance.$destroy() // We have to manually destroy the mounted nodes as it's not done automatically
         })
+    },
+    watch: {
+        hasActiveSelection: function(isActive) {
+            this.showSidebar = isActive || this.showSidebar
+        },
+        getConnectionList: function() {
+            this.updateWithStore()
+        }
     }
 }
 </script>
+
+
+<style>
+#sidebar-network.b-sidebar {
+    top: calc(54px + 1px);
+    height: calc(100vh - 41px);
+}
+
+path.link {
+    filter: drop-shadow(0px 1px 1px rgba(0, 0, 0, .7));
+    cursor: pointer;
+    transition: stroke-width .1s cubic-bezier(0.22, 0.61, 0.36, 1);
+    stroke: #bcc0c2;
+}
+path.link:hover {
+    filter: drop-shadow(0px 2px 2px rgba(0, 0, 0, .7));
+    stroke-width: 7px !important;
+    cursor: pointer;
+}
+path.link.has_rules {
+    stroke: #f8a57c;
+    filter: drop-shadow(0px 1px 1px #5b4a4299) !important;
+}
+path.link.selected {
+    stroke-width: 7px !important;
+    stroke: #2ca1db;
+    filter: drop-shadow(0px 1px 1px #2ca1db99);
+}
+path.link.has_rules.selected {
+    stroke: #f5854d;
+}
+
+path.marker.selected {
+    stroke: #e4e6e7 !important;
+}
+path.marker.has_rules.selected {
+    stroke: #ffdf0a !important;
+}
+
+.badge-container {
+    cursor: default;
+    font-family: FontAwesome;
+    padding: 2px 4px;
+    background-color: #ffffffaa;
+    border: 1px solid #828383;
+    border-radius: 3px;
+    width: min-content;
+    line-height: calc(24px - 4px - 2px);
+    text-wrap: nowrap;
+}
+
+.link-badge {
+    overflow: visible;
+}
+.link-badge.selected .badge-container {
+    border-color: #2ca1dbaa;
+    filter: drop-shadow(0px 1px 1px #2ca1db99);
+}
+.link-badge.has_rules .badge-container {
+    border-color: #f8a57c;
+    filter: drop-shadow(0px 1px 1px #5b4a4299);
+}
+.link-badge.has_rules.selected .badge-container {
+    filter: drop-shadow(0px 1px 1px #5b4a4299);
+}
+</style>
 
 <style scoped>
 
@@ -380,16 +487,13 @@ export default {
     background-color: white;
 }
 .network-toolbar {
-    width: calc(100% - 6.5em);
-    border-bottom-left-radius: 1em;
-    border-bottom-right-radius: 1em;
+    top: 2em;
+    right: 0em;
+    /* max-width: 8em; */
+    border-top-left-radius: 3px;
+    border-bottom-left-radius: 3px;
     border: rgba(0, 0, 0, 0.125) 1px solid;
-    border-top: 0;
     z-index: 10;
-}
-
-.link {
-  stroke: #aaa;
 }
 
 .node text {
@@ -407,5 +511,16 @@ export default {
     top: 2em;
     right: 0;
     width: 30em;
+}
+
+.slide-fade-enter-active {
+  transition: all .3s cubic-bezier(0, 0, 0.23, 0.96)
+}
+.slide-fade-leave-active {
+  transition: all .3s cubic-bezier(0, 0, 0.23, 0.96)
+}
+.slide-fade-enter, .slide-fade-leave-to {
+  transform: translateX(10px);
+  opacity: 0;
 }
 </style>

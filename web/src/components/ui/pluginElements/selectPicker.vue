@@ -89,14 +89,11 @@ export default {
             type: Array,
             required: true
         },
-        value: {
-            type: Array,
-        },
     },
     data() {
         return {
             search: '',
-            selected_value: this.value.slice(),
+            selected_value: [],
         }
     },
     computed: {
@@ -151,10 +148,5 @@ export default {
             });
         }
     },
-    watch: {
-        value: function() {
-            this.selected_value = this.value
-        }
-    }
 }
 </script>

@@ -42,8 +42,17 @@ class SocketioEmitter:
     def udpate_server(self, data):
         self.socketio.emit('UPDATE_SERVER', data)
 
+    def udpate_server_connection_list(self, server_id, data):
+        payload = {
+            'server_id': server_id,
+            'partial_data_key': 'connectedServers',
+            'data': data,
+        }
+        self.socketio.emit('UPDATE_SERVER_PARTIAL_DATA', payload)
+
     def udpate_server_connection(self, data):
         self.socketio.emit('UPDATE_SERVER_CONNECTION', data)
+
 
     def udpate_fleet(self, fleet):
         self.socketio.emit('UPDATE_FLEET', fleet)

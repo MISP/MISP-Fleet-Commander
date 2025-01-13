@@ -52,6 +52,9 @@ const getters = {
         })
         return serversByUUID
     },
+    getServerRefreshEnqueued: state => {
+        return Object.entries(state.server_refresh_enqueued)
+    }
 }
 
 // actions
@@ -94,7 +97,7 @@ const actions = {
             )
         })
     },
-    commitAllQueryInfo({ commit }, payload) {
+    commitAllQueryInfo({ commit, dispatch }, payload) {
         return new Promise((resolve, reject) => {
             const serverID = payload.server.id
             commit("setServerRefreshEnqueued", {server_id: serverID, is_enqueued: false})
@@ -107,6 +110,18 @@ const actions = {
             const serverID = payload.server.id
             commit("setServerStatusRefreshEnqueued", {server_id: serverID, is_enqueued: false})
             commit("setConnectionState", {server_id: serverID, connectionState: payload})
+            resolve()
+        })
+    },
+    commitPartialServerData({ commit }, payload) {
+        return new Promise((resolve, reject) => {
+            const server_id = payload.server_id
+            const partial_data_key = payload.partial_data_key
+            const partial_data = payload.data
+
+            if (partial_data_key == 'connectedServers') {
+                commit("setRemoteConnections", { server_id: server_id, connections: partial_data })
+            }
             resolve()
         })
     },

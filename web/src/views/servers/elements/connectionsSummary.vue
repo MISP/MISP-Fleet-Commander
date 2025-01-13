@@ -149,7 +149,7 @@ export default {
             return this.connections !== undefined && this.getAllConnectionsList.length > 0 && this.getAllConnectionsList[0]['error'] === undefined
         },
         connectionCount() {
-            return this.getConnectionList.length
+            return this.getAllConnectionsList.length
         },
         getConnections() {
             return this.expand_issue_only ? this.getIssueConnections : this.connections
@@ -189,7 +189,7 @@ export default {
             if (this.hasError) {
                 return summary
             }
-            const summaryText = this.getOkConnections.length == 1 ? 'OK' : `${this.getOkConnections.length} / ${this.getAllConnectionsList.length} OK`
+            const summaryText = `${this.getOkConnections.length} / ${this.getAllConnectionsList.length} OK`
             summary = {
                 names: this.getOkConnections.map(connection => (connection.Server.name != '' ? connection.Server.name : connection.Server.url)),
                 text: summaryText,
