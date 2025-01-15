@@ -112,7 +112,6 @@ class UserSettings(BaseModel):
         self._value = val
 
 
-
 class Server(BaseModel):
     __tablename__ = 'servers'
     id = db.Column(db.Integer,
@@ -175,7 +174,6 @@ class ServerMinimal(Server):
         return
 
 
-
 class Fleet(BaseModel):
     __tablename__ = 'fleets'
     id = db.Column(db.Integer,
@@ -186,6 +184,7 @@ class Fleet(BaseModel):
     description = db.Column(db.String(2048),
                             nullable=False,
                             default='')
+    is_monitored = db.Column(db.Boolean, nullable=False, server_default='0')
     user_id = db.Column(db.Integer,
                         db.ForeignKey('users.id'),
                         nullable=False,

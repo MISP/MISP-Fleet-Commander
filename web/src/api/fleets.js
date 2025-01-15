@@ -39,6 +39,16 @@ export default {
                 common.handleError(error, errorCb)
             })
     },
+    edit(fleet, cb, errorCb) {
+        // const url = `${url.index}?page=${ctx.currentPage}&size=${ctx.perPage}`
+        const url = `${urls.edit}/${fleet.id}`
+        return common.getClient().post(url, fleet)
+            .then((response) => {
+                cb(response.data)
+            }).catch(error => {
+                common.handleError(error, errorCb)
+            })
+    },
     delete(fleet, cb, errorCb) {
         const url = `${urls.delete}/${fleet.id}`
         return common.getClient().delete(url, fleet)

@@ -1,7 +1,7 @@
 <template>
     <b-modal 
         id="modal-add"
-        title="Add a new fleet"
+        :title="`${modalAction} a new fleet`"
         size="lg"
         scrollable
         @hidden="resetModal"
@@ -38,6 +38,14 @@
                         <b-form-invalid-feedback v-for="(error, index) in validationContext.errors" v-bind:key="index">{{ error }}</b-form-invalid-feedback>
                     </ValidationProvider>
                 </b-form-group>
+
+                <b-form-checkbox
+                    id="checkbox-is-monitored"
+                    v-model="form.is_monitored"
+                    name="checkbox-is-monitored"
+                >
+                Mark fleet for <code>{{ form.name }}</code> monitoring
+                </b-form-checkbox>
             </b-form>
         </ValidationObserver>
 
@@ -48,7 +56,7 @@
                     v-if="postInProgress"
                 ></b-spinner>
                 <span class="sr-only">Saving...</span>
-                <span v-if="!postInProgress">Add</span>
+                <span v-if="!postInProgress">{{ modalActionText }}</span>
             </b-button>
             <b-button variant="secondary" @click="cancel()">Cancel</b-button>
         </template>
@@ -71,13 +79,25 @@ export default {
         ValidationObserver
     },
     props: {
-        fleetForm: {}
+        fleetForm: {},
+        modalAction: {
+            type: String,
+            default: "Add"
+        },
     },
     computed: {
+        isEdit() {
+            return this.modalAction != "Add"
+        },
+        modalActionText() {
+            return this.modalAction == "Add" ? "Save" : this.modalAction
+        },
         formData() {
             return {
+                id: this.form.id,
                 name: this.form.name,
                 description: this.form.description,
+                is_monitored: this.form.is_monitored,
             }
         }
     },
@@ -95,6 +115,7 @@ export default {
             delete(this.form.id)
             this.form.name = ""
             this.form.description = ""
+            this.form.is_monitored = false
             this.$emit("update:modalAction", "Add")
         },
         handleSubmission(evt) {
@@ -108,14 +129,14 @@ export default {
         },
         submitForm() {
             this.postInProgress = true
-            this.$store.dispatch("fleets/addFleet", this.formData)
+            this.$store.dispatch(`fleets/${this.modalAction == "Add" ? "addFleet" : "editFleet"}`, this.formData)
                 .then(() => {
                     this.$nextTick(() => {
                         this.$refs.observer.reset()
                         this.$bvModal.hide("modal-add")
                     })
                     this.$bvToast.toast(`${this.formData.name} created`, {
-                        title: "Fleet successfully added",
+                        title: this.isEdit ? "Fleet successfully edited" : "Fleet successfully added",
                         variant: "success",
                     })
                     this.$emit("addition-success", "done")
@@ -133,8 +154,8 @@ export default {
         },
     },
     watch: {
-        serverForm: function() {
-            this.form = Object.assign({}, this.serverForm)
+        fleetForm: function() {
+            this.form = Object.assign({}, this.fleetForm)
         }
     }
 }

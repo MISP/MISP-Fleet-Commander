@@ -28,15 +28,26 @@
                     <small>{{ fleet.server_count }} {{ fleet.server_count > 1 ? "servers" : "server"}}</small>
                 </div>
                 <div class="d-flex">
-                    <span>{{ fleet.description }}</span>
-                    <span class="ml-auto">
+                    <span class="d-flex flex-row justify-content-center align-items-center" style="gap: 0.5em;">
+                        <span class="monitoring-icon" title="This fleet is marked to be monitored" style="color: #d22f27;">
+                            <img v-if="fleet.is_monitored" src="@/assets/monitored.svg" alt="Fleet monitored icon" width="24" height="24">
+                            <img v-else src="@/assets/monitored-slash.svg" alt="Fleet not monitored icon" width="24" height="24" style="filter: grayscale(1);">
+                        </span>
+                        <span>{{ fleet.description }}</span>
+                    </span>
+                    <span class="ml-auto d-flex flex-row" style="gap: 0.25em;">
                         <b-button
-                            class="ml-auto fa fa-trash reveal-on-parent-hover"
+                            class="fa fa-trash reveal-on-parent-hover"
                             size="sm"
                             variant="outline-danger"
                             v-b-modal.modal-delete-selected
                             @click.stop="selectFleetForDeletion(fleet.id)"
                         >
+                        </b-button>
+                        <b-button class="fa fa-edit reveal-on-parent-hover"
+                            size="sm"
+                            :variant="getSelectedFleetId == fleet.id ? 'outline-light' : 'outline-primary'"
+                            @click.stop="openEditModal(fleet.id)">
                         </b-button>
                     </span>
                 </div>
@@ -48,6 +59,7 @@
         </b-alert>
 
         <AddModal
+            :modalAction.sync="modalAction"
             :fleetForm="fleetData"
             @addition-success="handleAdd"
         ></AddModal>
@@ -74,6 +86,7 @@ export default {
     },
     data: function () {
         return {
+            modalAction: "Add",
             refreshInProgress: false,
             fleetData: {},
             fleet_id_to_delete: -1,
@@ -85,14 +98,15 @@ export default {
             getFleets: state => state.fleets.all
         }),
         ...mapGetters({
-            fleetCount: "fleets/fleetCount"
+            fleetCount: "fleets/fleetCount",
+            fleetList: "fleets/fleetList",
         }),
         getSelectedFleetId () {
             return this.getSelectedFleet === null ? -1 : this.getSelectedFleet.id
         },
         fleetEmpty() {
             return this.fleetCount == 0
-        }
+        },
     },
     methods: {
         selectFleet(fleet) {
@@ -105,6 +119,13 @@ export default {
             this.refreshFleetIndex()
         },
         handleDelete() {
+            this.refreshFleetIndex()
+        },
+        openEditModal(fleet_id) {
+            const theFleet = this.fleetList.filter((f) => f.id == fleet_id)[0]
+            this.fleetData = JSON.parse(JSON.stringify(theFleet)) // deep clone
+            this.modalAction = "Edit"
+            this.$bvModal.show("modal-add")
         },
         refreshFleetIndex() {
             this.refreshInProgress = true
@@ -139,5 +160,18 @@ button.reveal-on-parent-hover {
 
 .list-group-item:hover .reveal-on-parent-hover {
     visibility: visible;
+}
+.monitoring-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    height: 24px;
+    width: 24px;
+}
+.monitoring-icon svg {
+    /* min-width: 24px;
+    max-width: 24px; */
+    flex-shrink: 0
 }
 </style>

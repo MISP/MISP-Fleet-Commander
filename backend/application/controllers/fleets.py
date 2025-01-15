@@ -31,11 +31,31 @@ def get(user, fleet_id):
 @BPfleet.route('/fleets/add', methods=['POST'])
 @token_required
 def add(user):
-    fleet = Fleet(name=request.json.get('name'),
-                    description=request.json.get('description'),
-                    timestamp=int(time.time()),
-                    user_id=user.id)
+    fleet = Fleet(
+        name=request.json.get("name"),
+        description=request.json.get("description"),
+        is_monitored=request.json.get("is_monitored"),
+        timestamp=int(time.time()),
+        user_id=user.id,
+    )
     db.session.add(fleet)
+    db.session.commit()
+    return fleetSchema.dump(fleet)
+
+
+@BPfleet.route("/fleets/edit/<int:fleet_id>", methods=["POST"])
+@token_required
+def edit(user, fleet_id):
+    saveFields = ["name", "description", "is_monitored"]
+    fleet = fleetModel.getForUser(user, fleet_id)
+    if fleet is not None:
+        for field, value in request.json.items():
+            if field in saveFields:
+                setattr(fleet, field, value)
+    # fleet = Fleet(name=request.json.get('name'),
+    #                 description=request.json.get('description'),
+    #                 timestamp=int(time.time()),
+    #                 user_id=user.id)
     db.session.commit()
     return fleetSchema.dump(fleet)
 
@@ -61,4 +81,3 @@ def getFromServerId(user, server_id):
         return fleetSchema.dump(fleet)
     else:
         return jsonify({})
-

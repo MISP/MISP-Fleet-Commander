@@ -16,6 +16,12 @@ def indexForUser(user) -> List[Fleet]:
     fleets = q.all()
     return fleets
 
+def indexMonitored() -> List[Fleet]:
+    q = Fleet.query
+    q = q.filter_by(is_monitored=True)
+    fleets = q.all()
+    return fleets
+
 def get(fleet_id: int) -> Union[Fleet, None]:
     return Fleet.query.get(fleet_id)
 

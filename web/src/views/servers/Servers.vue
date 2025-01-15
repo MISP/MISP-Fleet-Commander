@@ -178,6 +178,9 @@
             </template>
 
             <template v-slot:cell(server_status)="row">
+                <span v-show="server_status_refresh_enqueued[row.item.id] && row.value.data === undefined">
+                    <i class="fas fa-circle-notch fa-spin"></i>
+                </span>
                 <loaderPlaceholder :loading="!row.value._loading">
                     <span
                         :class="{'text-nowrap': true, 'text-danger': row.value.error, 'text-success': !row.value.error}"
@@ -551,6 +554,7 @@ export default {
             servers: state => state.servers.servers,
             server_status: state => state.servers.server_status,
             server_query_in_progress: state => state.servers.server_query_in_progress,
+            server_status_refresh_enqueued: state => state.servers.server_status_refresh_enqueued,
             server_query_error: state => state.servers.server_query_error,
             server_refresh_enqueued: state => state.servers.server_refresh_enqueued,
             server_user: state => state.servers.server_user,

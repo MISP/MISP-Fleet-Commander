@@ -15,6 +15,9 @@ const getters = {
     },
     selectedFleet: state => {
         return state.selected
+    },
+    fleetList: state => {
+        return Object.values(state.all)
     }
 }
 
@@ -98,15 +101,24 @@ const actions = {
             )
         }) 
     },
-    deleteFleet({ dispatch }, payload={}) {
+    editFleet({ commit }, payload={}) {
+        return new Promise((resolve, reject) => {
+            api.edit(
+                payload,
+                fleet => {
+                    commit("setFleet", fleet)
+                    resolve()
+                },
+                (error) => { reject(error) }
+            )
+        }) 
+    },
+    deleteFleet({ }, payload={}) {
         return new Promise((resolve, reject) => {
             api.delete(
                 payload,
                 (response) => {
-                    dispatch("getFleet")
-                    .then(() => {
-                        resolve(response)
-                    })
+                    resolve(response)
                 },
                 (error) => { reject(error) }
             )

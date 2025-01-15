@@ -1,0 +1,3 @@
+aiohttp
+asyncio
+influxdb_client

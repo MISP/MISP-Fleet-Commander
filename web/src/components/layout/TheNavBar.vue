@@ -67,6 +67,12 @@
                     </b-nav-item-dropdown>
                 </template>
 
+                <div class="d-flex align-items-center justify-content-center">
+                    <b-button title="Settings" variant="outline-secondary" class="ml-1" size="sm" v-b-modal.modal-settings>
+                        <i class="fa fa-cogs"></i>
+                    </b-button>
+                </div>
+
                 <template v-if="!wsConnected">
                     <div title="Trying to connect websocket" class="d-flex align-items-center justify-content-center">
                         <img src="@/assets/websocket.svg" alt="Websocket icon" class="position-absolute" width="20" height="20">

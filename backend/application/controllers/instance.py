@@ -1,4 +1,3 @@
-
 from functools import wraps
 import pathlib
 from flask import Blueprint, current_app, request, render_template, make_response, jsonify, send_from_directory
@@ -6,6 +5,7 @@ from flask import session, abort
 import jwt
 import application.models.servers as serverModel
 import application.models.users as userModel
+import application.models.setting as settingModel
 from application.marshmallowSchemas import userSchema, serversSchema
 from application.DBModels import User, db, Server
 import os.path
@@ -100,3 +100,22 @@ def login():
             'scopes': scopes, 
         }, current_app)
         return jsonify({"access_token": token, "token_type": "bearer"})
+
+
+@BPinstance.route("/instance/settings/index", methods=["GET"])
+@token_required
+def settingIndex(user):
+    return jsonify(settingModel.index())
+
+
+@BPinstance.route("/instance/settings/get/<setting_name>", methods=["GET"])
+@token_required
+def settingGet(user, setting_name):
+    return jsonify(settingModel.get(setting_name))
+
+
+@BPinstance.route("/instance/settings/edit/<setting_name>", methods=["POST"])
+@token_required
+def settingEdit(user, setting_name):
+    setting_value = request.json.get("value")
+    return jsonify(settingModel.set(setting_name, setting_value))

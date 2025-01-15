@@ -6,6 +6,8 @@
 
         <TheLoginModal
         ></TheLoginModal>
+        <TheSettingsModal
+        ></TheSettingsModal>
     </div>
 </template>
 
@@ -14,6 +16,7 @@ import LayoutDefault from "@/components/layout/LayoutDefault.vue"
 import LayoutStretch from "@/components/layout/LayoutStretch.vue"
 import LayoutLogin from "@/components/layout/LayoutLogin.vue"
 import TheLoginModal from '@/views/login/TheLoginModal.vue';
+import TheSettingsModal from '@/views/settings/TheSettingsModal.vue';
 
 export default {
     name: "App",
@@ -22,6 +25,7 @@ export default {
         LayoutStretch,
         LayoutLogin,
         TheLoginModal,
+        TheSettingsModal,
     },
     data () {
         return {

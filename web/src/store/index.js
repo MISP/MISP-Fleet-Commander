@@ -1,7 +1,7 @@
 import Vue from "vue"
 import Vuex from "vuex"
 import ui from "./modules/ui"
-import config from "./modules/config"
+import settings from "./modules/settings"
 import auth from "./modules/auth"
 import users from "./modules/users"
 import userSettings from "./modules/userSettings"
@@ -21,7 +21,7 @@ const debug = false
 export default new Vuex.Store({
     modules: {
         ui,
-        config,
+        settings,
         auth,
         users,
         userSettings,

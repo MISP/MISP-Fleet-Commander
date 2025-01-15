@@ -1,17 +1,24 @@
 #!/usr/bin/env python3
 
+
+import asyncio
 import time
 import click
-from pprint import pprint
 
 from flask.cli import AppGroup
 from application.marshmallowSchemas import ServerSchemaLighter, serverSchema, userSchema
 import application.models.servers as serverModel
 import application.models.fleets as fleetModel
 import application.models.users as userModel
+import application
 
-server_cli = AppGroup('server')
-user_cli = AppGroup('user')
+from application.monitoring.monitor import closeSensorsConnection, monitor
+from application.monitoring.misp import MISP
+
+
+server_cli = AppGroup("server", short_help="Server utility to query servers or fleets.")
+user_cli = AppGroup("user", short_help="User utility to reset user password.")
+sensors = {}
 
 
 @server_cli.command('test-connection')
@@ -42,6 +49,19 @@ def queryFleet(fleet_id: int, delay_second: int):
 def watchFleet(fleet_id: int, minute: int = 5, delay_second: int = 10):
     while True:
         doQueryFleet(fleet_id, delay_second)
+        print(f'Sleeping {minute*60}')
+        time.sleep(minute*60)
+
+@server_cli.command('monitor-fleets')
+@click.option('--minute', required=False, default=5)
+def monitorFleet(minute: int = 5):
+    while True:
+        fleets = fleetModel.indexMonitored()
+        print('Starting monitoring fleets:')
+        for fleet in fleets:
+            print(f'- {fleet.name} ({fleet.server_count} servers)')
+        asyncio.run(monitor(fleets))
+
         print(f'Sleeping {minute*60}')
         time.sleep(minute*60)
 
