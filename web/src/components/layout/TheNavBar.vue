@@ -10,6 +10,9 @@
                     @input="search"
                     @blur.native="handleSearchInputBlur"
                     @focus.native="revealSearch = true"
+                    @keydown.up="searchInputUp()"
+                    @keydown.down="searchInputDown()"
+                    @keydown.enter="searchInputSelect()"
                     type="search"
                     size="sm" class="m-0 global-search" placeholder="Search servers…"
                     ></b-form-input>
@@ -20,14 +23,15 @@
                         text="Search results"
                     >
                         <b-list-group-item
-                            v-for="searchResult in searchResults"
+                            v-for="(searchResult, i) in searchResults"
                             :key="searchResult.id"
                             :to="{ name: 'servers.view', params: { server_id: searchResult.id } }"
+                            :variant="i == searchPosition ? 'primary' : ''"
                         >
                             <div class="d-flex flex-column">
                                 <div class="d-flex">
-                                    <span class="mr-2">{{ searchResult.name }}</span>
-                                    <span class="ml-auto">
+                                    <span class="mr-2 d-inline-block text-truncate">{{ searchResult.name }}</span>
+                                    <span class="ml-auto text-right" style="line-height: 1em;">
                                         <img src="@/assets/fleet.svg" alt="Fleet icon" width="20" class="mr-1" style="filter: grayscale(1);">
                                         <b>{{ searchResult.fleet.name }}</b>
                                     </span>
@@ -112,6 +116,7 @@ export default {
             revealSearch: false,
             searchText: "",
             searchResults: [],
+            searchPosition: -1,
         }
     },
     computed: {
@@ -164,7 +169,29 @@ export default {
                 this.revealSearch = false
             }
         },
+
+        searchInputUp() {
+            this.searchPosition -= 1
+            if (this.searchPosition < 0) {
+                this.searchPosition = this.searchResults.length - 1
+            }
+        },
+        searchInputDown() {
+            this.searchPosition += 1
+            if (this.searchPosition >= this.searchResults.length) {
+                this.searchPosition = 0
+            }
+        },
+        searchInputSelect() {
+            this.$router.push({ name: 'servers.view', params: { server_id: this.searchResults[this.searchPosition].id } })
+            this.searchText = ''
+        }
     },
+    watch: {
+        searchResults: function() {
+            this.searchPosition = -1
+        }
+    }
 }
 </script>
 
