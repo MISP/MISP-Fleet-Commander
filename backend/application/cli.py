@@ -11,6 +11,7 @@ import application.models.servers as serverModel
 import application.models.fleets as fleetModel
 import application.models.users as userModel
 import application
+import application.models.setting as settingModel
 
 from application.monitoring.monitor import closeSensorsConnection, monitor
 from application.monitoring.misp import MISP
@@ -56,11 +57,14 @@ def watchFleet(fleet_id: int, minute: int = 5, delay_second: int = 10):
 @click.option('--minute', required=False, default=5)
 def monitorFleet(minute: int = 5):
     while True:
-        fleets = fleetModel.indexMonitored()
-        print('Starting monitoring fleets:')
-        for fleet in fleets:
-            print(f'- {fleet.name} ({fleet.server_count} servers)')
-        asyncio.run(monitor(fleets))
+        if not settingModel.getRefreshValue("monitoring_enabled"):
+            print('Monitoring is not enabled')
+        else:
+            fleets = fleetModel.indexMonitored()
+            print('Starting monitoring fleets:')
+            for fleet in fleets:
+                print(f'- {fleet.name} ({fleet.server_count} servers)')
+            asyncio.run(monitor(fleets))
 
         print(f'Sleeping {minute*60}')
         time.sleep(minute*60)

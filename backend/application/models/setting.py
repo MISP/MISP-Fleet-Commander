@@ -3,6 +3,7 @@
 import json
 import os
 from typing import List, Union
+from pathlib import Path
 
 from application.DBModels import User
 from application.DBModels import db
@@ -12,12 +13,14 @@ import application.models.userSettings as userSettingsModel
 from application.models.auth import create_API_key
 
 
-setting_path = '../../config.json'
+current_path = Path(__file__).resolve().parent
+setting_path = current_path / "../../config.json"
+setting_path = setting_path.resolve()
 settings = {}
 setting_configuration = {
     "monitoring_enabled": {
         "name": "Monitoring Enabled",
-        "description": "If the monitoring system is started and functionnal, fleets marked to be monitored will be",
+        "description": "If the monitoring system is started and functionnal, fleets marked to be monitored will be.",
         "scope": "monitoring",
         "type": "checkbox",
         "default": False,
@@ -51,7 +54,8 @@ def saveSettings():
     if os.path.exists(setting_path):
         try:
             with open(setting_path, 'w') as file:
-                json.dump(setting_values, file)
+                json.dump(setting_values, file, indent=4)
+            loadSetting()
         except (json.JSONDecodeError, IOError) as e:
             print(f'Error loading setting file: {e}.')
 
@@ -64,6 +68,16 @@ def index() -> dict:
 def get(setting_name: str) -> Union[dict, None]:
     global settings
     return settings.get(setting_name, None)
+
+
+def getValue(setting_name: str) -> Union[dict, None]:
+    global settings
+    return settings.get(setting_name, None).get("value", None)
+
+
+def getRefreshValue(setting_name: str) -> Union[dict, None]:
+    loadSetting()  # Ensure to get the latest setting value, in case it was save in the meantime.
+    return getValue(setting_name)
 
 
 def set(setting_name: str, setting_value: Union[str, bool, int, float]) -> Union[dict, None]:
