@@ -715,6 +715,12 @@ export default {
             this.forcedHidden = -1
         },
         formatErrorMessage(message) {
+            if (message === undefined) {
+                return ''
+            }
+            if (message.startsWith('Authentication failed')) {
+                return 'Authentication failed'
+            }
             if (message.includes('Connection Error:')) {
                 return message.match(/\[([^\]]+)\]/)?.[1] || message
             }

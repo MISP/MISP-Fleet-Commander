@@ -47,8 +47,10 @@ const getters = {
     serversByUUID: state => {
         let serversByUUID = {}
         Object.values(state.servers).forEach(server => {
-            const server_uuid = state.final_settings[server.id]['MISP.uuid']
-            serversByUUID[server_uuid] = server
+            if (state.final_settings[server.id] !== undefined) {
+                const server_uuid = state.final_settings[server.id]['MISP.uuid']
+                serversByUUID[server_uuid] = server
+            }
         })
         return serversByUUID
     },
@@ -211,7 +213,7 @@ const mutations = {
             newStatus.data = connectionState.version
             newStatus.error = false
         } else {
-            newStatus.data = connectionState.error
+            newStatus.data = connectionState.error ? connectionState.error : connectionState.message
             newStatus.error = true
         }
         state.server_status[payload.server_id] = Object.assign({}, state.server_status[payload.server_id], newStatus)

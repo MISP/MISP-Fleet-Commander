@@ -20,7 +20,7 @@
                 v-for="(fleet, index) in getFleets"
                 v-bind:key="index"
                 href="#" class="p-2 flex-column align-items-start"
-                :active="getSelectedFleetId == fleet.id"
+                :variant="getSelectedFleetId == fleet.id ? 'primary' : ''"
                 @click="selectFleet(fleet)"
             >
                 <div class="d-flex w-100 justify-content-between">
