@@ -3,15 +3,15 @@
         v-if="hasUsage"
         class="usage-container"
     >
-        <div :title="`${usage.event_count} Event`">
+        <div :title="`${usage.event_count} Events`">
             <i class="fas fa-envelope"></i>
             <span>{{ genCount(usage.event_count) }}</span>
         </div>
-        <div :title="`${usage.attribute_count} Attribute`">
+        <div :title="`${usage.attribute_count} Attributes`">
             <i class="fas fa-cube"></i>
             <span>{{ genCount(usage.attribute_count) }}</span>
         </div>
-        <div :title="`${usage.attributes_per_event} per Events`">
+        <div :title="`${usage.attributes_per_event} Attributes per Events`">
             <i class="fas fa-chart-pie"></i>
             <span>{{ genCount(usage.attributes_per_event) }}</span>
         </div>
@@ -46,6 +46,9 @@ export default {
     },
     methods: {
         genCount(amount) {
+            if (amount == 0) {
+                return '0'
+            }
             const prefixes = ['', 'k', 'M', 'B', 'T']; // Add more as needed
             const magnitude = Math.floor(Math.log10(Math.abs(amount)) / 3);
             const abbreviated = (amount / Math.pow(1000, magnitude)).toFixed(0);

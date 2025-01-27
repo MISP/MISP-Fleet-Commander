@@ -15,7 +15,7 @@
             </div>
         </h6>
         <div class="p-1">
-            <b-tabs card>
+            <b-tabs card v-if="notificationPlugins.length > 0">
                 <b-tab
                     v-for="plugin in notificationPlugins"
                     v-bind:key="plugin.id"
@@ -110,6 +110,9 @@
                     </b-table>
                 </b-tab>
             </b-tabs>
+            <div class="p-3 text-center">
+                <span class="text-muted">No notifications</span>
+            </div>
         </div>
     </div>
 </template>

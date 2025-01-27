@@ -10,32 +10,39 @@
             <span class="text-muted">{{ getServer.comment }}</span>
         </b-card-body>
         <hr class="my-0" />
-        <b-card-body class="px-3 py-2" role="tab">
-            <h5 class="mb-2 d-flex ">
-                Server Status
+        <b-card-body class="px-3 p-0" role="tab">
+            <h5 class="my-1 d-flex ">
                 <span class="ml-auto">
-                    <span :class="['text-nowrap', 'my-auto', 'h6', {'text-danger': getServerStatus.error, 'text-success': !getServerStatus.error}]">
-                        <b-icon v-if="getServerStatus.data !== undefined" icon="circle-fill" class=""></b-icon>
-                        {{ serverStatusText }}
-                        <small
-                             v-if="getServerStatus.latency !== undefined"
-                             :class="{'text-success': getServerStatus.latency < 0.3, 'text-warning': getServerStatus.latency >= 0.3 && getServerStatus.latency < 2, 'text-danger': getServerStatus.latency >= 2}"
-                        >
-                            ({{ (getServerStatus.latency*1000).toFixed(0) }}ms)
-                        </small>
-                    </span>
+                    
                 </span>
             </h5>
 
             <template v-if="isOnline">
                 <b-table-simple
                 small
-                class="mb-0"
+                class="mb-0 condensed"
                 :bordered="false"
                 :borderless="true"
                 :outlined="false"
                 >
                     <b-tbody>
+                        <b-tr>
+                            <b-th class="text-nowrap text-right pr-3">
+                                Server Status
+                            </b-th>
+                            <b-td>
+                                <span :class="['text-nowrap', 'my-auto', 'h6', {'text-danger': getServerStatus.error, 'text-success': !getServerStatus.error}]">
+                                    <b-icon v-if="getServerStatus.data !== undefined" icon="circle-fill" class=""></b-icon>
+                                    {{ serverStatusText }}
+                                    <small
+                                        v-if="getServerStatus.latency !== undefined"
+                                        :class="{'text-success': getServerStatus.latency < 0.3, 'text-warning': getServerStatus.latency >= 0.3 && getServerStatus.latency < 2, 'text-danger': getServerStatus.latency >= 2}"
+                                    >
+                                        ({{ (getServerStatus.latency*1000).toFixed(0) }}ms)
+                                    </small>
+                                </span>
+                            </b-td>
+                        </b-tr>
                         <b-tr v-for="(v, k) in statusData" v-bind:key="k">
                             <b-th class="text-nowrap text-right pr-3">{{ k }}</b-th>
                             <b-td>
@@ -54,12 +61,9 @@
         <hr v-if="isOnline" class="my-0" />
 
         <b-card-body v-if="isOnline" class="p-0" role="tab">
-            <h5 class="card-title mb-0 mx-3 my-2">
-                Server Info
-            </h5>
             <b-table-simple
             striped small
-            class="mb-0"
+            class="mb-0 condensed"
             :bordered="false"
             :borderless="true"
             :outlined="false"

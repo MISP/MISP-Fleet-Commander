@@ -79,13 +79,14 @@ class ServerSchemaLighter(ServerSchema):
     def cull_settings_from_server_info(self, server, **kwargs):
         if server["server_info"] is None:
             return server
-        if 'serverSettings' not in server["server_info"]:
+        if "query_result" not in server["server_info"]:
             return server
 
         try:
-            server['server_info']['query_result']['serverSettings'].pop('dbDiagnostics')
-            server['server_info']['query_result']['serverSettings'].pop('dbSchemaDiagnostics')
-            server['server_info']['query_result']['serverSettings'].pop('finalSettings')
+            server["server_info"].pop("query_result")
+            # server['server_info']['query_result']['serverSettings'].pop('dbDiagnostics')
+            # server['server_info']['query_result']['serverSettings'].pop('dbSchemaDiagnostics')
+            # server['server_info']['query_result']['serverSettings'].pop('finalSettings')
         except KeyError:
             pass
         return server

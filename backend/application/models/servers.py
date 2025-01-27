@@ -1,18 +1,45 @@
 #!/usr/bin/env python3
 
 import asyncio
+from datetime import datetime, timedelta, timezone
 import json
 import time
 from typing import List, Union
 import concurrent.futures
 
+from application import flaskApp
 from application import redisClient, redisModel
 from application.DBModels import db, User, Server
 from application.controllers.utils import mispGetRequest, mispPostRequest
 from application.marshmallowSchemas import ServerSchema, serverQuerySchema
 
-from application.models.utils import asyncFetcher, asyncFetcherManyServer
+from application.models.utils import MonitoringImages, asyncFetcher, asyncFetcherManyServer
 from application.workers.tasks import fetchServerInfoTask
+
+MONITORING_PANELS = [
+    { 'panel_id': 'panel-7', 'alt_title': '# Events (Last 3 months)', 'width': 200, 'height': 150, 'relative_time_days': 3*31 },
+    { 'panel_id': 'panel-8', 'alt_title': '# Objects (Last 3 months)', 'width': 200, 'height': 150, 'relative_time_days': 3*31 },
+    { 'panel_id': 'panel-23', 'alt_title': '# Attributes (Last 3 months)', 'width': 200, 'height': 150, 'relative_time_days': 3*31 },
+    { 'panel_id': 'panel-30', 'alt_title': '# Event Reports  (Last 3 months)', 'width': 200, 'height': 150, 'relative_time_days': 3*31 },
+    { 'panel_id': 'panel-29', 'alt_title': '# Analyst Data  (Last 3 months)', 'width': 200, 'height': 150, 'relative_time_days': 3*31 },
+    { 'panel_id': 'panel-9', 'alt_title': '# Proposals  (Last 3 months)', 'width': 200, 'height': 150, 'relative_time_days': 3*31 },
+    { 'panel_id': 'panel-10', 'alt_title': '# Correlation  (Last 3 months)', 'width': 200, 'height': 150, 'relative_time_days': 3*31 },
+    { 'panel_id': 'panel-5', 'alt_title': '# Organisations  (Last 3 months)', 'width': 200, 'height': 150, 'relative_time_days': 3*31 },
+    { 'panel_id': 'panel-17', 'alt_title': '# Users  (Last 3 months)', 'width': 200, 'height': 150, 'relative_time_days': 3*31 },
+    { 'panel_id': 'panel-16', 'alt_title': 'Users / Org Ratio', 'width': 200, 'height': 150, 'relative_time_days': 1 },
+    { 'panel_id': 'panel-15', 'alt_title': '# Users with PGP', 'width': 200, 'height': 150, 'relative_time_days': 1 },
+    { 'panel_id': 'panel-13', 'alt_title': '# Local / Global Org ratio', 'width': 200, 'height': 150, 'relative_time_days': 1 },
+    { 'panel_id': 'panel-18', 'alt_title': '# Open registration (Last 3 months)', 'width': 200, 'height': 150, 'relative_time_days': 3*31 },
+    { 'panel_id': 'panel-14', 'alt_title': 'Contributing Org (Last year)', 'width': 200, 'height': 150, 'relative_time_days': 365} ,
+    { 'panel_id': 'panel-2', 'alt_title': '# Data Amount over time (Last year)', 'width': 600, 'height': 300, 'relative_time_days': 365 },
+    { 'panel_id': 'panel-1', 'alt_title': 'Login over time (Last year)', 'width': 600, 'height': 300, 'relative_time_days': 365 },
+    { 'panel_id': 'panel-19', 'alt_title': 'Top 5 Endpoint Daily Time', 'width': 600, 'height': 300, 'relative_time_days': 1 },
+    { 'panel_id': 'panel-21', 'alt_title': 'Top 5 Endpoint Daily SQL Time', 'width': 600, 'height': 300, 'relative_time_days': 1 },
+    { 'panel_id': 'panel-22', 'alt_title': 'Top 5 Endpoint Daily Memory', 'width': 600, 'height': 300, 'relative_time_days': 1 },
+]
+MONITORING_PANEL_BY_ID = {}
+for panel in MONITORING_PANELS:
+    MONITORING_PANEL_BY_ID[panel['panel_id']] = panel
 
 
 def index(fleet_id=None):
@@ -70,6 +97,8 @@ def testConnectionAsync(server_id: int) -> Union[dict, None]:
             '/servers/getVersion',
         ]
         results = asyncio.run(asyncFetcher(server, urls))
+        if results is None:
+            return None
         testConnection = results[0]
         testConnection['timestamp'] = int(time.time())
         return testConnection
@@ -264,6 +293,58 @@ def attachConnectedServerStatusFor(server, connectedServers, remote_server_id):
         else:
             connectedServers = attachConnectedServerStatus(server, connectedServers)
     return connectedServers
+
+
+def cacheMonitoringImages(servers: list, force: bool = False, callbacks: dict = {}):
+    allResults = asyncio.run(doCacheMonitoringImages(servers, force=force, callbacks=callbacks))
+    return allResults
+
+
+async def doCacheMonitoringImages(servers: list, force: bool = False, callbacks: dict = {}):
+    global MONITORING_PANELS
+    panels = MONITORING_PANELS
+    from_time = (datetime.now(timezone.utc) - timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    from_time = None
+
+    # Wrap callbacks to keep track of the reload status per server
+    wrappedCallbacks = {}
+    if 'server_graphs_resfresh_status' in callbacks:
+        panelRefreshedCount = 0
+        def graphRefreshStatus(serverID, refresh_panel_id):
+            nonlocal panelRefreshedCount
+            panelRefreshedCount += 1
+            status = {
+                "total_panels": len(panels),
+                "panel_refreshed_count": panelRefreshedCount,
+                "last_panel_refreshed": refresh_panel_id,
+            }
+            callbacks['server_graphs_resfresh_status'](serverID, status)
+        wrappedCallbacks['server_graphs_resfresh_status'] = graphRefreshStatus
+
+    if 'server_graphs_update_done' in callbacks:
+        wrappedCallbacks['server_graphs_update_done'] = callbacks['server_graphs_update_done']
+
+    tasks = []
+    for server in servers:
+        for panel in panels:
+            tasks.append(
+                cacheMonitoringImageAsync(server, panel, from_time, force, wrappedCallbacks)
+            )
+    result = await asyncio.gather(*tasks)
+    for server in servers:
+        timestamp = int(time.time())
+        if 'server_graphs_update_done' in wrappedCallbacks:
+            wrappedCallbacks["server_graphs_update_done"](server.id, timestamp)
+        savePartialInfo(server, "_monitoringGraphLastRefresh", {'timestamp': timestamp})
+    return result
+
+
+async def cacheMonitoringImageAsync(server, panel, from_time, force, callbacks = {}):
+    monitoringImage = MonitoringImages(server.id, panel, from_time)
+    monitoringImage.refreshImage(force)
+    flaskApp.logger.debug(f"[server:{server.id}] Cached monitoring image for panel `{panel}`")
+    if "server_graphs_resfresh_status" in callbacks:
+        callbacks["server_graphs_resfresh_status"](server.id, panel['panel_id'])
 
 
 def saveInfo(server, fullQuery: dict) -> bool:

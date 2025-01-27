@@ -25,6 +25,9 @@ export const websocketMixin = {
         wsFleetPing: function (fleetID) {
             this.$socket.emit("ping_fleet", fleetID);
         },
+        wsServerGraphsRefresh: function (serverID) {
+            this.$socket.emit('refresh_server_graphs', serverID);
+        },
 
         // emit with ack
         wsServerRefreshWithAck: async function (serverID, callback) {

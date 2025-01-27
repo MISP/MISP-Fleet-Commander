@@ -20,7 +20,7 @@
             width="400px"
             no-header
         >
-            <b-button variant="link" v-b-toggle.sidebar-network size="xs" class="ml-auto position-absolute text-decoration-none" style="right: 0.25em;"
+            <b-button variant="link" v-b-toggle.sidebar-network size="xs" class="ml-auto position-absolute text-decoration-none px-2 py-1" style="box-shadow: 0 0.1rem 0.35rem rgba(0, 0, 0, 0.175); right: 0.25em;"
                 @click="$event.target.blur()"
             >
                 <i class="fa-solid fa-close"></i> Hide Sidebar

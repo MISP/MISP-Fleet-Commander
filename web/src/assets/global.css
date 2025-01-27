@@ -206,3 +206,8 @@ table.table-no-select tbody, table.table-no-select thead > tr {
 .table-search-box:focus {
     min-width: 300px !important;
 }
+
+.table-sm.condensed th,
+.table-sm.condensed td {
+    padding: 0.15rem;
+}

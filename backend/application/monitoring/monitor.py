@@ -62,7 +62,7 @@ async def monitor(fleets=[]):
             for sensor in sensors:
                 task_results = all_coroutines[fleet_name][sensor.name]
                 measurement_results = []
-                print(f"    - Processing server: {sensor.name}")
+                print(f"    - Processing server: {sensor.name}. Tasks: {len(task_results)}")
                 for task_result in task_results:
                     try:
                         measurement_results.append(await task_result.result().json())
@@ -70,7 +70,7 @@ async def monitor(fleets=[]):
                         logger.warning('Error while performing query: ' + str(e))
                 measurements = sensor.process_measurements(measurement_results)
                 measurements_to_write.extend(measurements)
-        print(f"{len(measurements)} measurements to write")
+        print(f"{len(measurements_to_write)} measurements to write")
 
     finally:
         await closeSensorsConnection(all_sensors)

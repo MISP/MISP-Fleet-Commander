@@ -55,7 +55,8 @@ def watchFleet(fleet_id: int, minute: int = 5, delay_second: int = 10):
 
 @server_cli.command('monitor-fleets')
 @click.option('--minute', required=False, default=5)
-def monitorFleet(minute: int = 5):
+@click.option("--cache_images", is_flag=True, default=False)
+def monitorFleet(minute: int = 5, cache_images: bool = False):
     while True:
         if not settingModel.getRefreshValue("monitoring_enabled"):
             print('Monitoring is not enabled')
@@ -63,11 +64,32 @@ def monitorFleet(minute: int = 5):
             fleets = fleetModel.indexMonitored()
             print('Starting monitoring fleets:')
             for fleet in fleets:
-                print(f'- {fleet.name} ({fleet.server_count} servers)')
+                print(f'    - {fleet.name} ({fleet.server_count} servers)')
             asyncio.run(monitor(fleets))
+
+            if cache_images:
+                print("Caching images for fleets:")
+                for fleet in fleets:
+                    print(f"    - {fleet.name} ({fleet.server_count} servers)")
+                    asyncio.run(serverModel.doCacheMonitoringImages(fleet.servers))
 
         print(f'Sleeping {minute*60}')
         time.sleep(minute*60)
+
+@server_cli.command("cache-monitoring-images")
+@click.option("--minute", required=False, default=5)
+@click.option("--force", is_flag=True, default=False)
+def cacheMonitoringImages(minute: int = 5, force: bool = False):
+    while True:
+        fleets = fleetModel.indexMonitored()
+        print("Starting caching images:")
+        for fleet in fleets:
+            print(f"- {fleet.name} ({fleet.server_count} servers)")
+            asyncio.run(serverModel.doCacheMonitoringImages(fleet.servers, force))
+
+        print(f"Sleeping {minute*60}")
+        time.sleep(minute * 60)
+
 
 def doQueryFleet(fleet_id: int, delay_second: int = 10):
     fleet = fleetModel.get(fleet_id)

@@ -158,7 +158,7 @@ export default {
             return Object.values(this.getConnections)
         },
         getAllConnectionsList() {
-            return Object.values(this.connections)
+            return this.connections === undefined ? {} : Object.values(this.connections)
         },
         getIssueConnections() {
             if (this.hasError) {

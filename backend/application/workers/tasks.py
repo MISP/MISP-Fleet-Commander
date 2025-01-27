@@ -64,3 +64,16 @@ def doFleetConnectionTestTask(servers):
         testResult['server'] = serverSchemaLighter.dump(serverByID[server_id])
         socketioEmitter.udpate_server_connection(testResult)
     serverModel.testAllConnectionAsync(serversDict, clientSocketEmitterUpdateFun)
+
+
+@celery_app.task(name="doCacheMonitoringImages")
+def doCacheMonitoringImages(serverDict):
+    server = serverSchemaLighter.load(serverDict)
+    socketioEmitter.server_graphs_updating(server.id)
+
+    callbacks = {
+        "server_graphs_resfresh_status": socketioEmitter.server_graphs_resfresh_status,
+        "server_graphs_update_done": socketioEmitter.server_graphs_update_done,
+    }
+    serverModel.cacheMonitoringImages([server], force=True, callbacks=callbacks)
+    # socketioEmitter.server_graphs_update_done(server.id)

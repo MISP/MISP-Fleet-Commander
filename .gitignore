@@ -2,6 +2,7 @@
 node_modules
 /dist
 backend/data/pin-avatars/
+backend/data/cached-monitoring-images/
 
 # local env files
 .env.local

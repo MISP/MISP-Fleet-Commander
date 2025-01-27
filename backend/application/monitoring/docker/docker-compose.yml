@@ -29,6 +29,19 @@ services:
     environment:
       - GF_SECURITY_ADMIN_USER=${DOCKER_GRAFANA_USERNAME}
       - GF_SECURITY_ADMIN_PASSWORD=${DOCKER_GRAFANA_PASSWORD}
+      - GF_RENDERING_SERVER_URL=http://renderer:8081/render
+      - GF_RENDERING_CALLBACK_URL=http://grafana:3000/
+      - GF_LOG_FILTERS=rendering:debug
+
+  renderer:
+    image: grafana/grafana-image-renderer:latest
+    ports:
+      - "8081:8081"
+    environment:
+      - RENDERING_MODE=clustered
+      - RENDERING_CLUSTERING_MODE=browser
+      - RENDERING_CLUSTERING_MAX_CONCURRENCY=5
+      - RENDERING_CLUSTERING_TIMEOUT=30
 
 volumes:
   influxdb-storage-circl-monitoring:

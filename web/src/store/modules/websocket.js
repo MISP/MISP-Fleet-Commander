@@ -31,8 +31,8 @@ const actions = {
             dispatch("servers/commitConnectionTestInfo", serverData, { root: true })
         }
     },
-    UPDATE_SERVER_PARTIAL_DATA({ dispatch }, payload) {
-        if (serverData.server.fleet.id == store.getters["fleets/selectedFleet"].id)  {
+    SOCKET_UPDATE_SERVER_PARTIAL_DATA({ dispatch }, payload) {
+        if (payload.server.fleet.id == store.getters["fleets/selectedFleet"].id)  {
             dispatch("servers/commitPartialServerData", payload, { root: true })
         }
     },
@@ -49,6 +49,20 @@ const actions = {
             is_enqueued: true,
         }
         commit("servers/setServerStatusRefreshEnqueued", payload, { root: true })
+    },
+    SOCKET_SERVER_GRAPHS_UPDATING({ commit }, serverData) {
+        const payload = {
+            server_id: serverData,
+            is_enqueued: true,
+        }
+        commit("servers/setServerGraphsRefreshEnqueued", payload, { root: true })
+    },
+    SOCKET_SERVER_GRAPHS_UPDATE_DONE({ commit }, serverData) {
+        const payload = {
+            server_id: serverData,
+            is_enqueued: false,
+        }
+        commit("servers/setServerGraphsRefreshEnqueued", payload, { root: true })
     },
 }
 

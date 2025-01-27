@@ -12,6 +12,7 @@ const urls = {
     delete: `/servers/delete`,
     restQuery: `/servers/restQuery`,
     getUsers: `/servers/getUsers`,
+    getUsageDashboardConfig: `/servers/getUsageDashboardConfig`,
 }
 
 export default {
@@ -120,6 +121,16 @@ export default {
         }).catch(error => {
             common.handleError(error, errorCb)
         })
-    }
+    },
+
+    getUsageDashboardConfig(cb, errorCb) {
+        const url = `${urls.getUsageDashboardConfig}`
+        return common.getClient().get(url)
+            .then((response) => {
+                cb(response.data)
+            }).catch(error => {
+                common.handleError(error, errorCb)
+            })
+    },
 
 }

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from pathlib import Path
 import time
 import json
 import re
@@ -7,15 +8,17 @@ import concurrent.futures
 from datetime import datetime as dt, timedelta
 from collections.abc import Mapping, MutableSequence
 from collections import defaultdict
-from flask import Blueprint, request, jsonify, abort, Response
+from flask import Blueprint, request, jsonify, abort, Response, send_from_directory
 from marshmallow import ValidationError
 
 from application.DBModels import db, User, Server
 from application.controllers.utils import mispGetRequest, mispPostRequest, batchRequest
 from application.marshmallowSchemas import ServerSchema, serverSchemaLighter, fleetSchema, serverQuerySchema, serverSchema, serversSchemaLighter, taskSchema, serverSchema, serversSchema
 import application.models.servers as serverModel
+from application.models.servers import MONITORING_PANELS
 from application.workers.tasks import fetchServerInfoTask
 from application.controllers.instance import token_required
+from application.models.utils import MonitoringImages
 
 
 BPserver = Blueprint('server', __name__)
@@ -302,6 +305,25 @@ def getConnection(user, server_id, connection_id):
             return jsonify({})
     else:
         return jsonify({})
+
+
+@BPserver.route('/servers/getUsageDashboardConfig', methods=['GET'])
+def getUsageDashboardConfig():
+    return jsonify(MONITORING_PANELS)
+
+
+@BPserver.route('/servers/monitoringImage/<int:server_id>/<panel_id>/<from_time>', methods=['GET'])
+# @token_required
+def monitoringImage(server_id, panel_id, from_time):
+    # TODO: Find a way to add authentication here. Maybe encode it as base64?
+    # server = serverModel.getForUser(user, server_id)
+    server = serverModel.get(server_id)
+    if server is not None:
+        panelImage = MonitoringImages(server_id, panel_id, from_time)
+        (directoryPath, imagePath) = panelImage.getImagePaths()
+        return send_from_directory(directoryPath, imagePath)
+    abort(404)
+
 
 @BPserver.route('/servers/syncOvertime/<int:server_id>', methods=['GET'])
 @token_required

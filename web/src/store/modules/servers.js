@@ -10,6 +10,7 @@ const init_state = () => {
         server_query_in_progress: {},
         server_refresh_enqueued: {},
         server_status_refresh_enqueued: {},
+        server_graphs_refresh_enqueued: {},
         server_query_error: {},
         server_user: {},
         remote_connections: {},
@@ -20,6 +21,7 @@ const init_state = () => {
         server_users: {},
         server_usage: {},
         last_refresh: {},
+        monitoring_graph_last_refresh: {},
         final_settings: {},
         raw_final_settings: {},
         diagnostic_full: {},
@@ -120,9 +122,11 @@ const actions = {
             const server_id = payload.server_id
             const partial_data_key = payload.partial_data_key
             const partial_data = payload.data
-
             if (partial_data_key == 'connectedServers') {
                 commit("setRemoteConnections", { server_id: server_id, connections: partial_data })
+            }
+            if (partial_data_key == '_monitoringGraphLastRefresh') {
+                commit("setMonitoringGraphLastRefresh", { server_id: server_id, monitoring_graph_last_refresh: partial_data.monitoring_graph_last_refresh })
             }
             resolve()
         })
@@ -192,6 +196,7 @@ const mutations = {
             server._loading = false
             Vue.set(state.server_query_in_progress, server.id, false)
             Vue.set(state.server_refresh_enqueued, server.id, false)
+            Vue.set(state.server_graphs_refresh_enqueued, server.id, false)
             Vue.set(state.server_status_refresh_enqueued, server.id, false)
             Vue.set(state.server_query_error, server.id, false)
             Vue.set(state.server_status, server.id, {})
@@ -240,6 +245,11 @@ const mutations = {
         const server_id = payload.server_id
         const is_enqueued = payload.is_enqueued
         state.server_status_refresh_enqueued[server_id] = is_enqueued
+    },
+    setServerGraphsRefreshEnqueued(state, payload) {
+        const server_id = payload.server_id
+        const is_enqueued = payload.is_enqueued
+        state.server_graphs_refresh_enqueued[server_id] = is_enqueued
     },
     setServerUser(state, payload) {
         if (state.server_user[payload.server_id] === undefined) {
@@ -292,6 +302,12 @@ const mutations = {
             Vue.set(state.last_refresh, payload.server_id, "")
         }
         Vue.set(state.last_refresh, payload.server_id, payload.last_refresh)
+    },
+    setMonitoringGraphLastRefresh(state, payload) {
+        if (state.monitoring_graph_last_refresh[payload.server_id] === undefined) {
+            Vue.set(state.monitoring_graph_last_refresh, payload.server_id, "")
+        }
+        Vue.set(state.monitoring_graph_last_refresh, payload.server_id, payload.monitoring_graph_last_refresh)
     },
     setFinalSettings(state, payload) {
         if (payload.final_settings === undefined) {
@@ -349,6 +365,8 @@ function setAllQueryInfo(state, server_id, server_info) {
     }
     if (server_info["timestamp"])
         mutations.setLastRefresh(state, { server_id: server_id, last_refresh: server_info["timestamp"] })
+    if (query_info["_monitoringGraphLastRefresh"])
+        mutations.setMonitoringGraphLastRefresh(state, { server_id: server_id, monitoring_graph_last_refresh: query_info["_monitoringGraphLastRefresh"]['timestamp'] })
     if (query_info["serverUsage"])
         mutations.setServerUsage(state, { server_id: server_id, server_usage: query_info["serverUsage"] })
 }
@@ -369,6 +387,8 @@ function commitAllQueryInfo(commit, server_id, info) {
     }
     if (info["timestamp"])
         commit("setLastRefresh", { server_id: server_id, last_refresh: info["timestamp"] })
+    if (info["_monitoringGraphLastRefresh"])
+        commit("setMonitoringGraphLastRefresh", { server_id: server_id, monitoring_graph_last_refresh: info["_monitoringGraphLastRefresh"]['timestamp'] })
     if (queryResult["serverUsage"])
         commit("setServerUsage", { server_id: server_id, server_usage: queryResult["serverUsage"] })
 }
