@@ -19,6 +19,11 @@ import requests  # Make the asyncio's event loop re-entrant
 nest_asyncio.apply()
 
 
+GRAFANA_BASE_URL = os.environ.get('GRAFANA_BASE_URL')
+GRAFANA_DASHBOARD_DATA_RENDER = os.environ.get("GRAFANA_DASHBOARD_DATA_RENDER")
+GRAFANA_APIKEY = os.environ.get('GRAFANA_APIKEY')
+
+
 class AvatarGenerator:
 
     PAD = 10
@@ -112,12 +117,13 @@ class AvatarGenerator:
 
 
 class MonitoringImages:
+    global GRAFANA_BASE_URL, GRAFANA_DASHBOARD_DATA_RENDER, GRAFANA_APIKEY
     IMAGE_REFRESH_FREQUENCY_MIN = 5
     ROOT_PATH = Path(__file__).resolve().parent / ".." / ".." / "data" / "cached-monitoring-images"
     ROOT_PATH = ROOT_PATH.resolve()
-    grafana_base_url = 'http://localhost:3000'
-    grafana_dashboard_data = 'render/d-solo/ce6olif96756od'
-    grafana_apikey = "glsa_k94PVSfhraGiK5roLyoniHu0xFyvByne_b1604732"
+    grafana_base_url = GRAFANA_BASE_URL
+    grafana_dashboard_data_render = GRAFANA_DASHBOARD_DATA_RENDER
+    grafana_apikey = GRAFANA_APIKEY
 
     def __init__(self, server_id, panel: Union[dict, str], from_time: Union[str, None]=None) -> None:
         self.server_id = str(server_id)
@@ -149,7 +155,7 @@ class MonitoringImages:
             "var-instance": "Training Main",
             "panelId": str(self.panel_id),
         }
-        return f"{self.grafana_base_url}/{self.grafana_dashboard_data}?" + urlencode(url_params)
+        return f"{self.grafana_base_url}/{self.grafana_dashboard_data_render}?" + urlencode(url_params)
 
     def canonizeTime(self):
         return self.parsed_time.strftime("%Y-%m-%dT%H_%M_%S")

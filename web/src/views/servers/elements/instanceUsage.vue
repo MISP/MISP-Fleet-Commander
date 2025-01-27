@@ -111,8 +111,8 @@ export default {
             panel_refreshed_count: 0,
             total_panels: 0,
             all_refreshed_panels: [],
-            grafana_base_url: 'http://localhost:3000',
-            grafana_dashboard_data: 'd/ce6olif96756od/circl-monitoring-misp',
+            grafana_base_url: '',
+            grafana_dashboard: '',
         }
     },
     computed: {
@@ -140,7 +140,7 @@ export default {
             return this.monitoring_graph_last_refresh[this.server_id]
         },
         getDashboardURL: function() {
-            return `${this.grafana_base_url}/${this.grafana_dashboard_data}`
+            return `${this.grafana_base_url}/${this.grafana_dashboard}`
         }
     },
     methods: {
@@ -152,7 +152,9 @@ export default {
         },
         getUsageDashboardConfig: function() {
             return api.getUsageDashboardConfig((dashboardConfig) => {
-                this.panels = dashboardConfig
+                this.panels = dashboardConfig.panels
+                this.grafana_base_url = dashboardConfig.grafana_base_url
+                this.grafana_dashboard = dashboardConfig.grafana_dashboard
             })
         },
     },

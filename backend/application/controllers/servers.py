@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 from pathlib import Path
 import time
 import json
@@ -309,7 +310,14 @@ def getConnection(user, server_id, connection_id):
 
 @BPserver.route('/servers/getUsageDashboardConfig', methods=['GET'])
 def getUsageDashboardConfig():
-    return jsonify(MONITORING_PANELS)
+    GRAFANA_BASE_URL = os.environ.get('GRAFANA_BASE_URL')
+    GRAFANA_DASHBOARD = os.environ.get("GRAFANA_DASHBOARD")
+    dashboardConfig = {
+        "panels": MONITORING_PANELS,
+        "grafana_base_url": GRAFANA_BASE_URL,
+        "grafana_dashboard": GRAFANA_DASHBOARD,
+    }
+    return jsonify(dashboardConfig)
 
 
 @BPserver.route('/servers/monitoringImage/<int:server_id>/<panel_id>/<from_time>', methods=['GET'])

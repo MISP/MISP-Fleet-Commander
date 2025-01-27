@@ -76,4 +76,3 @@ def doCacheMonitoringImages(serverDict):
         "server_graphs_update_done": socketioEmitter.server_graphs_update_done,
     }
     serverModel.cacheMonitoringImages([server], force=True, callbacks=callbacks)
-    # socketioEmitter.server_graphs_update_done(server.id)

@@ -7,5 +7,6 @@ python3 -m venv venv
 . ./venv/bin/activate
 
 pip3 install -U -r requirements.txt
+cp config.json.sample config.json
 flask db upgrade
 

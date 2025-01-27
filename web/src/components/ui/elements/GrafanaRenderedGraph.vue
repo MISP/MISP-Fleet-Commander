@@ -54,13 +54,6 @@ export default {
         return {
             isLoaded: false,
             retriedOnce: false,
-            grafana_base_url: 'http://localhost:3000',
-            grafana_dashboard_data: 'render/d-solo/ce6olif96756od',
-            grafana_other_params: {
-                timezone: 'browser',
-                theme: 'light',
-                'var-bucket':  'MISP-Fleet-Commander',
-            }
         }
     },
     computed: {
@@ -75,15 +68,6 @@ export default {
             return this.server.name
         },
         getImageURL: function() {
-            const url_params_dict = JSON.parse(JSON.stringify(this.grafana_other_params))
-            // url_params_dict['width'] = this.width
-            // url_params_dict['height'] = this.height
-            // url_params_dict['from'] = this.getFromDate
-            // url_params_dict['to'] = this.getToDate
-            // url_params_dict['var-instance'] = this.getInstanceName
-            // url_params_dict['panelId'] = this.panelId
-            // const url_params = new URLSearchParams(url_params_dict).toString()
-            // return `${this.grafana_base_url}/${this.grafana_dashboard_data}?${url_params}`
             const now = new Date().getTime()
             return `http://127.0.0.1:5001/servers/monitoringImage/${this.server.id}/${this.panelId}/${this.getFromDate}?ts=${now}`
         },
@@ -96,7 +80,6 @@ export default {
             this.isLoaded = true
         },
         retryLoading() {
-            console.log('retryLoading');
             const that = this
             const img = new Image();
             img.src = this.getImageURL; // this should refer to the original failed image
@@ -113,7 +96,6 @@ export default {
     },
     watch: {
         loadingRequested: function(newValue) {
-            console.log('loadingRequested');
             if (newValue === false) {
                 this.retryLoading()
             }
