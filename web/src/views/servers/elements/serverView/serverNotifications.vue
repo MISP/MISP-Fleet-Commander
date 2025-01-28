@@ -110,7 +110,7 @@
                     </b-table>
                 </b-tab>
             </b-tabs>
-            <div class="p-3 text-center">
+            <div v-else class="p-3 text-center">
                 <span class="text-muted">No notifications</span>
             </div>
         </div>

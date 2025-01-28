@@ -11,12 +11,6 @@
         </b-card-body>
         <hr class="my-0" />
         <b-card-body class="px-3 p-0" role="tab">
-            <h5 class="my-1 d-flex ">
-                <span class="ml-auto">
-                    
-                </span>
-            </h5>
-
             <template v-if="isOnline">
                 <b-table-simple
                 small
