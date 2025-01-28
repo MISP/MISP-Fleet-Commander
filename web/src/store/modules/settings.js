@@ -29,6 +29,9 @@ const getters = {
         })
         return settingValues
     },
+    isMonitoringEnabled: (state, getters) => {
+        return getters.settingValues.monitoring_enabled || false
+    },
 }
 
 // actions

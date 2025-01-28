@@ -4,54 +4,57 @@
             <b-tab lazy no-body
                 title="Usage graphs"
             >
-            <div class="pt-1 pr-1 mb-1 text-right text-nowrap">
-                <div class="d-flex">
-                    <span>
-                        <b-link :href="getDashboardURL" target="_blank" class="text-nowrap ml-2 align-middle">
-                            View Full Dashboard
-                            <sup class="fa fa-external-link-alt"></sup>
-                        </b-link>
-                    </span>
-                    <span class="ml-auto">
-                        <strong class="mr-1">Graphs generated</strong>
-                        <b-badge variant="light" class="border align-middle">
-                            <timeSinceRefresh
-                                :timestamp="getMonitoringGraphLastRefresh"
-                            ></timeSinceRefresh>
-                        </b-badge>
-                        <b-button
-                            :variant="getGraphRefreshEnqueued ? 'dark' : 'primary'"
-                            :disabled="getGraphRefreshEnqueued"
-                            size="xs"
-                            title="Refresh Graphs"
-                            href="#"
-                            class="ml-1 px-2"
-                            @click="refreshGraphs()"
-                        >
-                            <span v-if="getGraphRefreshEnqueued">
-                                <i class="fas fa-sync-alt fa-spin"></i>
-                                Refresh in progress {{ panel_refreshed_count }} / {{ total_panels }}`
-                            </span>
-                            <span v-else>
-                                <i class="fas fa-sync-alt"></i>
-                                Full refresh
-                            </span>
-                        </b-button>
-                    </span>
+            <div v-if="isMonitoringEnabled">
+                <div class="pt-1 pr-1 mb-1 text-right text-nowrap">
+                    <div class="d-flex">
+                        <span>
+                            <b-link :href="getDashboardURL" target="_blank" class="text-nowrap ml-2 align-middle">
+                                View Full Dashboard
+                                <sup class="fa fa-external-link-alt"></sup>
+                            </b-link>
+                        </span>
+                        <span class="ml-auto">
+                            <strong class="mr-1">Graphs generated</strong>
+                            <b-badge variant="light" class="border align-middle">
+                                <timeSinceRefresh
+                                    :timestamp="getMonitoringGraphLastRefresh"
+                                ></timeSinceRefresh>
+                            </b-badge>
+                            <b-button
+                                :variant="getGraphRefreshEnqueued ? 'dark' : 'primary'"
+                                :disabled="getGraphRefreshEnqueued"
+                                size="xs"
+                                title="Refresh Graphs"
+                                href="#"
+                                class="ml-1 px-2"
+                                @click="refreshGraphs()"
+                            >
+                                <span v-if="getGraphRefreshEnqueued">
+                                    <i class="fas fa-sync-alt fa-spin"></i>
+                                    Refresh in progress {{ panel_refreshed_count }} / {{ total_panels }}`
+                                </span>
+                                <span v-else>
+                                    <i class="fas fa-sync-alt"></i>
+                                    Full refresh
+                                </span>
+                            </b-button>
+                        </span>
+                    </div>
+                </div>
+                <div class="d-flex flex-wrap p-1" style="gap: 0.25rem;">
+                    <GrafanaRenderedGraph
+                        v-for="panel in panels"
+                        :key="panel.panel_id"
+                        :loadingRequested="getGraphRefreshEnqueued && !all_refreshed_panels.includes(panel.panel_id)"
+                        :panelId="panel.panel_id"
+                        :graphAltTitle="panel.alt_title"
+                        :width="panel.width"
+                        :height="panel.height"
+                        :server="getServer"
+                    ></GrafanaRenderedGraph>
                 </div>
             </div>
-            <div class="d-flex flex-wrap p-1" style="gap: 0.25rem;">
-                <GrafanaRenderedGraph
-                    v-for="panel in panels"
-                    :key="panel.panel_id"
-                    :loadingRequested="getGraphRefreshEnqueued && !all_refreshed_panels.includes(panel.panel_id)"
-                    :panelId="panel.panel_id"
-                    :graphAltTitle="panel.alt_title"
-                    :width="panel.width"
-                    :height="panel.height"
-                    :server="getServer"
-                ></GrafanaRenderedGraph>
-            </div>
+            <MonitoringStatusBadge v-else class="m-2"></MonitoringStatusBadge>
             </b-tab>
 
             <b-tab lazy no-body
@@ -59,14 +62,26 @@
             >
                 <b-table-simple
                     striped small
-                    class="mb-0"
+                    class="mb-0 w-25"
                     :bordered="false"
                     :borderless="true"
                     :outlined="false"
                 >
                     <b-tbody>
-                        <b-tr v-for="(v, k) in getServerUsage.stats" v-bind:key="k">
-                            <b-th>{{ k }}</b-th>
+                        <b-tr v-for="(v, k) in getServerUsage" v-bind:key="k">
+                            <b-th>
+                                <i v-if="k.startsWith('event_')" class="fas fa-envelope fa-fw"></i>
+                                <i v-else-if="k.startsWith('attribute_')" class="fas fa-cube fa-fw"></i>
+                                <i v-else-if="k.startsWith('object_')" class="fas fa-cubes fa-fw"></i>
+                                <i v-else-if="k.startsWith('eventreport_')" class="fas fa-file-alt fa-fw"></i>
+                                <i v-else-if="k.startsWith('analyst_data_')" class="fas fa-gavel fa-fw"></i>
+                                <i v-else-if="k.startsWith('user_')" class="fas fa-user fa-fw"></i>
+                                <i v-else-if="k.startsWith('org_')" class="fas fa-building fa-fw"></i>
+                                <i v-else-if="k.startsWith('proposal_')" class="fas fa-comment fa-fw"></i>
+                                <i v-else-if="k == 'attributes_per_event' || k == 'objects_per_event'" class="fas fa-chart-pie fa-fw"></i>
+                                <i v-else class="fas fa-none fa-fw"></i>
+                                {{ k }}
+                            </b-th>
                             <b-td>{{ v }}</b-td>
                         </b-tr>
                     </b-tbody>
@@ -82,6 +97,7 @@ import api from "@/api/servers"
 import { websocketMixin } from "@/helpers/websocketMixin"
 import GrafanaRenderedGraph from "@/components/ui/elements/GrafanaRenderedGraph.vue"
 import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
+import MonitoringStatusBadge from "@/components/ui/elements/MonitoringStatusBadge.vue"
 
 export default {
     name: "instanceUsage",
@@ -89,6 +105,7 @@ export default {
     components: {
         GrafanaRenderedGraph,
         timeSinceRefresh,
+        MonitoringStatusBadge,
     },
     props: {
         server_id: {
@@ -124,11 +141,17 @@ export default {
             monitoring_graph_last_refresh: state => state.servers.monitoring_graph_last_refresh,
             server_graphs_refresh_enqueued: state => state.servers.server_graphs_refresh_enqueued,
         }),
+        ...mapGetters({
+            isMonitoringEnabled: "settings/isMonitoringEnabled",
+        }),
         getServer: function () {
             return this.servers[this.server_id]
         },
+        hasServerUsage() {
+            return this.usage !== undefined
+        },
         getServerUsage: function () {
-            return this.server_usage[this.server_id] | {}
+            return this.server_usage[this.server_id]?.stats
         },
         getServerPublicationActivity: function () {
             return this.server_publication_activity[this.server_id]

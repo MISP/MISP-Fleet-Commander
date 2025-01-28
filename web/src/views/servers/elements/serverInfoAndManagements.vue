@@ -24,7 +24,22 @@
                 </keep-alive>
             </div>
         </b-tab>
+        <b-tab title="Usage" no-body lazy>
+            <template #title>
+                <i class="fas fa-chart-line mr-1"></i><strong>Usage</strong>
+            </template>
+            <keep-alive>
+                <b-card no-body>
+                    <div :style="getMaxHeight">
+                        <instanceUsage :server_id="server_id"></instanceUsage>
+                    </div>
+                </b-card>
+            </keep-alive>
+        </b-tab>
         <b-tab title="Diagnostic" class="p-1" no-body lazy>
+            <template #title>
+                <i class="fas fa-heartbeat mr-1"></i><strong>Diagnostic</strong>
+            </template>
             <keep-alive>
             <b-card no-body>
                 <b-tabs pills card vertical>
@@ -81,16 +96,10 @@
             </b-card>
             </keep-alive>
         </b-tab>
-        <b-tab title="Usage" no-body lazy>
-            <keep-alive>
-            <b-card no-body>
-                <div :style="getMaxHeight">
-                    <instanceUsage :server_id="server_id"></instanceUsage>
-                </div>
-            </b-card>
-            </keep-alive>
-        </b-tab>
-        <b-tab title="User profile" class="p-1" no-body lazy>
+        <b-tab title="User Profile" class="p-1" no-body lazy>
+            <template #title>
+                <i class="fas fa-user-circle mr-1"></i><strong>User Profile</strong>
+            </template>
             <keep-alive>
             <b-card no-body>
                 <div :style="getMaxHeight">
@@ -103,7 +112,10 @@
             </b-card>
             </keep-alive>
         </b-tab>
-        <b-tab title="Connected MISP servers" class="p-1" no-body lazy>
+        <b-tab title="Connected MISP Servers" class="p-1" no-body lazy>
+            <template #title>
+                <i class="fas fa-network-wired mr-1"></i><strong>Connected MISP Servers</strong>
+            </template>
             <keep-alive>
             <b-card class="border-0" no-body>
                 <div class="p-2" :style="getMaxHeight">
@@ -115,6 +127,9 @@
             </keep-alive>
         </b-tab>
         <b-tab title="Content" class="p-1" no-body disabled lazy>
+            <template #title>
+                <i class="fas fa-database mr-1"></i><strong>Content</strong>
+            </template>
             <b-card no-body>
                 Content
             </b-card>
