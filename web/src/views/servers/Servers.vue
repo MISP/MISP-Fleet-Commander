@@ -182,19 +182,7 @@
                     <i class="fas fa-circle-notch fa-spin"></i>
                 </span>
                 <loaderPlaceholder :loading="!row.value._loading">
-                    <span
-                        :class="{'text-nowrap': true, 'text-danger': row.value.error, 'text-success': !row.value.error}"
-                    >
-                        <b-icon v-if="row.value.data !== undefined" icon="circle-fill"></b-icon>
-                        <template v-if="row.value.error"> {{ formatErrorMessage(row.value.data) }}</template>
-                        <template v-else> {{ row.value.data }}</template>
-                        <small
-                             v-if="row.value.latency !== undefined"
-                             :class="{'text-success': row.value.latency < 0.3, 'text-warning': row.value.latency >= 0.3 && row.value.latency < 2, 'text-danger': row.value.latency >= 2}"
-                        >
-                            {{ parseInt(row.value.latency*1000) }}ms
-                        </small>
-                    </span>
+                    <ServerConnectionTestResult :server_id="row.value"></ServerConnectionTestResult>
                 </loaderPlaceholder>
             </template>
 
@@ -387,6 +375,7 @@ import workersStatus from "@/views/servers/elements/workersStatus.vue"
 import dataUsageShort from "@/views/servers/elements/dataUsageShort.vue"
 import submodulesStatus from "@/views/servers/elements/submodulesStatus.vue"
 import zeroMQStatus from "@/views/servers/elements/zeroMQStatus.vue"
+import ServerConnectionTestResult from "@/components/ui/elements/ServerConnectionTestResult.vue"
 import pluginValueRenderer from "@/views/servers/elements/pluginValueRenderer.vue"
 import connectionsSummary from "@/views/servers/elements/connectionsSummary.vue"
 import contextualMenu from "@/components/ui/elements/contextualMenu.vue"
@@ -412,6 +401,7 @@ export default {
         proxyStatus,
         submodulesStatus,
         zeroMQStatus,
+        ServerConnectionTestResult,
         pluginValueRenderer,
         connectionsSummary,
         contextualMenu,
@@ -471,7 +461,7 @@ export default {
                         sortable: true,
                         tdClass: "align-middle",
                         formatter: (value, key, item, test) => {
-                            return this.server_status[item.id] || null
+                            return item.id || null
                         }
                     },
                     {

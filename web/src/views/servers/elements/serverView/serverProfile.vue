@@ -51,6 +51,44 @@
                     </b-tbody>
                 </b-table-simple>
             </template>
+            <template v-else>
+                <div class="mx-3 my-2">
+                    <b-overlay
+                        :show="server_status_refresh_enqueued[server_id]"
+                        opacity="0.6"
+                        blur="2px"
+                        rounded="sm"
+                    >
+                        <h5 class="text-center">
+                            <strong>Server </strong> <b-badge variant="danger">cannot be reached</b-badge>
+                        </h5>
+                        <div class="px-2 py-1">
+                            <ServerConnectionTestResult :server_id="server_id" :full_message="true"></ServerConnectionTestResult>
+                        </div>
+                    </b-overlay>
+                    <div class="mt-2 text-center">
+                        <b-overlay
+                            :show="server_status_refresh_enqueued[server_id]"
+                            rounded
+                            opacity="0.6"
+                            spinner-small
+                            spinner-variant="primary"
+                            class="d-inline-block"
+                        >
+                            <b-button
+                                variant="primary"
+                                class="ml-auto"
+                                size="sm"
+                                title="Quick refresh"
+                                :disabled="server_status_refresh_enqueued[server_id]"
+                                @click="wsStatusRefresh()"
+                            >
+                                <i class="fas fa-redo-alt"></i> Do Connection Test
+                            </b-button>
+                        </b-overlay>
+                    </div>
+                </div>
+            </template>
         </b-card-body>
         <hr v-if="isOnline" class="my-0" />
 
@@ -93,11 +131,13 @@ import zeroMQStatus from "@/views/servers/elements/zeroMQStatus.vue"
 import connectionsSummary from "@/views/servers/elements/connectionsSummary.vue"
 import pluginValueRenderer from "@/views/servers/elements/pluginValueRenderer.vue"
 import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
+import ServerConnectionTestResult from "@/components/ui/elements/ServerConnectionTestResult.vue"
 
 export default {
     name: "ServerViewProfile",
     components: {
         pluginValueRenderer,
+        ServerConnectionTestResult,
     },
     props: {
         server_id: {
@@ -119,6 +159,7 @@ export default {
             server_query_in_progress: state => state.servers.server_query_in_progress,
             server_query_error: state => state.servers.server_query_error,
             server_refresh_enqueued: state => state.servers.server_refresh_enqueued,
+            server_status_refresh_enqueued: state => state.servers.server_status_refresh_enqueued,
             server_user: state => state.servers.server_user,
             remote_connections: state => state.servers.remote_connections,
             submodules: state => state.servers.submodules,
@@ -255,7 +296,7 @@ export default {
         },
         wsStatusRefresh() {
             this.$emit("wsStatusRefresh")
-        }
+        },
     }
 }
 </script>

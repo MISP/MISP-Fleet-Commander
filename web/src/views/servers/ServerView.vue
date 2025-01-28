@@ -45,7 +45,7 @@
         <template v-else>
             <div class="row">
                 <div class="col col-md-5 col-xl-4 mx-auto">
-                    <ServerViewProfile :server_id="server_id"></ServerViewProfile>
+                    <ServerViewProfile :server_id="server_id" @wsStatusRefresh="wsStatusRefresh()"></ServerViewProfile>
                 </div>
             </div>
         </template>
