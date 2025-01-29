@@ -1,7 +1,7 @@
 <template>
     <b-modal 
         id="modal-add"
-        :title="`${modalAction} a new fleet`"
+        :title="`${modalAction} a fleet ${form.name}`"
         size="lg"
         scrollable
         @hidden="resetModal"
@@ -43,8 +43,25 @@
                     id="checkbox-is-monitored"
                     v-model="form.is_monitored"
                     name="checkbox-is-monitored"
+                    class="mb-1"
                 >
-                Mark fleet for <code>{{ form.name }}</code> monitoring
+                <div>
+                    <span style="color: #d22f27;" class="mr-1">
+                        <img src="@/assets/monitored.svg" alt="Fleet monitored icon" width="22" height="22">
+                    </span>
+                    <strong>Monitor</strong> Fleet
+                </div>
+                <small class="d-block text-muted">The monitoring system requires Grafana and InfluxDB to be running and reachable by the server.</small>
+                </b-form-checkbox>
+
+                <b-form-checkbox
+                    id="checkbox-is-watched"
+                    v-model="form.is_watched"
+                    name="checkbox-is-watched"
+                >
+                    <span class="mr-1 fas fa-heartbeat" style="color: #d22f27;"></span>
+                    <strong>Watch</strong> Fleet
+                    <small class="d-block text-muted">Fleet being watched will be automatically queried and refreshed every 5min by the system.</small>
                 </b-form-checkbox>
             </b-form>
         </ValidationObserver>
@@ -98,6 +115,7 @@ export default {
                 name: this.form.name,
                 description: this.form.description,
                 is_monitored: this.form.is_monitored,
+                is_watched: this.form.is_watched,
             }
         }
     },
@@ -116,6 +134,7 @@ export default {
             this.form.name = ""
             this.form.description = ""
             this.form.is_monitored = false
+            this.form.is_watched = false
             this.$emit("update:modalAction", "Add")
         },
         handleSubmission(evt) {
@@ -135,7 +154,7 @@ export default {
                         this.$refs.observer.reset()
                         this.$bvModal.hide("modal-add")
                     })
-                    this.$bvToast.toast(`${this.formData.name} created`, {
+                    this.$bvToast.toast(`${this.formData.name} ${this.isEdit ? 'updated' : 'created'}`, {
                         title: this.isEdit ? "Fleet successfully edited" : "Fleet successfully added",
                         variant: "success",
                     })

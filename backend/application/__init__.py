@@ -43,7 +43,7 @@ db = None
 migrate = Migrate()
 loadedPlugins = None
 flaskApp = None
-redisClient = redis.Redis(host=os.environ.get('REDIS_URL', 'localhost'), port=int(os.environ.get('REDIS_PORT', 6380)), db=int(os.environ.get('REDIS_DB', 1)))
+redisClient = redis.Redis(host=os.environ.get('REDIS_URL', 'localhost'), port=int(os.environ.get('REDIS_PORT', 6380)), db=int(os.environ.get('REDIS_DB', 1)), decode_responses=True)
 celery_app = None
 socketioApp = None
 bcrypt = None

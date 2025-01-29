@@ -5,6 +5,7 @@
             v-if="validTimestamp !== false && integerTimestamp !== 0" 
             :is="small ? 'small' : 'span'"
             class="align-middle"
+            style="line-height: 1.2em;"
         >
             {{ timestampDynamicText }}
         </component>

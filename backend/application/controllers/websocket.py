@@ -89,3 +89,12 @@ class SocketioEmitter:
             "status": status,
         }
         self.socketio.emit("SERVER_GRAPH_REFRESH_STATUS", payload)
+
+    def fleet_update_timestamps(self, fleet_id: int, watched_timestamp = None, monitored_timestamp = None):
+        payload = { 'fleet_id':  fleet_id }
+        if watched_timestamp is not None:
+            payload["watched_timestamp"] = watched_timestamp
+        if monitored_timestamp is not None:
+            payload["monitored_timestamp"] = monitored_timestamp
+
+        self.socketio.emit("FLEET_UPDATE_TIMESTAMPS", payload)

@@ -32,6 +32,9 @@ const getters = {
     isMonitoringEnabled: (state, getters) => {
         return getters.settingValues.monitoring_enabled || false
     },
+    isFleetWatchingEnabled: (state, getters) => {
+        return getters.settingValues.fleet_watching_enabled || false
+    },
 }
 
 // actions

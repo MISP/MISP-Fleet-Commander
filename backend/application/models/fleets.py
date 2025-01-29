@@ -22,6 +22,13 @@ def indexMonitored() -> List[Fleet]:
     fleets = q.all()
     return fleets
 
+def indexWatched() -> List[Fleet]:
+    q = Fleet.query
+    q = q.filter_by(is_watched=True)
+    fleets = q.all()
+    return fleets
+
+
 def get(fleet_id: int) -> Union[Fleet, None]:
     return Fleet.query.get(fleet_id)
 

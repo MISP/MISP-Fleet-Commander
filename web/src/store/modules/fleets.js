@@ -72,8 +72,12 @@ const actions = {
     },
     selectFleet({ commit, dispatch }, payload) {
         return new Promise((resolve, reject) => {
-            dispatch("servers/resetState", undefined, {root: true})
-            commit("selectFleet", payload)
+            const fleet_id = payload.data.id
+            dispatch("getFleet", fleet_id).then(() => {
+                dispatch("servers/resetState", undefined, {root: true})
+                commit("selectFleet", payload)
+                resolve()
+            })
         })
     },
     selectFleetFromServerId({ commit, dispatch }, server_id) {
@@ -82,8 +86,9 @@ const actions = {
             api.getFromServerId(
                 server_id,
                 fleet => {
-                    dispatch("selectFleet", { data: fleet, redirect: false})
-                    resolve()
+                    dispatch("selectFleet", { data: fleet, redirect: false}).then(() => {
+                        resolve()
+                    })
                 },
                 (error) => { reject(error) }
             )
@@ -144,9 +149,26 @@ const mutations = {
     },
     setFleet(state, fleet) {
         for (let i = 0; i < state.all.length; i++) {
-            if (state.all[i].id == fleet.vid) {
+            if (state.all[i].id == fleet.id) {
                 const updatedFleet = state.all[i] = {...state.all[i], fleet}
                 Vue.set(state.all, i, updatedFleet)
+                break
+            }
+        }
+    },
+    setFleetTimestamps(state, fleetTimestamps) {
+        const knownFleets = Object.values(state.all) // Looks like we cannot use getters in mutation
+        for (let i = 0; i < knownFleets.length; i++) {
+            if (knownFleets[i].id == fleetTimestamps.fleet_id) {
+                if (fleetTimestamps.watched_timestamp) {
+                    knownFleets[i].watched_timestamp = fleetTimestamps.watched_timestamp
+                    if (state.selected.id == fleetTimestamps.fleet_id)
+                        state.selected.watched_timestamp = fleetTimestamps.watched_timestamp
+                }
+                if (fleetTimestamps.monitored_timestamp) {
+                    if (state.selected.id == fleetTimestamps.fleet_id)
+                        state.selected.monitored_timestamp = fleetTimestamps.monitored_timestamp
+                }
                 break
             }
         }

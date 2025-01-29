@@ -53,6 +53,8 @@ class FleetSchema(BaseSchema):
 
     server_count = fields.Integer(dump_only=True)
     servers = mafields.Nested(lambda: ServerSchema(exclude=('fleet', 'server_info', )), many=True, dump_only=True)
+    watched_timestamp = fields.Integer(dump_only=True)
+    monitored_timestamp = fields.Integer(dump_only=True)
 
     class Meta(BaseSchema.Meta):
         model = Fleet
@@ -67,6 +69,8 @@ class ServerSchema(BaseSchema):
     fleet = mafields.Nested(lambda: FleetSchema(exclude=('servers', )), many=False)
     # server_info = mafields.Nested(lambda: ServerQuerySchema, many=False)
     server_info = fields.Nested(lambda: ServerQuerySchema, validate=existOrNone, missing=None)
+    watched_timestamp = fields.Integer(dump_only=True)
+    monitored_timestamp = fields.Integer(dump_only=True)
 
     class Meta(BaseSchema.Meta):
         model = Server

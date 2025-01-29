@@ -31,6 +31,10 @@
                     aria-controls="server-table"
                 ></b-pagination>
                 <b-form-select v-model="table.perPage" :options="table.optionsPerPage" size="sm" class="ml-2"></b-form-select>
+                <div class="ml-2 d-flex flex-row align-items-center">
+                    <FleetWatchingStatusBadge :show_for_selected_fleet="true" class="mr-1"></FleetWatchingStatusBadge>
+                    <MonitoringStatusBadge :show_for_selected_fleet="true"></MonitoringStatusBadge>
+                </div>
             </div>
             <div class="w-25">
                 <b-button-toolbar class="justify-content-end flex-nowrap">
@@ -388,6 +392,8 @@ import BatchPluginAction from "@/views/servers/BatchPluginAction.vue"
 import CSVAddModal from "@/views/servers/CSVAddModal.vue"
 import DiscoverServers from "@/views/servers/DiscoverServers.vue"
 import iconButton from "@/components/ui/elements/iconButton.vue"
+import MonitoringStatusBadge from "@/components/ui/elements/MonitoringStatusBadge.vue"
+import FleetWatchingStatusBadge from "@/components/ui/elements/FleetWatchingStatusBadge.vue"
 
 
 export default {
@@ -416,6 +422,8 @@ export default {
         iconButton,
         BatchAPI,
         BatchPluginAction,
+        MonitoringStatusBadge,
+        FleetWatchingStatusBadge,
     },
     data: function() {
         return {

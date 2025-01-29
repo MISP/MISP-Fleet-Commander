@@ -64,6 +64,14 @@ const actions = {
         }
         commit("servers/setServerGraphsRefreshEnqueued", payload, { root: true })
     },
+    SOCKET_FLEET_UPDATE_TIMESTAMPS({ commit }, fleetData) {
+        const payload = { fleet_id: fleetData.fleet_id }
+        if (fleetData.watched_timestamp)
+            payload.watched_timestamp = fleetData.watched_timestamp
+        if (fleetData.monitored_timestamp)
+            payload.monitored_timestamp = fleetData.monitored_timestamp
+        commit("fleets/setFleetTimestamps", payload, { root: true })
+    },
 }
 
 // mutations

@@ -164,6 +164,25 @@ class Server(BaseModel):
     def server_info(self, info):
         self._server_info = info
 
+    @property
+    def watched_timestamp(self):
+        import application.redisModel as redisModel
+        return redisModel.getServerWatchedTimestamp(self.uuid)
+
+    @property
+    def monitored_timestamp(self):
+        import application.redisModel as redisModel
+        return redisModel.getServerMonitoredTimestamp(self.uuid)
+
+    @monitored_timestamp.setter
+    def monitored_timestamp(self, ts):
+        self._monitored_timestamp = ts
+
+    @watched_timestamp.setter
+    def watched_timestamp(self, ts):
+        self._watched_timestamp = ts
+
+
 class ServerMinimal(Server):
     @hybrid_property
     def server_info(self):
@@ -185,6 +204,7 @@ class Fleet(BaseModel):
                             nullable=False,
                             default='')
     is_monitored = db.Column(db.Boolean, nullable=False, server_default='0')
+    is_watched = db.Column(db.Boolean, nullable=False, server_default='0')
     user_id = db.Column(db.Integer,
                         db.ForeignKey('users.id'),
                         nullable=False,
@@ -209,6 +229,24 @@ class Fleet(BaseModel):
         else:
             fleet_id, the_count = result
         return the_count
+
+    @hybrid_property
+    def watched_timestamp(self):
+        import application.redisModel as redisModel
+        return redisModel.getFleetWatchedTimestamp(self.id)
+
+    @hybrid_property
+    def monitored_timestamp(self):
+        import application.redisModel as redisModel
+        return redisModel.getFleetMonitoredTimestamp(self.id)
+
+    @monitored_timestamp.setter
+    def monitored_timestamp(self, ts):
+        self._monitored_timestamp = ts
+
+    @watched_timestamp.setter
+    def watched_timestamp(self, ts):
+        self._watched_timestamp = ts
 
 
 class PinList(BaseModel):

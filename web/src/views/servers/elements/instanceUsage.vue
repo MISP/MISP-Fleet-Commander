@@ -31,7 +31,7 @@
                             >
                                 <span v-if="getGraphRefreshEnqueued">
                                     <i class="fas fa-sync-alt fa-spin"></i>
-                                    Refresh in progress {{ panel_refreshed_count }} / {{ total_panels }}`
+                                    Refresh in progress {{ panel_refreshed_count }} / {{ total_panels }}
                                 </span>
                                 <span v-else>
                                     <i class="fas fa-sync-alt"></i>

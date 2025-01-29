@@ -20,8 +20,15 @@ settings = {}
 setting_configuration = {
     "monitoring_enabled": {
         "name": "Monitoring Enabled",
-        "description": "If the monitoring system is started and functionnal, fleets marked to be monitored will be.",
-        "scope": "monitoring",
+        "description": "If the monitoring system is started and functionnal, should the monitoring system be enabled.",
+        "scope": "Scheduling",
+        "type": "checkbox",
+        "default": False,
+    },
+    "fleet_watching_enabled": {
+        "name": "Fleet Watching Enabled",
+        "description": "If the watching system should be enabled.",
+        "scope": "Scheduling",
         "type": "checkbox",
         "default": False,
     },

@@ -1,7 +1,7 @@
 <template>
     <span
         v-if="hasUsage"
-        class="usage-container"
+        class="usage-container text-nowrap"
     >
         <div :title="`${usage.event_count} Events`">
             <i class="fas fa-envelope"></i>

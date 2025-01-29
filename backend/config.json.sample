@@ -1,3 +1,4 @@
 {
-    "monitoring_enabled": false
+    "monitoring_enabled": false,
+    "fleet_watching_enabled": false
 }

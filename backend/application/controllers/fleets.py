@@ -35,6 +35,7 @@ def add(user):
         name=request.json.get("name"),
         description=request.json.get("description"),
         is_monitored=request.json.get("is_monitored"),
+        is_watched=request.json.get("is_watched"),
         timestamp=int(time.time()),
         user_id=user.id,
     )
@@ -46,7 +47,7 @@ def add(user):
 @BPfleet.route("/fleets/edit/<int:fleet_id>", methods=["POST"])
 @token_required
 def edit(user, fleet_id):
-    saveFields = ["name", "description", "is_monitored"]
+    saveFields = ["name", "description", "is_monitored", "is_watched"]
     fleet = fleetModel.getForUser(user, fleet_id)
     if fleet is not None:
         for field, value in request.json.items():

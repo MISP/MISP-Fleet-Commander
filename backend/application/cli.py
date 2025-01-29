@@ -6,7 +6,8 @@ import time
 import click
 
 from flask.cli import AppGroup
-from application.marshmallowSchemas import ServerSchemaLighter, serverSchema, userSchema
+from application.marshmallowSchemas import serverSchemaLighter, serverSchema, userSchema
+from application.controllers.websocket import SocketioEmitter
 import application.models.servers as serverModel
 import application.models.fleets as fleetModel
 import application.models.users as userModel
@@ -15,6 +16,10 @@ import application.models.setting as settingModel
 
 from application.monitoring.monitor import closeSensorsConnection, monitor
 from application.monitoring.misp import MISP
+from application import redisModel
+
+
+socketioEmitter = SocketioEmitter()
 
 
 server_cli = AppGroup("server", short_help="Server utility to query servers or fleets.")
@@ -66,12 +71,16 @@ def monitorFleet(minute: int = 5, cache_images: bool = False):
             for fleet in fleets:
                 print(f'    - {fleet.name} ({fleet.server_count} servers)')
             asyncio.run(monitor(fleets))
+            for fleet in fleets:
+                monitored_timestamp = redisModel.setFleetMonitoredTimestamp(fleet.id)
+                if monitored_timestamp is not None:
+                    socketioEmitter.fleet_update_timestamps(fleet.id, monitored_timestamp = monitored_timestamp)
 
             if cache_images:
                 print("Caching images for fleets:")
                 for fleet in fleets:
                     print(f"    - {fleet.name} ({fleet.server_count} servers)")
-                    asyncio.run(serverModel.doCacheMonitoringImages(fleet.servers))
+                    asyncio.run(serverModel.doCacheMonitoringImages(fleet.servers, force=True))
 
         print(f'Sleeping {minute*60}')
         time.sleep(minute*60)
@@ -98,7 +107,7 @@ def doQueryFleet(fleet_id: int, delay_second: int = 10):
         for server in fleet.servers:
             print(f'Querying server {server.name} ({server.id})')
             timer1 = time.time()
-            serverModel.queryInfo(server.id, False)
+            serverModel.fetchServerInfo(server.id, False)
             print(f'\t Took {time.time() - timer1:.2f}')
             time.sleep(delay_second)
     else:
@@ -122,7 +131,7 @@ def doQueryFleetWs(fleet_id: int, delay_second: int = 10):
         for server in fleet.servers:
             print(f'Querying server {server.name} ({server.id})')
             timer1 = time.time()
-            fetchServerInfoTask.delay(ServerSchemaLighter.dump(server))
+            fetchServerInfoTask.delay(serverSchemaLighter.dump(server))
             print(f'\t Took {time.time() - timer1:.2f}')
             time.sleep(delay_second)
     else:

@@ -20,7 +20,8 @@
                 There are no plugin available.
             </b-alert>
 
-            <div>
+            <div class="d-flex mb-1">
+                <FleetWatchingStatusBadge class="mr-1"></FleetWatchingStatusBadge>
                 <MonitoringStatusBadge></MonitoringStatusBadge>
             </div>
 
@@ -94,11 +95,13 @@
 <script>
 import { mapState, mapGetters } from "vuex"
 import MonitoringStatusBadge from "@/components/ui/elements/MonitoringStatusBadge.vue"
+import FleetWatchingStatusBadge from "@/components/ui/elements/FleetWatchingStatusBadge.vue"
 
 export default {
     name: "PluginIndex",
     components: {
-        MonitoringStatusBadge
+        MonitoringStatusBadge,
+        FleetWatchingStatusBadge,
     },
     data: function () {
         return {

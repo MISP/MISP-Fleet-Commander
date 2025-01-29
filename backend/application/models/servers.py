@@ -33,6 +33,13 @@ MONITORING_PANELS = [
     { 'panel_id': 'panel-14', 'alt_title': 'Contributing Org (Last year)', 'width': 200, 'height': 150, 'relative_time_days': 365} ,
     { 'panel_id': 'panel-2', 'alt_title': '# Data Amount over time (Last year)', 'width': 600, 'height': 300, 'relative_time_days': 365 },
     { 'panel_id': 'panel-1', 'alt_title': 'Login over time (Last year)', 'width': 600, 'height': 300, 'relative_time_days': 365 },
+    { 'panel_id': 'panel-3', 'alt_title': 'Login Heatmap (Last 14 days)', 'width': 800, 'height': 600, 'relative_time_days': 14 },
+    { 'panel_id': 'panel-32', 'alt_title': 'Load avg medium', 'width': 200, 'height': 150, 'relative_time_days': 365 },
+    { 'panel_id': 'panel-33', 'alt_title': 'RAM Usage', 'width': 200, 'height': 150, 'relative_time_days': 365 },
+    { 'panel_id': 'panel-34', 'alt_title': 'Disk Usage', 'width': 200, 'height': 150, 'relative_time_days': 365 },
+    { 'panel_id': 'panel-20', 'alt_title': 'Redis Memory Usage (Last 7 days)', 'width': 600, 'height': 300, 'relative_time_days': 7 },
+    { 'panel_id': 'panel-35', 'alt_title': 'MySQL Memory Usage (Last 7 days)', 'width': 200, 'height': 150, 'relative_time_days': 7 },
+    { 'panel_id': 'panel-26', 'alt_title': 'Workers Queues (Last 7 days)', 'width': 600, 'height': 300, 'relative_time_days': 7 },
     { 'panel_id': 'panel-19', 'alt_title': 'Top 5 Endpoint Daily Time', 'width': 600, 'height': 300, 'relative_time_days': 1 },
     { 'panel_id': 'panel-21', 'alt_title': 'Top 5 Endpoint Daily SQL Time', 'width': 600, 'height': 300, 'relative_time_days': 1 },
     { 'panel_id': 'panel-22', 'alt_title': 'Top 5 Endpoint Daily Memory', 'width': 600, 'height': 300, 'relative_time_days': 1 },
@@ -206,11 +213,14 @@ def fetchServerInfo(server, use_cache=True):
         'query_result': server_query,
     }
     saveInfo(server, fullQuery)
+    redisModel.setServerWatchedTimestamp(server.uuid)
     return fullQuery
 
 
 def doFleetInfoTask(servers: list, clientSocketEmitterUpdateFun):
     allResults = asyncio.run(doFleetInfoTaskAsync(servers, clientSocketEmitterUpdateFun))
+    if len(servers) > 0:
+        redisModel.setFleetWatchedTimestamp(servers[0].fleet_id)
     return allResults
 
 def dofetchServerInfoAsync(servers: list, clientSocketEmitterUpdateFun):
@@ -252,6 +262,7 @@ async def fetchServerInfoAsync(server, clientSocketEmitterUpdateFun):
     fullQueryWithServer['server'] = server
     clientSocketEmitterUpdateFun(server.id, fullQueryWithServer)
     saveInfo(server, fullQuery)
+    redisModel.setServerWatchedTimestamp(server.uuid)
     return fullQuery
 
 
