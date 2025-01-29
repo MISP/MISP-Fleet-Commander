@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import asyncio
 import time
 from application import celery_app
 from application.controllers.websocket import SocketioEmitter
@@ -116,10 +117,12 @@ def watchMonitoredFleets():
 
 
 @celery_app.task(name="monitorMonitoredFleets", ignore_result=True)
-async def monitorMonitoredFleets(cache_images: bool = False):
+def monitorMonitoredFleets(cache_images: bool = False):
     if settingModel.getRefreshValue("monitoring_enabled"):
         fleets = fleetModel.indexMonitored()
-        await monitor(fleets)
+        cache_images = False
+        loop = asyncio.new_event_loop()
+        loop.run_until_complete(monitor(fleets))
         for fleet in fleets:
             monitored_timestamp = redisModel.setFleetMonitoredTimestamp(fleet.id)
             if monitored_timestamp is not None:
@@ -127,4 +130,7 @@ async def monitorMonitoredFleets(cache_images: bool = False):
 
         if cache_images:
             for fleet in fleets:
-                await serverModel.doCacheMonitoringImages(fleet.servers)
+                loop = asyncio.new_event_loop()
+                loop.run_until_complete(monitor(fleets))
+
+        loop.close()

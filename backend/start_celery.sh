@@ -20,4 +20,5 @@ export GRAFANA_DASHBOARD_DATA_RENDER=render/d-solo/ce6olif96756od
 export GRAFANA_DASHBOARD=d/ce6olif96756od/circl-monitoring-misp
 export GRAFANA_APIKEY=API_KEY_HERE
 
+celery -A application.celery beat -l INFO &
 celery -A application.celery worker -l INFO --pool=gevent --concurrency=30
