@@ -13,7 +13,7 @@ from flask import Blueprint, request, jsonify, abort, Response, send_from_direct
 from marshmallow import ValidationError
 
 from application.DBModels import db, User, Server
-from application.controllers.utils import mispGetRequest, mispPostRequest, batchRequest
+from application.controllers.utils import mispGetHTMLRequest, mispGetRequest, mispPostRequest, batchRequest
 from application.marshmallowSchemas import ServerSchema, serverSchemaLighter, fleetSchema, serverQuerySchema, serverSchema, serversSchemaLighter, taskSchema, serverSchema, serversSchema
 import application.models.servers as serverModel
 from application.models.servers import MONITORING_PANELS
@@ -318,6 +318,26 @@ def getUsageDashboardConfig():
         "grafana_dashboard": GRAFANA_DASHBOARD,
     }
     return jsonify(dashboardConfig)
+
+
+@BPserver.route("/servers/getInstancePicture/<int:server_id>", methods=["GET"])
+@token_required
+def getInstancePicture(user, server_id):
+    server = serverModel.getForUser(user, server_id)
+    if server is not None:
+        server.authkey = 'foobar'  # Force to show login page with wrong API key
+        searchString = '<img src="data:image/png;base64,'
+        loginPageHtml = mispGetHTMLRequest(server, "/users/login")
+        start = loginPageHtml.find(searchString)
+        if start == -1:
+            return jsonify("")
+        start += len(searchString)
+        end = loginPageHtml.find('"', start)
+        if end == -1:
+            return jsonify("")
+        b64Img = loginPageHtml[start:end]
+        return jsonify(b64Img)
+    return jsonify('')
 
 
 @BPserver.route('/servers/monitoringImage/<int:server_id>/<panel_id>/<from_time>', methods=['GET'])

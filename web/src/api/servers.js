@@ -13,6 +13,7 @@ const urls = {
     restQuery: `/servers/restQuery`,
     getUsers: `/servers/getUsers`,
     getUsageDashboardConfig: `/servers/getUsageDashboardConfig`,
+    getInstancePicture: `/servers/getInstancePicture`,
 }
 
 export default {
@@ -125,6 +126,16 @@ export default {
 
     getUsageDashboardConfig(cb, errorCb) {
         const url = `${urls.getUsageDashboardConfig}`
+        return common.getClient().get(url)
+            .then((response) => {
+                cb(response.data)
+            }).catch(error => {
+                common.handleError(error, errorCb)
+            })
+    },
+
+    getInstancePicture(server_id, cb, errorCb) {
+        const url = `${urls.getInstancePicture}/${server_id}`
         return common.getClient().get(url)
             .then((response) => {
                 cb(response.data)

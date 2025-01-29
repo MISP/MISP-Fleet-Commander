@@ -51,6 +51,36 @@ def getRequestPSession():
 
 
 @timer
+def mispGetHTMLRequest(server, url, data={}, rawResponse=False, nocache=False):
+    requestMISPSession = getMISPRequestSession()
+    requestSession = getRequestPSession()
+
+    headers = {
+        "Authorization": server.authkey,
+        "Accept": "text/html",
+    }
+    full_url = urljoin(server.url, url)
+    try:
+        if nocache:
+            response = requestSession.get(full_url, data=data, headers=headers, verify=(not getattr(server, 'skip_ssl', True)))
+        else:
+            response = requestMISPSession.get(full_url, data=data, headers=headers, verify=(not getattr(server, 'skip_ssl', True)))
+        error = handleStatusCode(response)
+        if error is not None:
+            return error
+        if rawResponse:
+            return response
+        else:
+            return response.text
+    except requests.exceptions.SSLError as e:
+        return { "error": "SSL error" }
+    except requests.exceptions.ConnectionError:
+        return { "error": "Server unreachable" }
+    except Exception as e:
+        return { "error": "Exception " + str(e) }
+
+
+@timer
 def mispGetRequest(server, url, data={}, rawResponse=False, nocache=False):
     requestMISPSession = getMISPRequestSession()
     requestSession = getRequestPSession()

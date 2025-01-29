@@ -6,7 +6,7 @@
                 {{ getServer.url }}
                 <sup class="fa fa-external-link-alt"></sup>
             </b-link>
-            <b-img fuild :src="welcomePicture" :alt="getServer.name" class="mb-2" height="150" width="200"></b-img>
+            <b-img fuild :src="`data:image/png;base64,${instancePictureB64}`" :alt="getServer.name" class="mb-2" height="150" width="200"></b-img>
             <span class="text-muted">{{ getServer.comment }}</span>
         </b-card-body>
         <hr class="my-0" />
@@ -132,6 +132,8 @@ import connectionsSummary from "@/views/servers/elements/connectionsSummary.vue"
 import pluginValueRenderer from "@/views/servers/elements/pluginValueRenderer.vue"
 import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
 import ServerConnectionTestResult from "@/components/ui/elements/ServerConnectionTestResult.vue"
+import api from "@/api/servers"
+import TheSettingsModal from "@/views/settings/TheSettingsModal.vue"
 
 export default {
     name: "ServerViewProfile",
@@ -149,7 +151,8 @@ export default {
         return {
             defaultInfoData: {
                 "MISP UUID": "",
-            }
+            },
+            instancePictureB64: ''
         }
     },
     computed: {
@@ -297,6 +300,14 @@ export default {
         wsStatusRefresh() {
             this.$emit("wsStatusRefresh")
         },
+        getInstancePicture() {
+            api.getInstancePicture(this.server_id, (b64Picture) => {
+                this.instancePictureB64 = b64Picture
+            })
+        },
+    },
+    mounted() {
+        this.getInstancePicture()
     }
 }
 </script>
