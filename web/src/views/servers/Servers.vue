@@ -177,6 +177,13 @@
                 Status
             </template>
 
+            <template v-slot:cell(name)="row">
+                <div class="d-flex flex-nowrap align-items-center justify-content-left">
+                    <b-img v-if="instancePicturesB64[row.item.id]" fuild :src="instancePicturesB64[row.item.id]" class="mr-1" height="32"></b-img>
+                    <span>{{ row.value }}</span>
+                </div>
+            </template>
+
             <template v-slot:cell(url)="row">
                 <b-link :href="row.value" target="_blank" class="text-nowrap">{{ row.value }} <sup class="fa fa-external-link-alt"></sup></b-link>
             </template>
@@ -368,6 +375,7 @@
 <script>
 import store from "@/store/index"
 import pluginAPI from "@/api/plugins"
+import api from "@/api/servers"
 import { websocketMixin } from "@/helpers/websocketMixin"
 import { mapState, mapGetters } from "vuex"
 import Layout from "@/components/layout/Layout.vue"
@@ -545,6 +553,7 @@ export default {
             tableItems: [],
             selectedServers: [],
             selectedServerIDs: [],
+            instancePicturesB64: {},
         }
     },
     computed: {
@@ -939,6 +948,18 @@ export default {
                 "no-auto-hide": true,
             })
         },
+        getInstancePictures() {
+            this.getIndex.forEach((server) => {
+                api.getInstancePicture(server.id, (picture) => {
+                    // this.instancePicturesB64[server.id] = b64Picture
+                    if (picture.startsWith('http')) {
+                        this.instancePicturesB64[server.id] = picture
+                    } else {
+                        this.instancePicturesB64[server.id] = `data:image/png;base64,${picture}`
+                    }
+                })
+            })
+        },
     },
     watch: {
         fetching_servers_in_progress: function() {
@@ -946,11 +967,15 @@ export default {
         },
         selectedFleet: function() {
             this.fullRefresh()
-        }
+        },
+        getIndex: function() {
+            this.getInstancePictures()
+        },
     },
     mounted() {
         this.fullRefreshIfNeeded()
         this.populatePluginFields()
+        this.getInstancePictures()
     },
 }
 </script>

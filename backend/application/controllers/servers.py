@@ -326,17 +326,23 @@ def getInstancePicture(user, server_id):
     server = serverModel.getForUser(user, server_id)
     if server is not None:
         server.authkey = 'foobar'  # Force to show login page with wrong API key
-        searchString = '<img src="data:image/png;base64,'
+        searchStringB64 = '<img src="data:image/png;base64,'
+        searchStringURI = '<img src="'
         loginPageHtml = mispGetHTMLRequest(server, "/users/login")
-        start = loginPageHtml.find(searchString)
-        if start == -1:
-            return jsonify("")
-        start += len(searchString)
-        end = loginPageHtml.find('"', start)
-        if end == -1:
-            return jsonify("")
-        b64Img = loginPageHtml[start:end]
-        return jsonify(b64Img)
+        start = loginPageHtml.find(searchStringB64)
+        if start != -1:
+            start += len(searchStringB64)
+            end = loginPageHtml.find('"', start)
+            if end != -1:
+                b64Img = loginPageHtml[start:end]
+                return jsonify(b64Img)
+        start = loginPageHtml.find(searchStringURI)
+        if start != -1:
+            start += len(searchStringURI)
+            end = loginPageHtml.find('"', start)
+            if end != -1:
+                imgURI = loginPageHtml[start:end]
+                return jsonify(imgURI)
     return jsonify('')
 
 

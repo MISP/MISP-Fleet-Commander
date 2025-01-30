@@ -6,7 +6,7 @@
                 {{ getServer.url }}
                 <sup class="fa fa-external-link-alt"></sup>
             </b-link>
-            <b-img fuild :src="`data:image/png;base64,${instancePictureB64}`" :alt="getServer.name" class="mb-2" height="150" width="200"></b-img>
+            <b-img fuild :src="instancePictureB64" :alt="getServer.name" class="mb-2" height="150" width="200"></b-img>
             <span class="text-muted">{{ getServer.comment }}</span>
         </b-card-body>
         <hr class="my-0" />
@@ -301,8 +301,15 @@ export default {
             this.$emit("wsStatusRefresh")
         },
         getInstancePicture() {
-            api.getInstancePicture(this.server_id, (b64Picture) => {
-                this.instancePictureB64 = b64Picture
+            api.getInstancePicture(this.server_id, (picture) => {
+                // this.instancePictureB64 = b64Picture
+                if (picture) {
+                    if (picture.startsWith('http')) {
+                        this.instancePictureB64 = picture
+                    } else {
+                        this.instancePictureB64 = `data:image/png;base64,${picture}`
+                    }
+                }
             })
         },
     },
