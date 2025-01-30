@@ -452,21 +452,24 @@ export default {
                     },
                     {
                         key: "name",
-                        sortable: true
+                        sortable: true,
+                        class: "align-middle",
                     },
                     {
                         key: "comment",
                         sortable: true,
-                        class: "d-none d-xxl-table-cell",
+                        class: "d-none d-xxl-table-cell align-middle",
                     },
                     {
                         key: "url",
-                        sortable: false
+                        sortable: true,
+                        class: "align-middle",
                     },
                     {
                         key: "server_status",
                         label: "Status",
                         sortable: true,
+                        class: "align-middle",
                         tdClass: "align-middle",
                         formatter: (value, key, item, test) => {
                             return item.id || null

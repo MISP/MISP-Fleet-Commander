@@ -43,10 +43,10 @@ def doFleetInfoTask(servers):
         socketioEmitter.udpate_server(testResult)
     serverModel.doFleetInfoTask(serversDict, clientSocketEmitterUpdateFun)
 
-    if len(servers) > 0:
-        watched_timestamp = redisModel.getFleetWatchedTimestamp(servers[0].fleet_id)
+    if len(serversDict) > 0:
+        watched_timestamp = redisModel.getFleetWatchedTimestamp(serversDict[0].fleet_id)
         if watched_timestamp is not None:
-            socketioEmitter.fleet_update_timestamps(servers[0].fleet_id, watched_timestamp = watched_timestamp)
+            socketioEmitter.fleet_update_timestamps(serversDict[0].fleet_id, watched_timestamp = watched_timestamp)
 
 
 @celery_app.task(name="doServerConnectionTestTask", ignore_result=True)
@@ -103,12 +103,12 @@ def watchMonitoredFleets():
         for fleet in fleets:
             for server in fleet.servers:
                 serversDict.append(server)
-                serverByID[server.id] = server
+                serverByID[server.id] = serverSchemaLighter.dump(server)
                 server_ids.append(server.id)
                 socketioEmitter.server_updating(server.id)
 
             def clientSocketEmitterUpdateFun(server_id, testResult):
-                testResult["server"] = serverSchemaLighter.dump(serverByID[server_id])
+                testResult["server"] = serverByID[server_id]
                 socketioEmitter.udpate_server(testResult)
 
             serverModel.doFleetInfoTask(serversDict, clientSocketEmitterUpdateFun)
@@ -120,9 +120,7 @@ def watchMonitoredFleets():
 def monitorMonitoredFleets(cache_images: bool = False):
     if settingModel.getRefreshValue("monitoring_enabled"):
         fleets = fleetModel.indexMonitored()
-        cache_images = False
-        loop = asyncio.new_event_loop()
-        loop.run_until_complete(monitor(fleets))
+        asyncio.run(monitor(fleets))
         for fleet in fleets:
             monitored_timestamp = redisModel.setFleetMonitoredTimestamp(fleet.id)
             if monitored_timestamp is not None:
@@ -130,7 +128,4 @@ def monitorMonitoredFleets(cache_images: bool = False):
 
         if cache_images:
             for fleet in fleets:
-                loop = asyncio.new_event_loop()
-                loop.run_until_complete(monitor(fleets))
-
-        loop.close()
+                asyncio.run(serverModel.doCacheMonitoringImages(fleet.servers))

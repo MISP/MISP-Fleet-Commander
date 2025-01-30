@@ -16,6 +16,10 @@ from application.marshmallowSchemas import ServerSchema, serverQuerySchema
 from application.models.utils import MonitoringImages, asyncFetcher, asyncFetcherManyServer
 from application.workers.tasks import fetchServerInfoTask
 
+import nest_asyncio
+nest_asyncio.apply()
+
+
 MONITORING_PANELS = [
     { 'panel_id': 'panel-7', 'alt_title': '# Events (Last 3 months)', 'width': 200, 'height': 150, 'relative_time_days': 3*31 },
     { 'panel_id': 'panel-8', 'alt_title': '# Objects (Last 3 months)', 'width': 200, 'height': 150, 'relative_time_days': 3*31 },
@@ -353,7 +357,6 @@ async def doCacheMonitoringImages(servers: list, force: bool = False, callbacks:
 async def cacheMonitoringImageAsync(server, panel, from_time, force, callbacks = {}):
     monitoringImage = MonitoringImages(server.id, panel, from_time)
     monitoringImage.refreshImage(force)
-    flaskApp.logger.debug(f"[server:{server.id}] Cached monitoring image for panel `{panel}`")
     if "server_graphs_resfresh_status" in callbacks:
         callbacks["server_graphs_resfresh_status"](server.id, panel['panel_id'])
 
