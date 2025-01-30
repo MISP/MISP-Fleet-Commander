@@ -44,7 +44,7 @@ Vue.use(utils)
 Vue.use(BootstrapVue)
 Vue.use(IconsPlugin)
 Vue.config.productionTip = false
-Vue.config.performance = true
+Vue.config.performance = false
 
 new Vue({
     router,

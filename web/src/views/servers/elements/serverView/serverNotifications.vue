@@ -21,6 +21,7 @@
                     v-bind:key="plugin.id"
                     :title="plugin.name"
                     lazy no-body
+                    style="height: 500px; overflow: scroll; resize: vertical;"
                 >
                     <div class="d-flex mt-1">
                         <div>
@@ -49,23 +50,23 @@
                         </div>
                     </div>
                     <b-table 
-                    show-empty small
-                    tbody-tr-class="no-outline"
-                    thead-tr-class="no-bgcolor"
-                    id="notification-table"
-                    ref="notificationTable"
-                    class="mb-0"
-                    :busy.sync="refreshInProgress"
-                    :items="pluginNotificationFor(server.id, plugin.id).data" 
-                    :fields="table.fields"
-                    :filterIncludedFields="table.filterFields"
-                    :filter="table.filter"
-                    :no-provider-paging="true"
-                    :no-provider-sorting="true"
-                    :no-provider-filtering="true"
-                    :sort-icon-left="true"
-                    @filtered="onFiltered"
-                    @sort-changed="onSorted"
+                        show-empty small
+                        tbody-tr-class="no-outline"
+                        thead-tr-class="no-bgcolor"
+                        id="notification-table"
+                        ref="notificationTable"
+                        class="mb-0"
+                        :busy.sync="refreshInProgress"
+                        :items="pluginNotificationFor(server.id, plugin.id).data" 
+                        :fields="table.fields"
+                        :filterIncludedFields="table.filterFields"
+                        :filter="table.filter"
+                        :no-provider-paging="true"
+                        :no-provider-sorting="true"
+                        :no-provider-filtering="true"
+                        :sort-icon-left="true"
+                        @filtered="onFiltered"
+                        @sort-changed="onSorted"
                     >
                         <template v-slot:table-busy>
                             <div class="text-center text-danger my-2">
@@ -106,7 +107,7 @@
                             </b-button>
                         </template>
 
-                        <template v-slot:table-caption>Showing {{ table.totalRows }} out of {{ notifications.length }}</template>
+                        <template v-slot:table-caption>Showing {{ table.totalRows }} out of {{ pluginNotificationFor(server.id, plugin.id).data.length }}</template>
                     </b-table>
                 </b-tab>
             </b-tabs>
