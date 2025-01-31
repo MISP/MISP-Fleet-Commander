@@ -56,6 +56,15 @@ class SocketioEmitter:
         }
         self.socketio.emit('UPDATE_SERVER_PARTIAL_DATA', payload)
 
+    def udpate_server_usage(self, server, data):
+        payload = {
+            "server_id": server.id,
+            "server": serverSchema.dump(server),
+            "partial_data_key": "serverUsage",
+            "data": data,
+        }
+        self.socketio.emit('UPDATE_SERVER_PARTIAL_DATA', payload)
+
     def udpate_server_connection(self, data):
         self.socketio.emit('UPDATE_SERVER_CONNECTION', data)
 

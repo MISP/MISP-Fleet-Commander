@@ -28,6 +28,7 @@ def fetchServerInfoTask(serverDict):
     clientSocketEmitterUpdateFuns = {
         "udpate_server": clientSocketEmitterUpdateFun,
         "udpate_server_connection_list": socketioEmitter.udpate_server_connection_list,
+        "udpate_server_usage": socketioEmitter.udpate_server_usage,
     }
     serverModel.dofetchServerInfoAsync(server, clientSocketEmitterUpdateFuns)
 
@@ -51,6 +52,7 @@ def doFleetInfoTask(servers):
     clientSocketEmitterUpdateFuns = {
         "udpate_server": clientSocketEmitterUpdateFun,
         "udpate_server_connection_list": socketioEmitter.udpate_server_connection_list,
+        "udpate_server_usage": socketioEmitter.udpate_server_usage,
     }
     serverModel.doFleetInfoTask(serversDict, clientSocketEmitterUpdateFuns)
 

@@ -242,13 +242,12 @@ async def fetchServerInfoAsync(server, clientSocketEmitterUpdateFuns):
         '/servers/serverSettings/diagnostics/light:1',
         '/users/view/me',
         '/servers/index',
-        '/users/statistics',
     ]
     results = await asyncFetcher(server, urls)
     serverSettings = results[0]
     serverUser = results[1]
     connectedServers = results[2]
-    serverUsage = results[3]
+    serverUsage = {}
     serverContent = None
     server_query = {
         'serverSettings': serverSettings,
@@ -273,7 +272,8 @@ async def fetchServerInfoAsync(server, clientSocketEmitterUpdateFuns):
     if "udpate_server_connection_list" in clientSocketEmitterUpdateFuns:
         clientSocketEmitterUpdateFuns['udpate_server_connection_list'](server, connectedServers)
 
-    connectedServers = await attachConnectedServerStatusAsync(server, connectedServers)
+    serverUsageResult = await asyncFetcher(server, ["/users/statistics"])
+    serverUsage = serverUsageResult[0]
     savePartialInfo(server, "serverUsage", serverUsage)
     if "udpate_server_usage" in clientSocketEmitterUpdateFuns:
         clientSocketEmitterUpdateFuns["udpate_server_usage"](server, serverUsage)

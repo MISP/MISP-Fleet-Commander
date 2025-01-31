@@ -125,6 +125,9 @@ const actions = {
             if (partial_data_key == 'connectedServers') {
                 commit("setRemoteConnections", { server_id: server_id, connections: partial_data })
             }
+            if (partial_data_key == 'serverUsage') {
+                commit("setServerUsage", { server_id: server_id, server_usage: partial_data })
+            }
             if (partial_data_key == '_monitoringGraphLastRefresh') {
                 commit("setMonitoringGraphLastRefresh", { server_id: server_id, monitoring_graph_last_refresh: partial_data.monitoring_graph_last_refresh })
             }
