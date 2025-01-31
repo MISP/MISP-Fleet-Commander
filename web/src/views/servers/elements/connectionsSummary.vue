@@ -10,7 +10,7 @@
                         v-for="(connection, index) in getConnectionList"
                         v-bind:key="index"
                         :id="`connection-popover-${row_index}-${index}-${getUUID(connection)}`"
-                        :class="['text-nowrap', `text-${connection.connectionTest.status.color}`]"
+                        :class="['text-nowrap', `text-${getConnectionBadgeVariant(connection)}`]"
                     >
                         <b-icon icon="circle-fill"></b-icon>
                         {{ labelText(connection) }}
@@ -20,9 +20,12 @@
                             placement="top"
                             boundary="viewport"
                             :target="`connection-popover-${row_index}-${index}-${getUUID(connection)}`"
-                            :variant="connection.connectionTest.status.color"
+                            :variant="getConnectionBadgeVariant(connection)"
                         >
-                            <connectionState :connection="connection.connectionTest" :user="connection.connectionUser"></connectionState>
+                            <connectionState v-if="connection.connectionTest" :connection="connection.connectionTest" :user="connection.connectionUser"></connectionState>
+                            <span v-else>
+                                The Connection Test has not been done or is ongoing.
+                            </span>
                         </b-popover>
                     </span>
                 </template>
@@ -58,7 +61,7 @@
                             v-bind:key="index"
                             :id="`connection-popover-${row_index}-${index}-${getUUID(connection)}`"
                             :class="getRoundedClass(index)"
-                            :variant="connection.connectionTest.status.color"
+                            :variant="getConnectionBadgeVariant(connection)"
                         >
                             {{ labelText(connection) }}
                             <b-popover
@@ -67,9 +70,12 @@
                                 placement="top"
                                 boundary="viewport"
                                 :target="`connection-popover-${row_index}-${index}-${getUUID(connection)}`"
-                                :variant="connection.connectionTest.status.color"
+                                :variant="getConnectionBadgeVariant(connection)"
                             >
-                                <connectionState :connection="connection.connectionTest" :user="connection.connectionUser"></connectionState>
+                                <connectionState v-if="connection.connectionTest" :connection="connection.connectionTest" :user="connection.connectionUser"></connectionState>
+                                <span v-else>
+                                    The Connection Test has not been done or is ongoing.
+                                </span>
                             </b-popover>
                         </b-badge>
                         <b-badge
@@ -221,7 +227,10 @@ export default {
                 this.vidToUUID[connection.vid] = this.$uuid()
             }
             return this.vidToUUID[connection.vid]
-        }
+        },
+        getConnectionBadgeVariant(connection) {
+            return connection?.connectionTest?.status?.color ?? 'secondary'
+        },
     }
 }
 </script>

@@ -221,35 +221,34 @@ def fetchServerInfo(server, use_cache=True):
     return fullQuery
 
 
-def doFleetInfoTask(servers: list, clientSocketEmitterUpdateFun):
-    allResults = asyncio.run(doFleetInfoTaskAsync(servers, clientSocketEmitterUpdateFun))
+def doFleetInfoTask(servers: list, clientSocketEmitterUpdateFuns):
+    allResults = asyncio.run(doFleetInfoTaskAsync(servers, clientSocketEmitterUpdateFuns))
     if len(servers) > 0:
         redisModel.setFleetWatchedTimestamp(servers[0].fleet_id)
     return allResults
 
-def dofetchServerInfoAsync(servers: list, clientSocketEmitterUpdateFun):
-    return asyncio.run(fetchServerInfoAsync(servers, clientSocketEmitterUpdateFun))
+def dofetchServerInfoAsync(servers: list, clientSocketEmitterUpdateFuns):
+    return asyncio.run(fetchServerInfoAsync(servers, clientSocketEmitterUpdateFuns))
 
-async def doFleetInfoTaskAsync(servers: list, clientSocketEmitterUpdateFun):
+async def doFleetInfoTaskAsync(servers: list, clientSocketEmitterUpdateFuns):
     tasks = []
     for server in servers:
-        tasks.append(fetchServerInfoAsync(server, clientSocketEmitterUpdateFun))
+        tasks.append(fetchServerInfoAsync(server, clientSocketEmitterUpdateFuns))
     return await asyncio.gather(*tasks)
 
 
-async def fetchServerInfoAsync(server, clientSocketEmitterUpdateFun):
+async def fetchServerInfoAsync(server, clientSocketEmitterUpdateFuns):
     urls = [
         '/servers/serverSettings/diagnostics/light:1',
-        '/users/statistics',
         '/users/view/me',
         '/servers/index',
+        '/users/statistics',
     ]
     results = await asyncFetcher(server, urls)
     serverSettings = results[0]
-    serverUsage = results[1]
-    serverUser = results[2]
-    connectedServers = results[3]
-    connectedServers = await attachConnectedServerStatusAsync(server, connectedServers)
+    serverUser = results[1]
+    connectedServers = results[2]
+    serverUsage = results[3]
     serverContent = None
     server_query = {
         'serverSettings': serverSettings,
@@ -264,9 +263,20 @@ async def fetchServerInfoAsync(server, clientSocketEmitterUpdateFun):
     }
     fullQueryWithServer = dict(fullQuery)
     fullQueryWithServer['server'] = server
-    clientSocketEmitterUpdateFun(server.id, fullQueryWithServer)
+    if "udpate_server" in clientSocketEmitterUpdateFuns:
+        clientSocketEmitterUpdateFuns["udpate_server"](server.id, fullQueryWithServer)
     saveInfo(server, fullQuery)
     redisModel.setServerWatchedTimestamp(server.uuid)
+
+    connectedServers = await attachConnectedServerStatusAsync(server, connectedServers)
+    savePartialInfo(server, "connectedServers", connectedServers)
+    if "udpate_server_connection_list" in clientSocketEmitterUpdateFuns:
+        clientSocketEmitterUpdateFuns['udpate_server_connection_list'](server, connectedServers)
+
+    connectedServers = await attachConnectedServerStatusAsync(server, connectedServers)
+    savePartialInfo(server, "serverUsage", serverUsage)
+    if "udpate_server_usage" in clientSocketEmitterUpdateFuns:
+        clientSocketEmitterUpdateFuns["udpate_server_usage"](server, serverUsage)
     return fullQuery
 
 

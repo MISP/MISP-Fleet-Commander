@@ -107,7 +107,7 @@
                             </b-button>
                         </template>
 
-                        <template v-slot:table-caption>Showing {{ table.totalRows }} out of {{ pluginNotificationFor(server.id, plugin.id).data.length }}</template>
+                        <template v-slot:table-caption>Showing {{ table.totalRows }} out of {{ pluginNotificationFor(server.id, plugin.id).data ? pluginNotificationFor(server.id, plugin.id).data.length : 0 }}</template>
                     </b-table>
                 </b-tab>
             </b-tabs>

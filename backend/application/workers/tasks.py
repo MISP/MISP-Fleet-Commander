@@ -20,10 +20,16 @@ socketioEmitter = SocketioEmitter()
 def fetchServerInfoTask(serverDict):
     server = serverSchemaLighter.load(serverDict)
     socketioEmitter.server_updating(server.id)
+
     def clientSocketEmitterUpdateFun(server_id, testResult):
         testResult['server'] = serverSchemaLighter.dump(server)
         socketioEmitter.udpate_server(testResult)
-    serverModel.dofetchServerInfoAsync(server, clientSocketEmitterUpdateFun)
+
+    clientSocketEmitterUpdateFuns = {
+        "udpate_server": clientSocketEmitterUpdateFun,
+        "udpate_server_connection_list": socketioEmitter.udpate_server_connection_list,
+    }
+    serverModel.dofetchServerInfoAsync(server, clientSocketEmitterUpdateFuns)
 
 
 @celery_app.task(name="doFleetInfoTask", ignore_result=True)
@@ -41,7 +47,12 @@ def doFleetInfoTask(servers):
     def clientSocketEmitterUpdateFun(server_id, testResult):
         testResult['server'] = serverSchemaLighter.dump(serverByID[server_id])
         socketioEmitter.udpate_server(testResult)
-    serverModel.doFleetInfoTask(serversDict, clientSocketEmitterUpdateFun)
+
+    clientSocketEmitterUpdateFuns = {
+        "udpate_server": clientSocketEmitterUpdateFun,
+        "udpate_server_connection_list": socketioEmitter.udpate_server_connection_list,
+    }
+    serverModel.doFleetInfoTask(serversDict, clientSocketEmitterUpdateFuns)
 
     if len(serversDict) > 0:
         watched_timestamp = redisModel.getFleetWatchedTimestamp(serversDict[0].fleet_id)
