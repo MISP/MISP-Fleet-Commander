@@ -7,6 +7,7 @@
         <TheLoginModal
         ></TheLoginModal>
         <TheSettingsModal
+            v-if="isUserAuthed"
         ></TheSettingsModal>
     </div>
 </template>
@@ -32,6 +33,11 @@ export default {
             layout: "div" // fallback value if the layout is not set in the view
         }
     },
+    computed: {
+        isUserAuthed() {
+            return this.$store.getters["auth/isAuthenticated"]
+        }
+    },
     sockets: {
         connect: function () {
             this.$store.commit('websocket/setConnected', true)
@@ -51,7 +57,9 @@ export default {
         },
     },
     mounted() {
-        this.$store.dispatch('userSettings/getUserSettings')
+        if (this.isUserAuthed) {
+            this.$store.dispatch('userSettings/getUserSettings')
+        }
     }
 }
 </script>

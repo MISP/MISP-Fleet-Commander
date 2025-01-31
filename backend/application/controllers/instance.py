@@ -35,7 +35,7 @@ def token_required(f):
             try:
                 user = get_current_user(token_value, current_app)
                 if not user:
-                    abort(401)
+                    abort(401, description="Invalid Bearer")
                 return f(user, *args, **kwargs)
             except jwt.ExpiredSignatureError:
                 return jsonify(expired_msg), 401 # 401 is Unauthorized HTTP status code
@@ -45,7 +45,7 @@ def token_required(f):
         elif token_type.lower() == 'apikey':
             user = get_current_user_api(token_value)
             if not user:
-                abort(401)
+                abort(401, description="Invalid API Key")
             return f(user, *args, **kwargs)
 
     return _verify
