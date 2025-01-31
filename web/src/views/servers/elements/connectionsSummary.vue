@@ -151,6 +151,13 @@ export default {
         }
     },
     computed: {
+        connectionCheckNotDone() {
+            return this.connections !== undefined &&
+                this.getAllConnectionsList.length > 0 &&
+                this.getAllConnectionsList[0]['error'] === undefined &&
+                this.getAllConnectionsList[0].Server !== undefined &&
+                this.getAllConnectionsList[0]?.connectionTest?.status === undefined
+        },
         hasValidConnections() {
             return this.connections !== undefined && this.getAllConnectionsList.length > 0 && this.getAllConnectionsList[0]['error'] === undefined
         },
@@ -195,11 +202,19 @@ export default {
             if (this.hasError) {
                 return summary
             }
+            let variant = ''
+            if (this.connectionCheckNotDone) {
+                variant = 'secondary'
+            } else if (this.getOkConnections.length == 0 && this.getAllConnectionsList.length > 0) {
+                variant = 'danger'
+            } else {
+                variant = 'success'
+            }
             const summaryText = `${this.getOkConnections.length} / ${this.getAllConnectionsList.length} OK`
             summary = {
                 names: this.getOkConnections.map(connection => (connection.Server.name != '' ? connection.Server.name : connection.Server.url)),
                 text: summaryText,
-                variant: (this.getOkConnections.length == 0 && this.getAllConnectionsList.length > 0) ? 'danger' : 'success'
+                variant: variant
             }
             return summary
         },
