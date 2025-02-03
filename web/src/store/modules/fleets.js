@@ -137,7 +137,7 @@ const mutations = {
         const fleet = payload.data
         const redirect = payload.redirect !== undefined ? payload.redirect : true
         state.selected = fleet
-        if (redirect && router.history.current.path !== '/servers') {
+        if (redirect && router.history.current.name !== 'servers.index') {
             router.push({ path: '/servers', replace: true })
         }
     },

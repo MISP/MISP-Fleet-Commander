@@ -125,8 +125,13 @@ class MonitoringImages:
     grafana_dashboard_data_render = GRAFANA_DASHBOARD_DATA_RENDER
     grafana_apikey = GRAFANA_APIKEY
 
-    def __init__(self, server_id, panel: Union[dict, str], from_time: Union[str, None]=None) -> None:
-        self.server_id = str(server_id)
+    def __init__(self, server, panel: Union[dict, str], from_time: Union[str, None]=None) -> None:
+        if type(server) is str or type(server) is int:
+            self.server_id = str(server)
+            self.server = None
+        else:
+            self.server_id = str(server.id)
+            self.server = server
         if type(panel) is str:
             self.panel_id = panel
             from application.models.servers import MONITORING_PANEL_BY_ID
@@ -152,7 +157,7 @@ class MonitoringImages:
             "height": self.height,
             "from": self.from_time,
             "to": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
-            "var-instance": "Training Main",
+            "var-instance": str(self.server.name),
             "panelId": str(self.panel_id),
         }
         return f"{self.grafana_base_url}/{self.grafana_dashboard_data_render}?" + urlencode(url_params)
