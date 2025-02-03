@@ -158,6 +158,10 @@ ul.dropdown-menu li.disabled {
     max-width: 75%;
 }
 
+.badge {
+    vertical-align: middle !important;
+}
+
 table.b-table > thead > tr > th {
     user-select: none;
 }

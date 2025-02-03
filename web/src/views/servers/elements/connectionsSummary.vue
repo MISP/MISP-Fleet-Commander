@@ -53,39 +53,30 @@
                             </ul>
                         </b-popover>
                     </b-badge>
-                    <template
-                        v-for="(connection, index) in getConnectionList"
-                    >
+                    <template v-for="(connections, namedError) in getGroupedIssueConnections">
                         <b-badge
-                            v-if="!connection.error"
-                            v-bind:key="index"
-                            :id="`connection-popover-${row_index}-${index}-${getUUID(connection)}`"
-                            :class="getRoundedClass(index)"
-                            :variant="getConnectionBadgeVariant(connection)"
+                        v-bind:key="namedError"
+                        :id="`connection-popover-${namedError.replace(' ', '_')}`"
+                        class="rounded"
+                        :variant="getConnectionBadgeVariant(connections[0])"
                         >
-                            {{ labelText(connection) }}
+                            <span>{{ namedError }} <span class="badge-light" style="display: inline-block; font-size: 80%; padding: 0.25em 0.4em; border-radius: 0.25em;">{{ connections.length }}</span></span>
                             <b-popover
                                 href="#" tabindex="0"
                                 triggers="hover"
-                                placement="top"
+                                placement="right"
                                 boundary="viewport"
-                                :target="`connection-popover-${row_index}-${index}-${getUUID(connection)}`"
-                                :variant="getConnectionBadgeVariant(connection)"
+                                :target="`connection-popover-${namedError.replace(' ', '_')}`"
+                                :variant="getConnectionBadgeVariant(connections[0])"
                             >
-                                <connectionState v-if="connection.connectionTest" :connection="connection.connectionTest" :user="connection.connectionUser"></connectionState>
-                                <span v-else>
-                                    The Connection Test has not been done or is ongoing.
-                                </span>
+                                <ul class="mb-0" style="padding-inline-start: 20px;">
+                                    <h6>{{ namedError }}</h6>
+                                    <hr />
+                                    <li v-for="(connection, index) in connections" :key="index">
+                                        {{ labelText(connection) }}
+                                    </li>
+                                </ul>
                             </b-popover>
-                        </b-badge>
-                        <b-badge
-                            v-else
-                            v-bind:key="index"
-                            :id="`connection-popover-${row_index}-OK}`"
-                            variant="danger"
-                            rounded
-                        >
-                            {{ connection.error }}
                         </b-badge>
                     </template>
                 </template>
@@ -220,7 +211,24 @@ export default {
         },
         hasError() {
             return this.getAllConnectionsList.length == 1 && this.getAllConnectionsList[0].error !== undefined
-        }
+        },
+        getGroupedIssueConnections() {
+            const groupedConnections = {'Connection Test Pending': []}
+            this.getIssueConnections.forEach((connection) => {
+                if (connection?.connectionTest?.status?.message !== undefined) {
+                    if (groupedConnections[connection.connectionTest.status?.message] === undefined) {
+                        groupedConnections[connection.connectionTest.status?.message] = []
+                    }
+                    groupedConnections[connection.connectionTest.status?.message].push(connection)
+                } else {
+                    groupedConnections['Connection Test Pending'].push(connection)
+                }
+            })
+            if (groupedConnections['Connection Test Pending'].length == 0) {
+                delete groupedConnections['Connection Test Pending']
+            }
+            return groupedConnections
+        },
     },
     methods: {
         getRoundedClass(index) {

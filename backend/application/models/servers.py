@@ -518,11 +518,13 @@ def parseMISPConnectionOutput(connection):
         parsed['status']['color'] = "danger"
         parsed['status']['message'] = "Terms not accepted"
     elif connection.get('status', None) == 7:
-        parsed['message'] = "Remote user is not a sync user"
+        parsed['status']['color'] = "warning"
+        parsed["status"]["message"] = "Remote user is not a sync user"
+        parsed["status"]["authorized"] = True
     elif connection.get('status', None) == 8:
         parsed['status']['color'] = "warning"
         parsed['status']['message'] = "Syncing sightings only"
-        parsed["authorized"] = True
+        parsed["status"]["authorized"] = True
     else:
         parsed['status']['color'] = "danger"
         if 'error' in connection:

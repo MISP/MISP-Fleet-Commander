@@ -218,9 +218,9 @@ async def asyncFetcher(server, urls, timeout=300) -> list[dict]:
         "Content-Type": "application/json"
     }
 
-    async def fetch(session, url, skip_ssl, headers, timeout) -> dict:
+    async def fetch(session, url, skip_ssl, headers, timeout_sec) -> dict:
         timer = time.perf_counter()
-        timeout = aiohttp.ClientTimeout(total=timeout)
+        timeout = aiohttp.ClientTimeout(total=timeout_sec)
         try:
             async with session.get(url, headers=headers, ssl=not skip_ssl, timeout=timeout) as response:
                 try:
@@ -235,7 +235,7 @@ async def asyncFetcher(server, urls, timeout=300) -> list[dict]:
         except aiohttp.ClientConnectorError as e:
             result = {"error": "Connection Error: " + str(e)}
         except asyncio.TimeoutError as e:
-            result = {"error": f"Timeout Exception ({timeout}s): " + str(e)}
+            result = {"error": f"Timeout Exception ({timeout_sec}s)" }
         except Exception as e:
             result = {"error": f"Unhandled Exception: `{str(type(e))}` {str(e)}"}
         return result
@@ -252,9 +252,9 @@ async def asyncFetcherManyServer(servers, url, resultCallback, timeout=300):
         "Accept": "application/json",
         "Content-Type": "application/json"
     }
-    async def fetch(session, url, headers, server_id, skip_ssl, timeout, resultCallback):
+    async def fetch(session, url, headers, server_id, skip_ssl, timeout_sec, resultCallback):
         timer = time.perf_counter()
-        timeout = aiohttp.ClientTimeout(total=timeout)
+        timeout = aiohttp.ClientTimeout(total=timeout_sec)
         result = None
         try:
             async with session.get(url, headers=headers, ssl=not skip_ssl, timeout=timeout) as response:
@@ -268,7 +268,7 @@ async def asyncFetcherManyServer(servers, url, resultCallback, timeout=300):
         except aiohttp.ClientConnectorError as e:
             result = {"error": "Connection Error: " + str(e)}
         except aiohttp.ServerTimeoutError as e:
-            result = {"error": f"Timeout Exception ({timeout}s): " + str(e)}
+            result = {"error": f"Timeout Exception ({timeout_sec}s)" + str(e)}
         except Exception as e:
             result = { "error": f"Unhandled Exception: `{type(e)}` {str(e)}" }
         resultCallback(server_id, result)
