@@ -124,7 +124,13 @@ def watchMonitoredFleets():
                 testResult["server"] = serverByID[server_id]
                 socketioEmitter.udpate_server(testResult)
 
-            serverModel.doFleetInfoTask(serversDict, clientSocketEmitterUpdateFun)
+            clientSocketEmitterUpdateFuns = {
+                "udpate_server": clientSocketEmitterUpdateFun,
+                "udpate_server_connection_list": socketioEmitter.udpate_server_connection_list,
+                "udpate_server_usage": socketioEmitter.udpate_server_usage,
+            }
+
+            serverModel.doFleetInfoTask(serversDict, clientSocketEmitterUpdateFuns)
             watched_timestamp = redisModel.getFleetWatchedTimestamp(fleet.id)
             socketioEmitter.fleet_update_timestamps(fleet.id, watched_timestamp = watched_timestamp)
 

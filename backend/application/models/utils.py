@@ -211,17 +211,18 @@ class MonitoringImages:
         os.unlink(self.getImageFullPath())
 
 
-async def asyncFetcher(server, urls) -> list[dict]:
+async def asyncFetcher(server, urls, timeout=300) -> list[dict]:
     headers = {
         "Authorization": server.authkey,
         "Accept": "application/json",
         "Content-Type": "application/json"
     }
 
-    async def fetch(session, url, headers) -> dict:
+    async def fetch(session, url, skip_ssl, headers, timeout) -> dict:
         timer = time.perf_counter()
+        timeout = aiohttp.ClientTimeout(total=timeout)
         try:
-            async with session.get(url, headers=headers, ssl=False) as response:
+            async with session.get(url, headers=headers, ssl=not skip_ssl, timeout=timeout) as response:
                 try:
                     result =  await response.json()
                     if type(result) is dict:
@@ -233,27 +234,30 @@ async def asyncFetcher(server, urls) -> list[dict]:
                 return result
         except aiohttp.ClientConnectorError as e:
             result = {"error": "Connection Error: " + str(e)}
+        except asyncio.TimeoutError as e:
+            result = {"error": f"Timeout Exception ({timeout}s): " + str(e)}
         except Exception as e:
-            result = {"error": "Unhandled Exception: " + str(e)}
+            result = {"error": f"Unhandled Exception: `{str(type(e))}` {str(e)}"}
         return result
 
     async with aiohttp.ClientSession() as session:
-        tasks = [fetch(session, urljoin(server.url, url), headers) for url in urls]
+        tasks = [fetch(session, urljoin(server.url, url), server.skip_ssl, headers, timeout) for url in urls]
         results = await asyncio.gather(*tasks)
         return results
 
 
-async def asyncFetcherManyServer(servers, url, resultCallback):
+async def asyncFetcherManyServer(servers, url, resultCallback, timeout=300):
     base_headers = {
         "Authorization": '---',
         "Accept": "application/json",
         "Content-Type": "application/json"
     }
-    async def fetch(session, url, headers, server_id, resultCallback):
+    async def fetch(session, url, headers, server_id, skip_ssl, timeout, resultCallback):
         timer = time.perf_counter()
+        timeout = aiohttp.ClientTimeout(total=timeout)
         result = None
         try:
-            async with session.get(url, headers=headers, ssl=False) as response:
+            async with session.get(url, headers=headers, ssl=not skip_ssl, timeout=timeout) as response:
                 try:
                     result = await response.json()
                     if type(result) is dict:
@@ -263,8 +267,10 @@ async def asyncFetcherManyServer(servers, url, resultCallback):
                     result = await response.text()
         except aiohttp.ClientConnectorError as e:
             result = {"error": "Connection Error: " + str(e)}
+        except aiohttp.ServerTimeoutError as e:
+            result = {"error": f"Timeout Exception ({timeout}s): " + str(e)}
         except Exception as e:
-            result = { "error": "Unhandled Exception: " + str(e) }
+            result = { "error": f"Unhandled Exception: `{type(e)}` {str(e)}" }
         resultCallback(server_id, result)
         return result
 
@@ -273,6 +279,6 @@ async def asyncFetcherManyServer(servers, url, resultCallback):
         for server in servers:
             headers = dict(base_headers)
             headers['Authorization'] = server.authkey
-            tasks.append(fetch(session, urljoin(server.url, url), headers, server.id, resultCallback))
+            tasks.append(fetch(session, urljoin(server.url, url), headers, server.id, server.skip_ssl, timeout, resultCallback))
         results = await asyncio.gather(*tasks)
         return results

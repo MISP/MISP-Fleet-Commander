@@ -394,15 +394,21 @@ def getConnectedServerStatus(server, connectedServer):
 async def getConnectedServerStatusAsync(server, connectedServer):
     urls = [
         f'/servers/testConnection/{connectedServer["Server"]["id"]}',
-        f'/servers/getRemoteUser/{connectedServer["Server"]["id"]}',
     ]
-    results = await asyncFetcher(server, urls)
+    results = await asyncFetcher(server, urls, timeout=5)  #  Aggressive timeout
     connectionTest = results[0]
-    connectionUser = results[1]
     connectionTest['timestamp'] = int(time.time())
     connectedServer['connectionTest'] = parseMISPConnectionOutput(connectionTest)
-    connectedServer['connectionUser'] = parseMISPUserConnectionOutput(connectionUser)
     connectedServer['vid'] = f"{server.id}-{connectedServer['Server']['id']}"
+    if connectedServer["connectionTest"]["status"]["authorized"]:
+        urls = [
+            f'/servers/getRemoteUser/{connectedServer["Server"]["id"]}',
+        ]
+        results = await asyncFetcher(server, urls, timeout=15)  #  Aggressive timeout
+        connectionUser = results[0]
+        connectedServer['connectionUser'] = parseMISPUserConnectionOutput(connectionUser)
+    else:
+        connectedServer['connectionUser'] = parseMISPUserConnectionOutput({})
     return connectedServer
 
 def parseMISPUserConnectionOutput(userConnection):
@@ -432,20 +438,21 @@ def parseMISPUserConnectionOutput(userConnection):
 
 def parseMISPConnectionOutput(connection):
     parsed = {
-        'status': { 'message': "", 'color': "danger"},
+        'status': { 'message': "", 'color': "danger", "authorized": False},
         'compatibility': {'message': "", 'color': ""},
         'post': { 'result': "", 'color': "danger", 'success': False },
         'localVersion': "",
         'remoteVersion': "",
         'uuid': "?",
     }
-    if connection['status'] == 1:
+    if connection.get('status', None) == 1:
         parsed['status']['color'] = "success"
         parsed['status']['message'] = "OK"
         parsed['compatibility']['color'] = "success"
         parsed['compatibility']['message'] = "Compatible"
         parsed['localVersion'] = connection['local_version']
         parsed['remoteVersion'] = connection['version']
+        parsed["authorized"] = True
         if 'uuid' in connection:
             parsed['uuid'] = connection['uuid']
         if connection['mismatch'] == "hotfix":
@@ -495,27 +502,31 @@ def parseMISPConnectionOutput(connection):
             else:
                 parsed['post']['result'] = "Remote too old for this test"
 
-    elif connection['status'] == 2:
+    elif connection.get('status', None) == 2:
         parsed['status']['color'] = "danger"
         parsed['status']['message'] = "Server unreachable"
-    elif connection['status'] == 3:
+    elif connection.get('status', None) == 3:
         parsed['status']['color'] = "danger"
         parsed['status']['message'] = "Unexpected error"
-    elif connection['status'] == 4:
+    elif connection.get('status', None) == 4:
         parsed['status']['color'] = "danger"
         parsed['status']['message'] = "Authentication failed"
-    elif connection['status'] == 5:
+    elif connection.get('status', None) == 5:
         parsed['status']['color'] = "danger"
         parsed['status']['message'] = "Password change required"
-    elif connection['status'] == 6:
+    elif connection.get('status', None) == 6:
         parsed['status']['color'] = "danger"
         parsed['status']['message'] = "Terms not accepted"
-    elif connection['status'] == 7:
+    elif connection.get('status', None) == 7:
         parsed['message'] = "Remote user is not a sync user"
-    elif connection['status'] == 8:
+    elif connection.get('status', None) == 8:
         parsed['status']['color'] = "warning"
         parsed['status']['message'] = "Syncing sightings only"
+        parsed["authorized"] = True
     else:
         parsed['status']['color'] = "danger"
-        parsed['status']['message'] = "Unkown response status"
+        if 'error' in connection:
+            parsed['status']['message'] = connection['error']
+        else:
+            parsed['status']['message'] = "Unkown response status"
     return parsed
