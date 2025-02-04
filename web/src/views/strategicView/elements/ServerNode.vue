@@ -12,7 +12,7 @@
                                 </span>
                             </span>
                             <span class="server-url">
-                                <a href="#" class="text-muted font-weight-light text-wrap">
+                                <a :href="getServer.url" class="text-muted font-weight-light text-wrap" target="_blank">
                                     {{ getServer.url }}
                                     <sup class="fa fa-external-link-alt text-muted"></sup>
                                 </a>

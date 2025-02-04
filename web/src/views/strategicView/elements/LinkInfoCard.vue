@@ -131,10 +131,13 @@
                             <b-input-group size="sm" prepend="Instance Name">
                                 <b-form-input v-model="connectionForm.name"></b-form-input>
                             </b-input-group>
-                            <b-input-group size="sm" prepend="Organisation Name">
+                            <b-input-group size="sm" prepend="Organisation ID">
                                 <b-form-input v-model="connectionForm.remote_org_id"></b-form-input>
                             </b-input-group>
                         </div>
+                        <b-form-checkbox
+                            v-model="connectionForm.internal"
+                        >Internal Sync.</b-form-checkbox>
 
                         <div class="text-center mt-2"><strong style="font-size: 1.25em">Synchronisation Methods</strong></div>
                         <div class="d-flex mt-2" style="gap: 0.5em;">

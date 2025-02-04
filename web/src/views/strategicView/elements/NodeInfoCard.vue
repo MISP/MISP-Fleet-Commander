@@ -25,7 +25,10 @@
                     </span>
                 </h5>
                 <div class="font-weight-light mb-2" style="font-size: 0.6em;">
-                    {{ getServer.url }}
+                    <b-link :href="getServer.url" class="text-muted" target="_blank">
+                        {{ getServer.url }}
+                        <sup class="fa fa-external-link-alt text-muted"></sup>
+                    </b-link>
                 </div>
             </b-card-title>
             <b-tabs

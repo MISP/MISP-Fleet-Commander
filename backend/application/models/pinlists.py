@@ -93,7 +93,8 @@ def refreshAllServers(fleet_id: int, entry: PinList):
                 'fn': mispGetRequest,
                 'server': server,
                 'path': url,
-                'passAlong': {'server_id': server.id, 'pinlist_id': entry.id}
+                'passAlong': {'server_id': server.id, 'pinlist_id': entry.id},
+                'nocache': True
             })
         allRefresh = batchRequest(allRequests)
         __handleRefreshResults(allRefresh)

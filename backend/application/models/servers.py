@@ -448,6 +448,7 @@ def parseMISPConnectionOutput(connection):
     if connection.get('status', None) == 1:
         parsed['status']['color'] = "success"
         parsed['status']['message'] = "OK"
+        parsed["status"]["authorized"] = True
         parsed['compatibility']['color'] = "success"
         parsed['compatibility']['message'] = "Compatible"
         parsed['localVersion'] = connection['local_version']

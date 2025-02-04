@@ -362,6 +362,9 @@ export default {
             if (d._has_rules) {
                 classes.push('has_rules')
             }
+            if (d._internal_sync) {
+                classes.push('internal_sync')
+            }
             return classes.join(' ')
         }
 

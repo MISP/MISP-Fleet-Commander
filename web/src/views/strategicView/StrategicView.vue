@@ -353,6 +353,7 @@ export default {
                 if (link.filtering_rules.pull_rule_number > 0 || link.filtering_rules.push_rule_number > 0) {
                     link._has_rules = true
                 }
+                link._internal_sync = link.destination.Server.internal
                 link.id = `${link.source}-${link.target}`
                 link.vid = `${link.source}-${link.destination.Server.id}`
                 link._has_rules = link._has_rules ? true : false
@@ -377,6 +378,7 @@ export default {
                     if (this.d3data.links[i].vid == newConnectionLink.vid) {
                         const newConnectionLinkHasRules = newConnectionLink.filtering_rules.push_rule_number > 0 || newConnectionLink.filtering_rules.pull_rule_number > 0
                         this.d3data.links[i]._has_rules = newConnectionLinkHasRules
+                        this.d3data.links[i]._internal_sync = newConnectionLink.destination.Server.internal
                     }
                 }
             })
@@ -442,6 +444,9 @@ path.link.selected {
 }
 path.link.has_rules.selected {
     stroke: #f5854d;
+}
+path.link.internal_sync {
+    stroke-dasharray: 20,10,5,5,5,10;
 }
 
 path.marker.selected {
