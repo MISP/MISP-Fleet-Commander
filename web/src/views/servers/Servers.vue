@@ -977,6 +977,18 @@ export default {
         this.populatePluginFields()
         this.getInstancePictures()
     },
+    beforeRouteEnter(to, from, next) {
+        if (store.getters["fleets/selectedFleet"] === null) {
+            store.dispatch("fleets/selectFleet", {data: {id: to.params.fleet_id}}).then(() => {
+                store.dispatch("servers/fetchServers", {force: true})
+                next()
+            }).catch(() => {
+                next("/home")
+            })
+        } else {
+            next()
+        }
+    },
 }
 </script>
 

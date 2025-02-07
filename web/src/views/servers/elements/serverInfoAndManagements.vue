@@ -238,7 +238,7 @@ export default {
             return this.last_refresh[this.server_id]
         },
         inServerIndex() {
-            return this.$route.name === "servers.index"
+            return this.$route.name === "fleet.view"
         },
         getMaxHeight() {
             return {

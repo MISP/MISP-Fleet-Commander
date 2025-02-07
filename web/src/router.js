@@ -24,6 +24,7 @@ const fleetSelected = (to, from, next) => {
 
 const noFleetPassThrough = [
     "servers.view",
+    "fleet.view",
 ]
 
 const publicRoutes = [
@@ -54,13 +55,36 @@ let router =  new Router({
             }
         },
         {
+            path: "/fleet",
+            component: () => import("./components/layout/layoutWrapper.vue"),
+            meta: {
+                requiresFleet: true,
+                breadcrumbs: {
+                    text: "Fleet",
+                    to: { name: "fleet.view" },
+                    icon: "server"
+                }
+            },
+            children: [
+                {
+                    path: ":fleet_id(\\d+)",
+                    name: "fleet.view",
+                    component: () => import("./views/servers/Servers.vue"),
+                    props: (route) => ({ fleet_id: Number.parseInt(route.params.fleet_id, 10) || 0 }),
+                    meta: {
+                        requiresFleet: true,
+                    }
+                },
+            ]
+        },
+        {
             path: "/servers",
             component: () => import("./components/layout/layoutWrapper.vue"),
             meta: {
                 requiresFleet: true,
                 breadcrumbs: {
-                    text: "Servers",
-                    to: { name: "servers.index" },
+                    text: "Fleet",
+                    to: { name: "fleet.view" },
                     icon: "server"
                 }
             },
@@ -75,14 +99,6 @@ let router =  new Router({
                             textGetter: "server_id",
                             to: { name: "servers.view" },
                         }
-                    }
-                },
-                {
-                    path: "",
-                    name: "servers.index",
-                    component: () => import("./views/servers/Servers.vue"),
-                    meta: {
-                        requiresFleet: true,
                     }
                 },
             ]
@@ -103,7 +119,7 @@ let router =  new Router({
         {
             path: "/strategicView",
             name: "strategicView",
-            component: StrategicView,
+            component: () => import("./views/strategicView/StrategicView.vue"),
             meta: {
                 requiresFleet: true,
                 breadcrumbs: {
@@ -137,7 +153,6 @@ router.beforeEach((to, from, next) => {
     if (authRequired && !store.getters["auth/isAuthenticated"]) {
         next({ name: 'login', query: { redirect: to.fullPath } })
     }
-    
 
     if (to.matched.some(record => record.meta.requiresFleet)) {
         fleetSelected(to, from, next)

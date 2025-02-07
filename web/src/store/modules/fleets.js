@@ -64,7 +64,7 @@ const actions = {
                 id,
                 fleet => {
                     commit("setFleet", fleet)
-                    resolve()
+                    resolve(fleet)
                 },
                 (error) => { reject(error) }
             )
@@ -73,9 +73,10 @@ const actions = {
     selectFleet({ commit, dispatch }, payload) {
         return new Promise((resolve, reject) => {
             const fleet_id = payload.data.id
-            dispatch("getFleet", fleet_id).then(() => {
+            const redirect = payload.redirect !== undefined ? payload.redirect : true
+            dispatch("getFleet", fleet_id).then((fleet) => {
                 dispatch("servers/resetState", undefined, {root: true})
-                commit("selectFleet", payload)
+                commit("selectFleet", { data: fleet, redirect: redirect })
                 resolve()
             })
         })
@@ -137,8 +138,8 @@ const mutations = {
         const fleet = payload.data
         const redirect = payload.redirect !== undefined ? payload.redirect : true
         state.selected = fleet
-        if (redirect && router.history.current.name !== 'servers.index') {
-            router.push({ path: '/servers', replace: true })
+        if (redirect && router.history.current.name !== 'fleet.view') {
+            router.push({ name: 'fleet.view', params: { fleet_id: fleet.id }, replace: true })
         }
     },
     setFleets(state, fleets) {
