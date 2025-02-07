@@ -3,15 +3,15 @@
         v-if="hasUsage"
         class="usage-container text-nowrap"
     >
-        <div :title="`${usage.event_count} Events`">
+        <div :title="`${usage.event_count} Events`" :style="`font-size: ${getFontSize(usage.event_count)}em;`">
             <i class="fas fa-envelope"></i>
             <span>{{ genCount(usage.event_count) }}</span>
         </div>
-        <div :title="`${usage.attribute_count} Attributes`">
+        <div :title="`${usage.attribute_count} Attributes`" :style="`font-size: ${getFontSize(usage.attribute_count)}em;`">
             <i class="fas fa-cube"></i>
             <span>{{ genCount(usage.attribute_count) }}</span>
         </div>
-        <div :title="`${usage.attributes_per_event} Attributes per Events`">
+        <div :title="`${usage.attributes_per_event} Attributes per Events`" :style="`font-size: ${getFontSize(usage.attributes_per_event)}em;`">
             <i class="fas fa-chart-pie"></i>
             <span>{{ genCount(usage.attributes_per_event) }}</span>
         </div>
@@ -53,7 +53,12 @@ export default {
             const magnitude = Math.floor(Math.log10(Math.abs(amount)) / 3);
             const abbreviated = (amount / Math.pow(1000, magnitude)).toFixed(0);
             return `${abbreviated}${prefixes[magnitude]}`;
-        }
+        },
+        getFontSize(amount) {
+            if (amount < 10)
+                return 1
+            return 1.0 + 0.05*Math.floor(Math.log10(amount))
+        },
     }
 }
 </script>
@@ -61,6 +66,7 @@ export default {
 <style scoped>
 .usage-container {
     display: flex;
+    align-items: flex-end;
     font-family: monospace;
 }
 
@@ -74,6 +80,6 @@ export default {
 
 .usage-container > div > span {
     margin-left: .25em;
-    font-size: 1.1em;
+    /* font-size: 1.1em; */
 }
 </style>
