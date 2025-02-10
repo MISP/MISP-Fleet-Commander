@@ -366,9 +366,13 @@ async def doCacheMonitoringImages(servers: list, force: bool = False, callbacks:
 
 async def cacheMonitoringImageAsync(server, panel, from_time, force, callbacks = {}):
     monitoringImage = MonitoringImages(server, panel, from_time)
-    monitoringImage.refreshImage(force)
     if "server_graphs_resfresh_status" in callbacks:
-        callbacks["server_graphs_resfresh_status"](server.id, panel['panel_id'])
+        def callback():
+            nonlocal server, panel
+            callbacks["server_graphs_resfresh_status"](server.id, panel["panel_id"])
+        await monitoringImage.asyncRefreshImage(force, callback)
+    else:
+        await monitoringImage.asyncRefreshImage(force)
 
 
 def saveInfo(server, fullQuery: dict) -> bool:

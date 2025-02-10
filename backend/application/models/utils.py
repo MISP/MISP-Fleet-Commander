@@ -199,9 +199,31 @@ class MonitoringImages:
                 r.raw.decode_content = True
                 shutil.copyfileobj(r.raw, f)
 
+    async def asyncCacheImage(self, callback=None):
+        headers = {
+            "Authorization": f"Bearer {self.grafana_apikey}",
+            "Accept": "image/png",
+        }
+        path = self.getImageFullPath()
+        connector = aiohttp.TCPConnector(force_close=True, enable_cleanup_closed=True)
+        async with aiohttp.ClientSession(connector=connector) as session:
+            async with session.get(self.generateGrafanaURL(), headers=headers) as resp:
+                try:
+                    if resp.status == 200:
+                        with open(path, "wb") as f:
+                            async for chunk in resp.content.iter_chunked(1024 * 1024):
+                                f.write(chunk)
+                except Exception:
+                    pass
+                finally:
+                    if callback is not None:
+                        callback()
+
     def getExistingImageCreationTime(self):
         try:
-            return datetime.fromtimestamp(os.stat(self.getImageFullPath()).st_mtime, tz=timezone.utc)
+            return datetime.fromtimestamp(
+                os.stat(self.getImageFullPath()).st_mtime, tz=timezone.utc
+            )
         except FileNotFoundError:
             return None
 
@@ -212,6 +234,10 @@ class MonitoringImages:
         if self.shouldReloadImage() or force:
             self.cacheImage()
 
+    async def asyncRefreshImage(self, force=False, callback=None):
+        if self.shouldReloadImage() or force:
+            await self.asyncCacheImage(callback)
+
     def deleteImage(self):
         os.unlink(self.getImageFullPath())
 
@@ -220,27 +246,29 @@ async def asyncFetcher(server, urls, timeout=300) -> list[dict]:
     headers = {
         "Authorization": server.authkey,
         "Accept": "application/json",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
     }
 
     async def fetch(session, url, skip_ssl, headers, timeout_sec) -> dict:
         timer = time.perf_counter()
         timeout = aiohttp.ClientTimeout(total=timeout_sec)
         try:
-            async with session.get(url, headers=headers, ssl=not skip_ssl, timeout=timeout) as response:
+            async with session.get(
+                url, headers=headers, ssl=not skip_ssl, timeout=timeout
+            ) as response:
                 try:
-                    result =  await response.json()
+                    result = await response.json()
                     if type(result) is dict:
-                        result['_latency'] = time.perf_counter() - timer
-                        result['_status_code'] = response.status
+                        result["_latency"] = time.perf_counter() - timer
+                        result["_status_code"] = response.status
                 except aiohttp.ContentTypeError:
                     result = await response.text()
-                    result = {'text': result}
+                    result = {"text": result}
                 return result
         except aiohttp.ClientConnectorError as e:
             result = {"error": "Connection Error: " + str(e)}
         except asyncio.TimeoutError as e:
-            result = {"error": f"Timeout Exception ({timeout_sec}s)" }
+            result = {"error": f"Timeout Exception ({timeout_sec}s)"}
         except Exception as e:
             result = {"error": f"Unhandled Exception: `{str(type(e))}` {str(e)}"}
         return result
