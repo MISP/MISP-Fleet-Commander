@@ -43,7 +43,7 @@
                 </div>
                 <div class="d-flex flex-wrap p-1" style="gap: 0.25rem;">
                     <GrafanaRenderedGraph
-                        v-for="panel in panels"
+                        v-for="panel in sortedPanelsBySize"
                         :key="panel.panel_id"
                         :loadingRequested="getGraphRefreshEnqueued && !all_refreshed_panels.includes(panel.panel_id)"
                         :panelId="panel.panel_id"
@@ -167,6 +167,12 @@ export default {
             const instance = this.getServer.name
             const time = 'from=now-24h&to=now&timezone=browser' // -24h
             return `${this.grafana_base_url}/${this.grafana_dashboard}?var-bucket=${bucket}&var-instance=${instance}&${time}`
+        },
+        sortedPanelsBySize: function() {
+            const sortedPanels = this.panels.sort((a, b) => {
+                return a.width*a.height - b.width*b.height
+            })
+            return sortedPanels
         }
     },
     methods: {
