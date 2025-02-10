@@ -67,7 +67,7 @@ let router =  new Router({
             },
             children: [
                 {
-                    path: ":fleet_id(\\d+)",
+                    path: ":fleet_id(\\d+)?",
                     name: "fleet.view",
                     component: () => import("./views/servers/Servers.vue"),
                     props: (route) => ({ fleet_id: Number.parseInt(route.params.fleet_id, 10) || 0 }),
@@ -118,16 +118,31 @@ let router =  new Router({
         },
         {
             path: "/strategicView",
-            name: "strategicView",
-            component: () => import("./views/strategicView/StrategicView.vue"),
+            component: () => import("./components/layout/layoutWrapperStretch.vue"),
             meta: {
                 requiresFleet: true,
                 breadcrumbs: {
-                    text: "Strategic View",
-                    to: { name: "strategicView" },
-                    icon: "fa-satellite-dish"
+                    text: "Fleet",
+                    to: { name: "fleet.view" },
+                    icon: "server"
                 }
-            }
+            },
+            children: [
+                {
+                    path: ":fleet_id(\\d+)?",
+                    name: "strategicView",
+                    component: () => import("./views/strategicView/StrategicView.vue"),
+                    props: (route) => ({ fleet_id: Number.parseInt(route.params.fleet_id, 10) || 0 }),
+                    meta: {
+                        requiresFleet: true,
+                        breadcrumbs: {
+                            text: "Strategic View",
+                            to: { name: "strategicView" },
+                            icon: "fa-satellite-dish"
+                        }
+                    }
+                }
+            ]
         },
         {
             path: "/users",
