@@ -1,21 +1,44 @@
 <template>
-    <span
-        v-if="hasUsage"
-        class="usage-container text-nowrap"
-    >
-        <div :title="`${usage.event_count} Events`" :style="`font-size: ${getFontSize(usage.event_count)}em;`">
-            <i class="fas fa-envelope"></i>
-            <span>{{ genCount(usage.event_count) }}</span>
+    <div class="d-flex flex-column align-items-center">
+        <div
+            v-if="hasUsage"
+            class="usage-container text-nowrap badge-list"
+        >
+            <b-badge
+                :title="`${usage.event_count.toLocaleString()} Events`"
+                class="rounded-left flat-right"
+            >
+                <i class="fas fa-envelope mr-1"></i>
+                <span>{{ genCount(usage.event_count) }}</span>
+            </b-badge>
+            <b-badge
+                :title="`${usage.attributes_per_event.toLocaleString()} Attributes per Events`"
+                class="rounded-right flat-left"
+            >
+                <i class="fas fa-chart-pie mr-1"></i>
+                <span>{{ genCount(usage.attributes_per_event) }}</span>
+            </b-badge>
         </div>
-        <div :title="`${usage.attribute_count} Attributes`" :style="`font-size: ${getFontSize(usage.attribute_count)}em;`">
-            <i class="fas fa-cube"></i>
-            <span>{{ genCount(usage.attribute_count) }}</span>
+        <div
+            v-if="hasUsage"
+            class="usage-container text-nowrap badge-list mt-1"
+        >
+            <b-badge
+                :title="`${usage.attribute_count.toLocaleString()} Attributes`"
+                class="rounded-left flat-right"
+            >
+                <i class="fas fa-cube mr-1"></i>
+                <span>{{ genCount(usage.attribute_count) }}</span>
+            </b-badge>
+            <b-badge
+                :title="`${usage.object_count.toLocaleString()} Objects`"
+                class="rounded-right flat-left"
+            >
+                <i class="fas fa-cubes mr-1"></i>
+                <span>{{ genCount(usage.object_count) }}</span>
+            </b-badge>
         </div>
-        <div :title="`${usage.attributes_per_event} Attributes per Events`" :style="`font-size: ${getFontSize(usage.attributes_per_event)}em;`">
-            <i class="fas fa-chart-pie"></i>
-            <span>{{ genCount(usage.attributes_per_event) }}</span>
-        </div>
-    </span>
+    </div>
 </template>
 
 <script>
@@ -54,32 +77,37 @@ export default {
             const abbreviated = (amount / Math.pow(1000, magnitude)).toFixed(0);
             return `${abbreviated}${prefixes[magnitude]}`;
         },
-        getFontSize(amount) {
-            if (amount < 10)
-                return 1
-            return 1.0 + 0.05*Math.floor(Math.log10(amount))
-        },
     }
 }
 </script>
 
 <style scoped>
-.usage-container {
-    display: flex;
-    align-items: flex-end;
-    font-family: monospace;
-}
+    .usage-container {
+        display: flex;
+        align-items: center;
+        font-family: monospace;
+        flex-wrap: nowrap;
+    }
 
-.usage-container > * {
-    font-size: 0.75em;
-}
+    .badge-list {
+        width: fit-content;
+    }
 
-.usage-container > *:not(:first-child) {
-    margin-left: .25em;
-}
+    .badge-list > .badge {
+        cursor: default;
+    }
 
-.usage-container > div > span {
-    margin-left: .25em;
-    /* font-size: 1.1em; */
-}
+    .badge-list > .badge:not(:last-child) {
+        border-right: 1px solid #dee2e6
+    }
+
+    .flat-right {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+
+    .flat-left {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0
+    }
 </style>
