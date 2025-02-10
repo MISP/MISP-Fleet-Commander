@@ -1,11 +1,16 @@
 <template>
     <span
         v-if="submodules !== '' && submodules !== undefined && hasSubmodules"
-        :class="allValids ? 'text-success' : 'text-danger'"
     >
-        <span :class="['fas', allValids ? 'fa-check' : 'fa-times']"></span>
-        {{ invalidModuleNames }}
-        {{ allValids }}
+        <span v-if="allValids" class="text-success fas fa-check"></span>
+         <b-badge
+            v-for="invalidModule in invalidModules"
+            v-bind:key="invalidModule.name"
+            variant="warning"
+        >
+            <strong>{{ invalidModule.name }}</strong>
+            : <small>{{ invalidModule.error }}</small>
+        </b-badge>
     </span>
 </template>
 
@@ -19,21 +24,29 @@ export default {
         hasSubmodules() {
             return Object.keys(this.submodules).length > 0
         },
-        invalidModuleNames() {
+        invalidModules() {
+            const moduleErrors = {
+                '0': 'OK',
+                '1': 'System not enabled',
+                '2': 'No modules found',
+            }
             if (typeof this.submodules === "string" || this.submodules === undefined) {
                 return ""
             } else {
                 let invalids = []
                 for (const [modulesName, moduleState] of Object.entries(this.submodules)) {
-                    if (moduleState == 1) {
-                        invalids.push(modulesName)
+                    if (moduleState != 0) {
+                        invalids.push({
+                            name: modulesName,
+                            error: moduleErrors[moduleState]
+                        })
                     }
                 }
-                return invalids.join(", ")
+                return invalids
             }
         },
         allValids() {
-            return this.invalidModuleNames.length == 0
+            return this.invalidModules.length == 0
         }
     },
     data: function() {
