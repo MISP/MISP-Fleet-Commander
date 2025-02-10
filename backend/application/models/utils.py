@@ -245,7 +245,9 @@ async def asyncFetcher(server, urls, timeout=300) -> list[dict]:
             result = {"error": f"Unhandled Exception: `{str(type(e))}` {str(e)}"}
         return result
 
-    async with aiohttp.ClientSession() as session:
+    # For TCP connection to close and do the cleanup. asyncio internal need to change (see aiohttp/issues/1925)
+    connector = aiohttp.TCPConnector(force_close=True, enable_cleanup_closed=True)
+    async with aiohttp.ClientSession(connector=connector) as session:
         tasks = [fetch(session, urljoin(server.url, url), server.skip_ssl, headers, timeout) for url in urls]
         results = await asyncio.gather(*tasks)
         return results
@@ -279,7 +281,9 @@ async def asyncFetcherManyServer(servers, url, resultCallback, timeout=300):
         resultCallback(server_id, result)
         return result
 
-    async with aiohttp.ClientSession() as session:
+    # For TCP connection to close and do the cleanup. asyncio internal need to change (see aiohttp/issues/1925)
+    connector = aiohttp.TCPConnector(force_close=True, enable_cleanup_closed=True)
+    async with aiohttp.ClientSession(connector=connector) as session:
         tasks = []
         for server in servers:
             headers = dict(base_headers)

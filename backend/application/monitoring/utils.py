@@ -63,7 +63,9 @@ class SensorBase:
 class HTTPClient:
 
     def __init__(self):
-        self.client_session = aiohttp.ClientSession()
+        # For TCP connection to close and do the cleanup. asyncio internal need to change (see aiohttp/issues/1925)
+        connector = aiohttp.TCPConnector(force_close=True, enable_cleanup_closed=True)
+        self.client_session = aiohttp.ClientSession(connector=connector)
 
     async def close_connection(self):
         await self.client_session.close()
