@@ -163,7 +163,10 @@ export default {
             return this.monitoring_graph_last_refresh[this.server_id]
         },
         getDashboardURL: function() {
-            return `${this.grafana_base_url}/${this.grafana_dashboard}`
+            const bucket = 'MISP-Fleet-Commander'
+            const instance = this.getServer.name
+            const time = 'from=now-24h&to=now&timezone=browser' // -24h
+            return `${this.grafana_base_url}/${this.grafana_dashboard}?var-bucket=${bucket}&var-instance=${instance}&${time}`
         }
     },
     methods: {
