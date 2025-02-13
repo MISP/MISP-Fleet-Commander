@@ -174,6 +174,11 @@ class Server(BaseModel):
         import application.redisModel as redisModel
         return redisModel.getServerMonitoredTimestamp(self.uuid)
 
+    @property
+    def monitoring_picture_cached(self):
+        import application.redisModel as redisModel
+        return redisModel.getServerCachedPicturedTimestamp(self.uuid)
+
     @monitored_timestamp.setter
     def monitored_timestamp(self, ts):
         self._monitored_timestamp = ts
@@ -181,6 +186,10 @@ class Server(BaseModel):
     @watched_timestamp.setter
     def watched_timestamp(self, ts):
         self._watched_timestamp = ts
+
+    @monitoring_picture_cached.setter
+    def monitoring_picture_cached(self, ts):
+        self._monitoring_picture_cached = ts
 
 
 class ServerMinimal(Server):

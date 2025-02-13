@@ -9,6 +9,7 @@ KEY_SERVER_MONITORED = 'server-monitored'
 KEY_SERVER_WATCHED = 'server-watched'
 KEY_FLEET_MONITORED = 'fleet-monitored'
 KEY_FLEET_WATCHED = 'fleet-watched'
+KEY_SERVER_PICTURES_CACHED = "server-pic-cached"
 
 
 def saveServerInfo(server_uuid: int, info: dict) -> bool:
@@ -56,6 +57,22 @@ def setFleetMonitoredTimestamp(fleet_id: int) -> Union[int, None]:
     if success:
         return now
     return None
+
+
+def getServerCachedPicturedTimestamp(server_uuid: str) -> Union[int, None]:
+    lastMonitoredTS = redisClient.get(f"{KEY_SERVER_PICTURES_CACHED}:{server_uuid}")
+    if lastMonitoredTS is not None:
+        return int(lastMonitoredTS)
+    return None
+
+
+def setServerCachedPicturedTimestamp(server_uuid: str) -> Union[int, None]:
+    now = int(time.time())
+    success = redisClient.set(f"{KEY_SERVER_PICTURES_CACHED}:{server_uuid}", now)
+    if success:
+        return now
+    return None
+
 
 def getFleetWatchedTimestamp(fleet_id: int) -> Union[int, None]:
     lastMonitoredTS = redisClient.get(f"{KEY_FLEET_WATCHED}:{fleet_id}")

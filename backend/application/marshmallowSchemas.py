@@ -71,6 +71,7 @@ class ServerSchema(BaseSchema):
     server_info = fields.Nested(lambda: ServerQuerySchema, validate=existOrNone, missing=None)
     watched_timestamp = fields.Integer(dump_only=True)
     monitored_timestamp = fields.Integer(dump_only=True)
+    monitoring_picture_cached = fields.Integer(dump_only=True)
 
     class Meta(BaseSchema.Meta):
         model = Server

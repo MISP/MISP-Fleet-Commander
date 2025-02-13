@@ -138,7 +138,6 @@ export default {
             server_usage: state => state.servers.server_usage,
             server_publication_activity: state => state.servers.server_publication_activity,
             last_refresh: state => state.servers.last_refresh,
-            monitoring_graph_last_refresh: state => state.servers.monitoring_graph_last_refresh,
             server_graphs_refresh_enqueued: state => state.servers.server_graphs_refresh_enqueued,
         }),
         ...mapGetters({
@@ -160,7 +159,7 @@ export default {
             return this.server_graphs_refresh_enqueued[this.server_id]
         },
         getMonitoringGraphLastRefresh: function() {
-            return this.monitoring_graph_last_refresh[this.server_id]
+            return this.servers[this.server_id].monitoring_picture_cached
         },
         getDashboardURL: function() {
             const bucket = 'MISP-Fleet-Commander'

@@ -21,7 +21,6 @@ const init_state = () => {
         server_users: {},
         server_usage: {},
         last_refresh: {},
-        monitoring_graph_last_refresh: {},
         final_settings: {},
         raw_final_settings: {},
         diagnostic_full: {},
@@ -307,10 +306,9 @@ const mutations = {
         Vue.set(state.last_refresh, payload.server_id, payload.last_refresh)
     },
     setMonitoringGraphLastRefresh(state, payload) {
-        if (state.monitoring_graph_last_refresh[payload.server_id] === undefined) {
-            Vue.set(state.monitoring_graph_last_refresh, payload.server_id, "")
-        }
-        Vue.set(state.monitoring_graph_last_refresh, payload.server_id, payload.monitoring_graph_last_refresh)
+        const newServer = state.servers[payload.server_id]
+        newServer.monitoring_picture_cached = payload.monitoring_graph_last_refresh
+        Vue.set(state.servers, payload.server_id, newServer)
     },
     setFinalSettings(state, payload) {
         if (payload.final_settings === undefined) {
@@ -368,8 +366,6 @@ function setAllQueryInfo(state, server_id, server_info) {
     }
     if (server_info["timestamp"])
         mutations.setLastRefresh(state, { server_id: server_id, last_refresh: server_info["timestamp"] })
-    if (query_info["_monitoringGraphLastRefresh"])
-        mutations.setMonitoringGraphLastRefresh(state, { server_id: server_id, monitoring_graph_last_refresh: query_info["_monitoringGraphLastRefresh"]['timestamp'] })
     if (query_info["serverUsage"])
         mutations.setServerUsage(state, { server_id: server_id, server_usage: query_info["serverUsage"] })
 }
@@ -390,8 +386,6 @@ function commitAllQueryInfo(commit, server_id, info) {
     }
     if (info["timestamp"])
         commit("setLastRefresh", { server_id: server_id, last_refresh: info["timestamp"] })
-    if (info["_monitoringGraphLastRefresh"])
-        commit("setMonitoringGraphLastRefresh", { server_id: server_id, monitoring_graph_last_refresh: info["_monitoringGraphLastRefresh"]['timestamp'] })
     if (queryResult["serverUsage"])
         commit("setServerUsage", { server_id: server_id, server_usage: queryResult["serverUsage"] })
 }

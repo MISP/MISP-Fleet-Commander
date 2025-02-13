@@ -360,7 +360,7 @@ async def doCacheMonitoringImages(servers: list, force: bool = False, callbacks:
         timestamp = int(time.time())
         if 'server_graphs_update_done' in wrappedCallbacks:
             wrappedCallbacks["server_graphs_update_done"](server.id, timestamp)
-        savePartialInfo(server, "_monitoringGraphLastRefresh", {'timestamp': timestamp})
+        redisModel.setServerCachedPicturedTimestamp(server.uuid)
     return result
 
 
