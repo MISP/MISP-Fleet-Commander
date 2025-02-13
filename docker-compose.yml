@@ -21,8 +21,8 @@ services:
             - REDIS_PORT=6379
             - REDIS_DB=1
             - SOCKETIO_MESSAGE_QUEUE=redis://redis:6379/3
-            - CELERY_BROKER_URL=redis://redis
-            - CELERY_RESULT_BACKEND=redis://redis
+            - WORKER_BROKER_URL=redis://redis
+            - WORKER_RESULT_BACKEND=redis://redis
         volumes:
             - "./run:/app/database"
             - "./run/data:/app/data"
@@ -56,11 +56,11 @@ services:
             - REDIS_PORT=6379
             - REDIS_DB=1
             - SOCKETIO_MESSAGE_QUEUE=redis://redis:6379/3
-            - CELERY_BROKER_URL=redis://redis
-            - CELERY_RESULT_BACKEND=redis://redis
+            - WORKER_BROKER_URL=redis://redis
+            - WORKER_RESULT_BACKEND=redis://redis
         volumes:
             - "./run:/app/database"
-        command: celery -A application.celery worker -l INFO
+        command: huey_consumer.py application.workers.tasks.huey_app -w 4 -k process
         depends_on:
             - redis
             - backend

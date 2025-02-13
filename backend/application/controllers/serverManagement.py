@@ -50,7 +50,6 @@ def genAuthkey(user, server_id, user_id):
     """Generate an authkey for a user on the MISP instance"""
     server = serverModel.getForUser(user, server_id)
     result = serverManagement.genAuthkey(server, user_id)
-    print(result)
     if result is not None:
         return jsonify(result)
     return jsonify({'error': 'Could not generate authkey for user.'})

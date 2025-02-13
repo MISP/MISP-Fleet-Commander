@@ -131,7 +131,7 @@ def doQueryFleetWs(fleet_id: int, delay_second: int = 10):
         for server in fleet.servers:
             print(f'Querying server {server.name} ({server.id})')
             timer1 = time.time()
-            fetchServerInfoTask.delay(serverSchemaLighter.dump(server))
+            fetchServerInfoTask(serverSchemaLighter.dump(server))
             print(f'\t Took {time.time() - timer1:.2f}')
             time.sleep(delay_second)
     else:

@@ -16,7 +16,7 @@ export AUTHLIB_INSECURE_TRANSPORT=true
 export GRAFANA_BASE_URL=http://localhost:3000
 export GRAFANA_DASHBOARD_DATA_RENDER=render/d-solo/ce6olif96756od
 export GRAFANA_DASHBOARD=d/ce6olif96756od/circl-monitoring-misp
-export GRAFANA_APIKEY=API_KEY_HERE
+export GRAFANA_APIKEY=glsa_k94PVSfhraGiK5roLyoniHu0xFyvByne_b1604732
 
 # export APP_CONFIG_FILE=config.ini
 # flask run --host=0.0.0.0
