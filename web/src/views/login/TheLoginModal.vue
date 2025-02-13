@@ -1,9 +1,18 @@
 <template>
     <div>
-        <b-modal ref="login-modal" hide-footer hide-header>
-            <loginForm
-                :callbackOnLoging="handleLogin"
-            ></loginForm>
+        <b-modal ref="login-modal" hide-footer hide-header content-class="login-modal">
+            <div class="d-flex flex-column align-items-center py-3">
+                <b-alert show variant="warning" style="width: 400px;">
+                    <strong class="mb-2">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                        Session Expired  
+                    </strong>
+                    <div>Your session has timed out. Please log in again to continue.</div>
+                </b-alert>
+                <loginForm
+                    :callbackOnLoging="handleLogin"
+                ></loginForm>
+            </div>
         </b-modal>
     </div>
 </template>
@@ -52,6 +61,9 @@ export default {
 <style>
     body {
         background-color: var(--var-color-background) !important;
+    }
+    .login-modal {
+        background: hsl(216.8, 18.18%, 19.25%);
     }
 </style>
 

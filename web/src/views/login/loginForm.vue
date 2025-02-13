@@ -1,15 +1,17 @@
 <template>
-    <div>
-        <h1 class="mb-4">Login</h1>
+    <div class="form-container">
+        <label>Email</label>
         <b-form-input
             v-model="email"
             v-on:keyup.enter="login"
-            size="lg" type="email" class="mb-2" placeholder="Username"
+            size="md" type="email" class="mb-4 input-element" placeholder="Username"
         ></b-form-input>
+
+        <label>Password</label>
         <b-form-input
             v-model="password"
             v-on:keyup.enter="login"
-            size="lg" type="password" class="mb-2" placeholder="Password"
+            size="md" type="password" class="mb-4 input-element" placeholder="Password"
         ></b-form-input>
         <Transition name="shake-x">
             <b-alert :show="loginError" variant="danger">{{ errorMessage }}</b-alert>
@@ -19,7 +21,7 @@
             block variant="primary" class="login-button"
         >
             <b-spinner small v-if="postInProgress"></b-spinner>
-            <span v-if="!postInProgress">Login</span>
+            <span v-if="!postInProgress">Log in</span>
         </b-button>
     </div>
 </template>
@@ -76,14 +78,45 @@ export default {
 }
 </script>
 
+
+<style>
+    .input-element {
+        border-color: hsl(200, 83%, 60%);
+        box-shadow: hsl(216.77, 31.96%, 19.02%) 0px 4px 12px;
+        background-color: hsl(216.77, 31.96%, 19.02%);
+        color: white;
+    }
+    .input-element:focus,
+    input:-webkit-autofill {
+        box-shadow: hsl(216.77, 31.96%, 19.02%) 0px 4px 12px;
+        background-color: hsl(216.77, 31.96%, 19.02%) !important;
+        color: white !important;
+        transition: all 0s 50000s;
+    }
+</style>
+
 <style scoped>
+    label{
+        color: hsl(200, 83%, 70%);
+        font-weight: 500;
+        margin-bottom: 0.35rem;
+        user-select: none;
+    }
+    .form-container {
+        width: 400px;
+        display: flex;
+        flex-direction: column;
+        justify-items: center;
+    }
     .login-button {
-        background-color: var(--var-color-giantorgane);
-        border-color: var(--var-color-giantorgane);
+        background-color: hsl(217, 32%, 13%);
+        border-color: hsl(220, 5%, 51%);
+        color: hsl(200, 83%, 60%);
     }
     .login-button:hover {
         background-color: var(--var-color-giantorganedarker);
         border-color: var(--var-color-giantorganedarker);
+        color: white;
     }
     .login-button:active {
         background-color: #ca4b0c !important;

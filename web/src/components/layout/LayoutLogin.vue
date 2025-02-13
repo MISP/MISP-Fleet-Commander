@@ -1,6 +1,6 @@
 <template>
-    <div class="main">
-        <div class="app">
+    <div class="main main-login">
+        <div class="app app-login">
             <slot/>
         </div>
     </div>
