@@ -14,7 +14,6 @@ from application.controllers.utils import mispGetRequest, mispPostRequest
 from application.marshmallowSchemas import ServerSchema, serverQuerySchema
 
 from application.models.utils import MonitoringImages, asyncFetcher, asyncFetcherManyServer
-from application.workers.tasks import fetchServerInfoTask
 
 import nest_asyncio
 nest_asyncio.apply()

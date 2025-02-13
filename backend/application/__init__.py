@@ -1,3 +1,4 @@
+from functools import wraps
 from pathlib import Path
 import tomllib
 from flask import Flask
@@ -8,28 +9,39 @@ from flask_migrate import Migrate
 from flask_bcrypt import Bcrypt
 import os
 import redis
-from celery import Celery, Task
+from huey import RedisHuey
 from flask_socketio import SocketIO
-import socketio
 
 
-def celery_init_app(app: Flask) -> Celery:
-    class FlaskTask(Task):
-        def __call__(self, *args: object, **kwargs: object) -> object:
-            with app.app_context():
-                return self.run(*args, **kwargs)
+class FlaskRedisHuey(RedisHuey):
 
-    celery_app = Celery(app.name, task_cls=FlaskTask,
-            broker_url = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6380/1'),
-            result_backend = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6380/1'),
-            enable_utc = True,
-            include=['application.workers.tasks']
-    )
-    # celery_app.config_from_object(app.config["CELERY"])
-    celery_app.set_default()
-    app.extensions["celery"] = celery_app
-    return celery_app
+    def __init__(self, *args, flaskApp, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.flaskApp = flaskApp
 
+    def task(self, *args, **kwargs):
+        original_task_decorator = super().task(*args, **kwargs)
+
+        def wrapper(fn):
+            @wraps(fn)
+            def wrapped_task(*fn_args, **fn_kwargs):
+                with self.flaskApp.app_context():
+                    return fn(*fn_args, **fn_kwargs)
+
+            return original_task_decorator(wrapped_task)
+        return wrapper
+
+    def periodic_task(self, *args, **kwargs):
+        original_periodic_task_decorator = super().periodic_task(*args, **kwargs)
+
+        def wrapper(fn):
+            @wraps(fn)
+            def wrapped_task(*fn_args, **fn_kwargs):
+                with self.flaskApp.app_context():
+                    return fn(*fn_args, **fn_kwargs)
+
+            return original_periodic_task_decorator(wrapped_task)
+        return wrapper
 
 # naming_convention = {
 #     "ix": 'ix_%(column_0_label)s',
@@ -44,7 +56,7 @@ migrate = Migrate()
 loadedPlugins = None
 flaskApp = None
 redisClient = redis.Redis(host=os.environ.get('REDIS_URL', 'localhost'), port=int(os.environ.get('REDIS_PORT', 6380)), db=int(os.environ.get('REDIS_DB', 1)), decode_responses=True)
-celery_app = None
+huey_app = None
 socketioApp = None
 bcrypt = None
 all_user_settings = []
@@ -57,7 +69,7 @@ with open(script_dir / relative_path, 'rb') as f:
 def create_app():
     """Construct the core application."""
 
-    global loadedPlugins, flaskApp, celery_app, socketioApp, bcrypt, db, migrate
+    global loadedPlugins, flaskApp, socketioApp, bcrypt, db, migrate
     flaskApp = Flask(__name__, instance_relative_config=False)
     flaskApp.config.from_object(os.environ.get('FLASK_CONFIG', 'config.DevelopmentConfig'))
     bcrypt = Bcrypt(flaskApp)
@@ -70,7 +82,8 @@ def create_app():
     # migrate.init_app(flaskApp, db, render_as_batch=True)
 
     migrate.init_app(flaskApp, db)
-    celery_app = celery_init_app(flaskApp)
+    huey_app = FlaskRedisHuey(flaskApp.name, url=os.environ.get('WORKER_BROKER_URL', 'redis://localhost:6380/1'), flaskApp=flaskApp)
+    flaskApp.extensions["huey"] = huey_app
 
     from application.plugins import loadAvailablePlugins
     loadedPlugins = loadAvailablePlugins()

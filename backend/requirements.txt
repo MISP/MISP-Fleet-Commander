@@ -7,7 +7,7 @@ flask-bcrypt
 gevent
 requests
 redis
-celery
+huey
 requests-cache
 marshmallow_sqlalchemy
 PyJWT

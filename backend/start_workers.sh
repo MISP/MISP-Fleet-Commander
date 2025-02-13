@@ -13,12 +13,12 @@ export SECRET_KEY=secret
 export TOKEN_EXPIRATION_MIN=30
 export APIKEY_EXPIRATION_DAYS=365
 export AUTHLIB_INSECURE_TRANSPORT=true
+export WORKER_COUNT=4
 
 # Monitoring
 export GRAFANA_BASE_URL=http://localhost:3000
 export GRAFANA_DASHBOARD_DATA_RENDER=render/d-solo/ce6olif96756od
 export GRAFANA_DASHBOARD=d/ce6olif96756od/circl-monitoring-misp
-export GRAFANA_APIKEY=API_KEY_HERE
+export GRAFANA_APIKEY=glsa_k94PVSfhraGiK5roLyoniHu0xFyvByne_b1604732
 
-celery -A application.celery beat -l INFO &
-celery -A application.celery worker -l INFO --pool=gevent --concurrency=30
+huey_consumer.py application.workers.tasks.huey_app -w "$WORKER_COUNT" -k process

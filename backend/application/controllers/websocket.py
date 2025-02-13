@@ -7,36 +7,36 @@ from flask_socketio import SocketIO
 
 
 def registerListeners():
-    from application.workers.tasks import fetchServerInfoTask
-    from application.workers.tasks import doServerConnectionTestTask
-    from application.workers.tasks import doFleetConnectionTestTask
-    from application.workers.tasks import doFleetInfoTask
-    from application.workers.tasks import doCacheMonitoringImages
 
     @socketioApp.on('refresh_server')
     def refresh_server(serverID):
+        from application.workers.tasks import fetchServerInfoTask
         server = ServerMinimal.query.get(serverID)
-        fetchServerInfoTask.delay(serverSchema.dump(server))
+        fetchServerInfoTask(serverSchema.dump(server))
 
     @socketioApp.on('refresh_fleet')
     def refresh_fleet(fleedID):
+        from application.workers.tasks import doFleetInfoTask
         servers = serverModel.index(fleedID)
-        doFleetInfoTask.delay(serversSchema.dump(servers))
+        doFleetInfoTask(serversSchema.dump(servers))
 
     @socketioApp.on('server_connection_test')
     def serverConnectionTest(serverID):
+        from application.workers.tasks import doServerConnectionTestTask
         server = ServerMinimal.query.get(serverID)
-        doServerConnectionTestTask.delay(serverSchema.dump(server))
+        doServerConnectionTestTask(serverSchema.dump(server))
 
     @socketioApp.on('fleet_connection_test')
     def fleetConnectionTest(fleedID):
+        from application.workers.tasks import doFleetConnectionTestTask
         servers = serverModel.index(fleedID)
-        doFleetConnectionTestTask.delay(serversSchema.dump(servers))
+        doFleetConnectionTestTask(serversSchema.dump(servers))
 
     @socketioApp.on("refresh_server_graphs")
     def refresh_server_graphs(serverID):
+        from application.workers.tasks import doCacheMonitoringImages
         server = ServerMinimal.query.get(serverID)
-        doCacheMonitoringImages.delay(serverSchema.dump(server))
+        doCacheMonitoringImages(serverSchema.dump(server))
 
 
 class SocketioEmitter:

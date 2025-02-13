@@ -2,7 +2,13 @@
 
 import asyncio
 import time
-from application import celery_app
+from huey import crontab
+
+from application import create_app
+
+flaskApp = create_app()
+huey_app = flaskApp.extensions["huey"]
+
 from application.controllers.websocket import SocketioEmitter
 from application.marshmallowSchemas import serverSchemaLighter
 import application.models.servers as serverModel
@@ -16,7 +22,7 @@ from application import redisModel
 socketioEmitter = SocketioEmitter()
 
 
-@celery_app.task(name="fetchServerInfoTask", ignore_result=True)
+@huey_app.task()
 def fetchServerInfoTask(serverDict):
     server = serverSchemaLighter.load(serverDict)
     socketioEmitter.server_updating(server.id)
@@ -33,7 +39,7 @@ def fetchServerInfoTask(serverDict):
     serverModel.dofetchServerInfoAsync(server, clientSocketEmitterUpdateFuns)
 
 
-@celery_app.task(name="doFleetInfoTask", ignore_result=True)
+@huey_app.task()
 def doFleetInfoTask(servers):
     server_ids = []
     serversDict = []
@@ -62,7 +68,7 @@ def doFleetInfoTask(servers):
             socketioEmitter.fleet_update_timestamps(serversDict[0].fleet_id, watched_timestamp = watched_timestamp)
 
 
-@celery_app.task(name="doServerConnectionTestTask", ignore_result=True)
+@huey_app.task()
 def doServerConnectionTestTask(serverDict):
     server = serverSchemaLighter.load(serverDict)
     socketioEmitter.server_status_updating(server.id)
@@ -72,7 +78,7 @@ def doServerConnectionTestTask(serverDict):
     socketioEmitter.udpate_server_connection(connectionInfo)
 
 
-@celery_app.task(name="doFleetConnectionTestTask", ignore_result=True)
+@huey_app.task()
 def doFleetConnectionTestTask(servers):
     server_ids = []
     serversDict = []
@@ -90,7 +96,7 @@ def doFleetConnectionTestTask(servers):
     serverModel.testAllConnectionAsync(serversDict, clientSocketEmitterUpdateFun)
 
 
-@celery_app.task(name="doCacheMonitoringImages", ignore_result=True)
+@huey_app.task()
 def doCacheMonitoringImages(serverDict):
     server = serverSchemaLighter.load(serverDict)
     socketioEmitter.server_graphs_updating(server.id)
@@ -106,7 +112,8 @@ def doCacheMonitoringImages(serverDict):
 ### SCHEDULER
 ###
 
-@celery_app.task(name="watchMonitoredFleets", ignore_result=True)
+
+@huey_app.periodic_task(crontab(minute="*/1"))
 def watchMonitoredFleets():
     if settingModel.getRefreshValue("fleet_watching_enabled"):
         fleets = fleetModel.indexWatched()
@@ -135,8 +142,8 @@ def watchMonitoredFleets():
             socketioEmitter.fleet_update_timestamps(fleet.id, watched_timestamp = watched_timestamp)
 
 
-@celery_app.task(name="monitorMonitoredFleets", ignore_result=True)
-def monitorMonitoredFleets(cache_images: bool = False):
+@huey_app.periodic_task(crontab(minute='*/10'))
+def monitorMonitoredFleets():
     if settingModel.getRefreshValue("monitoring_enabled"):
         fleets = fleetModel.indexMonitored()
         asyncio.run(monitor(fleets))
@@ -145,6 +152,10 @@ def monitorMonitoredFleets(cache_images: bool = False):
             if monitored_timestamp is not None:
                 socketioEmitter.fleet_update_timestamps(fleet.id, monitored_timestamp = monitored_timestamp)
 
-        if cache_images:
-            for fleet in fleets:
-                asyncio.run(serverModel.doCacheMonitoringImages(fleet.servers))
+
+@huey_app.periodic_task(crontab(hour='*/12'))
+def cacheMonitoringImages():
+    if settingModel.getRefreshValue("monitoring_enabled"):
+        fleets = fleetModel.indexMonitored()
+        for fleet in fleets:
+            asyncio.run(serverModel.doCacheMonitoringImages(fleet.servers))
