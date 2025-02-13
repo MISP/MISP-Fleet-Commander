@@ -32,6 +32,7 @@
                 <template v-else>
                     <b-badge
                         v-if="expand_issue_only && !hasError"
+                        v-show="!connectionCheckNotDone"
                         :id="`connection-popover-${row_index}-OK}`"
                         :variant="getOkConnectionSummary.variant"
                         rounded
