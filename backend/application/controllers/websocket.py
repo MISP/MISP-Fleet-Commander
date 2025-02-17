@@ -42,7 +42,7 @@ def registerListeners():
 class SocketioEmitter:
 
     def __init__(self):
-        self.socketio = SocketIO(message_queue=os.environ.get('SOCKETIO_MESSAGE_QUEUE', f'redis://localhost:{str(os.environ.get('REDIS_PORT', 6380))}/3'))
+        self.socketio = SocketIO(message_queue=os.environ.get('SOCKETIO_MESSAGE_QUEUE', f"redis://localhost:{str(os.environ.get('REDIS_PORT', 6380))}/3"))
 
     def udpate_server(self, data):
         self.socketio.emit('UPDATE_SERVER', data)
