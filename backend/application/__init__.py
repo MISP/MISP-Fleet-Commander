@@ -93,7 +93,7 @@ def create_app():
 
     with flaskApp.app_context():
 
-        socketioApp = SocketIO(flaskApp, cors_allowed_origins='*', message_queue=os.environ.get('SOCKETIO_MESSAGE_QUEUE', f'redis://localhost:{str(os.environ.get('REDIS_PORT', 6380))}/3'))
+        socketioApp = SocketIO(flaskApp, cors_allowed_origins='*', message_queue=os.environ.get('SOCKETIO_MESSAGE_QUEUE', f"redis://localhost:{str(os.environ.get('REDIS_PORT', 6380))}/3"))
 
         # Imports
         from . import routes
