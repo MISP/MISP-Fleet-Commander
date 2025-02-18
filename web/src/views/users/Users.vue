@@ -77,6 +77,13 @@
                 </div>
             </template>
 
+            <template v-slot:cell(apikey)="row">
+                <span
+                    @click="(e) => e.target.classList.toggle('blurred')"
+                    class="blurred"
+                >{{ row.value }}</span>
+            </template>
+
             <template v-slot:cell(action)="row">
                 <span class="d-block" style="width: 90px;">
                     <b-button-group size="sm">
@@ -178,7 +185,6 @@ export default {
                     {
                         key: "apikey",
                         sortable: false,
-                        tdClass: ['unblur-on-hover']
                     },
                     {
                         key: "user_settings",
@@ -281,7 +287,7 @@ export default {
         openUserSettingModal(user) {
             this.selectedUser = user
             this.$bvModal.show("user-setting-modal")
-        }
+        },
     },
     mounted() {
         this.refreshUsers()
@@ -291,12 +297,11 @@ export default {
 </script>
 
 <style>
-.unblur-on-hover {
+.apikey {
     font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     font-size: .85em;
-    filter: blur(5px);
 }
-.unblur-on-hover:hover {
-    filter: unset;
+.blurred {
+    filter: blur(5px);
 }
 </style>

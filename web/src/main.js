@@ -38,7 +38,7 @@ Vue.use(socketInstance)
 // Importing the global css file
 import "@/assets/global.css"
 
-import utils from "./util"
+import utils from "./color_utils"
 Vue.use(utils)
 
 Vue.use(BootstrapVue)
