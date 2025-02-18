@@ -87,4 +87,7 @@ export default {
         height: auto;
         max-width: 400px;
     }
+    .page-container {
+        padding-bottom: 3em;
+    }
 </style>

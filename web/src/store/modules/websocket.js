@@ -25,16 +25,25 @@ const actions = {
         dispatch("ui/setWorkerHealthStatus", okState.ok, { root: true })
     },
     SOCKET_UPDATE_SERVER({ dispatch }, serverData) {
+        if (store.getters["fleets/selectedFleet"] === null) {
+            return
+        }
         if (serverData.server.fleet.id == store.getters["fleets/selectedFleet"].id)  {
             dispatch("servers/commitAllQueryInfo", serverData, { root: true })
         }
     },
     SOCKET_UPDATE_SERVER_CONNECTION({ dispatch }, serverData) {
+        if (store.getters["fleets/selectedFleet"] === null) {
+            return
+        }
         if (serverData.server.fleet.id == store.getters["fleets/selectedFleet"].id)  {
             dispatch("servers/commitConnectionTestInfo", serverData, { root: true })
         }
     },
     SOCKET_UPDATE_SERVER_PARTIAL_DATA({ dispatch }, payload) {
+        if (store.getters["fleets/selectedFleet"] === null) {
+            return
+        }
         if (payload.server.fleet.id == store.getters["fleets/selectedFleet"].id)  {
             dispatch("servers/commitPartialServerData", payload, { root: true })
         }

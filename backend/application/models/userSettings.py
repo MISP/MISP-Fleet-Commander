@@ -98,4 +98,4 @@ def togglePlugin(user_id: int, plugin_name: str) -> Union[list[str], None]:
             updated_value.append(plugin_name) # type: ignore
         plugin_settings.value = updated_value
         db.session.commit()
-    return plugin_settings.value # type: ignore
+        return plugin_settings.value # type: ignore
