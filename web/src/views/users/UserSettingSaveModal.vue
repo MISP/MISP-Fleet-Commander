@@ -50,8 +50,9 @@
                                     <b-td class="align-middle" style="width: 0%;">
                                         <b-button-group size="sm">
                                             <b-button
-                                                :variant="changePending(setting.full_setting_name) ? 'success' : 'secondary'"
+                                                :variant="changePending(setting.full_setting_name) ? 'success' : 'outline-secondary'"
                                                 :disabled="!changePending(setting.full_setting_name) || postInProgress[setting.full_setting_name]"
+                                                :title="!changePending(setting.full_setting_name) || postInProgress[setting.full_setting_name] ? 'There is nothing save.' : ''"
                                                 :lastupdate="lastupdate"
                                                 @click="saveSetting(setting.full_setting_name)"
                                             >
@@ -63,9 +64,10 @@
                                                 <span v-if="!postInProgress[setting.full_setting_name]">Save</span>
                                             </b-button>
                                             <b-button
-                                                :variant="changePending(setting.full_setting_name) ? 'warning' : 'secondary'"
+                                                :variant="changePending(setting.full_setting_name) ? 'outline-secondary' : 'outline-secondary'"
                                                 :disabled="!changePending(setting.full_setting_name) || postInProgress[setting.full_setting_name]" :lastupdate="lastupdate"
                                                 @click="resetSetting(setting.full_setting_name)"
+                                                class="d-flex align-items-center"
                                             ><i class="fa fa-times"></i></b-button>
                                         </b-button-group>
                                     </b-td>

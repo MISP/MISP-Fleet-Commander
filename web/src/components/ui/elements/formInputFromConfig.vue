@@ -50,7 +50,7 @@
                 :disabled="params.disabled === true"
             ></b-form-input>
         </div>
-        <div v-if="params.error !== false" class="mt-1">
+        <div v-if="params.error !== undefined && params.error !== false" class="mt-1">
             <b-alert :variant="params.error.variant" class="px-3 py-2" show>{{ params.error.error_message }}</b-alert>
         </div>
     </div>

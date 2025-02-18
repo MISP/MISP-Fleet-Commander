@@ -56,6 +56,7 @@
                                             :variant="changePending(setting.full_setting_name) ? 'outline-secondary' : 'outline-secondary'"
                                             :disabled="!changePending(setting.full_setting_name) || postInProgress[setting.full_setting_name]" :lastupdate="lastupdate"
                                             @click="resetSetting(setting.full_setting_name)"
+                                            class="d-flex align-items-center"
                                         ><i class="fa fa-times"></i></b-button>
                                     </b-button-group>
                                 </b-td>

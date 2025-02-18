@@ -4,19 +4,19 @@ type = "picker"
 # Options are being generated dynamically by parsing the plugin directory
 options = []
 
-[[UI]]
-name = "surname"
-type = "text"
-
-[[UI]]
-name = "theme"
-type = "select"
-options = ["default", "modern", "old"]
-
-[[UI]]
-name = "dark"
-type = "checkbox"
-text = "Dark theme"
+# [[UI]]
+# name = "surname"
+# type = "text"
+# 
+# [[UI]]
+# name = "theme"
+# type = "select"
+# options = ["default", "modern", "old"]
+# 
+# [[UI]]
+# name = "dark"
+# type = "checkbox"
+# text = "Dark theme"
 
 [[UI]]
 name = "server_index.worker_warning_threshold"

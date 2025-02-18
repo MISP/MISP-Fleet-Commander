@@ -89,6 +89,10 @@ export default {
             type: Array,
             required: true
         },
+        value: {
+            type: Array,
+            required: true
+        },
     },
     data() {
         return {
@@ -147,6 +151,9 @@ export default {
                 removeTag(value)
             });
         }
+    },
+    mounted() {
+        this.selected_value = this.value
     },
 }
 </script>
