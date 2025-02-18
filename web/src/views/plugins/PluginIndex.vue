@@ -158,7 +158,7 @@ export default {
         },
     },
     mounted() {
-        // this.refreshUserSettings()
+        this.refreshPlugins(false)
     }
 }
 </script>

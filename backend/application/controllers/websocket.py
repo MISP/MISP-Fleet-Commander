@@ -5,6 +5,9 @@ from application.marshmallowSchemas import serverSchema, serversSchema
 import application.models.servers as serverModel
 from flask_socketio import SocketIO
 
+from application.controllers.instance import workers_health_check as do_workers_health_check
+
+socketEmitter = None
 
 def registerListeners():
 
@@ -38,11 +41,20 @@ def registerListeners():
         server = ServerMinimal.query.get(serverID)
         doCacheMonitoringImages(serverSchema.dump(server))
 
+    @socketioApp.on("workers_health_check")
+    def workers_health_check():
+        ok = do_workers_health_check()
+        if ok is not True:  # Pong has already been replied by the worker
+            socketEmitter.pong(False)
+
 
 class SocketioEmitter:
 
     def __init__(self):
         self.socketio = SocketIO(message_queue=os.environ.get('SOCKETIO_MESSAGE_QUEUE', f"redis://localhost:{str(os.environ.get('REDIS_PORT', 6380))}/3"))
+
+    def pong(self, ok):
+        self.socketio.emit('PONG', {'ok': ok})
 
     def udpate_server(self, data):
         self.socketio.emit('UPDATE_SERVER', data)
@@ -108,3 +120,6 @@ class SocketioEmitter:
             payload["monitored_timestamp"] = monitored_timestamp
 
         self.socketio.emit("FLEET_UPDATE_TIMESTAMPS", payload)
+
+
+socketEmitter = SocketioEmitter()

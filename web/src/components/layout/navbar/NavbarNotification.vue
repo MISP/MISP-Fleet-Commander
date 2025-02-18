@@ -51,6 +51,7 @@ export default {
     },
     data: function () {
         return {
+            timerWorkersHealthCheck: null,
         }
     },
     computed: {
@@ -68,9 +69,26 @@ export default {
         }
     },
     methods: {
+        async runWorkerHealthCheck() {
+            try {
+                await this.$socket.timeout(3000).emit('workers_health_check')
+            } catch (err) {
+                console.log(err)
+            }
+        },
+        registerWorkersHealthCheck() {
+            this.timerWorkersHealthCheck = setInterval(() => {
+                this.runWorkerHealthCheck()
+            }, 10000)
+        }
     },
     mounted() {
-    }
+        this.runWorkerHealthCheck()
+        this.registerWorkersHealthCheck()
+    },
+    beforeDestroy() {
+        clearInterval(this.timerWorkersHealthCheck)
+    },
 }
 </script>
 

@@ -1,18 +1,26 @@
 // initial state
 const state = {
-    sidebarCollapsed: true
+    sidebarCollapsed: true,
+    worker_health_status: null,
 }
 
 // getters
 const getters = {}
 
 // actions
-const actions = {}
+const actions = {
+    setWorkerHealthStatus({ commit }, healthStatus) {
+        return commit("setWorkerHealthStatus", healthStatus)
+    },
+}
 
 // mutations
 const mutations = {
     toggleSidebar: function (state) {
         state.sidebarCollapsed = !state.sidebarCollapsed
+    },
+    setWorkerHealthStatus: function (state, healthStatus) {
+        state.worker_health_status = healthStatus
     },
 }
 

@@ -14,7 +14,9 @@
             size="md" type="password" class="mb-4 input-element" placeholder="Password"
         ></b-form-input>
         <Transition name="shake-x">
-            <b-alert :show="loginError" variant="danger">{{ errorMessage }}</b-alert>
+            <b-alert :show="loginError" variant="danger">
+                {{ baseErrorMessage }}: <strong>{{ errorMessage }}</strong>
+            </b-alert>
         </Transition>
         <b-button
             @click="login"
@@ -44,7 +46,9 @@ export default {
             password: "",
             postInProgress: false,
             loginError: null,
-            errorMessage: "Invalid username or password",
+            wrongCredentialError: "Invalid username or password",
+            baseErrorMessage: "Something went wrong",
+            errorMessage: "",
         }
     },
     methods: {
@@ -68,7 +72,11 @@ export default {
                         this.callbackOnLoging(false)
                     }
                     this.loginError = true
-                    console.error(error);
+                    if (error.response.status == 401) {
+                        this.errorMessage = this.wrongCredentialError
+                    } else {
+                        this.errorMessage = `[${error.response.status}] ${error.response.statusText}`
+                    }
                 })
                 .finally(() => {
                     this.postInProgress = false

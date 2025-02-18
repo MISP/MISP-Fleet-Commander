@@ -29,7 +29,7 @@
                                 </div>
                             </div>
                             <div class="col border-left border-primary">
-                                <h6><i class="fa fa-puzzle-piece"></i> Browser Extension</h6>
+                                <h6><i class="fa fa-puzzle-piece"></i> Browser Extension (recommanded)</h6>
                                 <p class="m-0">
                                     <i class="fa fa-info-circle"></i>
                                     Install the MISP Fleet Commander Chrome Extension, Go to a MISP instance and click on the extension.

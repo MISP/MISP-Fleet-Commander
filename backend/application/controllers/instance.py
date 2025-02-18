@@ -9,6 +9,7 @@ import application.models.setting as settingModel
 from application.marshmallowSchemas import userSchema, serversSchema
 from application.DBModels import User, db, Server
 import os.path
+from huey.exceptions import ResultTimeout
 
 from application.models.auth import create_access_token, get_email_from_token
 
@@ -60,6 +61,14 @@ def get_current_user_api(token):
     return user
 
 
+def workers_health_check(timeout=2):
+    from application.workers.tasks import ping
+    try:
+        return ping()(blocking=True, timeout=timeout) == 'pong'
+    except ResultTimeout:
+        return False
+
+
 BPinstance = Blueprint('instance', __name__)
 
 
@@ -100,6 +109,7 @@ def login():
             'scopes': scopes, 
         }, current_app)
         return jsonify({"access_token": token, "token_type": "bearer"})
+    return jsonify(), 404
 
 
 @BPinstance.route("/instance/settings/index", methods=["GET"])

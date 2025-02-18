@@ -21,6 +21,9 @@ const actions = {
     SOCKET_DISCONNECT(state) {
         commit("setConnected", false)
     },
+    SOCKET_PONG({ dispatch }, okState) {
+        dispatch("ui/setWorkerHealthStatus", okState.ok, { root: true })
+    },
     SOCKET_UPDATE_SERVER({ dispatch }, serverData) {
         if (serverData.server.fleet.id == store.getters["fleets/selectedFleet"].id)  {
             dispatch("servers/commitAllQueryInfo", serverData, { root: true })

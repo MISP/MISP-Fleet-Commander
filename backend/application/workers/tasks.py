@@ -23,6 +23,12 @@ socketioEmitter = SocketioEmitter()
 
 
 @huey_app.task()
+def ping():
+    socketioEmitter.pong(True)
+    return 'pong'
+
+
+@huey_app.task()
 def fetchServerInfoTask(serverDict):
     server = serverSchemaLighter.load(serverDict)
     socketioEmitter.server_updating(server.id)

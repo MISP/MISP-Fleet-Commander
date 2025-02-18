@@ -36,6 +36,7 @@
                 </span>
                 Fleet watching system is
                 <b-badge
+                    class="ml-1"
                     variant="danger"
                     style="font-size: 100%;"
                 >disabled</b-badge>
