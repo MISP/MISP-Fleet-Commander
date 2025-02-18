@@ -71,7 +71,7 @@ def create_app():
 
     global loadedPlugins, flaskApp, socketioApp, bcrypt, db, migrate
     flaskApp = Flask(__name__, instance_relative_config=False)
-    flaskApp.config.from_object(os.environ.get('FLASK_CONFIG', 'config.DevelopmentConfig'))
+    flaskApp.config.from_object(os.environ.get('FLASK_CONFIG', 'config.ProductionConfig'))
     bcrypt = Bcrypt(flaskApp)
 
     from application.DBModels import db as sqla_db
@@ -79,7 +79,6 @@ def create_app():
 
     CORS(flaskApp)
     db.init_app(flaskApp)
-    # migrate.init_app(flaskApp, db, render_as_batch=True)
 
     migrate.init_app(flaskApp, db)
     huey_app = FlaskRedisHuey(flaskApp.name, url=os.environ.get('WORKER_BROKER_URL', 'redis://localhost:6380/1'), flaskApp=flaskApp)
@@ -88,12 +87,16 @@ def create_app():
     from application.plugins import loadAvailablePlugins
     loadedPlugins = loadAvailablePlugins()
 
-    # app.config.from_object('config.Config')
-    # app.config.from_object('config.DevelopmentConfig')
-
     with flaskApp.app_context():
 
-        socketioApp = SocketIO(flaskApp, cors_allowed_origins='*', message_queue=os.environ.get('SOCKETIO_MESSAGE_QUEUE', f"redis://localhost:{str(os.environ.get('REDIS_PORT', 6380))}/3"))
+        socketioApp = SocketIO(
+            flaskApp,
+            cors_allowed_origins="*",
+            message_queue=os.environ.get(
+                "SOCKETIO_MESSAGE_QUEUE",
+                f"redis://localhost:{str(os.environ.get('REDIS_PORT', 6380))}/3",
+            ),
+        )
 
         # Imports
         from . import routes

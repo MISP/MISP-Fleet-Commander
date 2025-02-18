@@ -8,6 +8,8 @@ gevent
 requests
 redis
 huey
+aiohttp
+nest_asyncio
 requests-cache
 marshmallow_sqlalchemy
 PyJWT
