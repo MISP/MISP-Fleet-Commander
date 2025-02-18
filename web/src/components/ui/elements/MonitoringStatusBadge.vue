@@ -30,6 +30,7 @@
                 <img src="@/assets/monitored-slash.svg" alt="Fleet not monitored icon" width="26" height="26" style="filter: grayscale(1); color: #d22f27;">
                 Fleet monitoring system is
                 <b-badge
+                    class="ml-1"
                     variant="danger"
                     style="font-size: 100%;"
                 >disabled</b-badge>
