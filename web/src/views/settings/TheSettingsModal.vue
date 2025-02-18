@@ -7,7 +7,7 @@
     >
     <b-card no-body>
         <settingView
-            :settings="settingByScopesWithFullname"
+            :settings="settingByPanelsWithFullname"
             :settingValues="settingValues"
             :saveDispatcher="saveDispatcher"
             :reloadDispatcher="reloadDispatcher"
@@ -34,14 +34,16 @@ export default {
     computed: {
         ...mapGetters({
             getSettings: "settings/getSettings",
-            settingsByScopes: "settings/settingsByScopes",
+            settingsByPanelAndScope: "settings/settingsByPanelAndScope",
             settingValues: "settings/settingValues",
         }),
-        settingByScopesWithFullname() {
-            const settingsWithFullname = JSON.parse(JSON.stringify(this.settingsByScopes))
-            Object.keys(settingsWithFullname).forEach((scope) => {
-                Object.keys(settingsWithFullname[scope]).forEach((setting_id) => {
-                    settingsWithFullname[scope][setting_id].full_setting_name = setting_id
+        settingByPanelsWithFullname() {
+            const settingsWithFullname = JSON.parse(JSON.stringify(this.settingsByPanelAndScope))
+            Object.keys(settingsWithFullname).forEach((panel) => {
+                Object.keys(settingsWithFullname[panel]).forEach((scope) => {
+                    Object.keys(settingsWithFullname[panel][scope]).forEach((setting_id) => {
+                        settingsWithFullname[panel][scope][setting_id].full_setting_name = setting_id
+                    })
                 })
             })
             return settingsWithFullname

@@ -1,47 +1,59 @@
 <template>
-    <b-form-select
-        v-if="type == 'select'"
-        v-model="formData[input_key]"
-        :options="params.options"
-        @input="emitInput(input_key, formData[input_key])"
-    >
-        <template #first>
-            <b-form-select-option :value="null" disabled>-- Please select an option --</b-form-select-option>
-        </template>
-    </b-form-select>
-
-    <b-form-checkbox
-        v-else-if="type == 'checkbox'"
-        :key="`${input_key}`"
-        v-model="formData[input_key]"
-        @input="emitInput(input_key, formData[input_key])"
-    >{{ params.text }}</b-form-checkbox>
-
-    <b-form-textarea
-        v-else-if="type == 'textarea'"
-        v-model="formData[input_key]"
-        :type="type"
-        :placeholder="params.placeholder || ''"
-        rows="3"
-        max-rows="6"
-        @input="emitInput(input_key, formData[input_key])"
-    ></b-form-textarea>
-
-    <selectPicker
-        v-else-if="type == 'picker'"
-        @input="(value) => { handleInput(input_key, value) }"
-        :value="formData[input_key]"
-        :options="params.options"
-    ></selectPicker>
-
-    <b-form-input
-        v-else
-        v-model="formData[input_key]"
-        v-bind="validProps()"
-        :type="inputType"
-        :placeholder="params.placeholder || ''"
-        @input="emitInput(input_key, formData[input_key])"
-    ></b-form-input>
+    <div>
+        <div>
+            <b-form-select
+                v-if="type == 'select'"
+                v-model="formData[input_key]"
+                :options="params.options"
+                @input="emitInput(input_key, formData[input_key])"
+                :disabled="params.disabled === true"
+            >
+                <template #first>
+                    <b-form-select-option :value="null" disabled>-- Please select an option --</b-form-select-option>
+                </template>
+            </b-form-select>
+        
+            <b-form-checkbox
+                v-else-if="type == 'checkbox'"
+                :key="`${input_key}`"
+                v-model="formData[input_key]"
+                @input="emitInput(input_key, formData[input_key])"
+                :disabled="params.disabled === true"
+            >{{ params.text }}</b-form-checkbox>
+        
+            <b-form-textarea
+                v-else-if="type == 'textarea'"
+                v-model="formData[input_key]"
+                :type="type"
+                :placeholder="params.placeholder || ''"
+                rows="3"
+                max-rows="6"
+                @input="emitInput(input_key, formData[input_key])"
+                :disabled="params.disabled === true"
+            ></b-form-textarea>
+        
+            <selectPicker
+                v-else-if="type == 'picker'"
+                @input="(value) => { handleInput(input_key, value) }"
+                :value="formData[input_key]"
+                :disabled="params.disabled === true"
+                :options="params.options"
+            ></selectPicker>
+        
+            <b-form-input
+                v-else
+                v-model="formData[input_key]"
+                v-bind="validProps()"
+                :type="inputType"
+                :placeholder="params.placeholder || ''"
+                @input="emitInput(input_key, formData[input_key])"
+                :disabled="params.disabled === true"
+            ></b-form-input>
+        </div>
+        <div v-if="params.error !== false" class="mt-1">
+            <b-alert :variant="params.error.variant" class="px-3 py-2" show>{{ params.error.error_message }}</b-alert>
+        </div>
+    </div>
 </template>
 
 <script>

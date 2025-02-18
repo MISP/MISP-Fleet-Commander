@@ -14,10 +14,9 @@ from application.marshmallowSchemas import serverSchemaLighter
 import application.models.servers as serverModel
 import application.models.fleets as fleetModel
 import application.models.setting as settingModel
-
-from application.monitoring.monitor import monitor
 from application import redisModel
 
+from application import MONITORING_SYSTEM_AVAILABLE, MONITORING_SYSTEM as monitor
 
 socketioEmitter = SocketioEmitter()
 
@@ -150,7 +149,7 @@ def watchMonitoredFleets():
 
 @huey_app.periodic_task(crontab(minute='*/10'))
 def monitorMonitoredFleets():
-    if settingModel.getRefreshValue("monitoring_enabled"):
+    if MONITORING_SYSTEM_AVAILABLE and settingModel.getRefreshValue("monitoring_enabled"):
         fleets = fleetModel.indexMonitored()
         asyncio.run(monitor(fleets))
         for fleet in fleets:
@@ -161,7 +160,7 @@ def monitorMonitoredFleets():
 
 @huey_app.periodic_task(crontab(hour='*/12'))
 def cacheMonitoringImages():
-    if settingModel.getRefreshValue("monitoring_enabled"):
+    if MONITORING_SYSTEM_AVAILABLE and settingModel.getRefreshValue("monitoring_enabled"):
         fleets = fleetModel.indexMonitored()
         for fleet in fleets:
             asyncio.run(serverModel.doCacheMonitoringImages(fleet.servers))

@@ -5,9 +5,6 @@ from collections import defaultdict
 from application.monitoring.config import INFLUXDB_URL, INFLUXDB_TOKEN, INFLUXDB_ORG, INFLUXDB_BUCKET
 
 from influxdb_client import InfluxDBClient, WriteOptions
-# from influxdb_client.client.influxdb_client_async import InfluxDBClient
-# import influxdb_client, os, time
-# from influxdb_client import InfluxDBClient, Point, WritePrecision
 from influxdb_client.client.write_api import SYNCHRONOUS
 
 from application.monitoring.utils import logger

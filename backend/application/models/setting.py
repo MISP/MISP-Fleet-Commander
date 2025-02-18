@@ -5,12 +5,7 @@ import os
 from typing import List, Union
 from pathlib import Path
 
-from application.DBModels import User
-from application.DBModels import db
-from application.marshmallowSchemas import userSchema
-import application.models.userSettings as userSettingsModel
-
-from application.models.auth import create_API_key
+from application import MONITORING_SYSTEM_AVAILABLE
 
 
 current_path = Path(__file__).resolve().parent
@@ -18,19 +13,53 @@ setting_path = current_path / "../../config.json"
 setting_path = setting_path.resolve()
 settings = {}
 setting_configuration = {
-    "monitoring_enabled": {
-        "name": "Monitoring Enabled",
-        "description": "If the monitoring system is started and functionnal, should the monitoring system be enabled.",
-        "scope": "Scheduler",
-        "type": "checkbox",
-        "default": False,
-    },
     "fleet_watching_enabled": {
         "name": "Fleet Watching Enabled",
         "description": "If the watching system should be enabled.",
-        "scope": "Scheduler",
+        "panel": "Scheduler",
+        "scope": "Fleet Watcher",
         "type": "checkbox",
         "default": False,
+        "disabled": False,
+        "error": False,
+    },
+    "fleet_watching_interval": {
+        "name": "Fleet Watching Interval",
+        "description": "The frequency (minute) at which the watcher refeshes the wathed fleets",
+        "panel": "Scheduler",
+        "scope": "Fleet Watcher",
+        "type": "number",
+        "default": 1,
+        "min": 1,
+        "disabled": True,
+        "error": {
+            "error_message": "The frequency cannot be configured at the moment.",
+            "variant": "info",
+        },
+    },
+    "monitoring_enabled": {
+        "name": "Monitoring Enabled",
+        "description": "If the monitoring system is started and functionnal, should the monitoring system be enabled.",
+        "panel": "Scheduler",
+        "scope": "Monitoring System",
+        "type": "checkbox",
+        "default": False,
+        "disabled": False,
+        "error": False,
+    },
+    "monitoring_interval": {
+        "name": "Monitoring Interval",
+        "description": "The frequency (minute) at which the monitoring system collect metrics",
+        "panel": "Scheduler",
+        "scope": "Monitoring System",
+        "type": "number",
+        "default": 10,
+        "min": 1,
+        "disabled": True,
+        "error": {
+            "error_message": "The frequency cannot be configured at the moment.",
+            "variant": "info",
+        },
     },
 }
 
@@ -52,6 +81,14 @@ def loadSetting():
             settings[setting_name]['value'] = setting_values[setting_name]
         else:
             settings[setting_name]['value'] = setting_config.get('default', None)
+
+    if not MONITORING_SYSTEM_AVAILABLE:
+        settings["monitoring_enabled"]["value"] = False
+        settings['monitoring_enabled']['disabled'] = True
+        settings["monitoring_enabled"]["error"] = {
+            "error_message": "Monitoring system is disabled due to missing libraries.",
+            "variant": "warning",
+        }
 
 def saveSettings():
     global settings

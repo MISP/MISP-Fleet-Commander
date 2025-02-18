@@ -11,52 +11,58 @@
             no-body
         >
             <div style="min-height: 25vh">
-                <h4>{{ panel | capitalize }}</h4>
-                <b-table-simple small class="mb-0" fixed>
-                    <b-tbody>
-                        <b-tr v-for="setting in panelSettings" :key="setting.name">
-                            <b-td>
-                                <span class="d-inline-flex flex-column">
-                                    <strong>{{ setting.text ? setting.text : setting.name }}</strong>
-                                    <code><small>{{ setting.full_setting_name }}</small></code>
-                                    <small class="text-muted">{{ setting.description }}</small>
-                                </span>
-                            </b-td>
-                            <b-td class="align-middle p-2" style="width: 520px;">
-                                <formInputFromConfig
-                                    :type="setting.type"
-                                    :input_key="setting.full_setting_name"
-                                    :user_value="selfSettingValues[setting.full_setting_name]"
-                                    :params="setting"
-                                    @input="handleInputChange"
-                                >
-                                </formInputFromConfig>
-                            </b-td>
-                            <b-td class="align-middle p-2" style="width: 100px;">
-                                <b-button-group size="sm">
-                                    <b-button
-                                        :variant="changePending(setting.full_setting_name) ? 'success' : 'secondary'"
-                                        :disabled="!changePending(setting.full_setting_name) || postInProgress[setting.full_setting_name]"
-                                        :lastupdate="lastupdate"
-                                        @click="saveSetting(setting.full_setting_name)"
+                <div
+                    v-for="(scopeSettings, scope) in panelSettings" :key="scope"
+                    class="mb-3"
+                >
+                    <h4 class="border-bottom">{{ scope | capitalize }}</h4>
+                    <b-table-simple small class="mb-0" fixed borderless>
+                        <b-tbody>
+                            <b-tr v-for="setting in scopeSettings" :key="setting.name">
+                                <b-td>
+                                    <span class="d-inline-flex flex-column">
+                                        <strong>{{ setting.text ? setting.text : setting.name }}</strong>
+                                        <code><small>{{ setting.full_setting_name }}</small></code>
+                                        <small class="text-muted">{{ setting.description }}</small>
+                                    </span>
+                                </b-td>
+                                <b-td class="align-middle p-2" style="width: 520px;">
+                                    <formInputFromConfig
+                                        :type="setting.type"
+                                        :input_key="setting.full_setting_name"
+                                        :user_value="selfSettingValues[setting.full_setting_name]"
+                                        :params="setting"
+                                        @input="handleInputChange"
                                     >
-                                        <b-spinner 
-                                            small
-                                            v-if="postInProgress[setting.full_setting_name]"
-                                        ></b-spinner>
-                                        <span class="sr-only">Saving...</span>
-                                        <span v-if="!postInProgress[setting.full_setting_name]">Save</span>
-                                    </b-button>
-                                    <b-button
-                                        :variant="changePending(setting.full_setting_name) ? 'warning' : 'secondary'"
-                                        :disabled="!changePending(setting.full_setting_name) || postInProgress[setting.full_setting_name]" :lastupdate="lastupdate"
-                                        @click="resetSetting(setting.full_setting_name)"
-                                    ><i class="fa fa-times"></i></b-button>
-                                </b-button-group>
-                            </b-td>
-                        </b-tr>
-                    </b-tbody>
-                </b-table-simple>
+                                    </formInputFromConfig>
+                                </b-td>
+                                <b-td class="align-middle p-2" style="width: 100px;">
+                                    <b-button-group size="sm">
+                                        <b-button
+                                            :variant="changePending(setting.full_setting_name) ? 'success' : 'outline-secondary'"
+                                            :disabled="!changePending(setting.full_setting_name) || postInProgress[setting.full_setting_name]"
+                                            :title="!changePending(setting.full_setting_name) || postInProgress[setting.full_setting_name] ? 'There is nothing save.' : ''"
+                                            :lastupdate="lastupdate"
+                                            @click="saveSetting(setting.full_setting_name)"
+                                        >
+                                            <b-spinner 
+                                                small
+                                                v-if="postInProgress[setting.full_setting_name]"
+                                            ></b-spinner>
+                                            <span class="sr-only">Saving...</span>
+                                            <span v-if="!postInProgress[setting.full_setting_name]">Save</span>
+                                        </b-button>
+                                        <b-button
+                                            :variant="changePending(setting.full_setting_name) ? 'outline-secondary' : 'outline-secondary'"
+                                            :disabled="!changePending(setting.full_setting_name) || postInProgress[setting.full_setting_name]" :lastupdate="lastupdate"
+                                            @click="resetSetting(setting.full_setting_name)"
+                                        ><i class="fa fa-times"></i></b-button>
+                                    </b-button-group>
+                                </b-td>
+                            </b-tr>
+                        </b-tbody>
+                    </b-table-simple>
+                </div>
             </div>
         </b-tab>
     </b-tabs>

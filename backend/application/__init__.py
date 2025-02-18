@@ -12,6 +12,15 @@ import redis
 from huey import RedisHuey
 from flask_socketio import SocketIO
 
+MONITORING_SYSTEM = None
+MONITORING_SYSTEM_AVAILABLE = False
+try:
+    from application.monitoring.monitor import monitor
+    MONITORING_SYSTEM = monitor
+    MONITORING_SYSTEM_AVAILABLE = True
+except ImportError:
+    print("The monitoring system is not avaible due to missing libraries.")
+
 
 class FlaskRedisHuey(RedisHuey):
 
