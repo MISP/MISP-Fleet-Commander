@@ -13,7 +13,14 @@ Vue.use(Router)
 const fleetSelected = (to, from, next) => {
     if (store.getters["fleets/selectedFleet"] === null) {
         if (noFleetPassThrough.includes(to.name)) {
-            next()
+            if (
+                (to.name == 'fleet.view' && to.params.fleet_id !== undefined) ||
+                (to.name == 'servers.view' && to.params.server_id !== undefined)
+            ) {
+                next()
+            } else {
+                next('home')
+            }
         } else {
             next('home')
         }
