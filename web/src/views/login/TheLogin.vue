@@ -4,7 +4,7 @@
         <div class="main-container d-flex flex-column">
             <div class="d-flex align-items-start justify-content-center pt-5 gradient">
                 <div class="d-flex flex-column align-items-center">
-                    <img src="@/assets/logo.svg" class="logo" alt="MISP Fleet Commander logo">
+                    <img src="@/assets/logo-text-lighter.svg" class="logo" alt="MISP Fleet Commander logo">
                     <loginForm></loginForm>
                 </div>
             </div>
