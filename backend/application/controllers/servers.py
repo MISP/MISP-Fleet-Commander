@@ -20,6 +20,18 @@ from application.models.servers import MONITORING_PANELS
 from application.controllers.instance import token_required
 from application.models.utils import MonitoringImages
 
+DEFAULT_PULL_RULE = {
+    "tags": {"OR": [], "NOT": []},
+    "orgs": {"OR": [], "NOT": []},
+    "type_attributes": {"NOT": []},
+    "type_objects": {"NOT": []},
+    "url_params": "",
+}
+DEFAULT_PUSH_RULE = {
+    "tags": {"OR": [], "NOT": []},
+    "orgs": {"OR": [], "NOT": []},
+}
+
 
 BPserver = Blueprint('server', __name__)
 
@@ -482,9 +494,13 @@ def updateConnectionForNetwork(server, connectedServer):
     link['pull'] = connectedServer['Server']['pull']
     link['push'] = connectedServer['Server']['push']
     pull_rules = json.loads(connectedServer['Server']['pull_rules'])
+    if len(pull_rules) == 0:
+        pull_rules = DEFAULT_PULL_RULE
     if pull_rules.get('url_params', '') != '':
         pull_rules['url_params'] = json.loads(pull_rules['url_params'])
     push_rules = json.loads(connectedServer['Server']['push_rules'])
+    if len(push_rules) == 0:
+        push_rules = DEFAULT_PUSH_RULE
     link['filtering_rules'] = {
         'pull_rules': pull_rules,
         'pull_rule_number': countJsonLeaves(pull_rules),
