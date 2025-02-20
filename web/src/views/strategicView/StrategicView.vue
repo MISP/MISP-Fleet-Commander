@@ -28,7 +28,7 @@
             <div class="d-flex flex-column pt-4" style="row-gap: 1em; overflow-x: hidden; height: calc(100% - 1.5rem)">
                 <transition name="slide-fade" mode="out-in">
                     <TheNodeInfoCard
-                        v-if="selectedNodeID"
+                        v-if="selectedNodeID && Number.isInteger(selectedNodeID)"
                         :server_id="selectedNodeID"
                     ></TheNodeInfoCard>
         
