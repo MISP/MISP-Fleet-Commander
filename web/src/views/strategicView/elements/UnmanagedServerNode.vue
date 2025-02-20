@@ -58,13 +58,13 @@ export default {
             return this.nodeData
         },
         getServerStatus: function () {
-            return this.getServer.status.status
+            return this.getServer.status?.status
         },
         getDiodeColor: function () {
-            return this.getServerStatus.color
+            return this.getServerStatus ? this.getServerStatus.color : null
         },
         getStatusMessage: function () {
-            return this.getServerStatus.message
+            return this.getServerStatus ? this.getServerStatus.message : null
         },
         statusHasError: function () {
             return this.getDiodeColor == 'danger'

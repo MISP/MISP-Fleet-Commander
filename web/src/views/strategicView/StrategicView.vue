@@ -332,7 +332,7 @@ export default {
                 link.source = parseInt(link.origin.id)
                 const destinationURL = link.destination.Server.url
                 const destinationURLWithoutTrailing = destinationURL.endsWith('/') ? destinationURL.substr(0, destinationURL.length - 1) : destinationURL
-                const destinationUUID = link.destination.connectionTest.uuid
+                const destinationUUID = link.destination.connectionTest?.uuid
                 let knownDestination
                 if (this.serversByUUID[destinationUUID]) {
                     knownDestination = this.serversByUUID[destinationUUID]

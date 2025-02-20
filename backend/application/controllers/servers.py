@@ -490,7 +490,7 @@ def updateConnectionForNetwork(server, connectedServer):
     }
     link['destination'] = connectedServer
     link['vid'] = f"{link['source']['id']}-{connectedServer['Server']['id']}"
-    link['status'] = connectedServer['connectionTest']
+    link['status'] = connectedServer.get('connectionTest', {})
     link['pull'] = connectedServer['Server']['pull']
     link['push'] = connectedServer['Server']['push']
     pull_rules = json.loads(connectedServer['Server']['pull_rules'])

@@ -53,13 +53,19 @@ export default {
         //     // .force("collide", d3.forceCollide((d) => d._managed_server ? 2*nodeWidth : nodeWidth/4))
         //     .force("center", d3.forceCenter(width / 2, height / 2))
 
+        // const simulation = d3.forceSimulation(d3data.nodes)
+        //     .alphaDecay(0.35)
+        //     .force("link", d3.forceLink(d3data.links).id(function(d) { return d.id }).distance(nodeWidth/2))
+        //     .force("charge", d3.forceManyBody().strength(-3000))
+        //     .force("collide", d3.forceCollide((d) => d._managed_server ? 0.9*nodeWidth : 0.3).iterations(3))
+        //     .force("center", d3.forceCenter(width / 2, height / 2))
+
         const simulation = d3.forceSimulation(d3data.nodes)
             .alphaDecay(0.35)
-            .force("link", d3.forceLink(d3data.links).id(function(d) { return d.id }).distance(nodeWidth/2))
+            .force("link", d3.forceLink(d3data.links).id((d) => { return d.id }).distance(nodeWidth / 2))
             .force("charge", d3.forceManyBody().strength(-3000))
-            // .force("collide", d3.forceCollide((d) => d._managed_server ? 1.2*nodeWidth : 0.1).iterations(3))
-            .force("collide", d3.forceCollide((d) => d._managed_server ? 0.9*nodeWidth : 0.3).iterations(3))
-            .force("center", d3.forceCenter(width / 2, height / 2))
+            .force("collide", d3.forceCollide((d) => d._managed_server ? 0.9*nodeWidth : 0.3*nodeWidth).strength(0.5) .iterations(1))
+            .force("center", d3.forceCenter(width / 2, height / 2).strength(0.05))
 
         const zoom = d3.zoom()
             .scaleExtent([.08, 4])
@@ -72,9 +78,9 @@ export default {
                 eventHandlers.refreshMinimap()
                 eventHandlers.updateScale(event.transform)
                 simulation.alphaTarget(0.001).restart()
-                setTimeout(() => {
-                    simulation.alphaTarget(0)
-                }, 1)
+                // setTimeout(() => {
+                //     simulation.alphaTarget(0)
+                // }, 1)
             })
         svg.call(zoom)
 
@@ -123,6 +129,7 @@ export default {
                 })
                 .attr("fill", "none")
                 .attr("stroke", linkColor)
+                .attr("stroke-linecap", 'round')
                 .attr("stroke-opacity", 1)
                 .attr("marker-end", 'url(#triangle)')
                 .attr("class", function (d) {
@@ -182,7 +189,7 @@ export default {
                 })
             badgeEnter
                 .append('xhtml:div')
-                .attr('class', 'badge-container')
+                .attr('class', function (d) { return hasActiveSyncMechanism(d) ? 'badge-container' : '' })
                 .append('div')
                 .html(getHTMLIconsFromLinkConfig)
 
@@ -223,9 +230,10 @@ export default {
                     link
                         .attr("d", function(d) {
                             const intersection = getIntersection(d.source, d.target)
-                            const { x1, y1, dr } = calcEdgePathCoordinate(d.source, d.target)
+                            let { x1, y1, dr } = calcEdgePathCoordinate(d.source, d.target)
                             if (intersection !== null) {
                                 return "M" + x1 + "," + y1 + "A" + dr + "," + dr + " 0 0,1 " + intersection.x2 + "," + intersection.y2;
+                                // return "M" + intersection.x1 + "," + intersection.y1 + "A" + dr + "," + dr + " 0 0,1 " + intersection.x2 + "," + intersection.y2;
                             }
                         })
                     link
@@ -235,13 +243,29 @@ export default {
                                 const originNode = d3.select(`#node-${d.origin.id}`).node()
                                 const nodeBoxWith = getNodeHalfDimension(originNode, "width")*2
                                 const nodeBoxHeight = getNodeHalfDimension(originNode, "height")*2
-    
+
                                 const pathLength = path.getTotalLength();
                                 let midpointLength = pathLength * (linkBadgeStartOffset/100);
-                                if (pathLength <= 1*nodeBoxHeight || pathLength <= 1.5*nodeBoxWith) {
-                                    midpointLength = 0.55*pathLength
+                                if (
+                                    pathLength <= 1*nodeBoxHeight ||
+                                    pathLength <= 1.5*nodeBoxWith
+                                ) {
+                                    if (pathLength <= nodeBoxWith / 2.5) { // #FIXME: Should consider if the other node is west/east, instead since physic simulation consider the node as a circle
+                                        midpointLength = 0.99*pathLength
+                                    } else {
+                                        midpointLength = 0.55*pathLength
+                                    }
                                 }
                                 const pointAtLength = path.getPointAtLength(midpointLength)
+
+                                // const intersection = getIntersection(d.source, d.target)
+                                // const { dr } = calcEdgePathCoordinate(d.source, d.target)
+                                // const fakePath = document.createElementNS("http://www.w3.org/2000/svg", "path")
+                                // const fakeD = "M" + intersection.x1 + "," + intersection.y1 + "A" + dr + "," + dr + " 0 0,1 " + intersection.x2 + "," + intersection.y2;
+                                // fakePath.setAttribute('d', fakeD)
+                                // const pathLength = fakePath.getTotalLength();
+                                // let midpointLength = 0.20*pathLength
+                                // const pointAtLength = fakePath.getPointAtLength(midpointLength)
     
                                 const theBadge = d3.select(`#badge_${d.vid}`)
                                 const badgeBoxTrueSize = theBadge.selectChildren().node().getBoundingClientRect()
@@ -397,24 +421,9 @@ export default {
             return icons.join(' ')
         }
 
-        function getFAIconFromLinkConfig(d) {
-            let text = []
+        function hasActiveSyncMechanism(d) {
             const serverConnection = d.destination.Server
-            if (serverConnection.push) {
-                if (serverConnection.push_sightings && serverConnection.push_galaxy_clusters && serverConnection.push_analyst_data) {
-                    text.push('\uf35b')
-                } else {
-                    text.push('\uf062')
-                }
-            }
-            if (serverConnection.pull) {
-                if (serverConnection.pull_galaxy_clusters && serverConnection.pull_analyst_data) {
-                    text.push('\uf358')
-                } else {
-                    text.push('\uf063')
-                }
-            }
-            return text.join(' ')
+            return serverConnection.push || serverConnection.pull
         }
 
         function calcEdgePathCoordinate(source, target) {
@@ -446,25 +455,17 @@ export default {
             }
             
             function dragged(event, d) {
-                const freeze = d.fx == event.x && d.fy == event.y
                 d.fx = event.x
                 d.fy = event.y
-                if (freeze) {
-                    d.vx = 0
-                    d.vy = 0
-                    simulation.alphaTarget(0)
-                    d.frozen = true
-                }
-                if (!freeze && d.frozen) {
-                    d.frozen = false
-                    simulation.alphaTarget(0.3).restart()
-                }
+                simulation.alphaTarget(0.3).restart()
             }
             
             function dragended(event, d) {
                 if (!event.active) simulation.alphaTarget(0)
-                d.fx = null
-                d.fy = null
+                // d.fx = null
+                // d.fy = null
+                d.fx = event.x
+                d.fy = event.y
             }
 
             // Add support of the drag handle
