@@ -1,14 +1,14 @@
 <template>
 <div>
     <span v-if="tree">
-        <ul class="pl-0 mb-1">
-            <li class="ml-1">
+        <ul class="pl-0">
+            <li class="ml-3">
                 <span 
                     variant="link"
                     :class="['p-0', canBeOpened && hasChild ? 'useCursorPointer' : '']"
                     @click="toggleOpen"
                 >
-                    <div :class="canBeOpened ? 'text-nowrap' : ''">
+                    <span :class="canBeOpened ? 'text-nowrap' : ''">
                         <i v-if="canBeOpened && hasChild" :class="['fas', isOpen ? 'fa-caret-down' : 'fa-caret-right']"></i>
                         <span :class="['font-weight-bold', rootkeyIndexing ? 'text-muted' : '']">
                             {{ rootKey }}
@@ -18,17 +18,18 @@
                                 {{ childString }}
                             </span>
                         </span>
-                    </div>
+                    </span>
                 </span>
                 <template v-if="canBeOpened && isOpen">
-                    <jsonViewer
-                        v-for="(child, index) in item"
-                        :key="index"
-                        :item="child"
-                        :rootKeyName="index"
-                        :rootkeyIndexing="Array.isArray(item)"
-                    >
-                    </jsonViewer>
+                    <div class="is-contained mb-2">
+                        <jsonViewer
+                            v-for="(child, index) in item"
+                            :key="index"
+                            :item="child"
+                            :rootKeyName="index"
+                            :rootkeyIndexing="Array.isArray(item)"
+                        ></jsonViewer>
+                    </div>
                 </template>
                 <template v-else-if="!hasChild && Array.isArray(item)">
                     <small>empty array</small>
@@ -144,7 +145,7 @@ export default {
     }
     .preppend-column::before {
         content: ':';
-        margin-right: 1em;
+        margin-right: 0.5em;
         color: black;
     }
     .code-container {
@@ -152,5 +153,11 @@ export default {
         box-shadow: 0 .125rem .25rem rgba(0,0,0,.075);
         border-radius: 3px;
         padding: 0.5rem;
+    }
+    .is-contained {
+        margin-left: 3px;
+        border-left: #93939366;
+        border-left-width: 2px;
+        border-left-style: solid;
     }
 </style>

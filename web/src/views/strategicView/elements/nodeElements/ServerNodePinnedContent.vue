@@ -55,7 +55,7 @@
             </b-button>
             <jsonViewer 
                 :tree="rulesTreeMode"
-                :item="selectedEntryData"
+                :item="sortedSelectedEntryData"
                 rootKeyName="Data"
                 :open="true"
             ></jsonViewer>
@@ -126,6 +126,23 @@ export default {
             }
             const keyContainingData = Object.keys(this.selectedEntry.data).filter((k) => k != 'server_id' && k != 'timestamp')[0]
             return this.selectedEntry.data[keyContainingData]
+        },
+        sortedSelectedEntryData() {
+            const sortedObject = {}
+            const sortedKeys = Object.keys(this.selectedEntryData).sort((a, b) => {
+                const isALower = /^[a-z]/.test(a);
+                const isBLower = /^[a-z]/.test(b);
+                
+                if (isALower && !isBLower) return -1;
+                if (!isALower && isBLower) return 1;
+                return a.localeCompare(b);
+            })
+            sortedKeys.forEach((k) => {
+                sortedObject[k] = this.selectedEntryData[k]
+            })
+            console.log(sortedKeys);
+            
+            return sortedObject
         },
     },
     methods: {
