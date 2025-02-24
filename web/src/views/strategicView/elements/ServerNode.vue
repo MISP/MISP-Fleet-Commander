@@ -39,7 +39,7 @@
                     <template v-slot:tabs-end>
                         <a class="nav-link disabled ml-auto border-0" href="#" style="pointer-events: auto;">
                             <timeSinceRefresh :timestamp="lastRefreshTimestamp" :clockNoMargin="true"></timeSinceRefresh>
-                            <button type="button btn-sm" class="btn btn-link sync-btn p-0">
+                            <button type="button btn-sm" class="btn btn-link sync-btn p-0" @click.prevent.stop="wsStatusRefresh()">
                                 <i class="fas fa-sync"></i>
                             </button>
                         </a>
@@ -52,6 +52,7 @@
 
 <script>
 import { mapState, mapGetters } from "vuex"
+import { websocketMixin } from "@/helpers/websocketMixin"
 /* eslint-disable vue/no-unused-components */
 import * as d3 from "d3"
 import loaderPlaceholder from "@/components/ui/elements/loaderPlaceholder.vue"
@@ -64,6 +65,7 @@ import ServerNodePinnedContent from "@/views/strategicView/elements/nodeElements
 
 export default {
     name: "ServerNode",
+    mixins: [websocketMixin],
     components: {
         timeSinceRefresh,
         ServerNodeInfo,
@@ -122,7 +124,11 @@ export default {
         },
         setTabIndex(index) {
             this.tabIndex = index
-        }
+        },
+        wsStatusRefresh() {
+            this.wsServerRefresh(this.server_id)
+            this.wsServerConnectionTest(this.server_id)
+        },
     },
     props: {
         server_id: {

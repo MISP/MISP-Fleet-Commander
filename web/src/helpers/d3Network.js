@@ -71,13 +71,17 @@ export default {
             .scaleExtent([.08, 4])
             .on("zoom", function (event) {
                 container.attr("transform", event.transform)
+                event.transform.k_changed = zoomLevel != event.transform.k
                 zoomLevel = event.transform.k
                 
             })
             .on("end", function (event) {
                 eventHandlers.refreshMinimap()
                 eventHandlers.updateScale(event.transform)
-                simulation.alphaTarget(0.001).restart()
+                if (event.transform.k_changed) {
+                    simulation.alphaTarget(0.001).restart()
+                }
+                
                 // setTimeout(() => {
                 //     simulation.alphaTarget(0)
                 // }, 1)
