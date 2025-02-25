@@ -411,7 +411,13 @@ export default {
         },
         getConnectionList: function() {
             this.updateWithStore()
-        }
+        },
+        remote_connections: {
+            handler: function() {
+                this.refreshConnections()
+            },
+            deep: true,
+        },
     },
     beforeRouteEnter(to, from, next) {
         if (store.getters["fleets/selectedFleet"] === null) {

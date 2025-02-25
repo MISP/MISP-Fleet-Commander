@@ -140,8 +140,6 @@ export default {
             sortedKeys.forEach((k) => {
                 sortedObject[k] = this.selectedEntryData[k]
             })
-            console.log(sortedKeys);
-            
             return sortedObject
         },
     },
