@@ -9,7 +9,7 @@ from flask_migrate import Migrate
 from flask_bcrypt import Bcrypt
 import os
 import redis
-from huey import RedisHuey
+from huey import PriorityRedisHuey
 from flask_socketio import SocketIO
 
 MONITORING_SYSTEM = None
@@ -22,7 +22,7 @@ except ImportError:
     print("The monitoring system is not avaible due to missing libraries.")
 
 
-class FlaskRedisHuey(RedisHuey):
+class FlaskRedisHuey(PriorityRedisHuey):
 
     def __init__(self, *args, flaskApp, **kwargs):
         super().__init__(*args, **kwargs)
@@ -51,6 +51,7 @@ class FlaskRedisHuey(RedisHuey):
 
             return original_periodic_task_decorator(wrapped_task)
         return wrapper
+
 
 # naming_convention = {
 #     "ix": 'ix_%(column_0_label)s',

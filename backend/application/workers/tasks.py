@@ -21,13 +21,13 @@ from application import MONITORING_SYSTEM_AVAILABLE, MONITORING_SYSTEM as monito
 socketioEmitter = SocketioEmitter()
 
 
-@huey_app.task()
+@huey_app.task(priority=1)
 def ping():
     socketioEmitter.pong(True)
     return 'pong'
 
 
-@huey_app.task()
+@huey_app.task(priority=2)
 def fetchServerInfoTask(serverDict):
     server = serverSchemaLighter.load(serverDict)
     socketioEmitter.server_updating(server.id)
@@ -44,7 +44,7 @@ def fetchServerInfoTask(serverDict):
     serverModel.dofetchServerInfoAsync(server, clientSocketEmitterUpdateFuns)
 
 
-@huey_app.task()
+@huey_app.task(priority=2)
 def doFleetInfoTask(servers):
     server_ids = []
     serversDict = []
@@ -73,7 +73,7 @@ def doFleetInfoTask(servers):
             socketioEmitter.fleet_update_timestamps(serversDict[0].fleet_id, watched_timestamp = watched_timestamp)
 
 
-@huey_app.task()
+@huey_app.task(priority=5)
 def doServerConnectionTestTask(serverDict):
     server = serverSchemaLighter.load(serverDict)
     socketioEmitter.server_status_updating(server.id)
@@ -83,7 +83,7 @@ def doServerConnectionTestTask(serverDict):
     socketioEmitter.udpate_server_connection(connectionInfo)
 
 
-@huey_app.task()
+@huey_app.task(priority=5)
 def doFleetConnectionTestTask(servers):
     server_ids = []
     serversDict = []
@@ -147,7 +147,8 @@ def watchMonitoredFleets():
             socketioEmitter.fleet_update_timestamps(fleet.id, watched_timestamp = watched_timestamp)
 
 
-@huey_app.periodic_task(crontab(minute='*/10'))
+@huey_app.periodic_task(crontab(minute="*/10"))
+@huey_app.lock_task("monitor-lock")
 def monitorMonitoredFleets():
     if MONITORING_SYSTEM_AVAILABLE and settingModel.getRefreshValue("monitoring_enabled"):
         fleets = fleetModel.indexMonitored()
@@ -158,7 +159,8 @@ def monitorMonitoredFleets():
                 socketioEmitter.fleet_update_timestamps(fleet.id, monitored_timestamp = monitored_timestamp)
 
 
-@huey_app.periodic_task(crontab(hour='*/12'))
+@huey_app.periodic_task(crontab(hour="*/12"))
+@huey_app.lock_task("monitor-image-lock")
 def cacheMonitoringImages():
     if MONITORING_SYSTEM_AVAILABLE and settingModel.getRefreshValue("monitoring_enabled"):
         fleets = fleetModel.indexMonitored()
