@@ -50,6 +50,40 @@
         </b-sidebar>
 
         <div
+            class="position-absolute border overflow-hidden py-1 px-2 bg-white shadow"
+            :style="actionBarPosition"
+        >
+            <div class="d-flex flex-row" style="gap: 0.25em">
+                <b-button
+                    variant="primary"
+                    class="ml-auto"
+                    size="sm"
+                    title="Quick refresh"
+                    @click="fleetStatusRefresh()"
+                >
+                    <i class="fas fa-redo-alt"></i>
+                </b-button>
+                <b-button
+                    :variant="getRefreshEnqueued ? 'dark' : 'primary'"
+                    :disabled="getRefreshEnqueued"
+                    size="sm"
+                    title="Enqueue full refresh"
+                    href="#"
+                    @click="fleetRefresh()"
+                >
+                    <span v-if="getRefreshEnqueued">
+                        <i class="fas fa-sync-alt fa-spin"></i>
+                        Refresh in progress
+                    </span>
+                    <span v-else>
+                        <i class="fas fa-sync-alt"></i>
+                        Full refresh
+                    </span>
+                </b-button>
+            </div>
+        </div>
+
+        <div
             class="position-absolute border overflow-hidden p-1 bg-white"
             :style="minimapPosition"
         >
@@ -129,6 +163,7 @@ export default {
             updateData: null,
             scaleInfo: {x: 0, y: 0, k: 1},
             minimapPosition: {top: "unset", right: "unset", left: "20px", bottom: "20px"},
+            actionBarPosition: {top: "15px", right: "unset", left: "15px", bottom: "unset"},
             minimapRedrawCount: 0,
             allNodeInstances: [],
         }
@@ -137,6 +172,7 @@ export default {
         ...mapState({
             selectedFleet: state => state.fleets.selected,
             remote_connections: state => state.servers.remote_connections,
+            server_refresh_enqueued: state => state.servers.server_refresh_enqueued,
         }),
         ...mapGetters({
             serverCount: "servers/serverCount",
@@ -149,8 +185,17 @@ export default {
         hasActiveSelection() {
             return this.selectedNodeID !== null || this.selectedLinkID !== null
         },
+        getRefreshEnqueued: function() {
+            return this.server_refresh_enqueued[this.server_id]
+        },
     },
     methods: {
+        fleetRefresh() {
+            this.wsFleetRefresh(this.selectedFleet.id)
+        },
+        fleetStatusRefresh() {
+            this.wsFleetConnectionTest(this.selectedFleet.id)
+        },
         toggleNodeInfoSideBar(show) {
             if (show === undefined) {
                 this.nodeInfoCard.show = !this.nodeInfoCard.show
