@@ -3,7 +3,7 @@
 . ./venv/bin/activate
 export FLASK_APP=wsgi.py
 # export FLASK_DEBUG=0
-# export FLASK_ENV=production
+export FLASK_ENV=production
 export FLASK_CONFIG=config.ProductionConfig
 # export SQLALCHEMY_DATABASE_URI=database/database.db
 # export SECRET_KEY=secret
