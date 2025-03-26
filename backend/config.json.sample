@@ -1,4 +1,7 @@
 {
+    "fleet_watching_enabled": false,
+    "fleet_watching_interval": 1,
     "monitoring_enabled": false,
-    "fleet_watching_enabled": false
+    "monitoring_interval": 10
+
 }
