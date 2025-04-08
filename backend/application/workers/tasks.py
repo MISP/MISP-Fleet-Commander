@@ -18,6 +18,9 @@ from application import redisModel
 
 from application import MONITORING_SYSTEM_AVAILABLE, MONITORING_SYSTEM as monitor
 
+fleet_watching_interval_min = settingModel.getRefreshValue("fleet_watching_interval")
+monitoring_interval_min = settingModel.getRefreshValue("monitoring_interval")
+
 socketioEmitter = SocketioEmitter()
 
 
@@ -118,7 +121,7 @@ def doCacheMonitoringImages(serverDict):
 ###
 
 
-@huey_app.periodic_task(crontab(minute="*/1"))
+@huey_app.periodic_task(crontab(minute=f"*/{fleet_watching_interval_min}"))
 def watchMonitoredFleets():
     if settingModel.getRefreshValue("fleet_watching_enabled"):
         fleets = fleetModel.indexWatched()
@@ -147,7 +150,7 @@ def watchMonitoredFleets():
             socketioEmitter.fleet_update_timestamps(fleet.id, watched_timestamp = watched_timestamp)
 
 
-@huey_app.periodic_task(crontab(minute="*/10"))
+@huey_app.periodic_task(crontab(minute=f"*/{monitoring_interval_min}"))
 @huey_app.lock_task("monitor-lock")
 def monitorMonitoredFleets():
     if MONITORING_SYSTEM_AVAILABLE and settingModel.getRefreshValue("monitoring_enabled"):
