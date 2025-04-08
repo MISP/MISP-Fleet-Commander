@@ -1,11 +1,10 @@
 # syntax=docker/dockerfile:1
 
-FROM python:3.8-slim
+FROM python:3.12-slim
 
 
 WORKDIR /app
 COPY . /app
-RUN pip install -r requirements.txt
-RUN flask db upgrade
+RUN bash install.sh
 
 CMD ["flask", "run", "--port=5001", "--host=0.0.0.0"]
