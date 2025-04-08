@@ -15,7 +15,6 @@ services:
             - TOKEN_EXPIRATION_MIN=30
             - TOKEN_EXPIRATION_DAYS=365
             - AUTHLIB_INSECURE_TRANSPORT=true
-            # - REDIS_URL=redis://redis
             - REDIS_URL=redis
             - REDIS_PORT=6379
             - REDIS_DB=1
@@ -27,18 +26,9 @@ services:
             - "./run/data:/app/data"
         ports:
             - "5001:5001"
+        command: flask run --port=5001 --host=0.0.0.0
         depends_on:
             - redis
-
-    web:
-        build:
-            context: web
-            dockerfile: docker/Dockerfile
-        working_dir: /app
-        ports:
-            - "8080:80"
-        depends_on:
-            - backend
 
     workers:
         build: 
@@ -50,7 +40,6 @@ services:
             - FLASK_CONFIG=config.ProductionConfig
             - SQLALCHEMY_DATABASE_URI=/app/database/database.db
             - SQLALCHEMY_TRACK_MODIFICATIONS=1
-            # - REDIS_URL=redis://redis
             - REDIS_URL=redis
             - REDIS_PORT=6379
             - REDIS_DB=1
@@ -59,7 +48,7 @@ services:
             - WORKER_RESULT_BACKEND=redis://redis
         volumes:
             - "./run:/app/database"
-        command: huey_consumer.py application.workers.tasks.huey_app -w 4 -k process
+        command: bash start_workers.sh
         depends_on:
             - redis
             - backend
