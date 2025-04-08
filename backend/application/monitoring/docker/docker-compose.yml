@@ -32,6 +32,8 @@ services:
       - GF_RENDERING_SERVER_URL=http://renderer:8081/render
       - GF_RENDERING_CALLBACK_URL=http://grafana:3000/
       - GF_LOG_FILTERS=rendering:debug
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   renderer:
     image: grafana/grafana-image-renderer:latest
