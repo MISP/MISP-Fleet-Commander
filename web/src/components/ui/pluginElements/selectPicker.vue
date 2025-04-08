@@ -26,7 +26,7 @@
                         </b-button>
                     </ul>
 
-                    <b-dropdown size="sm" variant="outline-secondary" block menu-class="w-100">
+                    <b-dropdown size="sm" variant="outline-secondary" block menu-class="w-100" boundary="scrollParent">
                         <template #button-content>
                             <b-icon icon="tag-fill"></b-icon> Choose
                         </template>
@@ -44,6 +44,7 @@
                                 <b-form-input
                                     v-model="search"
                                     id="tag-search-input"
+                                    ref="search_input"
                                     type="search"
                                     size="sm"
                                     autocomplete="off"
@@ -62,14 +63,38 @@
                         <b-dropdown-divider></b-dropdown-divider>
 
                         <div style="overflow-y: auto; max-height: 18rem;">
-                            <b-dropdown-item-button
-                                v-for="option in availableOptions"
-                                :key="option.value"
-                                :disabled="!isSelected(option.value)"
-                                @click="onOptionClick(option.value, addTag)"
-                            >
-                                {{ option.text }}
-                            </b-dropdown-item-button>
+                            <template v-if="isGroupedOptionsPossible">
+                                <div v-for="availableOptions, groupName in availableGroupedOptions" :key="groupName">
+                                    <b-dropdown-group
+                                        class="useCursorPointer"
+                                    >
+                                    <template #header>
+                                        <b-dropdown-item-button @click="onGroupClick(groupName, addTag)">
+                                            <b-icon icon="list-check"></b-icon> {{ groupName }}
+                                        </b-dropdown-item-button>
+                                    </template>
+
+                                        <b-dropdown-item-button
+                                            v-for="option in availableOptions"
+                                            :key="option.value"
+                                            :disabled="!isSelected(option.value)"
+                                            @click="onOptionClick(option.value, addTag)"
+                                        >
+                                            {{ option.text }}
+                                        </b-dropdown-item-button>
+                                    </b-dropdown-group>
+                                </div>
+                            </template>
+                            <template v-else>
+                                <b-dropdown-item-button
+                                    v-for="option in availableOptions"
+                                    :key="option.value"
+                                    :disabled="!isSelected(option.value)"
+                                    @click="onOptionClick(option.value, addTag)"
+                                >
+                                    {{ option.text }}
+                                </b-dropdown-item-button>
+                            </template>
     
                             <b-dropdown-text v-if="availableOptions.length === 0">
                                 There are no option available to select
@@ -113,11 +138,21 @@ export default {
         },
         availableOptions() {
             const criteria = this.criteria
-            const options = this.options.filter(opt => this.selected_value.indexOf(opt.value) === -1)
+            let options = this.options.filter(opt => this.selected_value.indexOf(opt.value) === -1)
             if (criteria) {
-                return this.matchingOptions(options)
+                options = this.matchingOptions(options)
             }
             return options
+        },
+        availableGroupedOptions() {
+            let groupedOptions = this.availableOptions
+            if (this.isGroupedOptionsPossible) {
+                groupedOptions = Object.groupBy(this.availableOptions, ({ group }) => group)
+            }
+            return groupedOptions
+        },
+        isGroupedOptionsPossible() {
+            return this.availableOptions.length > 0 && this.availableOptions[0].group !== undefined
         },
         searchDesc() {
             if (this.criteria && this.availableOptions.length === 0) {
@@ -140,6 +175,12 @@ export default {
             addTag(selectedOption)
             this.search = ''
         },
+        onGroupClick(selectedGroup, addTag ) {
+            this.availableGroupedOptions[selectedGroup].forEach(option => {
+                addTag(option.value)
+            });
+            this.search = ''
+        },
         selectAll(addTag) {
             this.matchingOptions().forEach(option => {
                 addTag(option.value)
@@ -154,6 +195,18 @@ export default {
     },
     mounted() {
         this.selected_value = this.value
+        search_input
+        this.$root.$on('bv::dropdown::shown', bvEvent => {
+            this.$refs.search_input.focus()
+        })
     },
 }
 </script>
+
+<style scoped>
+.dropdown-header:hover {
+    color: #16181b;
+    text-decoration: none;
+    background-color: #e9ecef;
+}
+</style>
