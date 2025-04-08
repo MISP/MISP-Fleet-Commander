@@ -23,7 +23,7 @@ With MISP Fleet Commander, you can diagnose, configure, update, and monitor MISP
 
 ## 💡 Why This Project?
 
-> Back in 2021, I was managing multiple MISP servers and found myself constantly repeating tasks — monitoring health, tweaking configs, running the same API calls across instances. I also wanted to explore some modern web technologies I wasn’t familiar with. So, I started building MISP Fleet Commander in my spare time — mostly just for fun.  
+> Back in 2021, I was managing multiple MISP servers and found myself constantly repeating tasks — monitoring health, tweaking configs, running the same API calls across instances. I also wanted to explore some modern web technologies I wasn’t familiar with. So, I started building MISP Fleet Commander in my spare time — mostly just for fun.
 >
 > Now, in 2025 — four years later — it’s finally stable enough to share with the world.
 
@@ -120,7 +120,7 @@ Instructions for both are available on the Home page of the app.
             <img src="documentation/screenshots/home-page.png" alt="Home page">
         </td>
         <td>
-            Fleet index
+            The fleet index showing all servers from the selected fleet
             <img src="documentation/screenshots/fleet-index.png" alt="Fleet index page"></td>
     </tr> 
     <tr>
@@ -128,27 +128,27 @@ Instructions for both are available on the Home page of the app.
             Server view
             <img src="documentation/screenshots/server-view.png" alt="Server view page"></td>
         <td>
-            Plugin page
+            Plugin page showing all available plugins
             <img src="documentation/screenshots/plugins.png" alt="Plugin page">
         </td>
     </tr>
     <tr>
         <td>
-            Batch API modal
+            Batch API modal allowing to run API call on multiple server at once
             <img src="documentation/screenshots/batch-api.png" alt="Batch API modal">
         </td>
         <td>
-            Strategic view page
+            Strategic View page displaying how inter-connected are servers in the selected fleet
             <img src="documentation/screenshots/strategic-view.png" alt="Strategic view page">
         </td>
     </tr>
     <tr>
         <td>
-            Connection page
+            Connection page listing all known server synchronisation and their status
             <img src="documentation/screenshots/connections.png" alt="Connection page">
         </td>
         <td>
-            Grafana page
+            Grafana page displaying all the collected metrics
             <img src="documentation/screenshots/grafana.png" alt="Grafana page">
         </td>
     </tr>
@@ -195,6 +195,14 @@ Contributions, bug reports, and feature suggestions are **more than welcome**!
 - Open a pull request
 - Or simply open an issue
 
+### 🧩 How to Add a New Plugin
+MISP Fleet Commander supports a plugin system to extend its UI and functionality. Adding a new plugin is quick and doesn't require a full rebuild of the application.
+
+#### 🔧 Steps to Create a Plugin
+
+1. Go in `backend/application/plugins`.
+2. Copy/Paste a plugin and modify it to your needs 😉.
+
 ## 🤝 Acknowledgments
 
 Special thanks to the MISP Project and its community for building such a foundational tool for threat intelligence sharing.
@@ -203,5 +211,5 @@ Special thanks to the MISP Project and its community for building such a foundat
 ## ©️ Copyright
 ```
 © 2021–2025 Sami Mokaddem.
-© Logo design by Ysaline Rochez — thank you for the beautiful work!
+© Logo designed by Ysaline Rochez — thank you for the beautiful work!
 ```
