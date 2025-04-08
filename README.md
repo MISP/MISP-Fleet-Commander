@@ -34,7 +34,7 @@ This is a project built out of real-world need, shaped by curiosity and the desi
 
 ### 📦 Requirements
 
-- python 3.12
+- python 3.11
 - A modern browser (for using the UI and extensions)
 
 ### 🛠️ Installation
@@ -63,6 +63,17 @@ bash start.sh
 
 This will start a local server running on all addresses (0.0.0.0) (typically at http://localhost:5001) where you can interact with the UI.
 
+
+#### Or you can use the provided docker image
+
+```
+docker compose up
+```
+
+A default admin user is already provisioned with the following credential:
+```text
+admin@admin.test:Password1234
+```
 
 ### 🔄 Updating
 
@@ -143,6 +154,38 @@ Instructions for both are available on the Home page of the app.
     </tr>
 </table>
 
+## Setting up metric collection with InfluxDB and Grafana
+1. Install the needed dependencies.
+```bash
+cd backend
+. ./venv/bin/activate
+pip3 install -U -r requirements_monitoring.txt
+```
+2. If you already have Grafana and InfluxDB running, go to step 4.
+3. Start the InfluxDB and Grafana containers.
+```bash
+cd backend/application/monitoring/docker
+docker compose up
+```
+4. Duplicate and update the `config.py` configuration file.
+```bash
+cd backend/application/monitoring
+cp config.py.sample config.py
+vim config.py  # Update the token, org and URL based on what has been created on InfluxDB
+```
+5. If needed, restart the MISP Fleet Commander server and check if monitoring is supported.
+   - Login in MISP Fleet Commander and click on the setting button in the top right corner.
+   - If everything went right, you should be able to enable the setting `monitoring_enabled` under the `Scheduler tab`.
+6. Export the env variable before starting the server. FIXME: Provide sane values
+```bash
+GRAFANA_BASE_URL=http://localhost:3000
+GRAFANA_DASHBOARD_DATA_RENDER=render/d-solo/ce6olif96756od
+GRAFANA_DASHBOARD=d/ce6olif96756od/circl-monitoring-misp
+GRAFANA_APIKEY=glsa_k94PVSfhraGiK5roLyoniHu0xFyvByne_b1604732
+bash start.sh
+```
+
+
 ## 📬 Feedback & Contributions
 
 Contributions, bug reports, and feature suggestions are **more than welcome**!
@@ -151,8 +194,6 @@ Contributions, bug reports, and feature suggestions are **more than welcome**!
 - Commit your changes
 - Open a pull request
 - Or simply open an issue
-
-## 📄 License
 
 ## 🤝 Acknowledgments
 
