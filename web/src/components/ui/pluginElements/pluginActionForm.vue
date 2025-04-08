@@ -48,6 +48,7 @@
                 :id="`input-${i}`"
                 @input="(value) => { handleInput(param.key, value) }"
                 :options="param.options"
+                :value="param.default_value !== undefined ? param.default_value : []"
             ></selectPicker>
 
             <b-form-input

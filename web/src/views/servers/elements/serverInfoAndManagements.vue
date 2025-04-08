@@ -243,6 +243,7 @@ export default {
         getMaxHeight() {
             return {
                 "max-height": this.max_content_size,
+                "min-height": "600px",
                 "overflow-y": "auto",
             }
         }
