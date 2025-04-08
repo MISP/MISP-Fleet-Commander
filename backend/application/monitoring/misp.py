@@ -41,12 +41,10 @@ class MISP(SensorBase):
         }
         super().__init__()
 
-
     def query_misp(self, url, data=None, headers=None):
         fullurl = urljoin(self.baseurl, url)
         logger.debug(f'Querying {self.measurement_name} `{self.name}`: {fullurl}')
         return self.query(fullurl, data=data, headers=self.headers, ssl=not self.skip_ssl)
-
 
     def get_measurements_coroutines(self):
         # Create and executes all queries
@@ -62,7 +60,6 @@ class MISP(SensorBase):
         return corou_to_execute
 
         # return await asyncio.gather(*corou_to_execute)
-
 
     def process_measurements(self, results):
         # Generate the measurements for each queries
@@ -96,7 +93,6 @@ class MISP(SensorBase):
             measurements.append(self.measurement_factory.create(m_widget['tags'], m_widget['fields'], m_widget.get('time', None)))
 
         return measurements
-
 
     def get_diagnostic(self):
         full_diagnostic = self.query_misp(f'/servers/serverSettings/diagnostics.json')
@@ -157,7 +153,6 @@ class MISP(SensorBase):
         entries.extend(process_workers_info(diagnostic['workers']))
         return entries
 
-
     def get_login(self):
         minute = 60
         login_logs = self.query_misp(f'/logs/index/created:{minute}m/model:User/action:login.json')
@@ -178,7 +173,6 @@ class MISP(SensorBase):
                 'time': login_log['Log']['created'],
             })
         return logins
-
 
     def get_widgets(self):
         systemRessource = self.query_misp(f'/dashboards/renderWidget/0/exportjson:1', {
@@ -258,10 +252,9 @@ class MISP(SensorBase):
                 'org_count': int(stats['stats']['org_count']),
                 'local_org_count': int(stats['stats']['local_org_count']),
                 'contributing_org_count': int(stats['stats']['contributing_org_count']),
-                'average_user_per_org': int(stats['stats']['average_user_per_org']),
+                'average_user_per_org': int(float(stats['stats']['average_user_per_org'])),
             },
         }
-
 
     def get_open_registration(self):
         registrations_index = self.query_misp('/users/registrations.json')
@@ -276,7 +269,6 @@ class MISP(SensorBase):
                 'open_self_registration': len(registrations_index)
             }
         }
-
 
     def get_all_benchmarking(self):
         today_date = date.today().isoformat()
