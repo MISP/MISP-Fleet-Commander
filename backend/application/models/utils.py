@@ -16,12 +16,13 @@ import asyncio
 
 import nest_asyncio
 import requests  # Make the asyncio's event loop re-entrant
+from application import flaskApp
 nest_asyncio.apply()
 
 
-GRAFANA_BASE_URL = os.environ.get('GRAFANA_BASE_URL')
-GRAFANA_DASHBOARD_DATA_RENDER = os.environ.get("GRAFANA_DASHBOARD_DATA_RENDER")
-GRAFANA_APIKEY = os.environ.get('GRAFANA_APIKEY')
+GRAFANA_BASE_URL = flaskApp.config['GRAFANA_BASE_URL']
+GRAFANA_DASHBOARD_DATA_RENDER = flaskApp.config['GRAFANA_DASHBOARD_DATA_RENDER']
+GRAFANA_APIKEY = flaskApp.config['GRAFANA_APIKEY']
 
 
 class AvatarGenerator:

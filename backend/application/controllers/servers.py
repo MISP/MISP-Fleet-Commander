@@ -12,6 +12,7 @@ from collections import defaultdict
 from flask import Blueprint, request, jsonify, abort, Response, send_from_directory
 from marshmallow import ValidationError
 
+from application import flaskApp
 from application.DBModels import db, User, Server
 from application.controllers.utils import mispGetHTMLRequest, mispGetRequest, mispPostRequest, batchRequest
 from application.marshmallowSchemas import ServerSchema, serverSchemaLighter, fleetSchema, serverQuerySchema, serverSchema, serversSchemaLighter, taskSchema, serverSchema, serversSchema
@@ -322,8 +323,8 @@ def getConnection(user, server_id, connection_id):
 
 @BPserver.route('/servers/getUsageDashboardConfig', methods=['GET'])
 def getUsageDashboardConfig():
-    GRAFANA_BASE_URL = os.environ.get('GRAFANA_BASE_URL')
-    GRAFANA_DASHBOARD = os.environ.get("GRAFANA_DASHBOARD")
+    GRAFANA_BASE_URL = flaskApp.config['GRAFANA_BASE_URL']
+    GRAFANA_DASHBOARD = flaskApp.config['GRAFANA_DASHBOARD']
     dashboardConfig = {
         "panels": MONITORING_PANELS,
         "grafana_base_url": GRAFANA_BASE_URL,
