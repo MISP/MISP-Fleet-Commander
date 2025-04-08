@@ -81,8 +81,8 @@ def monitorFleet(minute: int = 5, cache_images: bool = False):
                     print(f"    - {fleet.name} ({fleet.server_count} servers)")
                     asyncio.run(serverModel.doCacheMonitoringImages(fleet.servers, force=True))
 
-        print(f'Sleeping {minute*60}')
-        time.sleep(minute*60)
+            print(f'Sleeping {minute*60}')
+            time.sleep(minute*60)
 
 @server_cli.command("cache-monitoring-images")
 @click.option("--minute", required=False, default=5)
