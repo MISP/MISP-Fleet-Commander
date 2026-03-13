@@ -1,8 +1,8 @@
 services:
     backend:
         build: 
-            context: backend
-            dockerfile: docker/Dockerfile
+            context: .
+            dockerfile: backend/docker/Dockerfile
         working_dir: /app
         environment:
             - FLASK_APP=wsgi.py
@@ -32,8 +32,8 @@ services:
 
     workers:
         build: 
-            context: backend
-            dockerfile: docker/Dockerfile
+            context: .
+            dockerfile: backend/docker/Dockerfile
         working_dir: /app
         environment:
             - FLASK_ENV=production
