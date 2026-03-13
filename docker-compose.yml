@@ -3,6 +3,9 @@ services:
         build: 
             context: backend
             dockerfile: docker/Dockerfile
+            args:
+                FLASK_APP: wsgi.py
+                FLASK_ENV: production
         working_dir: /app
         environment:
             - FLASK_APP=wsgi.py
