@@ -425,6 +425,9 @@ def restQuery(user, server_id):
             response = mispPostRequest(server, queryURL, queryData, rawResponse=True, nocache=True)
         else:
             response = mispGetRequest(server, queryURL, rawResponse=True, nocache=True)
+        if isinstance(response, dict):
+            # Request helpers return an error dict instead of a Response on failure
+            return jsonify(response)
         responseData = ""
         try:
             responseData = response.json()
@@ -519,20 +522,23 @@ def parseGetSyncOvertime(syncLogs, afterTime=None):
         afterTime = dt.now() - timedelta(days=7)
     servers = defaultdict(dict)
     for logEntry in syncLogs:
-        if title.startsWith('Pull from'):
+        title = logEntry['Log']['title']
+        if title.startswith('Pull from'):
             created = dt.fromisoformat(logEntry['Log']['created'])
             if created > afterTime:
-                title = logEntry['Log']['title']
-                url = re.search(r'Pull from (?P<url>[\S]+) .*', title).group('url')
+                urlMatch = re.search(r'Pull from (?P<url>[\S]+) .*', title)
                 change = logEntry['Log']['change']
-                parsedChange = re.search(r'(?P<events>[\d]+) events, (?P<proposals>[\d]+) proposals and (?P<sightings>[\d]+) sightings pulled or updated. (?P<event_failed>[\d]+) events failed or didn\'t need an update.', change)
+                parsedChange = re.search(r'(?P<events>[\d]+) events, (?P<proposals>[\d]+) proposals and (?P<sightings>[\d]+) sightings pulled or updated. (?P<events_failed>[\d]+) events failed or didn\'t need an update.', change)
+                if urlMatch is None or parsedChange is None:
+                    continue
+                url = urlMatch.group('url')
                 syncMetrics = {
                     'events': parsedChange.group('events'),
                     'events_failed': parsedChange.group('events_failed'),
                     'proposals': parsedChange.group('proposals'),
                     'sightings': parsedChange.group('sightings')
                 }
-                servers[url][created] = syncMetrics
+                servers[url][created.isoformat()] = syncMetrics
     return servers
 
 def parseGetLoginLogs(loginLogs, afterTime=None):
