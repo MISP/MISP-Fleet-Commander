@@ -240,7 +240,6 @@ def doQuickAction(server: Server, plugin, data: Optional[dict]) -> dict:
 
 def getNotificationForPlugin(server: Server, plugin) -> list:
     pluginInstance = plugin['instance']
-    notifications = pluginInstance.notifications(server)
     try:
         notifications = pluginInstance.notifications(server)
         notifications.data = [notificationData.to_dict() for notificationData in notifications.data]

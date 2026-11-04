@@ -24,7 +24,7 @@ class LiveMode(BasePlugin):
         return self.view(server, data)
 
     def action(self, server: Server, data: Optional[dict] = {}) -> Union[PluginResponse, List[PluginResponse]]:
-        selectedState = bool(data.get('enabled', True))
+        selectedState = str(data.get('enabled', True)).strip().lower() in ('1', 'true', 'on')
         return LiveMode.toggleLiveMode(server, selectedState)
 
     @classmethod
@@ -43,9 +43,14 @@ class LiveMode(BasePlugin):
     def toggleLiveMode(cls, server: Server, liveModeEnabled: bool = True) -> PluginResponse:
         url = '/servers/serverSettingsEdit/MISP.live'
         result = mispPostRequest(server, url, {'Server': {'value': liveModeEnabled}}, rawResponse=True, nocache=True)
-        data = result.json()
-        if 'error' in result:
-            actionResponse = FailPluginResponse(data, [result['error']], None, result)
+        if isinstance(result, dict):
+            return FailPluginResponse({}, [result.get('error', 'Request failed')])
+        try:
+            data = result.json()
+        except ValueError:
+            data = {}
+        if not result.ok:
+            actionResponse = FailPluginResponse(data, [data.get('message', result.reason) if isinstance(data, dict) else result.reason], None, result)
         else:
             actionResponse = SuccessPluginResponse(data, None, None, result)
 

@@ -120,9 +120,11 @@ class ToggleObject(BasePlugin):
             }
         }
         result = mispPostRequest(server, url, payload, rawResponse=True, nocache=True)
+        if isinstance(result, dict):
+            return result.get('error', 'Request failed')
         data = result.json()
-        if "error" in data:
-            actionResponse = result['error']
+        if isinstance(data, dict) and "error" in data:
+            actionResponse = data['error']
         else:
             actionResponse = True
 
@@ -132,10 +134,10 @@ class ToggleObject(BasePlugin):
     def fetchObjectTemplates(cls, server: Server):
         url = f"objectTemplates/index/all.json"
         result = mispGetRequest(server, url, rawResponse=True, nocache=True)
-        data = result.json()
-        if 'error' not in result:
-            if result.status_code != 404:
-                return data
+        if isinstance(result, dict):
+            return []
+        if result.status_code != 404:
+            return result.json()
         return []
 
 
