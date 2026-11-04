@@ -327,7 +327,7 @@ def cacheMonitoringImages(servers: list, force: bool = False, callbacks: dict = 
 async def doCacheMonitoringImages(servers: list, force: bool = False, callbacks: dict = {}):
     global MONITORING_PANELS
     panels = MONITORING_PANELS
-    from_time = (datetime.now(timezone.utc) - timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    # No explicit start: each panel uses its own relative_time_days window
     from_time = None
 
     # Wrap callbacks to keep track of the reload status per server

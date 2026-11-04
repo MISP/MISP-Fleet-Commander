@@ -17,12 +17,12 @@ async def main():
 
 
 async def monitor(fleets=[]):
+    all_sensors = {}
     try:
         influxReady = pingInfluxDB()
         if not influxReady:
             return
 
-        all_sensors = {}
         for fleet in fleets:
             all_sensors[fleet.name] = []
             for server in fleet.servers:
