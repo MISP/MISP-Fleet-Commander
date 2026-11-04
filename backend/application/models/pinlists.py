@@ -47,9 +47,10 @@ def addForUser(user, data):
         success = False
         db.session.rollback()
         db.session.flush()
-    if success:
-        avatarGenerator = AvatarGenerator(entry.uuid)
-        avatarGenerator.generate()
+    if not success:
+        return None
+    avatarGenerator = AvatarGenerator(entry.uuid)
+    avatarGenerator.generate()
     return entry
 
 def delete(entry: PinList):
