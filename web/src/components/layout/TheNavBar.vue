@@ -183,7 +183,11 @@ export default {
             }
         },
         searchInputSelect() {
-            this.$router.push({ name: 'servers.view', params: { server_id: this.searchResults[this.searchPosition].id } })
+            const searchResult = this.searchResults[this.searchPosition]
+            if (searchResult === undefined) {
+                return
+            }
+            this.$router.push({ name: 'servers.view', params: { server_id: searchResult.id } })
             this.searchText = ''
         }
     },
