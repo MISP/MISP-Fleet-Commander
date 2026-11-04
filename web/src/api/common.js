@@ -61,11 +61,7 @@ function showLoginModal(successCB, errorCB) {
 function handleError(error, errorCb) {
     if (error !== undefined) {
         if (error.message) {
-            if (error._showToLoginPage) {
-                showGoToLoginPageToast(error)
-            } else {
-                errorCb(error.message)
-            }
+            errorCb(error.message)
         } else {
             errorCb(error.toJSON().message)
         }
