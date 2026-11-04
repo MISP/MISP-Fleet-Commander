@@ -228,12 +228,26 @@ export default {
         toggleRulesTreeMode() {
             this.rulesTreeMode = !this.rulesTreeMode
         },
+        resetRequestInProgress() {
+            Object.keys(this.requestInProgress).forEach((server_id) => {
+                this.$delete(this.requestInProgress, server_id)
+            })
+        },
+        updateRequestInProgress(newIDs) {
+            this.resetRequestInProgress()
+            newIDs.forEach((server_id) => {
+                this.$set(this.requestInProgress, server_id, false)
+                this.$set(this.serverResponse, server_id, {})
+            })
+        },
     },
-    beforeUpdate: function () {
-        this.server_ids.forEach((server_id) => {
-            this.$set(this.requestInProgress, server_id, false)
-            this.$set(this.serverResponse, server_id, {})
-        })
+    watch: {
+        server_ids(newIDs) {
+            this.updateRequestInProgress(newIDs)
+        }
+    },
+    beforeMount: function () {
+        this.updateRequestInProgress(this.server_ids)
     },
 }
 </script>
