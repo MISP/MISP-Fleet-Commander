@@ -412,9 +412,12 @@ def loginOvertime(user, server_id):
 @BPserver.route('/servers/restQuery/<int:server_id>', methods=['POST'])
 @token_required
 def restQuery(user, server_id):
-    queryURL = request.json['url']
-    queryData = request.json['data']
-    queryMethod = request.json['method']
+    payload = request.json if isinstance(request.json, dict) else {}
+    queryURL = payload.get('url')
+    queryData = payload.get('data')
+    queryMethod = payload.get('method')
+    if queryURL is None or queryMethod is None:
+        abort(400)
     server = serverModel.getForUser(user, server_id)
     if server is not None:
         if queryMethod == 'POST':
