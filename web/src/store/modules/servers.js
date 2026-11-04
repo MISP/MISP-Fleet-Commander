@@ -227,14 +227,13 @@ const mutations = {
         //setUpdatableServers(state)
     },
     setQueryState(state, payload) {
-        let server = state.servers[payload.server_id]
         state.server_query_in_progress[payload.server_id] = payload.loading
         const info = payload.info
         if (info !== undefined) {
             if (info.error === undefined) {
-                server.server_query_error = false
+                Vue.set(state.server_query_error, payload.server_id, false)
             } else {
-                state.server_query_error = info.error ? info.error : true
+                Vue.set(state.server_query_error, payload.server_id, info.error ? info.error : true)
             }
         }
     },
