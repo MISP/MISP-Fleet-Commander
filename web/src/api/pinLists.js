@@ -43,7 +43,7 @@ export default {
                 cb(response.data)
             })
             .catch(error => {
-                errorCb(error.data.toJSON())
+                common.handleError(error, errorCb)
             })
     },
     deleteFromServer(entry_id, server_id, cb, errorCb) {
@@ -53,7 +53,7 @@ export default {
                 cb(response.data)
             })
             .catch(error => {
-                errorCb(error.data.toJSON())
+                common.handleError(error, errorCb)
             })
     },
     deleteFromServers(entry_id, cb, errorCb) {
@@ -63,7 +63,7 @@ export default {
                 cb(response.data)
             })
             .catch(error => {
-                errorCb(error.data.toJSON())
+                common.handleError(error, errorCb)
             })
     },
     getEntriesOnServer(server_id, cb, errorCb) {
