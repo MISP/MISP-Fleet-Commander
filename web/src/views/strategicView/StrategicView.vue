@@ -118,6 +118,7 @@ import TheNodeInfoCard from "@/views/strategicView/elements/NodeInfoCard.vue"
 import TheLinkInfoCard from "@/views/strategicView/elements/LinkInfoCard.vue"
 import ThePinCard from "@/views/strategicView/elements/PinCard.vue"
 import DraggableComponent from "@/components/ui/DraggableComponent.vue"
+import * as d3 from "d3"
 import d3Network from "@/helpers/d3Network.js"
 
 export default {
@@ -159,6 +160,7 @@ export default {
             nodeFunctions: [],
             svg: null,
             svgSelection: null,
+            simulation: null,
             zoom: null,
             updateData: null,
             scaleInfo: {x: 0, y: 0, k: 1},
@@ -324,6 +326,7 @@ export default {
                     callbacks
                 )
                 this.svgSelection = network.svgSelection
+                this.simulation = network.simulation
                 this.zoom = network.zoom
                 this.updateData = network.updateData
             }
@@ -449,6 +452,10 @@ export default {
         this.allNodeInstances.forEach(nodeInstance => {
             nodeInstance.$destroy() // We have to manually destroy the mounted nodes as it's not done automatically
         })
+        if (this.simulation !== null) {
+            this.simulation.stop() // Otherwise the simulation keeps ticking after the view is destroyed
+        }
+        d3.select(window).on("resize.updatesvg", null)
     },
     watch: {
         hasActiveSelection: function(isActive) {
