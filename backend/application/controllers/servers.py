@@ -322,7 +322,8 @@ def getConnection(user, server_id, connection_id):
 
 
 @BPserver.route('/servers/getUsageDashboardConfig', methods=['GET'])
-def getUsageDashboardConfig():
+@token_required
+def getUsageDashboardConfig(user):
     GRAFANA_BASE_URL = flaskApp.config['GRAFANA_BASE_URL']
     GRAFANA_DASHBOARD = flaskApp.config['GRAFANA_DASHBOARD']
     dashboardConfig = {
