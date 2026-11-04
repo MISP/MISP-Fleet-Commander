@@ -23,6 +23,7 @@ class UserSchema(BaseSchema):
 
     hashed_password = fields.Str(load_only=True)
     password = fields.Str(load_only=True)
+    apikey = fields.Str(load_only=True)
     # user_settings = mafields.Nested(lambda: UserSettingSchema(), many=True, dump_only=True)
     user_settings = mafields.Nested(lambda: UserSettingSchema(), many=True, dump_only=True)
 
