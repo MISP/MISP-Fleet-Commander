@@ -4,6 +4,7 @@ node_modules
 backend/data/pin-avatars/
 backend/data/cached-monitoring-images/
 backend/config.json
+backend/database/secret_key
 
 # local env files
 .env.local
