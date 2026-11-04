@@ -26,6 +26,7 @@ const actions = {
                 api.index(
                     connections => {
                         connections.forEach(connection => {
+                            connection._showDetails = false
                             connection._loading = false
                         })
                         commit("setConnections", connections)
@@ -103,6 +104,8 @@ const mutations = {
     setConnection(state, connection) {
         for (let i = 0; i < state.all.length; i++) {
             if (state.all[i].vid == connection.vid) {
+                connection._showDetails = state.all[i]._showDetails
+                connection._loading = state.all[i]._loading
                 Vue.set(state.all, i, connection)
                 break
             }
