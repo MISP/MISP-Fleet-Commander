@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, abort
 # from flask import current_app as app
 from datetime import datetime as dt
 import time
@@ -49,10 +49,11 @@ def add(user):
 def edit(user, fleet_id):
     saveFields = ["name", "description", "is_monitored", "is_watched"]
     fleet = fleetModel.getForUser(user, fleet_id)
-    if fleet is not None:
-        for field, value in request.json.items():
-            if field in saveFields:
-                setattr(fleet, field, value)
+    if fleet is None:
+        abort(404)
+    for field, value in request.json.items():
+        if field in saveFields:
+            setattr(fleet, field, value)
     # fleet = Fleet(name=request.json.get('name'),
     #                 description=request.json.get('description'),
     #                 timestamp=int(time.time()),

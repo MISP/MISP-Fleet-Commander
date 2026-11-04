@@ -102,10 +102,11 @@ def add(user, fleet_id):
 def edit(user):
     saveFields = ['name', 'comment', 'url', 'skip_ssl', 'authkey']
     server = serverModel.getForUser(user, request.json['id'])
-    if server is not None:
-        for field, value in request.json.items():
-            if field in saveFields:
-                setattr(server, field, value)
+    if server is None:
+        abort(404)
+    for field, value in request.json.items():
+        if field in saveFields:
+            setattr(server, field, value)
     if request.json.get('recursive_add', False):
         # recursively add servers
         pass
