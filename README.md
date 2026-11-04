@@ -162,11 +162,14 @@ cd backend
 pip3 install -U -r requirements_monitoring.txt
 ```
 2. If you already have Grafana and InfluxDB running, go to step 4.
-3. Start the InfluxDB and Grafana containers.
+3. Duplicate the `.env` file, set your own credentials in it and start the InfluxDB and Grafana containers.
 ```bash
 cd backend/application/monitoring/docker
+cp .env.sample .env
+vim .env  # Set the InfluxDB and Grafana usernames, passwords and admin token
 docker compose up
 ```
+The containers only publish their ports on `127.0.0.1`. If you need to reach them from another host, put them behind a reverse proxy instead of binding them to every interface.
 4. Duplicate and update the `config.py` configuration file.
 ```bash
 cd backend/application/monitoring

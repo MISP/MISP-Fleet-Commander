@@ -6,6 +6,7 @@ backend/data/cached-monitoring-images/
 backend/config.json
 
 # local env files
+backend/application/monitoring/docker/.env
 .env.local
 .env.*.local
 
