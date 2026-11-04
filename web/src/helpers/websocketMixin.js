@@ -32,7 +32,7 @@ export const websocketMixin = {
         // emit with ack
         wsServerRefreshWithAck: async function (serverID, callback) {
             try {
-                const response = await socket.timeout(this.socket_ack_timeout).emitWithAck('refresh_server', serverID);
+                const response = await this.$socket.timeout(this.socket_ack_timeout).emitWithAck('refresh_server', serverID);
                 this.handleSuccess(response)
                 if (callback !== undefined) {
                     callback(response)
@@ -43,7 +43,7 @@ export const websocketMixin = {
         },
         wsFleetRefreshWithAck: async function (fleetID, callback) {
             try {
-                const response = await socket.timeout(this.socket_ack_timeout).emitWithAck('refresh_fleet', fleetID);
+                const response = await this.$socket.timeout(this.socket_ack_timeout).emitWithAck('refresh_fleet', fleetID);
                 this.handleSuccess(response)
                 if (callback !== undefined) {
                     callback(response)
