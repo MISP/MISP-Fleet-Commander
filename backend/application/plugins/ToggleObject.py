@@ -132,6 +132,8 @@ class ToggleObject(BasePlugin):
     def fetchObjectTemplates(cls, server: Server):
         url = f"objectTemplates/index/all.json"
         result = mispGetRequest(server, url, rawResponse=True, nocache=True)
+        if isinstance(result, dict):
+            return []
         data = result.json()
         if 'error' not in result:
             if result.status_code != 404:

@@ -30,10 +30,10 @@ class QueryOrganisation(BasePlugin):
     def getOrganisation(cls, server: Server, org_name_or_uuid: str) -> PluginResponse:
         url = f'/organisations/view/{org_name_or_uuid}'
         result = mispGetRequest(server, url, rawResponse=True, nocache=True)
-        data = result.json()
-        if 'error' in result:
-            actionResponse = FailPluginResponse(result, [result['error']], None, result)
+        if isinstance(result, dict):
+            actionResponse = FailPluginResponse(result, [result['error']])
         else:
+            data = result.json()
             if result.status_code == 404:
                 actionResponse = FailPluginResponse(data, [data['message']], None, result)
             else:

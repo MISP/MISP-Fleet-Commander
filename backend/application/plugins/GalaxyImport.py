@@ -36,6 +36,8 @@ class GalaxyImport(BasePlugin):
     def doImport(cls, server: Server, payload: dict) -> PluginResponse:
         url = '/galaxies/import'
         result = mispPostRequest(server, url, data=payload, rawResponse=True, nocache=True)
+        if isinstance(result, dict):
+            return FailPluginResponse(result, [result['error']])
         data = result.json()
         if 'error' in data:
             actionResponse = FailPluginResponse(data, [data['error']], None, result)

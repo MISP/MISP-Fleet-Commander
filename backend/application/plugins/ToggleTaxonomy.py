@@ -60,7 +60,7 @@ class ToggleTaxonomy(BasePlugin):
             return result
 
         taxonomyIDByName = ToggleTaxonomy.fetchAllIDs(server)
-        if type(taxonomyIDByName) is requestsResponse:
+        if type(taxonomyIDByName) is requestsResponse or isinstance(taxonomyIDByName, PluginResponse):
             return taxonomyIDByName
 
         for taxonomy in taxonomies:
@@ -107,6 +107,8 @@ class ToggleTaxonomy(BasePlugin):
     def fetchAllIDs(cls, server: Server) -> Union[int, requestsResponse]:
         urlTaxonomyIndex = f'/taxonomies/index'
         result = mispGetRequest(server, urlTaxonomyIndex, {}, rawResponse=True, nocache=True)
+        if isinstance(result, dict):
+            return FailPluginResponse(result, [result['error']])
         data = result.json()
         if 'Taxonomy' not in data[0]:
             return result

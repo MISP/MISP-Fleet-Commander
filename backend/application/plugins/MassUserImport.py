@@ -87,6 +87,8 @@ class MassUserImport(BasePlugin):
     def addUser(cls, server: Server, user: dict):
         url = '/admin/users/add'
         result = mispPostRequest(server, url, data=user, rawResponse=True, nocache=True)
+        if isinstance(result, dict):
+            return result['error']
         data = result.json()
         if 'error' in data:
             actionResponse = data['error']

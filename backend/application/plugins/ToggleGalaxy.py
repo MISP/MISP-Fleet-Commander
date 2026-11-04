@@ -52,7 +52,7 @@ class ToggleGalaxy(BasePlugin):
             return result
 
         galaxyIDByUUID = ToggleGalaxy.fetchAllIDs(server)
-        if type(galaxyIDByUUID) is requestsResponse:
+        if type(galaxyIDByUUID) is requestsResponse or isinstance(galaxyIDByUUID, PluginResponse):
             return galaxyIDByUUID
 
         for galaxy_uuid in galaxies_uuid:
@@ -99,6 +99,8 @@ class ToggleGalaxy(BasePlugin):
     def fetchAllIDs(cls, server: Server) -> Union[list, requestsResponse]:
         url = f'/galaxies/index'
         result = mispGetRequest(server, url, {}, rawResponse=True, nocache=True)
+        if isinstance(result, dict):
+            return FailPluginResponse(result, [result['error']])
         data = result.json()
         if 'Galaxy' not in data[0]:
             return result
