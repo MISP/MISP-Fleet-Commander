@@ -35,7 +35,7 @@ class UpToDate(BasePlugin):
     def quickAction(self, server: Server, data: Optional[dict] = {}) -> Union[PluginResponse, List[PluginResponse]]:
         updateResult = UpToDate.doUpdate(server)
         if 'error' in updateResult:
-            return FailPluginResponse({}, updateResult['error'])
+            return FailPluginResponse({}, [updateResult['error']])
         data = updateResult.json()
         data['message'] = f"Server `{server.name}` updated"
         return SuccessPluginResponse(data, None, None, updateResult)
