@@ -308,7 +308,7 @@ def network(user, fleet_id=None):
 @token_required
 def getConnection(user, server_id, connection_id):
     server = serverModel.getForUser(user, server_id)
-    if server is not None:
+    if server is not None and server.server_info is not None:
         destinations = server.server_info['query_result']['connectedServers']
         connection = [ d for d in destinations if int(d['Server']['id']) == connection_id]
         if len(connection) > 0:
