@@ -250,8 +250,8 @@ def batchTest(user):
     allTestUsers = batchRequest(allUserRequests)
     for index, server in enumerate(server_to_test):
         server_id = server['id'] if 'id' in server else index
-        version = next(filter(lambda x: x['server_id'] == server_id, allTestConnections))
-        user = next(filter(lambda x: x['server_id'] == server_id, allTestUsers))
+        version = next(filter(lambda x: x['server_id'] == server_id, allTestConnections), { "error": "No result for this server" })
+        user = next(filter(lambda x: x['server_id'] == server_id, allTestUsers), { "error": "No result for this server" })
         server['testResult'] = parseGetVersion(version)
         server['userResult'] = user
         test_result.append(server)
@@ -290,8 +290,8 @@ def discoverConnected(user):
         allTestConnections = batchRequest(allVersionRequests)
         allTestUsers = batchRequest(allUserRequests)
         for server in rootIndex:
-            version = next(filter(lambda x: x['server_id'] == server['Server']['id'], allTestConnections))
-            user = next(filter(lambda x: x['server_id'] == server['Server']['id'], allTestUsers))
+            version = next(filter(lambda x: x['server_id'] == server['Server']['id'], allTestConnections), { "error": "No result for this server" })
+            user = next(filter(lambda x: x['server_id'] == server['Server']['id'], allTestUsers), { "error": "No result for this server" })
             server['testResult'] = parseGetVersion(version)
             server['userResult'] = user
             test_result.append(server)
