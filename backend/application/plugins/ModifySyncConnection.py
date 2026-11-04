@@ -53,7 +53,7 @@ class ModifySyncConnection(BasePlugin):
         for syncConnection in syncConnections:
             result = ModifySyncConnection.pushChanges(server, syncConnection['Server']['id'], payload)
             if not result['success']:
-                errors.push(result['error'])
+                errors.append(result['error'])
         if len(errors) > 0:
             actionResponse = FailPluginResponse({'success': False, 'message': f"Could not change {len(errors)} sync connections. But successfully changed {len(syncConnections) - len(errors)} sync connections."}, errors)
         else:
