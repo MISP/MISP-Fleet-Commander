@@ -30,7 +30,7 @@
                     v-for="option, j in param.options"
                     :key="`${plugin.id}-${param.key}-${j}`"
                     :value="option.value"
-                >option.text</b-form-checkbox>
+                >{{ option.text }}</b-form-checkbox>
             </b-form-checkbox-group>
 
             <b-form-textarea
