@@ -112,7 +112,7 @@ export default {
                     text += h + "h "
                 }
                 if (m !== "00") {
-                    text += h + "m "
+                    text += m + "m "
                 }
                 let ms = s.split(".")
                 s = ms[0]
