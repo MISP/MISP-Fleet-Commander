@@ -2,13 +2,21 @@
 (function () {
     (window.bookmarkletMFC = function () {
 
-        const MFC_URL = localStorage.getItem('MFM_baseurl')
+        const MFC_URL = window.MFM_baseurl
         const MFC_FLEET_INDEX_URL = `${MFC_URL}/fleets/index`
         const MFC_SERVER_ADD_URL = `${MFC_URL}/servers/add`
 
         const DEFAULT_SERVER_NAME = window.location.origin
-        const token = localStorage.getItem('MFM_token')
-        const token_type = localStorage.getItem('MFM_token_type')
+        const token = window.MFM_token
+        const token_type = window.MFM_token_type
+
+        // Don't leave MFC credentials behind on this MISP origin
+        delete window.MFM_baseurl
+        delete window.MFM_token
+        delete window.MFM_token_type
+        localStorage.removeItem('MFM_baseurl')
+        localStorage.removeItem('MFM_token')
+        localStorage.removeItem('MFM_token_type')
 
         /** API MFC */
         async function getFleetIndex() {

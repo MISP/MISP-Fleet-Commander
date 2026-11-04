@@ -76,7 +76,7 @@ export default {
         const token = this.$store.getters["auth/access_token"];
         const location = window.location.origin
         return {
-            bookmarkJS: `javascript: (function () {if (window.bookmarkletMFC !== undefined) {bookmarkletMFC();} else {localStorage.setItem("MFM_token", "${token}");localStorage.setItem("MFM_token_type", "${token_type}");localStorage.setItem("MFM_baseurl", "${location}");document.body.appendChild(document.createElement("script")).src = "${baseurl}/static/bookmarklet.js?r=" + Math.floor(Math.random() * 999999999)}})()`,
+            bookmarkJS: `javascript: (function () {window.MFM_token = "${token}";window.MFM_token_type = "${token_type}";window.MFM_baseurl = "${location}";if (window.bookmarkletMFC !== undefined) {bookmarkletMFC();} else {document.body.appendChild(document.createElement("script")).src = "${baseurl}/static/bookmarklet.js?r=" + Math.floor(Math.random() * 999999999)}})()`,
         }
     }
 }
