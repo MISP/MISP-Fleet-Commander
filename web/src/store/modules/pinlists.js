@@ -115,7 +115,7 @@ const actions = {
         })
     },
 
-    deleteFromServers({ }, entry_id) {
+    deleteFromServers({ dispatch }, entry_id) {
         return new Promise((resolve, reject) => {
             api.deleteFromServers(
                 entry_id,
