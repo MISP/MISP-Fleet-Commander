@@ -129,7 +129,7 @@ export default {
                     })
                 })
                 .finally(() => {
-                    this.postInProgress = true
+                    this.postInProgress = false
                 })
         },
         discoverServer() {
