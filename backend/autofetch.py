@@ -7,11 +7,12 @@ import datetime
 
 SLEEP = 60*8
 SERVER_NUMBER = 26
+TIMEOUT = 300
 
 
 def fetch(serverid):
     print(f'Fetching for {serverid}')
-    r = requests.get(f'http://10.250.138.14:5000/servers/queryInfo/{serverid}/1')
+    r = requests.get(f'http://10.250.138.14:5000/servers/queryInfo/{serverid}/1', timeout=TIMEOUT)
 
 
 def main():
