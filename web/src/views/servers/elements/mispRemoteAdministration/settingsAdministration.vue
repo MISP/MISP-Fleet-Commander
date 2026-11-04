@@ -67,6 +67,9 @@ export default {
             raw_final_settings: state => state.servers.raw_final_settings,
         }),
         getRawFinalSettings: function() {
+            if (this.raw_final_settings[this.server.id] === undefined) {
+                return []
+            }
             return Object.values(this.raw_final_settings[this.server.id])
         },
     },
