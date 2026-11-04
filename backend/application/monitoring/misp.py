@@ -127,7 +127,7 @@ class MISP(SensorBase):
                 'fields': {
                     'used_memory': redis_info['used_memory'],
                     'used_memory_peak': redis_info['used_memory_peak'],
-                    'db_13_keys': int(redis_info['db13'].split(',')[0][5:]),
+                    'db_13_keys': int(redis_info.get('db13', 'keys=0').split(',')[0][5:]),
                 },
             }]
 
