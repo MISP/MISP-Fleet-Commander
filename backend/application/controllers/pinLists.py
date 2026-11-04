@@ -96,7 +96,7 @@ def deleteFromServer(user, server_id, entry_id):
     """Delete the data associated with the pin entry on all servers"""
     entry = pinlistsModel.getForUser(user, entry_id)
     if entry is not None:
-        result = pinlistsModel.deleteFromServer(server_id, entry)
+        result = pinlistsModel.deleteFromServer(user, server_id, entry)
         return jsonify(result)
     else:
         return jsonify({})
@@ -108,7 +108,7 @@ def deleteFromServers(user, fleet_id, entry_id):
     """Delete the data associated with the pin entry on all servers"""
     entry = pinlistsModel.getForUser(user, entry_id)
     if entry is not None:
-        result = pinlistsModel.deleteFromServers(fleet_id, entry)
+        result = pinlistsModel.deleteFromServers(user, fleet_id, entry)
         return jsonify(result)
     else:
         return jsonify({})
@@ -120,7 +120,7 @@ def refreshAllServers(user, fleet_id, entry_id):
     """Collect the data associated with that entry on all servers"""
     entry = pinlistsModel.getForUser(user, entry_id)
     if entry is not None:
-        pinlistsModel.refreshAllServers(fleet_id, entry)
+        pinlistsModel.refreshAllServers(user, fleet_id, entry)
     return jsonify({})
 
 
@@ -130,7 +130,7 @@ def refreshServerEntry(user, server_id, entry_id):
     """Collect the data associated with that entry on all servers"""
     entry = pinlistsModel.getForUser(user, entry_id)
     if entry is not None:
-        pinlistsModel.refreshServerEntry(server_id, entry)
+        pinlistsModel.refreshServerEntry(user, server_id, entry)
     return jsonify({})
 
 
@@ -141,6 +141,6 @@ def publishEventOnServer(user, server_id, entry_id):
     """Collect the data associated with that entry on all servers"""
     entry = pinlistsModel.getForUser(user, entry_id)
     if entry is not None:
-        pinlistsModel.publishEventOnServer(server_id, entry)
+        pinlistsModel.publishEventOnServer(user, server_id, entry)
     return jsonify({})
 
