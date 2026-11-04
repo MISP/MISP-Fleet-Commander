@@ -4,6 +4,7 @@
 import asyncio
 import time
 import click
+from pprint import pprint
 
 from flask.cli import AppGroup
 from application.marshmallowSchemas import serverSchemaLighter, serverSchema, userSchema
