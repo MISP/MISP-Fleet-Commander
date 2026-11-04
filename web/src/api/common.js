@@ -24,7 +24,7 @@ function getClient() {
     client.interceptors.response.use(
         (response) => response,
         (error) => {
-            if (error.response.status === 401) {
+            if (error.response?.status === 401) {
                 return new Promise((resolve, reject) => {
                     showLoginModal(
                         () => {
@@ -39,7 +39,7 @@ function getClient() {
                         }
                     )
                 });
-            } else if (error.response.data?.message !== undefined) {
+            } else if (error.response?.data?.message !== undefined) {
                 return Promise.reject(error.response.data.message);
             }
             return Promise.reject(error);
