@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
 from datetime import timedelta
+from pathlib import Path
 import requests
 import requests.adapters
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
@@ -23,6 +24,8 @@ import functools
 
 # requestMISPSession = requestSession
 
+MISP_CACHE_PATH = (Path(__file__).resolve().parent / ".." / ".." / "data" / "misp_cache").resolve()
+
 def timer(func):
     @functools.wraps(func)
     def wrapper_timer(*args, **kwargs):
@@ -36,7 +39,7 @@ def timer(func):
     return wrapper_timer
 
 def getMISPRequestSession():
-    requestMISPSession = CachedSession(cache_name='misp_cache', expire_after=timedelta(minutes=1))
+    requestMISPSession = CachedSession(cache_name=str(MISP_CACHE_PATH), expire_after=timedelta(minutes=1))
     adapterCache = requests.adapters.HTTPAdapter(pool_connections=50, pool_maxsize=50)
     requestMISPSession.mount('https://', adapterCache)
     requestMISPSession.mount('http://', adapterCache)

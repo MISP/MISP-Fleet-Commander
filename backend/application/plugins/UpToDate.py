@@ -1,4 +1,5 @@
 from datetime import timedelta
+from pathlib import Path
 from typing import List, Optional, Union
 from requests_cache import CachedSession
 from application.DBModels import Server
@@ -7,7 +8,8 @@ from application.models.plugins import BasePlugin, PluginResponse, SuccessPlugin
 from requests import Response
 
 
-requestGithubSession = CachedSession(cache_name='github_cache', expire_after=timedelta(minutes=10))
+GITHUB_CACHE_PATH = Path(__file__).resolve().parent / ".." / ".." / "data" / "github_cache"
+requestGithubSession = CachedSession(cache_name=str(GITHUB_CACHE_PATH.resolve()), expire_after=timedelta(minutes=10))
 
 class UpToDate(BasePlugin):
     name = 'Up-To-Date'
