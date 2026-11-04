@@ -54,7 +54,7 @@ def getAvatar(entry_id):
         return "Not found", 404
 
 
-@BPpinLists.route('/pinlists/getEntriesOnServer/<int:entry_id>', methods=['GET'])
+@BPpinLists.route('/pinlists/getEntriesOnServer/<int:server_id>', methods=['GET'])
 @token_required
 def getEntriesOnServer(user, server_id):
     """Return all entries linked to the pinned entry existing on the server"""
