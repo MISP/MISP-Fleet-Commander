@@ -19,16 +19,16 @@ export default {
     },
     computed: {
         getStatus: function() {
-            return this.connection.status.status || null
+            return this.connection.status?.status || null
         },
         getCompatibility: function() {
-            return this.connection.status.compatibility || null
+            return this.connection.status?.compatibility || null
         },
         getColorVariant: function() {
-            return this.getCompatibility?.color ? this.getCompatibility.color : (this.getStatus.color || null)
+            return this.getCompatibility?.color ? this.getCompatibility.color : (this.getStatus?.color || null)
         },
         getText: function() {
-            return this.getStatus.message || null
+            return this.getStatus?.message || null
         },
     }
 }

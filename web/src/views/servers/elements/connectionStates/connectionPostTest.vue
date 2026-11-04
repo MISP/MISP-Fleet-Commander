@@ -26,7 +26,7 @@ export default {
     },
     computed: {
         isValidConnection: function() {
-            return this.connection.status.localVersion !== ""
+            return !!this.connection.status && this.connection.status.localVersion !== ""
         },
         getStatus: function() {
             return this.connection.status || null
