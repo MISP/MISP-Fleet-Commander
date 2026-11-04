@@ -125,10 +125,10 @@ def doCacheMonitoringImages(serverDict):
 def watchMonitoredFleets():
     if settingModel.getRefreshValue("fleet_watching_enabled"):
         fleets = fleetModel.indexWatched()
-        server_ids = []
-        serversDict = []
-        serverByID = {}
         for fleet in fleets:
+            server_ids = []
+            serversDict = []
+            serverByID = {}
             for server in fleet.servers:
                 serversDict.append(server)
                 serverByID[server.id] = serverSchemaLighter.dump(server)
