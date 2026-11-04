@@ -449,7 +449,8 @@ def restQuery(user, server_id):
 
 
 def fetchServerUsers(server):
-    users = mispGetRequest(server, 'admin/users/index')
+    # Not cached: the list must reflect user administration actions immediately
+    users = mispGetRequest(server, 'admin/users/index', nocache=True)
     if 'error' in users:
         return []
     return users

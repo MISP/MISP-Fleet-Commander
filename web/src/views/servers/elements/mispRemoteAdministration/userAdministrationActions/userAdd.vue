@@ -133,6 +133,7 @@ export default {
         addUser(evt) {
             evt.preventDefault()
             this.requestInProgress = true
+            const email = this.form.email
             api.addUser(
                 this.server.id,
                 JSON.parse(JSON.stringify(this.form)),
@@ -145,11 +146,12 @@ export default {
                         })
                     } else {
                         this.resetForm()
-                        this.$bvToast.toast(`Successfully added user`, {
-                            title: data,
+                        this.$bvToast.toast(`Successfully added ${email}`, {
+                            title: "User added",
                             variant: "success",
                             solid: true
                         })
+                        this.$emit("user-added")
                         this.$nextTick(() => {
                             this.$bvModal.hide("modal-administration-user-add")
                         })

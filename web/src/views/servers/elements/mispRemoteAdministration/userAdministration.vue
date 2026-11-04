@@ -121,6 +121,7 @@
     <UserAdd
         :users="users"
         :server="getServer"
+        @user-added="loadUsers"
     ></UserAdd>
 
     <UserAdministrationModal
