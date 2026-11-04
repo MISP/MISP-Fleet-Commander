@@ -195,7 +195,6 @@ export default {
     },
     mounted() {
         this.selected_value = this.value
-        search_input
         this.$root.$on('bv::dropdown::shown', bvEvent => {
             this.$refs.search_input.focus()
         })
