@@ -344,7 +344,7 @@ export default {
                     variant: "",
                     text: "View server",
                     icon: "server",
-                    eventName: "view-servers",
+                    eventName: "view-in-server",
                     callbackData: {index: index}
                 }
             ]
@@ -382,7 +382,11 @@ export default {
         refreshInfo(connection) {
             this.$store.dispatch("connections/getConnection", connection)
         },
-        viewInServer() {
+        viewInServer(data) {
+            const connection = this.getConnections[data.index]
+            if (connection && connection.source) {
+                this.$router.push({ name: "servers.view", params: { server_id: connection.source.id } })
+            }
         }
 
     },

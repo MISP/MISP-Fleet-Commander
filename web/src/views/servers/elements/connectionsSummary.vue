@@ -144,30 +144,30 @@ export default {
     },
     computed: {
         connectionCheckNotDone() {
-            return this.connections !== undefined &&
+            return this.connections !== undefined && this.connections !== null &&
                 this.getAllConnectionsList.length > 0 &&
                 this.getAllConnectionsList[0]['error'] === undefined &&
                 this.getAllConnectionsList[0].Server !== undefined &&
                 this.getAllConnectionsList[0]?.connectionTest?.status === undefined
         },
         hasValidConnections() {
-            return this.connections !== undefined && this.getAllConnectionsList.length > 0 && this.getAllConnectionsList[0]['error'] === undefined
+            return this.connections !== undefined && this.connections !== null && this.getAllConnectionsList.length > 0 && this.getAllConnectionsList[0]['error'] === undefined
         },
         connectionCount() {
             return this.getAllConnectionsList.length
         },
         getConnections() {
-            return this.expand_issue_only ? this.getIssueConnections : this.connections
+            return this.expand_issue_only ? this.getIssueConnections : (this.connections || {})
         },
         getConnectionList() {
             return Object.values(this.getConnections)
         },
         getAllConnectionsList() {
-            return this.connections === undefined ? {} : Object.values(this.connections)
+            return this.connections === undefined || this.connections === null ? [] : Object.values(this.connections)
         },
         getIssueConnections() {
             if (this.hasError) {
-                return this.connections
+                return this.connections || {}
             }
             return this.getAllConnectionsList.filter(connection => {
                 if (connection.connectionTest !== undefined) {
