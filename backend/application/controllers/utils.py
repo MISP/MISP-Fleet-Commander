@@ -62,9 +62,9 @@ def mispGetHTMLRequest(server, url, data={}, rawResponse=False, nocache=False):
     full_url = urljoin(server.url, url)
     try:
         if nocache:
-            response = requestSession.get(full_url, data=data, headers=headers, verify=(not getattr(server, 'skip_ssl', True)))
+            response = requestSession.get(full_url, data=data, headers=headers, verify=(not getattr(server, 'skip_ssl', False)))
         else:
-            response = requestMISPSession.get(full_url, data=data, headers=headers, verify=(not getattr(server, 'skip_ssl', True)))
+            response = requestMISPSession.get(full_url, data=data, headers=headers, verify=(not getattr(server, 'skip_ssl', False)))
         error = handleStatusCode(response)
         if error is not None:
             return error
@@ -93,9 +93,9 @@ def mispGetRequest(server, url, data={}, rawResponse=False, nocache=False):
     full_url = urljoin(server.url, url)
     try:
         if nocache:
-            response = requestSession.get(full_url, data=data, headers=headers, verify=(not getattr(server, 'skip_ssl', True)))
+            response = requestSession.get(full_url, data=data, headers=headers, verify=(not getattr(server, 'skip_ssl', False)))
         else:
-            response = requestMISPSession.get(full_url, data=data, headers=headers, verify=(not getattr(server, 'skip_ssl', True)))
+            response = requestMISPSession.get(full_url, data=data, headers=headers, verify=(not getattr(server, 'skip_ssl', False)))
         error = handleStatusCode(response)
         if error is not None:
             return error
@@ -128,9 +128,9 @@ def mispPostRequest(server, url, data={}, rawResponse=False, nocache=True):
     full_url = urljoin(server.url, url)
     try:
         if nocache:
-            response = requestSession.post(full_url, json=data, headers=headers, verify=(not getattr(server, 'skip_ssl', True)))
+            response = requestSession.post(full_url, json=data, headers=headers, verify=(not getattr(server, 'skip_ssl', False)))
         else:
-            response = requestMISPSession.post(full_url, json=data, headers=headers, verify=(not getattr(server, 'skip_ssl', True)))
+            response = requestMISPSession.post(full_url, json=data, headers=headers, verify=(not getattr(server, 'skip_ssl', False)))
         error = handleStatusCode(response)
         if error is not None:
             if rawResponse:
