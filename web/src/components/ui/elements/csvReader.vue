@@ -279,19 +279,23 @@ export default {
         },
         handleSelectableFieldChange() {
             const allRequiredFields = Object.entries(this.mappedFields)
-                // eslint-disable-next-line no-unused-vars
-                .filter(([fieldName, field]) => { return field.required && field.csvIndex === null })
-                .filter(([fieldName, field]) => { 
-                    if (!field.regex) {
+                .filter(([fieldName, field]) => {
+                    if (!field.required) {
+                        return false
+                    }
+                    if (field.csvIndex === null) {
                         return true
                     }
+                    if (!field.regex) {
+                        return false
+                    }
                     for (let i = 0; i < this.mappedCSV.length; i++) {
-                        const value = this.mappedCSV[i];
+                        const value = this.mappedCSV[i][fieldName];
                         if (!this.checkFieldValidity(field, value)) {
-                            return false
+                            return true
                         }
                     }
-                    return true
+                    return false
                 })
             this.$emit("update:allRequiredFieldsPicked", allRequiredFields.length == 0 )
         }
