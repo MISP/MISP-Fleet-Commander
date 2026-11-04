@@ -67,10 +67,10 @@ export default {
             selectedFleet: "fleets/selectedFleet",
         }),
         watchedTimestamp: function() {
-            return this.selectedFleet.watched_timestamp
+            return this.selectedFleet?.watched_timestamp
         },
         isFleetWatchingEnabledForThisFleet: function() {
-            return this.selectedFleet.is_watched
+            return this.selectedFleet?.is_watched
         },
     }
 }

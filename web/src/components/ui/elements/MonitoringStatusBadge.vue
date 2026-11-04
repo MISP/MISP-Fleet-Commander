@@ -61,10 +61,10 @@ export default {
             selectedFleet: "fleets/selectedFleet",
         }),
         monitoredTimestamp: function() {
-            return this.selectedFleet.monitored_timestamp
+            return this.selectedFleet?.monitored_timestamp
         },
         isFleetMonitoringEnabledForThisFleet: function() {
-            return this.selectedFleet.is_monitored
+            return this.selectedFleet?.is_monitored
         },
     }
 }
