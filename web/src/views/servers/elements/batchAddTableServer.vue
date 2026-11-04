@@ -78,7 +78,7 @@
 </template>
 
 <script>
-import axios from "axios"
+import common from "@/api/common"
 import userPerms from "@/views/servers/elements/userPerms.vue"
 
 export default {
@@ -163,9 +163,9 @@ export default {
         },
         refreshServers() {
             this.refreshInProgress = true
-            const url = "http://127.0.0.1:5000/servers/batchTest"
+            const url = "/servers/batchTest"
             let payload = this.createValidServerForm(this.localServers)
-            axios.post(url, payload)
+            common.getClient().post(url, payload)
                 .then((response) => {
                     this.localServers.forEach((loServer, index) => {
                         let reServer = response.data.find(reServer => {

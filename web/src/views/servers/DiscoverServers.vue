@@ -67,7 +67,7 @@
 </template>
 
 <script>
-import axios from "axios"
+import common from "@/api/common"
 import batchAddTableServer from "@/views/servers/elements/batchAddTableServer.vue"
 
 export default {
@@ -133,20 +133,21 @@ export default {
                 })
         },
         discoverServer() {
-            const url = "http://10.250.138.14:5000/servers/discoverConnected"
+            const url = "/servers/discoverConnected"
             this.table.busy = true
             this.refreshInProgress = true
             let server = {
+                id: this.rootServer.id,
                 url: this.rootServer.url,
                 authkey: this.rootServer.authkey,
                 skip_ssl: this.rootServer.skip_ssl
             }
-            axios.post(url, server)
+            common.getClient().post(url, server)
                 .then((response) => {
                     this.discoveredServers = response.data
                 })
                 .catch(error => {
-                    this.$bvToast.toast(error.response.statusText, {
+                    this.$bvToast.toast(error, {
                         title: "Could not reach root server",
                         variant: "danger",
                     })
