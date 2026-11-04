@@ -24,7 +24,8 @@ class LiveMode(BasePlugin):
         return self.view(server, data)
 
     def action(self, server: Server, data: Optional[dict] = {}) -> Union[PluginResponse, List[PluginResponse]]:
-        selectedState = bool(data.get('enabled', True))
+        selectedState = data.get('enabled', '1')
+        selectedState = True if selectedState == '1' else False
         return LiveMode.toggleLiveMode(server, selectedState)
 
     @classmethod
