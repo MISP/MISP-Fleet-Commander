@@ -6,7 +6,9 @@ from application.controllers.utils import mispPostRequest
 
 
 def addUser(server: Server, payload: dict) -> Union[dict, None]:
-    return
+    url = "/admin/users/add"
+    response = mispPostRequest(server, url, payload or {})
+    return response
 
 
 def setPassword(server: Server, user_id: int, payload: dict) -> Union[dict, None]:
