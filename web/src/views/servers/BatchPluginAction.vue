@@ -163,6 +163,19 @@ export default {
                         return response
                     })
                     .catch(error => {
+                        const errorResponse = error?.response
+                        if (errorResponse !== undefined) {
+                            this.handlePluginResponse(server_id, errorResponse)
+                        } else {
+                            Vue.set(this.serverResponse, server_id, {
+                                status_code: 'Error',
+                                reason: error?.message ?? 'Request failed',
+                                url: '',
+                                data: {},
+                                elapsed_time: '',
+                            })
+                        }
+                        return { failed: true, response: errorResponse, error: error }
                     })
                     .finally(() => {
                         that.requestInProgress[server_id] = false
@@ -172,16 +185,25 @@ export default {
             return Promise.all(actionPromises)
                 .then((responses) => {
                     const successes = responses.filter(response => {
-                        return response.statusText == 'OK'
-                    });
-                    if (successes.length > 0) {
-                        const successMessage = successes[0].data.data.message
-                        this.$bvToast.toast(successMessage, {
+                        return response && !response.failed && response.statusText == 'OK'
+                    })
+                    const failures = responses.filter(response => !successes.includes(response))
+                    const failureMessage = (failure) => {
+                        return failure?.response?.data?.data?.message ?? failure?.data?.data?.message ?? failure?.error?.message ?? 'Unknown error'
+                    }
+                    if (successes.length > 0 && failures.length === 0) {
+                        this.$bvToast.toast(successes[0].data?.data?.message ?? 'Done', {
                             title: `Successfully performed ${successes.length} action(s)`,
                             variant: "success",
                         })
+                    } else if (successes.length > 0) {
+                        this.$bvToast.toast(`${failures.length} action(s) failed: ${failureMessage(failures[0])}`, {
+                            title: `Performed ${successes.length} action(s) successfully`,
+                            variant: "warning",
+                        })
                     } else {
-                        const errorMessage = responses[0].data.data.message
+                        const failure = failures[0]
+                        const errorMessage = failureMessage(failure)
                         this.$bvToast.toast(errorMessage, {
                             title: "Could not perform any action",
                             variant: "danger",
@@ -189,7 +211,7 @@ export default {
                     }
                 })
                 .catch(error => {
-                    const errorMessage = error.toJSON().message
+                    const errorMessage = error?.toJSON ? error.toJSON().message : String(error)
                     this.$bvToast.toast(errorMessage, {
                         title: "Could not perform action",
                         variant: "danger",
@@ -201,7 +223,7 @@ export default {
                 status_code: response.data?.request_response?.status_code ?? response.status,
                 reason: response.data?.request_response?.reason ?? (response.data?.data?.message ?? ''),
                 url: response.data?.data?.url ?? '',
-                data: response.data.data,
+                data: response.data?.data,
                 elapsed_time: response.data?.request_response?.elapsed_time ?? '',
             })
         },
