@@ -59,18 +59,21 @@ function showLoginModal(successCB, errorCB) {
 }
 
 function handleError(error, errorCb) {
-    if (error !== undefined) {
-        if (error.message) {
-            if (error._showToLoginPage) {
-                showGoToLoginPageToast(error)
-            } else {
-                errorCb(error.message)
-            }
+    if (error === undefined) {
+        errorCb('Something went wrong.')
+    } else if (typeof error === 'string') {
+        errorCb(error)
+    } else if (error.message) {
+        if (error._showToLoginPage) {
+            showGoToLoginPageToast(error)
         } else {
-            errorCb(error.toJSON().message)
+            errorCb(error.message)
         }
+    } else if (typeof error.toJSON === 'function') {
+        errorCb(error.toJSON().message)
+    } else {
+        errorCb('Something went wrong.')
     }
-    errorCb('Something went wrong.')
 }
 
 function appendFleetIDIfDefined(url) {
