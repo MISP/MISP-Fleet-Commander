@@ -845,8 +845,8 @@ export default {
                 })
         },
         populatePluginFields() {
-            const lastRefreshPosition = this.table.fields.indexOf('last_refresh')
             this.indexPlugins.forEach(plugin => {
+                const lastRefreshPosition = this.table.fields.findIndex(field => field.key === 'last_refresh')
                 const field = {
                     key: plugin.id,
                     label: plugin.name,
