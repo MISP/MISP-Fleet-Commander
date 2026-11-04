@@ -72,7 +72,9 @@ export default {
                         this.callbackOnLoging(false)
                     }
                     this.loginError = true
-                    if (error.response.status == 401) {
+                    if (error.response === undefined) {
+                        this.errorMessage = error.message
+                    } else if (error.response.status == 401) {
                         this.errorMessage = this.wrongCredentialError
                     } else {
                         this.errorMessage = `[${error.response.status}] ${error.response.statusText}`
