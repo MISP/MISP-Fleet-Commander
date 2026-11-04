@@ -49,6 +49,8 @@ def token_required(f):
                 abort(401, description="Invalid API Key")
             return f(user, *args, **kwargs)
 
+        return jsonify(invalid_msg), 401
+
     return _verify
 
 def get_current_user(token, app):
