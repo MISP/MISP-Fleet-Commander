@@ -171,6 +171,9 @@ export default {
                         let reServer = response.data.find(reServer => {
                             return loServer.Server.name == reServer.name && loServer.Server.url == reServer.url && loServer.Server.authkey == reServer.authkey
                         })
+                        if (reServer === undefined) {
+                            return
+                        }
                         loServer.testResult = reServer.testResult
                         loServer.userResult = reServer.userResult
                         if (reServer.testResult.color == "success") {
