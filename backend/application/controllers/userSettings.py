@@ -14,6 +14,8 @@ BPuserSetting = Blueprint('userSettings', __name__)
 @token_required
 def view(loggedUser, id):
     userSetting = userSettingsModel.get(id)
+    if userSetting is not None and userSetting.user_id != loggedUser.id:
+        abort(404)
     return userSettingSchema.dump(userSetting)
 
 
@@ -52,7 +54,7 @@ def editForUser(loggedUser, user_id):
 @BPuserSetting.route('/user-settings/index', methods=['GET'])
 @token_required
 def index(loggedUser):
-    users = userSettingsModel.index()
+    users = userSettingsModel.indexForUser(loggedUser.id)
     return userSettingsSchema.dump(users)
 
 
@@ -80,6 +82,9 @@ def edit(loggedUser):
 @token_required
 def delete(loggedUser, id):
     """Delete a user"""
+    userSetting = userSettingsModel.get(id)
+    if userSetting is None or userSetting.user_id != loggedUser.id:
+        return jsonify({})
     userSettingToDelete = userSettingsModel.delete(id)
     if userSettingToDelete:
         return jsonify([id])

@@ -30,6 +30,13 @@ def index() -> List[UserSettings]:
     return user_settings
 
 
+def indexForUser(user_id: int) -> List[UserSettings]:
+    q = UserSettings.query
+    q = q.filter_by(user_id=user_id)
+    user_settings = q.all()
+    return user_settings
+
+
 def get(id: int) -> Union[UserSettings, None]:
     return UserSettings.query.get(id)
 
