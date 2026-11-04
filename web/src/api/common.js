@@ -8,7 +8,6 @@ import EventBus from '@/event-bus';
 
 const urls = {
     searchAll: `${baseurl}/instance/searchAll`,
-    githubVersion: `${baseurl}/instance/getGithubVersion`,
 }
 
 function getClient() {
@@ -92,26 +91,9 @@ function searchAll(searchtext, errorCb) {
         })
 }
 
-function fetchGithubVersion(cb, errorCb) {
-    // const url = "https://api.github.com/repos/MISP/MISP/releases/latest"
-    const url = urls.githubVersion
-    return axios.get(url)
-        .then((response) => {
-            cb(response.data)
-        }).catch(error => {
-            console.log(error)
-            if (error.data !== undefined) {
-                errorCb(error.data.toJSON())
-            } else {
-                errorCb(error)
-            }
-        })
-}
-
 export default {
     getClient,
     handleError,
     appendFleetIDIfDefined,
-    fetchGithubVersion,
     searchAll,
 }
