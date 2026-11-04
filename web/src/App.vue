@@ -18,6 +18,7 @@ import LayoutStretch from "@/components/layout/LayoutStretch.vue"
 import LayoutLogin from "@/components/layout/LayoutLogin.vue"
 import TheLoginModal from '@/views/login/TheLoginModal.vue';
 import TheSettingsModal from '@/views/settings/TheSettingsModal.vue';
+import EventBus from '@/event-bus';
 
 export default {
     name: "App",
@@ -56,10 +57,20 @@ export default {
         reconnect() {
         },
     },
+    methods: {
+        reconnectSocket() {
+            this.$socket.disconnect()
+            this.$socket.connect()
+        }
+    },
     mounted() {
+        EventBus.$on('access-token-updated', this.reconnectSocket)
         if (this.isUserAuthed) {
             this.$store.dispatch('userSettings/getUserSettings')
         }
+    },
+    beforeDestroy() {
+        EventBus.$off('access-token-updated', this.reconnectSocket)
     }
 }
 </script>

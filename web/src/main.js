@@ -21,7 +21,13 @@ import VueSocketIO from 'vue-socket.io'
 
 import { baseurl } from "@/api/apiConfig"
 
-const socket = SocketIO(baseurl)
+const socket = SocketIO(baseurl, {
+    // Re-evaluated on every (re)connection so the server can authenticate the socket
+    auth: (cb) => cb({
+        token: store.getters["auth/access_token"],
+        token_type: store.getters["auth/access_token_type"],
+    }),
+})
 export const socketInstance = new VueSocketIO({
     debug: false,
     connection: socket,

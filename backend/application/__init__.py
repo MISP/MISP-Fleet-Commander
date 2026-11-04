@@ -101,7 +101,13 @@ def create_app():
 
         socketioApp = SocketIO(
             flaskApp,
-            cors_allowed_origins="*",
+            # Same-origin only by default. Set the env variable to a comma
+            # separated list of origins when the frontend is served separately.
+            cors_allowed_origins=[
+                origin.strip()
+                for origin in os.environ.get("SOCKETIO_CORS_ALLOWED_ORIGINS", "").split(",")
+                if origin.strip()
+            ] or None,
             message_queue=os.environ.get(
                 "SOCKETIO_MESSAGE_QUEUE",
                 f"redis://localhost:{str(os.environ.get('REDIS_PORT', 6380))}/3",

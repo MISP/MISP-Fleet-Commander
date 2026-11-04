@@ -3,6 +3,7 @@ import jwt_decode from "jwt-decode";
 import router from "@/router"
 import api from "@/api/auth"
 import axios from "axios"
+import EventBus from "@/event-bus"
 
 // initial state
 const state = {
@@ -52,6 +53,8 @@ const mutations = {
         state.access_token_type = token_type
         state.decoded_access_token = jwt_decode(access_token)
         setLocalStorage(state)
+        // The websocket authenticates on connection, it has to pick up the new token
+        EventBus.$emit("access-token-updated")
     },
     cleanAccessToken(state) {
         state.access_token = null
