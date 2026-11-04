@@ -27,13 +27,13 @@ def getByEmail(email: str) -> Union[User, None]:
 
 
 def add(user: dict) -> User:
-    user = User(email=user['email'],
-                password=user['password'])
-    db.session.add(user)
+    newUser = User(email=user['email'],
+                   password=user['password'])
+    db.session.add(newUser)
     db.session.commit()
     if 'user_settings' in user and len(user['user_settings']) > 0:
-        userSettingsModel.add(user.id, user['user_settings'])
-    return user
+        userSettingsModel.add(newUser.id, user['user_settings'])
+    return newUser
 
 
 def edit(user: dict) -> Union[User, None]:
