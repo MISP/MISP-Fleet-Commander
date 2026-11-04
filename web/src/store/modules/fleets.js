@@ -76,6 +76,7 @@ const actions = {
             const redirect = payload.redirect !== undefined ? payload.redirect : true
             dispatch("getFleet", fleet_id).then((fleet) => {
                 dispatch("servers/resetState", undefined, {root: true})
+                dispatch("connections/resetState", undefined, {root: true})
                 commit("selectFleet", { data: fleet, redirect: redirect })
                 resolve()
             })

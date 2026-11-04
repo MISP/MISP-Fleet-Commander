@@ -2,9 +2,13 @@ import api from "@/api/connections"
 import Vue from "vue"
 
 // initial state
-const state = {
-    all: []
+const init_state = () => {
+    return {
+        all: []
+    }
 }
+
+const state = init_state()
 
 // getters
 const getters = {
@@ -18,7 +22,13 @@ const getters = {
 
 // actions
 const actions = {
-    getConnections({ commit }, payload={}) {
+    resetState({ commit }) {
+        return new Promise((resolve) => {
+            commit("resetState")
+            resolve()
+        })
+    },
+    getConnections({ commit, getters }, payload={}) {
         return new Promise((resolve, reject) => {
             if (payload.init_only && getters.connectionCount > 0) {
                 resolve("Server already loaded")
@@ -94,6 +104,9 @@ const actions = {
 
 // mutations
 const mutations = {
+    resetState (state) {
+        Object.assign(state, init_state())
+    },
     toggleShowDetails (state, index) {
         state.all[index]._showDetails = !state.all[index]._showDetails
     },
