@@ -169,6 +169,12 @@ export default {
                     this.requestInProgress = false
                 },
                 (error) => {
+                    this.$bvToast.toast(`Error while executing the REST query`, {
+                        title: error,
+                        variant: "danger",
+                        solid: true
+                    })
+                    this.requestInProgress = false
                 }
             )
         },
