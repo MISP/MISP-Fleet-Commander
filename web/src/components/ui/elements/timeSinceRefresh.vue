@@ -88,7 +88,7 @@ export default {
             this.timestampDynamicText = this.genFromNow();
         }, 3000)
     },
-    unmounted() {
+    beforeDestroy() {
         clearInterval(this.interval)
     }
 }
