@@ -54,6 +54,7 @@ export default {
         return {
             isLoaded: false,
             retriedOnce: false,
+            cacheBuster: new Date().getTime(),
         }
     },
     computed: {
@@ -68,8 +69,7 @@ export default {
             return this.server.name
         },
         getImageURL: function() {
-            const now = new Date().getTime()
-            return `http://127.0.0.1:5001/servers/monitoringImage/${this.server.id}/${this.panelId}/${this.getFromDate}?ts=${now}`
+            return `http://127.0.0.1:5001/servers/monitoringImage/${this.server.id}/${this.panelId}/${this.getFromDate}?ts=${this.cacheBuster}`
         },
         isImageLoaded: function() {
             return !this.loadingRequested && this.isLoaded
@@ -80,12 +80,10 @@ export default {
             this.isLoaded = true
         },
         retryLoading() {
-            const that = this
-            const img = new Image();
-            img.src = this.getImageURL; // this should refer to the original failed image
-            img.onerror = function() {
-                that.imgLoaded()
-            }
+            // Changing the cache buster updates the `src` of the rendered image,
+            // making the browser fetch it again. The template's `@load` / `@error`
+            // handlers then reflect the outcome of that new attempt.
+            this.cacheBuster = new Date().getTime()
         },
         imgLoadingError() {
             if (!this.retriedOnce) {
