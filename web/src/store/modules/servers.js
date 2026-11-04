@@ -226,18 +226,6 @@ const mutations = {
         state.server_status[payload.server_id] = Object.assign({}, state.server_status[payload.server_id], newStatus)
         //setUpdatableServers(state)
     },
-    setQueryState(state, payload) {
-        let server = state.servers[payload.server_id]
-        state.server_query_in_progress[payload.server_id] = payload.loading
-        const info = payload.info
-        if (info !== undefined) {
-            if (info.error === undefined) {
-                server.server_query_error = false
-            } else {
-                state.server_query_error = info.error ? info.error : true
-            }
-        }
-    },
     setServerRefreshEnqueued(state, payload) {
         const server_id = payload.server_id
         const is_enqueued = payload.is_enqueued

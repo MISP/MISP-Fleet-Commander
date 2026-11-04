@@ -391,10 +391,10 @@ export default {
                 } else {
                     link.target = 'v' + link.destination.Server.id
                     link.remote_sync_server = link.destination.Server
-                    const targetServer = Object.values(this.remote_connections[link.origin.id]).filter((server) => {
+                    const targetServer = Object.values(this.remote_connections[link.origin.id] || {}).filter((server) => {
                         return server.Server.id == link.destination.Server.id
                     })
-                    link.remote_sync_server.status = targetServer[0].connectionTest
+                    link.remote_sync_server.status = targetServer[0] ? targetServer[0].connectionTest : undefined
                     link._managed_server = false
                 }
                 if (link.filtering_rules.pull_rule_number > 0 || link.filtering_rules.push_rule_number > 0) {
