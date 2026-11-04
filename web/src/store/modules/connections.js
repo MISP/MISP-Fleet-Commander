@@ -97,7 +97,7 @@ const mutations = {
     toggleShowDetails (state, connection) {
         const target = state.all.find(c => c.vid == connection.vid)
         if (target !== undefined) {
-            target._showDetails = !target._showDetails
+            Vue.set(target, '_showDetails', !target._showDetails)
         }
     },
     setConnections(state, connections) {
@@ -106,6 +106,8 @@ const mutations = {
     setConnection(state, connection) {
         for (let i = 0; i < state.all.length; i++) {
             if (state.all[i].vid == connection.vid) {
+                // keep the row expanded when its data is refreshed
+                connection._showDetails = state.all[i]._showDetails
                 Vue.set(state.all, i, connection)
                 break
             }
