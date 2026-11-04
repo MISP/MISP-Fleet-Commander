@@ -17,7 +17,7 @@ def view(loggedUser, id):
     return userSettingSchema.dump(userSetting)
 
 
-@BPuserSetting.route('/user-settings/get-for-user/<int:user_id>/<string:setting_name>', methods=['GET'])
+@BPuserSetting.route('/user-settings/get-for-user/<user_id>/<string:setting_name>', methods=['GET'])
 @token_required
 def getForUser(loggedUser, user_id, setting_name):
     if user_id == 'me':
@@ -32,7 +32,7 @@ def getForUser(loggedUser, user_id, setting_name):
     return userSettingSchema.dump(userSetting)
 
 
-@BPuserSetting.route('/user-settings/edit-for-user/<int:user_id>', methods=['POST', 'PUT'])
+@BPuserSetting.route('/user-settings/edit-for-user/<user_id>', methods=['POST', 'PUT'])
 @token_required
 def editForUser(loggedUser, user_id):
     if user_id == 'me':
