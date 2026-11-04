@@ -202,8 +202,9 @@ export default {
                 .then((result) => {
                     this.rawText = result
                 })
-                // .catch((error) => {
-                // })
+                .catch(() => {
+                    // The user has already been notified by a toast in `readFile`
+                })
                 // .finally(() => {
                 // })
         },
@@ -214,7 +215,7 @@ export default {
                         title: "Error while parsing the CSV file",
                         variant: "warning",
                     })
-                    this.reject("File is larger than the accepted maximum size")
+                    reject("File is larger than the accepted maximum size")
                 } else {
                     const reader = new FileReader()
                     reader.onloadstart = () => {
