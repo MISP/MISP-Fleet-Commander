@@ -122,7 +122,7 @@ class ToggleObject(BasePlugin):
         result = mispPostRequest(server, url, payload, rawResponse=True, nocache=True)
         data = result.json()
         if "error" in data:
-            actionResponse = result['error']
+            actionResponse = data['error']
         else:
             actionResponse = True
 
