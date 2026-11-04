@@ -124,7 +124,7 @@ def delete(user):
                 db.session.delete(server)
                 deletedServers.append(server.id)
         db.session.commit()
-        return serversSchema.dump(deletedServers)
+        return jsonify(deletedServers)
     else:
         server = serverModel.getForUser(user, request.json['id'])
         if server is not None:
