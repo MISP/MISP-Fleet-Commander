@@ -51,7 +51,7 @@ export default {
     },
     delete(fleet, cb, errorCb) {
         const url = `${urls.delete}/${fleet.id}`
-        return common.getClient().delete(url, fleet)
+        return common.getClient().delete(url)
             .then((response) => {
                 cb(response.data)
             }).catch(error => {
