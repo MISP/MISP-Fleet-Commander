@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -o errexit
+
 apt update && apt upgrade -y
 apt install python3-pip python3-venv screen redis-server -y
 

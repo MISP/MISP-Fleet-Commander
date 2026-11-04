@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -o errexit
+
 git pull origin main
 pushd backend
 . ./venv/bin/activate
