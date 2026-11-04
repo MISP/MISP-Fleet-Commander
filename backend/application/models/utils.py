@@ -142,7 +142,6 @@ class MonitoringImages:
             self.panel = panel
         self.width = panel.get('width', 200)  if type(panel) is dict else 200
         self.height = panel.get('height', 150)  if type(panel) is dict else 150
-        from_time = None
         if from_time is not None:
             self.parsed_time = datetime.strptime(from_time, "%Y-%m-%dT%H:%M:%S.%fZ")
         else:
