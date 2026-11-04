@@ -7,7 +7,7 @@ export default {
             return full ? results : results.colors
         }
         Vue.prototype.$createColorPalette = (count) => {
-            return ColorTool.generatePaletteFromString(count)
+            return ColorTool.createColorPalette(count)
         }
         Vue.prototype.$getTextColor = (hex) => {
             return ColorTool.getTextColor(hex)
