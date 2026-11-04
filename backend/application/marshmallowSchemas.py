@@ -68,7 +68,7 @@ class ServerSchema(BaseSchema):
 
     fleet = mafields.Nested(lambda: FleetSchema(exclude=('servers', )), many=False)
     # server_info = mafields.Nested(lambda: ServerQuerySchema, many=False)
-    server_info = fields.Nested(lambda: ServerQuerySchema, validate=existOrNone, missing=None)
+    server_info = fields.Nested(lambda: ServerQuerySchema, validate=existOrNone, load_default=None)
     watched_timestamp = fields.Integer(dump_only=True)
     monitored_timestamp = fields.Integer(dump_only=True)
     monitoring_picture_cached = fields.Integer(dump_only=True)

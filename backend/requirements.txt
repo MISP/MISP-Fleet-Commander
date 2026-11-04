@@ -11,6 +11,7 @@ huey
 aiohttp
 nest_asyncio
 requests-cache
+marshmallow<5
 marshmallow_sqlalchemy
 PyJWT
 Pillow
