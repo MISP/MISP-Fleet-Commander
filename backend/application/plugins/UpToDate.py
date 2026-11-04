@@ -105,5 +105,4 @@ class UpToDate(BasePlugin):
 
     @classmethod
     def doUpdate(cls, server: Server) -> Union[dict, Response]:
-        # return mispPostRequest(server, '/servers/update', rawResponse=True, nocache=True)
-        return mispGetRequest(server, '/servers/getVersion', rawResponse=True, nocache=True)
+        return mispPostRequest(server, '/servers/update', rawResponse=True, nocache=True)
