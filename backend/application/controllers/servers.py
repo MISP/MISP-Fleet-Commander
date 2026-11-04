@@ -6,7 +6,7 @@ import time
 import json
 import re
 import concurrent.futures
-from datetime import datetime as dt, timedelta
+from datetime import datetime as dt, timedelta, timezone
 from collections.abc import Mapping, MutableSequence
 from collections import defaultdict
 from flask import Blueprint, request, jsonify, abort, Response, send_from_directory
@@ -517,15 +517,22 @@ def updateConnectionForNetwork(server, connectedServer):
     return link
 
 
+def _toAwareUTC(value):
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
 def parseGetSyncOvertime(syncLogs, afterTime=None):
     if afterTime is None:
-        afterTime = dt.now() - timedelta(days=7)
+        afterTime = dt.now(timezone.utc) - timedelta(days=7)
+    afterTime = _toAwareUTC(afterTime)
     servers = defaultdict(dict)
     for logEntry in syncLogs:
         title = logEntry['Log']['title']
         if title.startswith('Pull from'):
             created = dt.fromisoformat(logEntry['Log']['created'])
-            if created > afterTime:
+            if _toAwareUTC(created) > afterTime:
                 urlMatch = re.search(r'Pull from (?P<url>[\S]+) .*', title)
                 change = logEntry['Log']['change']
                 parsedChange = re.search(r'(?P<events>[\d]+) events, (?P<proposals>[\d]+) proposals and (?P<sightings>[\d]+) sightings pulled or updated. (?P<events_failed>[\d]+) events failed or didn\'t need an update.', change)
@@ -543,14 +550,15 @@ def parseGetSyncOvertime(syncLogs, afterTime=None):
 
 def parseGetLoginLogs(loginLogs, afterTime=None):
     if afterTime is None:
-        afterTime = dt.now() - timedelta(days=7)
+        afterTime = dt.now(timezone.utc) - timedelta(days=7)
+    afterTime = _toAwareUTC(afterTime)
     logins = {
         'login': [],
         'auth_fail': []
     }
     for logEntry in loginLogs:
         created = dt.fromisoformat(logEntry['Log']['created'])
-        if created > afterTime:
+        if _toAwareUTC(created) > afterTime:
             action = logEntry['Log']['action']
             title = logEntry['Log']['title']
             ip = logEntry['Log'].get('ip', '')
