@@ -15,10 +15,10 @@ const getters = {
 
 // actions
 const actions = {
-    SOCKET_CONNECT(state) {
+    SOCKET_CONNECT({ commit }) {
         commit("setConnected", true)
     },
-    SOCKET_DISCONNECT(state) {
+    SOCKET_DISCONNECT({ commit }) {
         commit("setConnected", false)
     },
     SOCKET_PONG({ dispatch }, okState) {
