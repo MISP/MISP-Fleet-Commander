@@ -889,7 +889,7 @@ export default {
                     }
                 })
                 .catch(error => {
-                    const errorMessage = error.toJson()
+                    const errorMessage = error.toJSON().message
                     this.$bvToast.toast(errorMessage, {
                         title: `Could not perform quick action ${plugin.quickActionMeta.quickActionName}`,
                         variant: "danger",
