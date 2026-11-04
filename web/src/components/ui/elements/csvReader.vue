@@ -245,6 +245,9 @@ export default {
             })
             this.handleSelectableFieldChange()
         },
+        escapeRegExp(str) {
+            return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+        },
         updateAfterRead() {
             let csvLines = this.rawText.trim().split(/\r?\n/)
             if (this.has_header) {
@@ -256,7 +259,7 @@ export default {
             let tmpCsv = []
             csvLines.forEach(line => {
                 let regex = new RegExp(
-                    `${this.delimiter}(?=(?:[^"]*"[^"]*")*[^"]*$)`
+                    `${this.escapeRegExp(this.delimiter)}(?=(?:[^"]*"[^"]*")*[^"]*$)`
                 )
 
                 let list = line.split(regex)
