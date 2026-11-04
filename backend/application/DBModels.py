@@ -91,7 +91,7 @@ class UserSettings(BaseModel):
     
     name = db.Column(db.String(120), nullable=False, index=True)
     _value = db.Column('value', db.String)
-    UniqueConstraint(user_id, name)
+    __table_args__ = (UniqueConstraint('user_id', 'name'),)
 
     user = db.relationship('User', back_populates='user_settings')
 
