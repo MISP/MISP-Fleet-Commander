@@ -90,7 +90,11 @@ def getSettingConfig() -> dict:
 
 def togglePlugin(user_id: int, plugin_name: str) -> Union[list[str], None]:
     plugin_settings = getForUser(user_id, PLUGIN_SETTING_FULL_PATH)
-    if plugin_settings is not None:
+    if plugin_settings is None:
+        # First plugin enabled by this user: the setting row doesn't exist yet
+        plugin_settings = add(user_id, {'name': PLUGIN_SETTING_FULL_PATH, 'value': [plugin_name]})
+        return plugin_settings.value # type: ignore
+    else:
         updated_value = plugin_settings.value
         if plugin_name in plugin_settings.value:
             updated_value.remove(plugin_name) # type: ignore
