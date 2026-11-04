@@ -174,6 +174,7 @@ router.beforeEach((to, from, next) => {
     const authRequired = !publicRoutes.includes(to.path);
     if (authRequired && !store.getters["auth/isAuthenticated"]) {
         next({ name: 'login', query: { redirect: to.fullPath } })
+        return
     }
 
     if (to.matched.some(record => record.meta.requiresFleet)) {
