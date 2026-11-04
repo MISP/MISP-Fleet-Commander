@@ -1,5 +1,4 @@
-const baseurl = "http://127.0.0.1:5001"
-// const baseurl = ""
+const baseurl = process.env.NODE_ENV === "production" ? "" : "http://127.0.0.1:5001"
 
 export {
     baseurl,
