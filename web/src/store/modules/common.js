@@ -1,3 +1,5 @@
+import api from "@/api/common"
+
 // initial state
 const state = {
 }
@@ -27,7 +29,7 @@ const mutations = {
     setGithubVersion(state, githubReply) {
         const githubVersion = githubReply.tag_name
         state.githubVersion = githubVersion
-        setUpdatableServers(state)
+        //setUpdatableServers(state)
     }
 }
 
