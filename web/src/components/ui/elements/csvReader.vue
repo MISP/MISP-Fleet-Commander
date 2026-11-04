@@ -116,7 +116,7 @@ export default {
             fileMaxAllowedSize: 102400,
             rawText: "",
             has_header: true,
-            defaultHeader: ["name", "Comment", "url", "skip_ssl", "authkey"],
+            defaultHeader: ["name", "comment", "url", "skip_ssl", "authkey"],
             delimiter: ",",
             mappedFields: {
                 name: {label: "Name", csvIndex: null, required: true},
