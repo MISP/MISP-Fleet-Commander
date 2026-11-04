@@ -167,11 +167,11 @@ class MonitoringImages:
         return self.parsed_time.strftime("%Y-%m-%dT%H_%M_%S")
 
     def shouldReloadImage(self):
-        now = self.getExistingImageCreationTime()
-        if now is None:
+        image_creation_time = self.getExistingImageCreationTime()
+        if image_creation_time is None:
             return True
-        one_hour_ago = now - timedelta(minutes=self.IMAGE_REFRESH_FREQUENCY_MIN)
-        return one_hour_ago <= self.parsed_time <= now
+        refresh_deadline = datetime.now(timezone.utc) - timedelta(minutes=self.IMAGE_REFRESH_FREQUENCY_MIN)
+        return image_creation_time <= refresh_deadline
 
     def canonizedName(self):
         return f"{self.server_id}_{self.panel_id}"
