@@ -56,22 +56,22 @@ export default {
     computed: {
         integerTimestamp() {
             const timestampValue = Number.parseInt(this.timestamp)
-            return Number.isNaN(this.timestampValue) ? false : timestampValue
+            return Number.isNaN(timestampValue) ? false : timestampValue
         },
         validTimestamp() {
             return Number.isInteger(this.integerTimestamp) ? this.integerTimestamp : false
         },
         moreThanOneDay() {
-            return (new Date()).getTime()/1000 - this.integerTimestamp > 3600
+            return this.validTimestamp === false ? false : (new Date()).getTime()/1000 - this.integerTimestamp > 3600
         },
         clockMarginClass() {
             return this.clockNoMargin ? "" : "mr-1"
         },
         timestampDate() {
-            return moment(this.integerTimestamp * 1000).format("ddd DD/MM/YYYY HH:mm")
+            return this.validTimestamp === false ? "" : moment(this.integerTimestamp * 1000).format("ddd DD/MM/YYYY HH:mm")
         },
         timestampFromNow() {
-            return moment(this.integerTimestamp * 1000).fromNow()
+            return this.validTimestamp === false ? "" : moment(this.integerTimestamp * 1000).fromNow()
         },
         timestampTitle() {
             return this.type == "from" ? this.timestampDate : this.timestampFromNow
@@ -79,7 +79,7 @@ export default {
     },
     methods: {
         genFromNow() {
-            return moment(this.integerTimestamp * 1000).fromNow() 
+            return this.validTimestamp === false ? "" : moment(this.integerTimestamp * 1000).fromNow() 
         },
     },
     mounted() {
