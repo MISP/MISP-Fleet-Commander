@@ -16,6 +16,7 @@ from application import flaskApp
 from application.DBModels import db, User, Server
 from application.controllers.utils import mispGetHTMLRequest, mispGetRequest, mispPostRequest, batchRequest
 from application.marshmallowSchemas import ServerSchema, serverSchemaLighter, fleetSchema, serverQuerySchema, serverSchema, serversSchemaLighter, taskSchema, serverSchema, serversSchema
+import application.models.fleets as fleetModel
 import application.models.servers as serverModel
 from application.models.servers import MONITORING_PANELS
 from application.controllers.instance import token_required
@@ -65,6 +66,9 @@ def get(user, server_id):
 @BPserver.route('/servers/add/<int:fleet_id>', methods=['POST'])
 @token_required
 def add(user, fleet_id):
+    fleet = fleetModel.getForUser(user, fleet_id)
+    if fleet is None:
+        abort(404)
     servers = []
     # TODO: If password provided, fetch the associated API key
     if isinstance(request.json, list):
