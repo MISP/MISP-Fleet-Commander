@@ -98,7 +98,8 @@ export default {
             break
         case 7:
             parsed.variant = "danger"
-            parsed.message = "Remote user is not a sync user"
+            parsed.status.variant = "danger"
+            parsed.status.message = "Remote user is not a sync user"
             break
         case 8:
             parsed.variant = "warning"
