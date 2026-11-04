@@ -49,7 +49,7 @@ class User(BaseModel):
                       index=False,
                       unique=False,
                       nullable=False)
-    apikey = db.Column(db.String(40),
+    apikey = db.Column(db.String(64),
                       index=False,
                       unique=False,
                       nullable=True,
