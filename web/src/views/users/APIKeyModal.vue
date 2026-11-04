@@ -92,6 +92,7 @@ export default {
         resetModal() {
             delete(this.form.id)
             this.form.note = ""
+            this.APIKey = false
             this.$emit("update:modalAction", "GenAPIKey")
         },
         handleSubmission(evt) {
