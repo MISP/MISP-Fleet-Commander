@@ -94,7 +94,7 @@ export default {
             })
         },
         getRefreshEnqueued: function() {
-            return this.server_refresh_enqueued[this.server_id]
+            return this.server_refresh_enqueued[this.server.id]
         },
     },
     data: function () {
@@ -139,7 +139,7 @@ export default {
                     }
                 })
                 .catch(error => {
-                    const errorMessage = error.json()
+                    const errorMessage = error.toJSON().message
                     this.$bvToast.toast(errorMessage, {
                         title: `Could not perform quick action ${plugin.text}`,
                         variant: "danger",
