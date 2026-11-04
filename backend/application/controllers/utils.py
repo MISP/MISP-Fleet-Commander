@@ -177,6 +177,8 @@ def batchRequest(batch_request):
             server_id, passAlong = future_to_serverid[future]
             try:
                 data = future.result()
+                if type(data) is not dict:
+                    data = { 'data': data }
                 data['timestamp'] = int(time.time())
                 data['server_id'] = server_id
                 if passAlong is not None:

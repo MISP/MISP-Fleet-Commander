@@ -121,9 +121,9 @@ def __handleRefreshResults(allRefresh):
             'pinlist_id': result['_passAlong']['pinlist_id'],
             'server_id': result['_passAlong']['server_id'],
         }
-        if result['_status_code'] == 404:
+        if result.get('_status_code') == 404:
             pinlistEntryModel.deleteForPinlistServer(**data)
-        elif result['_status_code'] == 200:
+        elif result.get('_status_code') == 200:
             filteredData = {key: value for key, value in result.items() if not key.startswith('_')}
             data['data'] = filteredData
             pinlistEntryModel.add(data)
