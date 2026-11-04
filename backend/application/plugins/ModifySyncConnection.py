@@ -23,6 +23,8 @@ class ModifySyncConnection(BasePlugin):
             return FailPluginResponse({}, [str(e)])
         payload = ModifySyncConnection.rearrangePayload(payload)
         syncConnections = ModifySyncConnection.getFilteredServers(server, urlFilters)
+        if isinstance(syncConnections, dict):
+            return FailPluginResponse({}, [str(syncConnections.get('error', syncConnections))])
         result = ModifySyncConnection.pushChangesToAllServers(server, syncConnections, payload)
         return result
 
@@ -38,6 +40,8 @@ class ModifySyncConnection(BasePlugin):
     def getFilteredServers(cls, server: Server, urlFilters: str = '') -> list:
         url = f'/servers/index/search:{urlFilters}'
         servers = mispGetRequest(server, url)
+        if isinstance(servers, dict):
+            return servers
 
         filteredServers = []
         # Make sure we filter based on server name and URL even if server doesn't support server/index filtering (2.4.171)

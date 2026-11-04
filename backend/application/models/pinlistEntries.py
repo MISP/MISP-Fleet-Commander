@@ -7,8 +7,7 @@ import application.models.servers as serverModel
 
 
 def index() -> List[PinListEntry]:
-    q = PinListEntry.query.all()
-    lists = q.all()
+    lists = PinListEntry.query.all()
     return lists
 
 def get(entry_id: int) -> Union[PinListEntry, None]:
