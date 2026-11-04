@@ -163,6 +163,7 @@ export default {
                         return response
                     })
                     .catch(error => {
+                        return error
                     })
                     .finally(() => {
                         that.requestInProgress[server_id] = false
@@ -172,7 +173,7 @@ export default {
             return Promise.all(actionPromises)
                 .then((responses) => {
                     const successes = responses.filter(response => {
-                        return response.statusText == 'OK'
+                        return response?.statusText == 'OK'
                     });
                     if (successes.length > 0) {
                         const successMessage = successes[0].data.data.message
@@ -181,7 +182,8 @@ export default {
                             variant: "success",
                         })
                     } else {
-                        const errorMessage = responses[0].data.data.message
+                        const failure = responses.find(response => response !== undefined)
+                        const errorMessage = failure?.data?.data?.message ?? failure?.message ?? 'Unknown error'
                         this.$bvToast.toast(errorMessage, {
                             title: "Could not perform any action",
                             variant: "danger",
@@ -189,7 +191,7 @@ export default {
                     }
                 })
                 .catch(error => {
-                    const errorMessage = error.toJSON().message
+                    const errorMessage = typeof error?.toJSON === 'function' ? error.toJSON().message : error?.message
                     this.$bvToast.toast(errorMessage, {
                         title: "Could not perform action",
                         variant: "danger",
