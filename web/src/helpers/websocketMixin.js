@@ -19,12 +19,6 @@ export const websocketMixin = {
         wsFleetConnectionTest: function (fleetID) {
             this.$socket.emit('fleet_connection_test', fleetID);
         },
-        wsServerPing: function (serverID) {
-            this.$socket.emit('ping_server', serverID);
-        },
-        wsFleetPing: function (fleetID) {
-            this.$socket.emit("ping_fleet", fleetID);
-        },
         wsServerGraphsRefresh: function (serverID) {
             this.$socket.emit('refresh_server_graphs', serverID);
         },

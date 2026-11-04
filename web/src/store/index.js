@@ -9,7 +9,6 @@ import servers from "./modules/servers"
 import connections from "./modules/connections"
 import fleets from "./modules/fleets"
 import plugins from "./modules/plugins"
-import notifications from "./modules/notifications"
 import pinlists from "./modules/pinlists"
 import websocket from "./modules/websocket"
 
@@ -28,7 +27,6 @@ export default new Vuex.Store({
         servers,
         connections,
         fleets,
-        notifications,
         pinlists,
         plugins,
         websocket,
