@@ -39,7 +39,7 @@
                     <template v-slot:tabs-end>
                         <a class="nav-link disabled ml-auto border-0" href="#" style="pointer-events: auto;">
                             <timeSinceRefresh :timestamp="lastRefreshTimestamp" :clockNoMargin="true"></timeSinceRefresh>
-                            <button type="button btn-sm" class="btn btn-link sync-btn p-0" @click.prevent.stop="wsStatusRefresh()">
+                            <button type="button" class="btn btn-sm btn-link sync-btn p-0" @click.prevent.stop="wsStatusRefresh()">
                                 <i class="fas fa-sync"></i>
                             </button>
                         </a>

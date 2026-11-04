@@ -284,7 +284,13 @@ export default {
             return this.getConnection.source || null
         },
         getTargetServer: function() {
-            return this.link.target || null
+            const link = this.link || {}
+            if (link._managed_server === false && link.remote_sync_server) {
+                return link.remote_sync_server
+            }
+            // the target is a server id, or an already resolved node once the layout has run
+            const target = link.target !== null && typeof link.target === 'object' ? link.target.id : link.target
+            return this.servers[target] || (link.target !== null && typeof link.target === 'object' ? link.target : null) || link.remote_sync_server || {}
         },
         getTargetServerIDForSource: function() {
             return this.getTargetServerForSource.id || null

@@ -16,7 +16,7 @@
                 </span>
                 <span class="ml-2 border-0" href="#" style="pointer-events: auto; font-size: 1.3rem;">
                     <timeSinceRefresh :timestamp="lastRefreshTimestamp" :clockNoMargin="true"></timeSinceRefresh>
-                    <button type="button btn-sm" class="btn btn-link sync-btn p-0">
+                    <button type="button" class="btn btn-sm btn-link sync-btn p-0">
                         <i class="fas fa-sync"></i>
                     </button>
                 </span>

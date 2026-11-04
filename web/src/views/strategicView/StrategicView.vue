@@ -186,7 +186,8 @@ export default {
             return this.selectedNodeID !== null || this.selectedLinkID !== null
         },
         getRefreshEnqueued: function() {
-            return this.server_refresh_enqueued[this.server_id]
+            // the server list only holds the servers of the selected fleet
+            return this.getServerList.some(server => this.server_refresh_enqueued[server.id])
         },
     },
     methods: {
