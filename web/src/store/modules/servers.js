@@ -242,6 +242,7 @@ const mutations = {
         const server_id = payload.server_id
         const is_enqueued = payload.is_enqueued
         state.server_refresh_enqueued[server_id] = is_enqueued
+        Vue.set(state.server_query_in_progress, server_id, is_enqueued)
     },
     setServerStatusRefreshEnqueued(state, payload) {
         const server_id = payload.server_id
