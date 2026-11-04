@@ -310,10 +310,13 @@ def attachConnectedServerStatusFor(server, connectedServers, remote_server_id):
                 if int(connectedServer["Server"]["id"]) == int(remote_server_id):
                     connectedServers[i] = getConnectedServerStatus(server, connectedServer)
                 else:
-                    theOldConnectionStatus = oldConnectionStatusByID[connectedServer["Server"]["id"]]
-                    connectedServers[i]['connectionTest'] = theOldConnectionStatus['connectionTest']
-                    connectedServers[i]['connectionUser'] = theOldConnectionStatus['connectionUser']
-                    connectedServers[i]['vid'] = theOldConnectionStatus['vid']
+                    theOldConnectionStatus = oldConnectionStatusByID.get(connectedServer["Server"]["id"])
+                    if theOldConnectionStatus is None: # Connection added since the last refresh, no old state to recover
+                        connectedServers[i] = getConnectedServerStatus(server, connectedServer)
+                    else:
+                        connectedServers[i]['connectionTest'] = theOldConnectionStatus['connectionTest']
+                        connectedServers[i]['connectionUser'] = theOldConnectionStatus['connectionUser']
+                        connectedServers[i]['vid'] = theOldConnectionStatus['vid']
         else:
             connectedServers = attachConnectedServerStatus(server, connectedServers)
     return connectedServers
