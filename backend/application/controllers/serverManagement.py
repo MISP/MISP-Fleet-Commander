@@ -24,12 +24,13 @@ def addUser(user, server_id):
 def setPassword(user, server_id, user_id):
     """Set the password of a user on the MISP instance"""
     server = serverModel.getForUser(user, server_id)
-    result = serverManagement.setPassword(server, user_id, request.json)
-    if result is not None:
-        if 'errors' in result:
-            return jsonify({'error': result['message'] + ' - ' + ', '.join(result['errors']['password'])})
-        else:
-            return jsonify(result)
+    if server is not None:
+        result = serverManagement.setPassword(server, user_id, request.json)
+        if result is not None:
+            if 'errors' in result:
+                return jsonify({'error': result['message'] + ' - ' + ', '.join(result['errors']['password'])})
+            else:
+                return jsonify(result)
     return jsonify({'error': 'Could not set password for user.'})
 
 
@@ -38,9 +39,10 @@ def setPassword(user, server_id, user_id):
 def resetPassword(user, server_id, user_id):
     """Reset password for a user on the MISP instance"""
     server = serverModel.getForUser(user, server_id)
-    result = serverManagement.resetPassword(server, user_id)
-    if result is not None:
-        return jsonify(result)
+    if server is not None:
+        result = serverManagement.resetPassword(server, user_id)
+        if result is not None:
+            return jsonify(result)
     return jsonify({'error': 'Could not reset password user.'})
 
 
@@ -49,9 +51,10 @@ def resetPassword(user, server_id, user_id):
 def genAuthkey(user, server_id, user_id):
     """Generate an authkey for a user on the MISP instance"""
     server = serverModel.getForUser(user, server_id)
-    result = serverManagement.genAuthkey(server, user_id)
-    if result is not None:
-        return jsonify(result)
+    if server is not None:
+        result = serverManagement.genAuthkey(server, user_id)
+        if result is not None:
+            return jsonify(result)
     return jsonify({'error': 'Could not generate authkey for user.'})
 
 
