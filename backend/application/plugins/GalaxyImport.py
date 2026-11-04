@@ -28,6 +28,7 @@ class GalaxyImport(BasePlugin):
         result = None
         if payload is None:
             result = FailPluginResponse({}, [f'Invalid parameters (payload: `{payload}`)'])
+            return result
 
         result = GalaxyImport.doImport(server, payload)
         return result
