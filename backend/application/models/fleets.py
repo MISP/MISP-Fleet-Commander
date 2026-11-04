@@ -6,7 +6,7 @@ from application.DBModels import Fleet
 
 
 def index() -> List[Fleet]:
-    q = Fleet.query.all()
+    q = Fleet.query
     fleets = q.all()
     return fleets
 

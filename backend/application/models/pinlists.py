@@ -10,7 +10,7 @@ from application.models.utils import AvatarGenerator
 
 
 def index() -> List[PinList]:
-    q = PinList.query.all()
+    q = PinList.query
     lists = q.all()
     return lists
 

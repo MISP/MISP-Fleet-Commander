@@ -7,7 +7,7 @@ import application.models.servers as serverModel
 
 
 def index() -> List[PinListEntry]:
-    q = PinListEntry.query.all()
+    q = PinListEntry.query
     lists = q.all()
     return lists
 
