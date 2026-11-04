@@ -180,6 +180,19 @@ export default {
                 .then((responses) => {
                     this.handleQueryResponse(responses)
                 })
+                .catch(error => {
+                    const message = typeof error === "string" ? error : (error?.message ?? "Something went wrong.")
+                    this.$bvToast.toast(message, {
+                        title: "Could not perform the batch API call",
+                        variant: "danger",
+                        solid: true
+                    })
+                })
+                .finally(() => {
+                    this.server_ids.forEach((server_id) => {
+                        that.requestInProgress[server_id] = false
+                    })
+                })
         },
         onSubmit(event) {
             event.preventDefault()
