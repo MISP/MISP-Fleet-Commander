@@ -184,12 +184,13 @@ export default {
             })
             return Promise.all(actionPromises)
                 .then((responses) => {
+                    // A plugin reports its own outcome: an HTTP 200 can still carry a failed action
                     const successes = responses.filter(response => {
-                        return response && !response.failed && response.statusText == 'OK'
+                        return response && !response.failed && response.status >= 200 && response.status < 300 && response.data?.status === 'success'
                     })
                     const failures = responses.filter(response => !successes.includes(response))
                     const failureMessage = (failure) => {
-                        return failure?.response?.data?.data?.message ?? failure?.data?.data?.message ?? failure?.error?.message ?? 'Unknown error'
+                        return failure?.data?.error?.[0] ?? failure?.data?.data?.message ?? failure?.response?.data?.data?.message ?? failure?.error?.message ?? 'Unknown error'
                     }
                     if (successes.length > 0 && failures.length === 0) {
                         this.$bvToast.toast(successes[0].data?.data?.message ?? 'Done', {
@@ -219,9 +220,12 @@ export default {
                 })
         },
         handlePluginResponse(server_id, response) {
+            // Without a MISP response, fall back on the plugin outcome rather than our own HTTP status
+            const pluginFailed = response.data?.status !== undefined && response.data.status !== 'success'
+            const fallbackStatus = pluginFailed ? 'Error' : response.status
             Vue.set(this.serverResponse, server_id, {
-                status_code: response.data?.request_response?.status_code ?? response.status,
-                reason: response.data?.request_response?.reason ?? (response.data?.data?.message ?? ''),
+                status_code: response.data?.request_response?.status_code ?? fallbackStatus,
+                reason: response.data?.request_response?.reason ?? (response.data?.error?.[0] ?? response.data?.data?.message ?? ''),
                 url: response.data?.data?.url ?? '',
                 data: response.data?.data,
                 elapsed_time: response.data?.request_response?.elapsed_time ?? '',
