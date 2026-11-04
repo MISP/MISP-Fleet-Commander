@@ -4,8 +4,7 @@
         <b-button
             size="sm"
             variant="primary"
-            title="Not sure if this will be added. TBD"
-            disabled
+            v-b-modal="'modal-administration-user-add'"
         >
             <i class="fas fa-plus"></i> Add user
         </b-button>
@@ -119,6 +118,11 @@
             </template>
     </b-table>
 
+    <UserAdd
+        :users="users"
+        :server="getServer"
+    ></UserAdd>
+
     <UserAdministrationModal
         v-if="selectedItem !== null"
         ref="modal-user-administration"
@@ -132,6 +136,7 @@
 import { mapState, mapGetters } from "vuex"
 import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
 import UserAdministrationModal from "@/views/servers/elements/mispRemoteAdministration/UserAdministrationModal.vue"
+import UserAdd from "@/views/servers/elements/mispRemoteAdministration/userAdministrationActions/userAdd.vue"
 import userPerms from "@/views/servers/elements/userPerms.vue"
 
 export default {
@@ -139,6 +144,7 @@ export default {
     components: {
         timeSinceRefresh,
         UserAdministrationModal,
+        UserAdd,
         userPerms
     },
     props: {
