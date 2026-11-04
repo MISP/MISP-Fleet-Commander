@@ -151,7 +151,7 @@ export default {
             }
             this.$store.dispatch('userSettings/editForUser', payload)
                 .then(() => {
-                    this.$bvToast.toast(`User setting \`${this.settingName}\` for user \`${this.selectedUser.email}\` saved`, {
+                    this.$bvToast.toast(`User setting \`${settingName}\` for user \`${this.selectedUser.email}\` saved`, {
                         title: "User setting successfully saved",
                         variant: "success",
                     })
@@ -161,7 +161,7 @@ export default {
                 })
                 .catch(error => {
                     this.$bvToast.toast(error, {
-                        title: `Could not save user setting \`${this.settingName}\``,
+                        title: `Could not save user setting \`${settingName}\``,
                         variant: "danger",
                     })
                 })
