@@ -76,11 +76,14 @@ const actions = {
                 commit('setFetchingServersInProgress', true)
                 api.index(servers => {
                         commit("setServers", servers)
+                        commit('setFetchingServersInProgress', false)
                         resolve()
                     },
-                    (error) => { reject(error) }
+                    (error) => {
+                        commit('setFetchingServersInProgress', false)
+                        reject(error)
+                    }
                 )
-                commit('setFetchingServersInProgress', false)
             } else {
                 resolve("Server already loaded")
             }
