@@ -70,7 +70,7 @@ const actions = {
             resolve()
         })
     },
-    fetchServers({ commit }, payload) {
+    fetchServers({ commit, getters }, payload) {
         return new Promise((resolve, reject) => {
             if (getters.serverCount == 0 || (payload !== undefined && payload.force)) {
                 commit('setFetchingServersInProgress', true)
