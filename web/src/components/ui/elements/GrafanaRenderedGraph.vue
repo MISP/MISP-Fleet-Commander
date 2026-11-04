@@ -8,8 +8,7 @@
         <img
             v-show="isImageLoaded"
             @load="imgLoaded"
-            @error="imgLoadingError"
-            :src="getImageURL"
+            :src="imageSrc"
             :alt="graphAltTitle"
             :title="graphAltTitle"
             :width="width"
@@ -19,6 +18,8 @@
 </template>
 
 <script>
+import api from "@/api/servers"
+
 export default {
     name: "GrafanaRenderedGraph",
     props: {
@@ -54,6 +55,7 @@ export default {
         return {
             isLoaded: false,
             retriedOnce: false,
+            imageSrc: null,
         }
     },
     computed: {
@@ -67,10 +69,6 @@ export default {
         getInstanceName: function() {
             return this.server.name
         },
-        getImageURL: function() {
-            const now = new Date().getTime()
-            return `http://127.0.0.1:5001/servers/monitoringImage/${this.server.id}/${this.panelId}/${this.getFromDate}?ts=${now}`
-        },
         isImageLoaded: function() {
             return !this.loadingRequested && this.isLoaded
         },
@@ -79,18 +77,30 @@ export default {
         imgLoaded() {
             this.isLoaded = true
         },
-        retryLoading() {
-            const that = this
-            const img = new Image();
-            img.src = this.getImageURL; // this should refer to the original failed image
-            img.onerror = function() {
-                that.imgLoaded()
+        loadImage() {
+            const payload = {
+                server_id: this.server.id,
+                panel_id: this.panelId,
+                from_time: this.getFromDate,
             }
+            api.monitoringImage(payload, (blob) => {
+                if (this.imageSrc !== null) {
+                    URL.revokeObjectURL(this.imageSrc)
+                }
+                this.imageSrc = URL.createObjectURL(blob)
+            }, () => {
+                this.imgLoadingError()
+            })
+        },
+        retryLoading() {
+            this.loadImage()
         },
         imgLoadingError() {
             if (!this.retriedOnce) {
-                this.retryLoading()
                 this.retriedOnce = true
+                this.retryLoading()
+            } else {
+                this.imgLoaded()
             }
         },
     },
@@ -99,6 +109,14 @@ export default {
             if (newValue === false) {
                 this.retryLoading()
             }
+        }
+    },
+    mounted() {
+        this.loadImage()
+    },
+    beforeDestroy() {
+        if (this.imageSrc !== null) {
+            URL.revokeObjectURL(this.imageSrc)
         }
     }
 

@@ -14,6 +14,7 @@ const urls = {
     getUsers: `/servers/getUsers`,
     getUsageDashboardConfig: `/servers/getUsageDashboardConfig`,
     getInstancePicture: `/servers/getInstancePicture`,
+    monitoringImage: `/servers/monitoringImage`,
 }
 
 export default {
@@ -137,6 +138,16 @@ export default {
     getInstancePicture(server_id, cb, errorCb) {
         const url = `${urls.getInstancePicture}/${server_id}`
         return common.getClient().get(url)
+            .then((response) => {
+                cb(response.data)
+            }).catch(error => {
+                common.handleError(error, errorCb)
+            })
+    },
+
+    monitoringImage(payload, cb, errorCb) {
+        const url = `${urls.monitoringImage}/${payload.server_id}/${payload.panel_id}/${payload.from_time}`
+        return common.getClient().get(url, { responseType: 'blob' })
             .then((response) => {
                 cb(response.data)
             }).catch(error => {

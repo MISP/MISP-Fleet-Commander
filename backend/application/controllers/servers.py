@@ -363,11 +363,9 @@ def getInstancePicture(user, server_id):
 
 
 @BPserver.route('/servers/monitoringImage/<int:server_id>/<panel_id>/<from_time>', methods=['GET'])
-# @token_required
-def monitoringImage(server_id, panel_id, from_time):
-    # TODO: Find a way to add authentication here. Maybe encode it as base64?
-    # server = serverModel.getForUser(user, server_id)
-    server = serverModel.get(server_id)
+@token_required
+def monitoringImage(user, server_id, panel_id, from_time):
+    server = serverModel.getForUser(user, server_id)
     if server is not None:
         panelImage = MonitoringImages(server_id, panel_id, from_time)
         (directoryPath, imagePath) = panelImage.getImagePaths()
