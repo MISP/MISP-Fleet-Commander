@@ -180,6 +180,7 @@ export default {
     },
     watch: {
         selectedUser: function() {
+            this.changedSettings = {}
             this.backupSettings()
         }
     }
