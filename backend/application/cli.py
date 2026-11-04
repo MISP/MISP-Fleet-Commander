@@ -3,6 +3,7 @@
 
 import asyncio
 import time
+from pprint import pprint
 import click
 
 from flask.cli import AppGroup
