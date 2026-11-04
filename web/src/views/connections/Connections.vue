@@ -185,7 +185,7 @@
                         <div class="btn-group">
                             <b-button
                                 size="xs" variant ="link"
-                                @click="toggleConnectionInfo(row.item, row.index, row)"
+                                @click="toggleConnectionInfo(row.item)"
                             >
                                 <i :class="['text-secondary', 'fas', `fa-${row.detailsShowing ? 'compress-alt' : 'expand-alt'}`]"></i>
                             </b-button>
@@ -201,7 +201,7 @@
                                     ></i>
                                 </template>
                                 <contextualMenu
-                                    :menu="genContextualMenu(row.index)"
+                                    :menu="genContextualMenu(row.item)"
                                     @handle-refresh-info="handleRefreshInfo"
                                     @view-in-server="viewInServer"
                                 ></contextualMenu>
@@ -216,7 +216,7 @@
                     :connection="row.item"
                     :serverSource="row.item.source"
                     :serverDestination="row.item.destination"
-                    @actionRefresh="handleRefreshInfo({index: row.index, method: $event})"
+                    @actionRefresh="handleRefreshInfo({connection: row.item, method: $event})"
                     @actionClose="row.toggleDetails"
                 ></RowDetails>
             </template>
@@ -331,21 +331,21 @@ export default {
         clearForcedHidden() {
             this.forcedHidden = -1
         },
-        genContextualMenu(index) {
+        genContextualMenu(connection) {
             return [
                 {
                     variant: "",
                     text: "Refresh",
                     icon: "sync-alt",
                     eventName: "handle-refresh-info",
-                    callbackData: {index: index, method: "no_cache"}
+                    callbackData: {connection: connection, method: "no_cache"}
                 },
                 {
                     variant: "",
                     text: "View server",
                     icon: "server",
                     eventName: "view-in-server",
-                    callbackData: {index: index}
+                    callbackData: {connection: connection}
                 }
             ]
         },
@@ -365,8 +365,8 @@ export default {
                     this.refreshInProgress = false
                 })
         },
-        toggleConnectionInfo(connection, row_id) {
-            this.$store.commit("connections/toggleShowDetails", row_id)
+        toggleConnectionInfo(connection) {
+            this.$store.commit("connections/toggleShowDetails", connection)
             if (connection._showDetails) {
                 this.refreshInfo(connection)
             }
@@ -375,15 +375,13 @@ export default {
             this.rulesTreeMode = !this.rulesTreeMode
         },
         handleRefreshInfo(data) {
-            const index = data.index
-            let connection = this.getConnections[index]
-            this.refreshInfo(connection)
+            this.refreshInfo(data.connection)
         },
         refreshInfo(connection) {
             this.$store.dispatch("connections/getConnection", connection)
         },
         viewInServer(data) {
-            const connection = this.getConnections[data.index]
+            const connection = data.connection
             if (connection && connection.source) {
                 this.$router.push({ name: "servers.view", params: { server_id: connection.source.id } })
             }

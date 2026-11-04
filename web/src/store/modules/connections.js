@@ -94,8 +94,11 @@ const actions = {
 
 // mutations
 const mutations = {
-    toggleShowDetails (state, index) {
-        state.all[index]._showDetails = !state.all[index]._showDetails
+    toggleShowDetails (state, connection) {
+        const target = state.all.find(c => c.vid == connection.vid)
+        if (target !== undefined) {
+            target._showDetails = !target._showDetails
+        }
     },
     setConnections(state, connections) {
         state.all = connections
