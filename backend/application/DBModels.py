@@ -234,7 +234,7 @@ class Server(BaseModel):
 def forgetDeletedServer(mapper, connection, server):
     import application.redisModel as redisModel
     try:
-        redisModel.deleteServerData(server.uuid)
+        redisModel.deleteServerData(server.uuid, server.id)
     except Exception as e:  # Redis being down must not prevent deleting the server
         print(f'Could not clear the cached data of server {server.uuid}: {e}')
 

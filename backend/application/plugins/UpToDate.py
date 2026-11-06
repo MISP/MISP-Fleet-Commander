@@ -1,19 +1,16 @@
-from datetime import timedelta
 from typing import List, Optional, Union
-from requests_cache import CachedSession
 from application.DBModels import Server
-from application.controllers.utils import mispGetRequest, mispPostRequest
+from application.controllers.utils import mispGetRequest
+from application.health.versions import GITHUB_LATEST_RELEASE_URL, how_far_behind, latest_release, parse_version
 from application.models.plugins import BasePlugin, PluginResponse, SuccessPluginResponse, FailPluginResponse
 from requests import Response
 
-
-requestGithubSession = CachedSession(cache_name='github_cache', expire_after=timedelta(minutes=10))
 
 class UpToDate(BasePlugin):
     name = 'Up-To-Date'
     description = 'Check if the server is up-to-date based on the latest GitHub release'
     icon = 'far fa-arrow-alt-circle-up'
-    githubURL = "https://api.github.com/repos/MISP/MISP/releases/latest"
+    githubURL = GITHUB_LATEST_RELEASE_URL
     quickActionName = 'Run Updates'
     quickActionIcon = 'arrow-up'
     quickActionVariant = 'outline-primary'
@@ -23,7 +20,7 @@ class UpToDate(BasePlugin):
         upToDate = upToDateStatus['up_to_date']
         data = {
             "component": "badge",
-            "variant": "success" if upToDate else "danger",
+            "variant": "secondary" if upToDate is None else ("success" if upToDate else "danger"),
             "text": upToDateStatus['current'],
             "title": f"Latest release {upToDateStatus['github']}"
         }
@@ -44,64 +41,41 @@ class UpToDate(BasePlugin):
     @classmethod
     def queryVersion(cls, server: Server) -> str:
         testConnection = mispGetRequest(server, '/servers/getVersion')
-        if 'error' in testConnection:
+        if not isinstance(testConnection, dict) or 'error' in testConnection or not testConnection.get('version'):
             return '?'
-        current_version = testConnection['version']
-        return current_version
+        return testConnection['version']
 
     @classmethod
     def queryGithub(cls) -> str:
-        github_version_r = requestGithubSession.get(cls.githubURL)
-        # if github_version_r == 200:
-        #     github_version = github_version_r.json()['tag_name']
-        # else:
-        #     github_version = '?'
-        try:
-            github_version = github_version_r.json()['tag_name']
-        except:
-            github_version = '?'
-        return github_version
+        return latest_release() or '?'
 
     @classmethod
     def tokenizeMISPVersion(cls, versionString: str) -> dict:
-        version = {}
-        if versionString == '?':
-            version = {
-                "major": '?',
-                "minor": '?',
-                "patch": '?',
-            }
-        else:
-            if versionString.startswith("v"):
-                versionString = versionString[1:]
-            arr = versionString.split(".")
-            version = {
-                "major": arr[0],
-                "minor": arr[1],
-                "patch": arr[2]
-            }
-        return version
+        version = parse_version(versionString)
+        if version is None:
+            return {"major": '?', "minor": '?', "patch": '?'}
+        return {"major": str(version[0]), "minor": str(version[1]), "patch": str(version[2])}
 
     @classmethod
     def getStatus(cls, server: Server) -> dict:
         current = cls.queryVersion(server)
-        currentTokenized = cls.tokenizeMISPVersion(current)
         github = cls.queryGithub()
-        githubTokenized = cls.tokenizeMISPVersion(github)
         data = {
             "current": current,
-            "current_tokenized": currentTokenized,
+            "current_tokenized": cls.tokenizeMISPVersion(current),
             "github": github,
-            "github_tokenized": githubTokenized,
-            "up_to_date": UpToDate.isUpToDate(githubTokenized, currentTokenized)
+            "github_tokenized": cls.tokenizeMISPVersion(github),
+            "up_to_date": cls.isUpToDate(github, current),
         }
         return data
 
     @classmethod
-    def isUpToDate(cls, github_version: dict, current_version: dict) -> bool:
-        return github_version['major'] == current_version['major'] and \
-            github_version['minor'] == current_version['minor'] and \
-            github_version['patch'] == current_version['patch']
+    def isUpToDate(cls, github_version: str, current_version: str) -> Optional[bool]:
+        """None when either version is unknown. A server newer than the latest release is up to date"""
+        current, latest = parse_version(current_version), parse_version(github_version)
+        if current is None or latest is None:
+            return None
+        return how_far_behind(current, latest) is None
 
     @classmethod
     def doUpdate(cls, server: Server) -> Union[dict, Response]:

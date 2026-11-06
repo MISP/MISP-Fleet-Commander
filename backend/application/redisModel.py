@@ -6,6 +6,7 @@ from application import redisClient
 # Snapshots never expire: their freshness is judged by their `timestamp`
 KEY_SERVER_INFO = 'server-info'
 KEY_SERVER_STATUS = 'server-status'
+KEY_HEALTH_FIRST_SEEN = 'health-first-seen'
 KEY_SERVER_MONITORED = 'server-monitored'
 KEY_SERVER_WATCHED = 'server-watched'
 KEY_FLEET_MONITORED = 'fleet-monitored'
@@ -47,11 +48,33 @@ def getServerStatus(server_uuid: str) -> Union[None, dict]:
     return json.loads(statusText)
 
 
-def deleteServerData(server_uuid: str) -> None:
+def deleteServerData(server_uuid: str, server_id: Union[int, None] = None) -> None:
     """Forget everything cached about a server: needed now that snapshots no longer expire"""
-    redisClient.delete(*[f"{key}:{server_uuid}" for key in (
+    keys = [f"{key}:{server_uuid}" for key in (
         KEY_SERVER_INFO, KEY_SERVER_STATUS, KEY_SERVER_MONITORED, KEY_SERVER_WATCHED, KEY_SERVER_PICTURES_CACHED,
-    )])
+    )]
+    if server_id is not None:
+        keys.append(f"{KEY_HEALTH_FIRST_SEEN}:{server_id}")
+    redisClient.delete(*keys)
+
+
+def syncHealthFirstSeen(server_id: int, issue_ids: list, now: int) -> dict:
+    """Keep `health-first-seen:<server_id>` ({issue id: timestamp}) in line with the server's current issues: new
+    issues are stamped with `now`, cleared ones are dropped. Returns the timestamps of the current issues"""
+    key = f"{KEY_HEALTH_FIRST_SEEN}:{server_id}"
+    known = redisClient.hgetall(key)
+    current = set(issue_ids)
+    cleared = [issue_id for issue_id in known if issue_id not in current]
+    new = {issue_id: now for issue_id in current if issue_id not in known}
+    pipeline = redisClient.pipeline()
+    if cleared:
+        pipeline.hdel(key, *cleared)
+    if new:
+        pipeline.hset(key, mapping=new)
+    pipeline.execute()
+    firstSeen = {issue_id: int(ts) for issue_id, ts in known.items() if issue_id in current}
+    firstSeen.update(new)
+    return firstSeen
 
 
 def getServerMonitoredTimestamp(server_uuid: str) -> Union[int, None]:
