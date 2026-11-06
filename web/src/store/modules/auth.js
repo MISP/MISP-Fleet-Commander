@@ -20,6 +20,8 @@ const getters = {
     user: state => state.decoded_access_token?.data?.user || null,
     // UI hint only: the backend enforces the role on every admin route
     isAdmin: (state, getters) => getters.user?.is_admin === true,
+    // The account uses a well-known password: the backend refuses everything else until it is changed
+    mustChangePassword: (state, getters) => getters.user?.must_change_password === true,
     access_token: (state, getter) => getter.isAuthenticated ? state.access_token : null, 
     access_token_type: (state, getter) => getter.isAuthenticated ? state.access_token_type : null,
 }
@@ -30,6 +32,14 @@ const actions = {
         return api.login(credential)
             .then((data) => {
                 commit("setAccessToken", data)
+                reconnectSocket()
+            })
+    },
+    changePassword({ commit }, { currentPassword, newPassword }) {
+        return api.changePassword(currentPassword, newPassword)
+            .then((data) => {
+                commit("setAccessToken", data)
+                // The socket is refused while a password change is pending
                 reconnectSocket()
             })
     },

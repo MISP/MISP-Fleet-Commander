@@ -38,6 +38,11 @@ function getClient() {
                         }
                     )
                 });
+            } else if (error.response.status === 403 && error.response.data?.password_change_required) {
+                if (router.currentRoute.name !== "change-password") {
+                    router.push({ name: "change-password", query: { redirect: router.currentRoute.fullPath } }).catch(() => {})
+                }
+                return Promise.reject(error.response.data.message)
             } else if (error.response.data?.message !== undefined) {
                 return Promise.reject(error.response.data.message);
             }
@@ -58,6 +63,11 @@ function showLoginModal(successCB, errorCB) {
 }
 
 function handleError(error, errorCb) {
+    // The client's interceptor rejects with the server's message when there is one
+    if (typeof error === "string") {
+        errorCb(error)
+        return
+    }
     if (error !== undefined) {
         if (error.message) {
             if (error._showToLoginPage) {

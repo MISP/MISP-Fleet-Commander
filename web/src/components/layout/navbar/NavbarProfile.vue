@@ -1,5 +1,9 @@
 <template>
     <div>
+        <b-dropdown-item :to="{ name: 'change-password', query: { redirect: $route.fullPath } }">
+            <i class="fas fa-key fa-fw"></i> Change password
+        </b-dropdown-item>
+        <b-dropdown-divider></b-dropdown-divider>
         <b-dropdown-item
             class="logout-button"
             @click="logout()"

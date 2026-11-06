@@ -9,6 +9,7 @@ decrypt: this is how keys are rotated (see `flask security rotate-key`).
 """
 import os
 import re
+import secrets
 from pathlib import Path
 
 from cryptography.fernet import Fernet, InvalidToken, MultiFernet
@@ -45,16 +46,30 @@ def readKeyFile(path: Path) -> list:
         return []
 
 
-def createKeyFile(path: Path) -> list:
-    """Write a new key file readable by its owner only. Concurrent processes end up sharing the same key."""
+def createSecretFile(path: Path, secret: str) -> None:
+    """Write a secret to a new file readable by its owner only. If the file already exists, it is kept: concurrent
+    processes end up sharing the same secret."""
     path.parent.mkdir(parents=True, exist_ok=True)
     try:
         fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     except FileExistsError:
-        return readKeyFile(path)
-    with os.fdopen(fd, 'w') as keyFile:
-        keyFile.write(generateKey() + '\n')
+        return
+    with os.fdopen(fd, 'w') as secretFile:
+        secretFile.write(secret + '\n')
+
+
+def createKeyFile(path: Path) -> list:
+    createSecretFile(path, generateKey())
     return readKeyFile(path)
+
+
+def readOrCreateSecretKey(path: Path) -> str:
+    """The secret signing the session tokens, generated on first use"""
+    createSecretFile(path, secrets.token_hex(32))
+    secret = path.read_text().strip()
+    if not secret:
+        raise EncryptionKeyError(f'The secret key file {path} is empty')
+    return secret
 
 
 def init(app, hasEncryptedData) -> None:

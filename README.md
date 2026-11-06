@@ -78,6 +78,9 @@ A default admin user is already provisioned with the following credential:
 ```text
 admin@admin.test:Password1234
 ```
+You are asked to choose a new password on the first login: until then, the account cannot do anything else.
+
+The secret signing the session tokens is generated on the first start (`backend/database/secret_key`, or `./run/secret_key` with Docker). Set `SECRET_KEY` to provide your own.
 
 ### 🔄 Updating
 

@@ -21,7 +21,7 @@ def generate_uuid():
 
 def init_defaults():
     if User.query.first() is None:
-        user = User(email='admin@admin.test', password='Password1234', is_admin=True)
+        user = User(email='admin@admin.test', password='Password1234', is_admin=True, must_change_password=True)
         db.session.add(user)
         db.session.commit()
 
@@ -57,6 +57,11 @@ class User(BaseModel):
                          nullable=False,
                          default=False,
                          server_default='0')
+    # Set for accounts with a well-known password: they can only change it until they do
+    must_change_password = db.Column(db.Boolean,
+                                     nullable=False,
+                                     default=False,
+                                     server_default='0')
 
     user_settings = db.relationship("UserSettings", uselist=True, back_populates="user", cascade="all, delete-orphan")
 
@@ -87,7 +92,7 @@ class User(BaseModel):
 
     @password.setter
     def password(self, password):
-        self.hashed_password = bcrypt.generate_password_hash(password)
+        self.hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
 
     def verify_password(self, candidate):
         return bcrypt.check_password_hash(self.hashed_password, candidate)

@@ -5,7 +5,8 @@
             <div class="d-flex align-items-start justify-content-center pt-5 gradient">
                 <div class="d-flex flex-column align-items-center">
                     <img src="@/assets/logo-text-lighter.svg" class="logo" alt="MISP Fleet Commander logo">
-                    <loginForm></loginForm>
+                    <changePasswordForm v-if="$route.name === 'change-password'"></changePasswordForm>
+                    <loginForm v-else></loginForm>
                 </div>
             </div>
             <div class="logo-text-bottom">
@@ -19,12 +20,14 @@
 <script>
 import Layout from "@/components/layout/Layout.vue"
 import loginForm from "@/views/login/loginForm.vue"
+import changePasswordForm from "@/views/login/changePasswordForm.vue"
 
 export default {
     name: "TheLogin",
     components: {
         Layout,
         loginForm,
+        changePasswordForm,
     },
     data: function () {
         return {
@@ -47,7 +50,9 @@ export default {
         align-items: center;
         justify-content: center;
         width: 100%;
-        height: 100vh;
+        /* Grow and scroll rather than clip the card on short screens */
+        min-height: 100vh;
+        padding: 1rem 0;
     }
 
     .main-container {

@@ -1,6 +1,5 @@
 from os import environ
 from os import path as osPath
-import secrets
 
 
 basedir = osPath.abspath(osPath.dirname(__file__))
@@ -11,7 +10,10 @@ class Config:
     # General
     FLASK_DEBUG = environ.get('FLASK_DEBUG')
     FLASK_ENV = environ.get('FLASK_ENV')
-    SECRET_KEY = environ.get("SECRET_KEY", secrets.token_hex())
+    # Signs the session tokens. When SECRET_KEY is not set, it is read from (or generated into) the secret file,
+    # so tokens survive restarts and are shared by all processes
+    SECRET_KEY = environ.get('SECRET_KEY') or None
+    SECRET_KEY_FILE = environ.get('MFC_SECRET_KEY_FILE') or osPath.join(basedir, 'database', 'secret_key')
     TOKEN_EXPIRATION_MIN = environ.get("TOKEN_EXPIRATION_MIN", 60 * 12)
 
     # Database
@@ -45,7 +47,7 @@ class ProductionConfig(Config):
 class DevelopmentConfig(Config):
     FLASK_DEBUG = True
     FLASK_ENV = 'development'
-    SECRET_KEY = 'secret'
+    SECRET_KEY = environ.get('SECRET_KEY') or 'secret'
     TOKEN_EXPIRATION_MIN = 60*12
 
     # SQLALCHEMY_DATABASE_URI = 'sqlite:///' + osPath.join(basedir, 'app.db')

@@ -25,25 +25,6 @@ def two_users(db, make_user):
 
 
 @pytest.fixture()
-def socket_client(app):
-    from application import socketioApp
-    from application.models.auth import create_access_token
-    clients = []
-
-    def _connect(user=None, token=None):
-        if user is not None:
-            token = create_access_token(user, {}, app)
-        auth = {"token": token} if token is not None else None
-        client = socketioApp.test_client(app, auth=auth)
-        clients.append(client)
-        return client
-    yield _connect
-    for client in clients:
-        if client.is_connected():
-            client.disconnect()
-
-
-@pytest.fixture()
 def queued(monkeypatch):
     """Record the tasks the socket handlers queue instead of sending them to the workers"""
     import application.workers.tasks as tasks

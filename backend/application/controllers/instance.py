@@ -47,6 +47,11 @@ def resolve_user(credential: str) -> User:
     raise AuthenticationError('Invalid token. Registeration and / or authentication required')
 
 
+# What users with a well-known password can still do: see who they are and change it
+PASSWORD_CHANGE_ENDPOINTS = {'user.changePassword', 'user.view'}
+MIN_PASSWORD_LENGTH = 12
+
+
 def token_required(f):
     @wraps(f)
     def _verify(*args, **kwargs):
@@ -54,9 +59,21 @@ def token_required(f):
             user = resolve_user(request.headers.get('Authorization', ''))
         except AuthenticationError as e:
             return jsonify({'message': e.message, 'authenticated': False}), 401
+        if user.must_change_password and request.endpoint not in PASSWORD_CHANGE_ENDPOINTS:
+            return jsonify({'message': 'You must change your password first', 'authenticated': True,
+                            'password_change_required': True}), 403
         return f(user, *args, **kwargs)
 
     return _verify
+
+
+def issue_access_token(user):
+    """The login response. The UI only needs who is logged in; everything else is fetched with the token"""
+    token = create_access_token(user, {
+        'user': {'id': user.id, 'email': user.email, 'is_admin': user.is_admin,
+                 'must_change_password': user.must_change_password},
+    }, current_app)
+    return {"access_token": token, "token_type": "bearer"}
 
 def admin_required(f):
     """Like token_required, and the user must be an administrator"""
@@ -164,12 +181,7 @@ def login():
         recordLoginFailure(failuresKey)
         return jsonify({'message': 'Invalid credential'}), 401
     clearLoginFailures(failuresKey)
-
-    # The UI only needs who is logged in; everything else is fetched with the token
-    token = create_access_token(user, {
-        'user': {'id': user.id, 'email': user.email, 'is_admin': user.is_admin},
-    }, current_app)
-    return jsonify({"access_token": token, "token_type": "bearer"})
+    return jsonify(issue_access_token(user))
 
 
 @BPinstance.route("/instance/settings/index", methods=["GET"])

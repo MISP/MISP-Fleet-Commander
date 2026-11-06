@@ -1,0 +1,47 @@
+/* Shared by the login and password change forms */
+label{
+    color: hsl(200, 83%, 70%);
+    font-weight: 500;
+    margin-bottom: 0.35rem;
+    user-select: none;
+}
+.form-container {
+    width: 400px;
+    display: flex;
+    flex-direction: column;
+    justify-items: center;
+}
+.login-button {
+    background-color: hsl(217, 32%, 13%);
+    border-color: hsl(220, 5%, 51%);
+    color: hsl(200, 83%, 60%);
+}
+.login-button:hover {
+    background-color: var(--var-color-giantorganedarker);
+    border-color: var(--var-color-giantorganedarker);
+    color: white;
+}
+.login-button:active {
+    background-color: #ca4b0c !important;
+    border-color: #ca4b0c !important;
+}
+.login-button:active:focus {
+    box-shadow: 0 0 0 0.2rem #f2621a80 !important;
+}
+.login-button:focus {
+    box-shadow: 0 0 0 0.2rem #f2621a80 !important;
+}
+
+.shake-x-enter-active {
+    animation: shake-x 0.5s;
+}
+.shake-x-leave-active {
+    animation: shake-x 0.5s reverse;
+}
+@keyframes shake-x {
+     0% { transform: translateX(0) }
+    25% { transform: translateX(5px) }
+    50% { transform: translateX(-5px) }
+    75% { transform: translateX(5px) }
+    100% { transform: translateX(0) }
+}

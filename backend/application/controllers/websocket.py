@@ -25,9 +25,11 @@ def resolveSocketUser(auth):
         return None
     credential = token if ' ' in token.strip() else f"Bearer {token}"
     try:
-        return resolve_user(credential)
+        user = resolve_user(credential)
     except AuthenticationError:
         return None
+    # Like the REST API, nothing is available before a well-known password is changed
+    return None if user.must_change_password else user
 
 
 def currentSocketUser():

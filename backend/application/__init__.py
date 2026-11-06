@@ -115,6 +115,9 @@ def create_app():
     global loadedPlugins, flaskApp, socketioApp, bcrypt, db, migrate
     flaskApp = Flask(__name__, instance_relative_config=False)
     flaskApp.config.from_object(os.environ.get('FLASK_CONFIG', 'config.ProductionConfig'))
+    if not flaskApp.config.get('SECRET_KEY'):
+        from application import crypto
+        flaskApp.config['SECRET_KEY'] = crypto.readOrCreateSecretKey(Path(flaskApp.config['SECRET_KEY_FILE']))
     bcrypt = Bcrypt(flaskApp)
 
     from application.DBModels import db as sqla_db

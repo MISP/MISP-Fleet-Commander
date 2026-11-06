@@ -5,16 +5,8 @@ set -euo pipefail
 DATA_DIR=/app/database
 mkdir -p "$DATA_DIR" /app/data/cached-monitoring-images /app/data/pin-avatars
 
-# Secret used to sign the session tokens: generated once and kept in the data volume
-# so tokens survive restarts. An explicit SECRET_KEY environment variable wins.
-if [ -z "${SECRET_KEY:-}" ]; then
-    if [ ! -s "$DATA_DIR/secret_key" ]; then
-        python -c 'import secrets; print(secrets.token_hex(32))' > "$DATA_DIR/secret_key"
-        chmod 600 "$DATA_DIR/secret_key"
-    fi
-    SECRET_KEY="$(cat "$DATA_DIR/secret_key")"
-    export SECRET_KEY
-fi
+# The application generates its signing secret (secret_key) and its encryption key (encryption_key) in
+# $DATA_DIR on first start, unless SECRET_KEY / MFC_ENCRYPTION_KEY are set
 
 # Instance settings are edited from the UI: keep them in the data volume
 if [ ! -f "$DATA_DIR/config.json" ]; then

@@ -50,6 +50,11 @@ let router =  new Router({
             component: TheLogin,
         },
         {
+            path: "/change-password",
+            name: "change-password",
+            component: TheLogin,
+        },
+        {
             path: "/home",
             name: "home",
             component: Home,
@@ -175,6 +180,10 @@ router.beforeEach((to, from, next) => {
     const authRequired = !publicRoutes.includes(to.path);
     if (authRequired && !store.getters["auth/isAuthenticated"]) {
         next({ name: 'login', query: { redirect: to.fullPath } })
+        return
+    }
+    if (authRequired && to.name !== 'change-password' && store.getters["auth/mustChangePassword"]) {
+        next({ name: 'change-password', query: { redirect: to.fullPath } })
         return
     }
     if (to.matched.some(record => record.meta.requiresAdmin) && !store.getters["auth/isAdmin"]) {

@@ -7,7 +7,7 @@
         <TheLoginModal
         ></TheLoginModal>
         <TheSettingsModal
-            v-if="isUserAuthed"
+            v-if="isUserAuthed && !mustChangePassword"
         ></TheSettingsModal>
     </div>
 </template>
@@ -36,7 +36,11 @@ export default {
     computed: {
         isUserAuthed() {
             return this.$store.getters["auth/isAuthenticated"]
-        }
+        },
+        // Nothing else is available until the password is changed: avoid requests bound to fail
+        mustChangePassword() {
+            return this.$store.getters["auth/mustChangePassword"]
+        },
     },
     sockets: {
         connect: function () {
@@ -57,7 +61,7 @@ export default {
         },
     },
     mounted() {
-        if (this.isUserAuthed) {
+        if (this.isUserAuthed && !this.mustChangePassword) {
             this.$store.dispatch('userSettings/getUserSettings')
         }
     }

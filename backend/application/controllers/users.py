@@ -2,7 +2,7 @@ from flask import Blueprint, abort, request, render_template, make_response, jso
 # from flask import current_app as app
 from datetime import datetime as dt
 from application.DBModels import db, User
-from application.controllers.instance import token_required, admin_required
+from application.controllers.instance import token_required, admin_required, issue_access_token, MIN_PASSWORD_LENGTH
 from application.marshmallowSchemas import userSchema, usersSchema
 import application.models.users as userModel
 
@@ -85,6 +85,25 @@ def delete(loggedUser, user_id):
         return jsonify([user_id])
     else:
         return jsonify({})
+
+
+@BPuser.route('/users/change-password', methods=['POST'])
+@token_required
+def changePassword(loggedUser):
+    """Users change their own password, proving they know the current one. Returns a fresh login token."""
+    payload = request.get_json(silent=True) or {}
+    currentPassword, newPassword = payload.get('current_password') or '', payload.get('new_password') or ''
+    if not loggedUser.verify_password(currentPassword):
+        return jsonify({'message': 'The current password is incorrect', 'field': 'current_password'}), 400
+    if len(newPassword) < MIN_PASSWORD_LENGTH:
+        return jsonify({'message': f'The new password must be at least {MIN_PASSWORD_LENGTH} characters long',
+                        'field': 'new_password'}), 400
+    if newPassword == currentPassword:
+        return jsonify({'message': 'The new password must be different from the current one', 'field': 'new_password'}), 400
+    loggedUser.password = newPassword
+    loggedUser.must_change_password = False
+    db.session.commit()
+    return jsonify(issue_access_token(loggedUser))
 
 
 @BPuser.route('/users/genAPIKey/<user_id>', methods=['POST'])

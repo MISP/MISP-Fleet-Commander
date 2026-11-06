@@ -61,7 +61,8 @@ def test_login_token_only_identifies_the_user(app, client, make_user):
     user = make_user("token@test.local")
     token = client.post("/login", json={"email": "token@test.local", "password": "Password1234"}).get_json()["access_token"]
     payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
-    assert payload["data"] == {"user": {"id": user.id, "email": "token@test.local", "is_admin": False}}
+    assert payload["data"] == {"user": {"id": user.id, "email": "token@test.local", "is_admin": False,
+                                        "must_change_password": False}}
 
 
 def test_api_keys_are_stored_hashed(owned, client, auth_headers, db):

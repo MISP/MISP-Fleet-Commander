@@ -77,10 +77,34 @@ def flask_cli(tmp_path):
                                     capture_output=True, text=True, timeout=120)
             return result
 
+        def python(self, code, **env):
+            return subprocess.run([sys.executable, "-c", code], cwd=BACKEND_DIR, env=dict(self.env, **env),
+                                  capture_output=True, text=True, timeout=120)
+
         def upgrade(self, revision="head"):
             result = self.run("db", "upgrade", revision)
             assert result.returncode == 0, result.stderr
     return FlaskCLI()
+
+
+@pytest.fixture()
+def socket_client(app):
+    """Connects in-memory socket.io clients, as a user or with a raw token"""
+    from application import socketioApp
+    from application.models.auth import create_access_token
+    clients = []
+
+    def _connect(user=None, token=None):
+        if user is not None:
+            token = create_access_token(user, {}, app)
+        auth = {"token": token} if token is not None else None
+        client = socketioApp.test_client(app, auth=auth)
+        clients.append(client)
+        return client
+    yield _connect
+    for client in clients:
+        if client.is_connected():
+            client.disconnect()
 
 
 @pytest.fixture()
