@@ -16,13 +16,9 @@ Vue.use(VueMoment)
 import App from "./App.vue"
 import router from "./router"
 import store from "./store/index"
-import SocketIO from 'socket.io-client'
 import VueSocketIO from 'vue-socket.io'
+import { socket } from "@/socket"
 
-import { baseurl } from "@/api/apiConfig"
-
-// Without an explicit base URL, socket.io connects to the page's origin
-const socket = SocketIO(baseurl || undefined)
 export const socketInstance = new VueSocketIO({
     debug: false,
     connection: socket,

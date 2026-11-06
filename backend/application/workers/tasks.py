@@ -25,8 +25,10 @@ socketioEmitter = SocketioEmitter()
 
 
 @huey_app.task(priority=1)
-def ping():
-    socketioEmitter.pong(True)
+def ping(sid=None):
+    """Health check: the reply only goes to the socket that asked (`sid`)"""
+    if sid is not None:
+        socketioEmitter.pong(True, sid)
     return 'pong'
 
 
@@ -41,11 +43,11 @@ def fetchServerInfoTask(server_id):
     server = serverModel.get(server_id)
     if server is None:
         return
-    socketioEmitter.server_updating(server.id)
+    socketioEmitter.server_updating(server)
 
     def clientSocketEmitterUpdateFun(server_id, testResult):
         testResult['server'] = serverSchemaLighter.dump(server)
-        socketioEmitter.udpate_server(testResult)
+        socketioEmitter.udpate_server(server, testResult)
 
     clientSocketEmitterUpdateFuns = {
         "udpate_server": clientSocketEmitterUpdateFun,
@@ -62,11 +64,11 @@ def doFleetInfoTask(server_ids):
     for server in loadServers(server_ids):
         serversDict.append(server)
         serverByID[server.id] = server
-        socketioEmitter.server_updating(server.id)
+        socketioEmitter.server_updating(server)
 
     def clientSocketEmitterUpdateFun(server_id, testResult):
         testResult['server'] = serverSchemaLighter.dump(serverByID[server_id])
-        socketioEmitter.udpate_server(testResult)
+        socketioEmitter.udpate_server(serverByID[server_id], testResult)
 
     clientSocketEmitterUpdateFuns = {
         "udpate_server": clientSocketEmitterUpdateFun,
@@ -86,11 +88,11 @@ def doServerConnectionTestTask(server_id):
     server = serverModel.get(server_id)
     if server is None:
         return
-    socketioEmitter.server_status_updating(server.id)
+    socketioEmitter.server_status_updating(server)
     connectionInfo = serverModel.testConnectionAsync(server.id)
     if connectionInfo is not None:
         connectionInfo['server'] = serverSchemaLighter.dump(server)
-    socketioEmitter.udpate_server_connection(connectionInfo)
+    socketioEmitter.udpate_server_connection(server, connectionInfo)
 
 
 @huey_app.task(priority=5)
@@ -100,11 +102,11 @@ def doFleetConnectionTestTask(server_ids):
     for server in loadServers(server_ids):
         serversDict.append(server)
         serverByID[server.id] = server
-        socketioEmitter.server_status_updating(server.id)
+        socketioEmitter.server_status_updating(server)
 
     def clientSocketEmitterUpdateFun(server_id, testResult):
         testResult['server'] = serverSchemaLighter.dump(serverByID[server_id])
-        socketioEmitter.udpate_server_connection(testResult)
+        socketioEmitter.udpate_server_connection(serverByID[server_id], testResult)
     serverModel.testAllConnectionAsync(serversDict, clientSocketEmitterUpdateFun)
 
 
@@ -113,7 +115,7 @@ def doCacheMonitoringImages(server_id):
     server = serverModel.get(server_id)
     if server is None:
         return
-    socketioEmitter.server_graphs_updating(server.id)
+    socketioEmitter.server_graphs_updating(server)
 
     callbacks = {
         "server_graphs_resfresh_status": socketioEmitter.server_graphs_resfresh_status,
@@ -132,18 +134,18 @@ def watchMonitoredFleets():
     if settingModel.getRefreshValue("fleet_watching_enabled"):
         fleets = fleetModel.indexWatched()
         for fleet in fleets:
-            server_ids = []
             serversDict = []
             serverByID = {}
+            serverDumpByID = {}
             for server in fleet.servers:
                 serversDict.append(server)
-                serverByID[server.id] = serverSchemaLighter.dump(server)
-                server_ids.append(server.id)
-                socketioEmitter.server_updating(server.id)
+                serverByID[server.id] = server
+                serverDumpByID[server.id] = serverSchemaLighter.dump(server)
+                socketioEmitter.server_updating(server)
 
             def clientSocketEmitterUpdateFun(server_id, testResult):
-                testResult["server"] = serverByID[server_id]
-                socketioEmitter.udpate_server(testResult)
+                testResult["server"] = serverDumpByID[server_id]
+                socketioEmitter.udpate_server(serverByID[server_id], testResult)
 
             clientSocketEmitterUpdateFuns = {
                 "udpate_server": clientSocketEmitterUpdateFun,
@@ -153,7 +155,7 @@ def watchMonitoredFleets():
 
             serverModel.doFleetInfoTask(serversDict, clientSocketEmitterUpdateFuns)
             watched_timestamp = redisModel.getFleetWatchedTimestamp(fleet.id)
-            socketioEmitter.fleet_update_timestamps(fleet.id, watched_timestamp = watched_timestamp)
+            socketioEmitter.fleet_update_timestamps(fleet, watched_timestamp = watched_timestamp)
 
 
 @huey_app.periodic_task(crontab(minute=f"*/{monitoring_interval_min}"))
@@ -165,7 +167,7 @@ def monitorMonitoredFleets():
         for fleet in fleets:
             monitored_timestamp = redisModel.setFleetMonitoredTimestamp(fleet.id)
             if monitored_timestamp is not None:
-                socketioEmitter.fleet_update_timestamps(fleet.id, monitored_timestamp = monitored_timestamp)
+                socketioEmitter.fleet_update_timestamps(fleet, monitored_timestamp = monitored_timestamp)
 
 
 @huey_app.periodic_task(crontab(hour="*/12"))

@@ -14,40 +14,46 @@ from huey.exceptions import ResultTimeout
 from application.models.auth import create_access_token, get_email_from_token
 
 
+class AuthenticationError(Exception):
+    def __init__(self, message):
+        super().__init__(message)
+        self.message = message
+
+
+def resolve_user(credential: str) -> User:
+    """Return the user behind a credential, in the `Authorization` header format: `Bearer <jwt>` or
+    `Apikey <key>`. Used by both the REST API and the socket.io connection.
+    Raises AuthenticationError if the credential is missing, malformed, expired or unknown."""
+    parts = (credential or '').split()
+    if len(parts) != 2:
+        raise AuthenticationError('Invalid token. Registeration and / or authentication required')
+    token_type, token_value = parts
+    if token_type.lower() == 'bearer':
+        try:
+            user = get_current_user(token_value, current_app)
+        except jwt.ExpiredSignatureError:
+            raise AuthenticationError('Expired token. Reauthentication required.')
+        except jwt.InvalidTokenError:
+            raise AuthenticationError('Invalid token. Registeration and / or authentication required')
+        if not user:
+            raise AuthenticationError('Invalid Bearer')
+        return user
+    if token_type.lower() == 'apikey':
+        user = get_current_user_api(token_value)
+        if not user:
+            raise AuthenticationError('Invalid API Key')
+        return user
+    raise AuthenticationError('Invalid token. Registeration and / or authentication required')
+
+
 def token_required(f):
     @wraps(f)
     def _verify(*args, **kwargs):
-        auth_headers = request.headers.get('Authorization', '').split()
-
-        invalid_msg = {
-            'message': 'Invalid token. Registeration and / or authentication required',
-            'authenticated': False
-        }
-        expired_msg = {
-            'message': 'Expired token. Reauthentication required.',
-            'authenticated': False
-        }
-
-        if len(auth_headers) != 2:
-            return jsonify(invalid_msg), 401
-
-        token_type, token_value = auth_headers
-        if token_type.lower() == 'bearer':
-            try:
-                user = get_current_user(token_value, current_app)
-                if not user:
-                    abort(401, description="Invalid Bearer")
-                return f(user, *args, **kwargs)
-            except jwt.ExpiredSignatureError:
-                return jsonify(expired_msg), 401 # 401 is Unauthorized HTTP status code
-            except (jwt.InvalidTokenError) as e:
-                return jsonify(invalid_msg), 401
-
-        elif token_type.lower() == 'apikey':
-            user = get_current_user_api(token_value)
-            if not user:
-                abort(401, description="Invalid API Key")
-            return f(user, *args, **kwargs)
+        try:
+            user = resolve_user(request.headers.get('Authorization', ''))
+        except AuthenticationError as e:
+            return jsonify({'message': e.message, 'authenticated': False}), 401
+        return f(user, *args, **kwargs)
 
     return _verify
 
@@ -61,10 +67,11 @@ def get_current_user_api(token):
     return user
 
 
-def workers_health_check(timeout=2):
+def workers_health_check(timeout=2, sid=None):
+    """True if a worker answered in time. With a socket `sid`, the worker also replies to that socket"""
     from application.workers.tasks import ping
     try:
-        return ping()(blocking=True, timeout=timeout) == 'pong'
+        return ping(sid)(blocking=True, timeout=timeout) == 'pong'
     except ResultTimeout:
         return False
 

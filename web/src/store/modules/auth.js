@@ -3,6 +3,7 @@ import jwt_decode from "jwt-decode";
 import router from "@/router"
 import api from "@/api/auth"
 import axios from "axios"
+import { reconnectSocket, disconnectSocket } from "@/socket"
 
 // initial state
 const state = {
@@ -35,9 +36,11 @@ const actions = {
         return api.login(credential)
             .then((data) => {
                 commit("setAccessToken", data)
+                reconnectSocket()
             })
     },
     logout({ commit }) {
+        disconnectSocket()
         commit("cleanAccessToken")
         localStorage.clear();
         window.location.reload()
