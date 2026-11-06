@@ -152,7 +152,7 @@ export default {
                 })
                 .catch(error => {
                     this.$bvToast.toast(error, {
-                        title: `Could not save setting \`${this.settingName}\``,
+                        title: `Could not save setting \`${settingName}\``,
                         variant: "danger",
                     })
                 })
