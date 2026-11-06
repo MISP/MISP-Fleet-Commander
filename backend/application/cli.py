@@ -149,3 +149,32 @@ def change_pw(user_email: str, password: str):
         print('Password updated')
         return
     print('Could not update password')
+
+
+security_cli = AppGroup("security", short_help="Encryption key utilities.")
+
+
+@security_cli.command('generate-key')
+def generateKey():
+    """Print a new encryption key"""
+    from application import crypto
+    print(crypto.generateKey())
+
+
+@security_cli.command('rotate-key')
+def rotateKey():
+    """Re-encrypt the stored MISP authkeys with the first configured key.
+
+    \b
+    1. Generate a key with `flask security generate-key`
+    2. Configure the new key first, followed by the current one: MFC_ENCRYPTION_KEY="NEW,CURRENT"
+       (or one key per line in the key file)
+    3. Run this command, then keep only the new key
+    """
+    from application import crypto, db
+    from application.DBModels import Server
+    servers = Server.query.filter(Server.authkey_enc.isnot(None)).all()
+    for server in servers:
+        server.authkey_enc = crypto.rotate(server.authkey_enc)
+    db.session.commit()
+    print(f'Re-encrypted the authkeys of {len(servers)} servers with the first configured key')

@@ -15,6 +15,9 @@ def app(tmp_path_factory):
     os.environ["SQLALCHEMY_DATABASE_URI"] = str(db_path)
     # No message queue: socket.io runs in memory, so tests can connect clients and observe emitted events
     os.environ["SOCKETIO_MESSAGE_QUEUE"] = ""
+    from cryptography.fernet import Fernet
+    os.environ["MFC_ENCRYPTION_KEY"] = Fernet.generate_key().decode()
+    os.environ["MFC_ENCRYPTION_KEY_FILE"] = str(db_path.parent / "encryption_key")
 
     # Keep the app's data off any real Redis: swap the shared client before models import it
     import fakeredis

@@ -17,6 +17,11 @@ class Config:
     # Database
     SQLALCHEMY_DATABASE_URI = environ.get('SQLALCHEMY_DATABASE_URI')
 
+    # Key encrypting the MISP authkeys in the database. When MFC_ENCRYPTION_KEY is not set, the key is read
+    # from (or, on new installs, generated into) the key file
+    ENCRYPTION_KEY = environ.get('MFC_ENCRYPTION_KEY') or None
+    ENCRYPTION_KEY_FILE = environ.get('MFC_ENCRYPTION_KEY_FILE') or osPath.join(basedir, 'database', 'encryption_key')
+
     # Monitoring
     GRAFANA_BASE_URL = environ.get('GRAFANA_BASE_URL') or 'http://localhost:3000'
     GRAFANA_DASHBOARD_DATA_RENDER = environ.get('GRAFANA_DASHBOARD_DATA_RENDER') or 'render/d-solo/ce6olif96756od'

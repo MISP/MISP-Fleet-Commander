@@ -10,6 +10,9 @@ x-mfc-common: &mfc-common
         SQLALCHEMY_DATABASE_URI: /app/database/database.db
         SQLALCHEMY_TRACK_MODIFICATIONS: "1"
         # SECRET_KEY: set it to override the key generated in ./run/secret_key
+        # Key encrypting the MISP authkeys in the database. When unset, it is generated into ./run/encryption_key:
+        # back that file up, the stored authkeys cannot be read without it
+        MFC_ENCRYPTION_KEY: ${MFC_ENCRYPTION_KEY:-}
         TOKEN_EXPIRATION_MIN: "30"
         REDIS_URL: redis
         REDIS_PORT: "6379"

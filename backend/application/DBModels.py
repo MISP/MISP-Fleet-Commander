@@ -137,8 +137,9 @@ class Server(BaseModel):
     skip_ssl = db.Column(db.Boolean,
                          nullable=False,
                          default=False)
-    authkey = db.Column(db.String(40),
-                        nullable=True)
+    # Encrypted at rest: use the `authkey` property, which encrypts and decrypts
+    authkey_enc = db.Column(db.Text,
+                            nullable=True)
     user_id = db.Column(db.Integer,
                         db.ForeignKey('users.id'),
                         nullable=False,
@@ -158,6 +159,16 @@ class Server(BaseModel):
     # fleet = db.relationship('Fleet',
     #     backref=db.backref('fleet', lazy='joined', uselist=True))
     fleet = db.relationship('Fleet', back_populates='servers')
+
+    @property
+    def authkey(self):
+        from application import crypto
+        return crypto.decrypt(self.authkey_enc)
+
+    @authkey.setter
+    def authkey(self, authkey):
+        from application import crypto
+        self.authkey_enc = crypto.encrypt(authkey) if authkey else None
 
     @hybrid_property
     def server_info(self):

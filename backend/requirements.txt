@@ -15,3 +15,4 @@ marshmallow<5
 marshmallow_sqlalchemy
 PyJWT
 Pillow
+cryptography

@@ -83,6 +83,19 @@ with open(script_dir / relative_path, 'rb') as f:
     all_user_settings = tomllib.load(f)
 
 
+def sampleEncryptedAuthkey():
+    """An encrypted authkey from the database, to check the encryption key against. None when there is none,
+    including before the migration introducing the encryption has run."""
+    from sqlalchemy import inspect, text
+    inspector = inspect(db.engine)
+    if not inspector.has_table('servers'):
+        return None
+    if 'authkey_enc' not in {column['name'] for column in inspector.get_columns('servers')}:
+        return None
+    with db.engine.connect() as connection:
+        return connection.execute(text('SELECT authkey_enc FROM servers WHERE authkey_enc IS NOT NULL LIMIT 1')).scalar()
+
+
 def create_app():
     """Construct the core application."""
 
@@ -105,6 +118,9 @@ def create_app():
     loadedPlugins = loadAvailablePlugins()
 
     with flaskApp.app_context():
+        # Fails here, with an explicit message, if the key is missing or wrong rather than at first use
+        from application import crypto
+        crypto.init(flaskApp, sampleEncryptedAuthkey)
 
         socketioApp = SocketIO(
             flaskApp,
@@ -138,10 +154,11 @@ def create_app():
         registerWSListeners()
 
         # Add CLI commands
-        from application.cli import server_cli, user_cli
+        from application.cli import server_cli, user_cli, security_cli
 
         flaskApp.cli.add_command(server_cli)
         flaskApp.cli.add_command(user_cli)
+        flaskApp.cli.add_command(security_cli)
 
         # Create tables for our models
         from application.DBModels import init_defaults

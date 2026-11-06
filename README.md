@@ -70,7 +70,7 @@ This will start a local server running on all addresses (0.0.0.0) (typically at 
 docker compose up -d --build
 ```
 
-The UI is then available on port 5001 of the host (e.g. http://localhost:5001). The database, the generated secret key, the instance settings and the cached images are kept in `./run`.
+The UI is then available on port 5001 of the host (e.g. http://localhost:5001). The database, the generated secret and encryption keys, the instance settings and the cached images are kept in `./run`.
 
 To update: `git pull && docker compose up -d --build`.
 
@@ -85,6 +85,18 @@ To update the application:
 ```bash
 bash update.sh
 ```
+
+### 🔐 Encryption key
+
+The MISP authkeys of your servers are encrypted in the database. The key is read from the `MFC_ENCRYPTION_KEY` environment variable or, when it is not set, from a key file that is generated on the first start: `backend/database/encryption_key`, or `./run/encryption_key` with Docker. Set `MFC_ENCRYPTION_KEY_FILE` to keep the file elsewhere.
+
+**Back this key up**, separately from the database: the stored authkeys cannot be read without it. The application refuses to start when the key is missing or does not match the database.
+
+To rotate the key:
+1. Generate a new key with `flask security generate-key` (Docker: `docker compose exec backend flask security generate-key`).
+2. Configure the new key first, followed by the current one: `MFC_ENCRYPTION_KEY="NEW_KEY,CURRENT_KEY"`, or one key per line in the key file.
+3. Restart, then run `flask security rotate-key` to re-encrypt the authkeys with the new key.
+4. Remove the old key and restart.
 
 ## Development
 ### ▶️ Running the Application (Development Mode)

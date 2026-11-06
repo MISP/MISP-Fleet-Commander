@@ -90,6 +90,7 @@ class ServerSchema(BaseSchema):
 
     class Meta(BaseSchema.Meta):
         model = Server
+        exclude = ('authkey_enc', )
         unknown = INCLUDE
 
 
