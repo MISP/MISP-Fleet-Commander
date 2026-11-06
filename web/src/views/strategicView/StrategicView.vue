@@ -108,7 +108,6 @@ import store from "@/store/index"
 import { mapState, mapGetters } from "vuex"
 import { websocketMixin } from "@/helpers/websocketMixin"
 import Layout from "@/components/layout/Layout.vue"
-import iconButton from "@/components/ui/elements/iconButton.vue"
 import ServerNodeGeneric from "@/views/strategicView/elements/ServerNodeGeneric.vue"
 import ServerNode from "@/views/strategicView/elements/ServerNode.vue"
 import ServerNodeMini from "@/views/strategicView/elements/ServerNodeMini.vue"
@@ -117,7 +116,6 @@ import ServerNodeMicro from "@/views/strategicView/elements/ServerNodeMicro.vue"
 import TheNodeInfoCard from "@/views/strategicView/elements/NodeInfoCard.vue"
 import TheLinkInfoCard from "@/views/strategicView/elements/LinkInfoCard.vue"
 import ThePinCard from "@/views/strategicView/elements/PinCard.vue"
-import DraggableComponent from "@/components/ui/DraggableComponent.vue"
 import d3Network from "@/helpers/d3Network.js"
 
 export default {
@@ -125,11 +123,9 @@ export default {
     mixins: [websocketMixin],
     components: {
         Layout,
-        iconButton,
         TheNodeInfoCard,
         TheLinkInfoCard,
         ThePinCard,
-        DraggableComponent,
         // NetworkMinimap
     },
     data: function () {

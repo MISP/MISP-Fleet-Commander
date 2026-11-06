@@ -168,7 +168,7 @@ export default {
             return `${this.grafana_base_url}/${this.grafana_dashboard}?var-bucket=${bucket}&var-instance=${instance}&${time}`
         },
         sortedPanelsBySize: function() {
-            const sortedPanels = this.panels.sort((a, b) => {
+            const sortedPanels = [...this.panels].sort((a, b) => {
                 return a.width*a.height - b.width*b.height
             })
             return sortedPanels

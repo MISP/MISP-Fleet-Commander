@@ -2,7 +2,7 @@
 import Vue from "vue"
 
 export default {
-    name: "Layout",
+    name: "AppLayout",
     props: {
         name: {
             type: String,

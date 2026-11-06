@@ -1,0 +1,3 @@
+# Optional monitoring system (InfluxDB). Installed alongside requirements.txt, hence the constraint.
+-c requirements.txt
+influxdb-client>=1.40,<2

@@ -1,0 +1,5 @@
+# Tests and tooling, installed alongside requirements.txt, hence the constraint.
+-c requirements.txt
+pytest>=8
+fakeredis>=2.20
+pip-tools>=7

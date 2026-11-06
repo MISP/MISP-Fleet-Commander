@@ -153,8 +153,6 @@ import AddModal from "@/views/users/AddModal.vue"
 import DeleteModal from "@/views/users/DeleteModal.vue"
 import APIKeyModal from "@/views/users/APIKeyModal.vue"
 import UserSettingSaveModal from "@/views/users/UserSettingSaveModal.vue"
-import jsonViewer from "@/components/ui/elements/jsonViewer.vue"
-import formInputFromConfig from "@/components/ui/elements/formInputFromConfig.vue"
 
 export default {
     name: "UserIndex",
@@ -164,8 +162,6 @@ export default {
         DeleteModal,
         APIKeyModal,
         UserSettingSaveModal,
-        jsonViewer,
-        formInputFromConfig,
     },
     data: function () {
         return {

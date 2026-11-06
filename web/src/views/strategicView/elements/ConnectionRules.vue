@@ -28,7 +28,6 @@
 </template>
 
 <script>
-import jsonViewer from "@/components/ui/elements/jsonViewer.vue"
 import JsonEditorVue from 'json-editor-vue'
 import { Mode, createAjvValidator } from 'vanilla-jsoneditor'
 
@@ -112,7 +111,6 @@ serverConnectionRuleSchemaPull.required.push('url_params')
 export default {
     name: "strategicViewConnectionRules",
     components: {
-        jsonViewer,
         JsonEditorVue
     },
     props: {

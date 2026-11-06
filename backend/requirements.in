@@ -1,0 +1,22 @@
+# Direct dependencies of the backend. Edit this file, then regenerate the pinned requirements.txt:
+#   pip-compile requirements.in && pip-compile requirements_monitoring.in && pip-compile requirements-dev.in
+Flask>=3.1,<4
+flask-cors>=6,<7
+Flask-SQLAlchemy>=3.1,<4
+SQLAlchemy>=2,<3
+Flask-Migrate>=4,<5
+Flask-SocketIO>=5.3,<6
+Flask-Bcrypt>=1,<2
+# Not imported: Flask-SocketIO runs on it when it is installed
+gevent>=24
+requests>=2.31,<3
+redis>=5,<9
+huey>=2.5,<4
+aiohttp>=3.9,<4
+nest_asyncio>=1.5,<2
+requests-cache>=1,<2
+marshmallow>=3.13,<5
+marshmallow-sqlalchemy>=1,<2
+PyJWT>=2.8,<3
+Pillow>=10
+cryptography>=42

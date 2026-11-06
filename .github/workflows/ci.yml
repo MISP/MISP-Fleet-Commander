@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      FLASK_APP: wsgi.py
+      FLASK_CONFIG: config.ProductionConfig
+      SQLALCHEMY_DATABASE_URI: database/ci.db
+      # socket.io in memory: no Redis needed
+      SOCKETIO_MESSAGE_QUEUE: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements_monitoring.txt
+            backend/requirements-dev.txt
+      - name: Install the pinned dependencies
+        run: pip install -r requirements.txt -r requirements_monitoring.txt -r requirements-dev.txt
+      - name: Migrate an empty database
+        run: flask db upgrade
+      - name: Check the models match the migrations
+        run: flask db check
+      - name: Run the tests
+        run: python -m pytest
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Lint
+        run: npx vue-cli-service lint --no-fix
+      - name: Build
+        run: npm run build

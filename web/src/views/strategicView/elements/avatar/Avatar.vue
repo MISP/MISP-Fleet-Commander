@@ -38,7 +38,7 @@ import AvatarImage from "@/views/strategicView/elements/avatar/AvatarImage.vue"
 
 
 export default {
-    name: "Avatar",
+    name: "EntryAvatar",
     inheritAttrs: false,
     components: {
         AvatarImage

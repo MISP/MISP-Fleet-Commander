@@ -53,7 +53,7 @@
                             ></b-form-input>
                                 <b-input-group-append>
                                     <b-input-group-text>
-                                        <ValidationProvider v-slot="validationContext" name="Skip SSL">
+                                        <ValidationProvider v-slot="{}" name="Skip SSL">
                                             <b-form-checkbox v-model="form.skip_ssl" switch>
                                                 <small>Skip SSL validation</small>
                                             </b-form-checkbox>

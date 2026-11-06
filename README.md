@@ -111,6 +111,24 @@ bash start_dev.sh
 
 This will start a local development server (typically at http://localhost:5001/) and a local web development server (typically at http://localhost:8080/).
 
+### 🧪 Tests
+The backend tests need neither Redis nor a MISP instance:
+
+```bash
+cd backend
+pip install -r requirements.txt -r requirements_monitoring.txt -r requirements-dev.txt
+python -m pytest
+```
+
+The web UI is checked with `npx vue-cli-service lint --no-fix` (in `web/`). CI runs both, plus the migrations on an empty database.
+
+### 📌 Dependencies
+The backend's direct dependencies are listed in `backend/requirements*.in`; the `requirements*.txt` files pin the whole set. After changing a `.in` file, regenerate the pins (from `backend/`, with `requirements-dev.txt` installed):
+
+```bash
+pip-compile requirements.in && pip-compile requirements_monitoring.in && pip-compile requirements-dev.in
+```
+
 
 ### 🏗️ Building for Production
 To create an optimized production build:

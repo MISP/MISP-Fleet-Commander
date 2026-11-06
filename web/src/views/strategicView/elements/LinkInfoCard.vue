@@ -223,7 +223,6 @@
 
 <script>
 import { mapState, mapGetters } from "vuex"
-import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
 import connectionStatus from "@/views/servers/elements/connectionStates/connectionStatus.vue"
 import ConnectionLocalVersion from "@/views/servers/elements/connectionStates/connectionLocalVersion.vue";
 import ConnectionRemoteVersion from "@/views/servers/elements/connectionStates/connectionRemoteVersion.vue";
@@ -237,7 +236,6 @@ import ConnectionRules from "@/views/strategicView/elements/ConnectionRules.vue"
 export default {
     name: "TheLinkInfoCard",
     components: {
-        timeSinceRefresh,
         connectionStatus,
         ConnectionLocalVersion,
         ConnectionRemoteVersion,

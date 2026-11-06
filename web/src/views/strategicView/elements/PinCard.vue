@@ -131,7 +131,6 @@
 <script>
 import { mapState, mapGetters } from "vuex"
 import { ValidationProvider, extend } from "vee-validate"
-import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
 import Avatar from "@/views/strategicView/elements/avatar/Avatar.vue";
 
 extend('validUUID', value => {
@@ -141,7 +140,6 @@ extend('validUUID', value => {
 export default {
     name: "ThePinCard",
     components: {
-        timeSinceRefresh,
         ValidationProvider,
         Avatar,
     },

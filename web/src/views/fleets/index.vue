@@ -89,7 +89,7 @@ import DeleteModal from "@/views/fleets/DeleteModal.vue"
 import router from "@/router"
 
 export default {
-    name: "Fleet",
+    name: "FleetsView",
     components: {
         iconButton,
         AddModal,

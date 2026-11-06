@@ -49,15 +49,11 @@
 
 <script>
 import api from "@/api/servers"
-import jsonViewer from "@/components/ui/elements/jsonViewer.vue"
-import loaderPlaceholder from "@/components/ui/elements/loaderPlaceholder.vue"
 import APIResponsePanel from "@/views/servers/elements/mispRemoteAdministration/APIResponsePanel"
 
 export default {
     name: "RestAPIAdministrationModal",
     components: {
-        jsonViewer,
-        loaderPlaceholder,
         APIResponsePanel,
     },
     props: {
