@@ -64,11 +64,15 @@ bash start.sh
 This will start a local server running on all addresses (0.0.0.0) (typically at http://localhost:5001) where you can interact with the UI.
 
 
-#### Or you can use the provided docker image
+#### Or you can use Docker
 
+```bash
+docker compose up -d --build
 ```
-docker compose up
-```
+
+The UI is then available on port 5001 of the host (e.g. http://localhost:5001). The database, the generated secret key, the instance settings and the cached images are kept in `./run`.
+
+To update: `git pull && docker compose up -d --build`.
 
 A default admin user is already provisioned with the following credential:
 ```text

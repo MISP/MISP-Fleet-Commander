@@ -1,59 +1,60 @@
+x-mfc-common: &mfc-common
+    build:
+        context: .
+        dockerfile: backend/docker/Dockerfile
+    working_dir: /app
+    environment: &mfc-env
+        FLASK_APP: wsgi.py
+        FLASK_DEBUG: "0"
+        FLASK_CONFIG: config.ProductionConfig
+        SQLALCHEMY_DATABASE_URI: /app/database/database.db
+        SQLALCHEMY_TRACK_MODIFICATIONS: "1"
+        # SECRET_KEY: set it to override the key generated in ./run/secret_key
+        TOKEN_EXPIRATION_MIN: "30"
+        REDIS_URL: redis
+        REDIS_PORT: "6379"
+        REDIS_DB: "1"
+        SOCKETIO_MESSAGE_QUEUE: redis://redis:6379/3
+        WORKER_BROKER_URL: redis://redis
+        WORKER_RESULT_BACKEND: redis://redis
+    volumes:
+        - "./run:/app/database"
+        - "./run/data:/app/data"
+    restart: unless-stopped
+
 services:
     backend:
-        build: 
-            context: backend
-            dockerfile: docker/Dockerfile
-        working_dir: /app
+        <<: *mfc-common
         environment:
-            - FLASK_APP=wsgi.py
-            - FLASK_DEBUG=0
-            - FLASK_ENV=production
-            - FLASK_CONFIG=config.ProductionConfig
-            - SQLALCHEMY_DATABASE_URI=/app/database/database.db
-            - SQLALCHEMY_TRACK_MODIFICATIONS=1
-            - SECRET_KEY=secret
-            - TOKEN_EXPIRATION_MIN=30
-            - TOKEN_EXPIRATION_DAYS=365
-            - AUTHLIB_INSECURE_TRANSPORT=true
-            - REDIS_URL=redis
-            - REDIS_PORT=6379
-            - REDIS_DB=1
-            - SOCKETIO_MESSAGE_QUEUE=redis://redis:6379/3
-            - WORKER_BROKER_URL=redis://redis
-            - WORKER_RESULT_BACKEND=redis://redis
-        volumes:
-            - "./run:/app/database"
-            - "./run/data:/app/data"
+            <<: *mfc-env
+            MFC_RUN_MIGRATIONS: "1"
+        command: flask run --port=5001 --host=0.0.0.0
         ports:
             - "5001:5001"
-        command: flask run --port=5001 --host=0.0.0.0
+        healthcheck:
+            test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5001/', timeout=3)"]
+            interval: 10s
+            timeout: 5s
+            retries: 12
+            start_period: 15s
         depends_on:
-            - redis
+            redis:
+                condition: service_healthy
 
     workers:
-        build: 
-            context: backend
-            dockerfile: docker/Dockerfile
-        working_dir: /app
-        environment:
-            - FLASK_ENV=production
-            - FLASK_CONFIG=config.ProductionConfig
-            - SQLALCHEMY_DATABASE_URI=/app/database/database.db
-            - SQLALCHEMY_TRACK_MODIFICATIONS=1
-            - REDIS_URL=redis
-            - REDIS_PORT=6379
-            - REDIS_DB=1
-            - SOCKETIO_MESSAGE_QUEUE=redis://redis:6379/3
-            - WORKER_BROKER_URL=redis://redis
-            - WORKER_RESULT_BACKEND=redis://redis
-        volumes:
-            - "./run:/app/database"
-        command: bash start_workers.sh
+        <<: *mfc-common
+        command: huey_consumer application.workers.tasks.huey_app -w 4 -k process
         depends_on:
-            - redis
-            - backend
+            redis:
+                condition: service_healthy
+            backend:
+                condition: service_healthy
 
     redis:
         image: redis:7-alpine
+        restart: unless-stopped
         healthcheck:
             test: [ "CMD", "redis-cli", "ping" ]
+            interval: 5s
+            timeout: 3s
+            retries: 10
