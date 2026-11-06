@@ -18,10 +18,12 @@ class Config:
     SQLALCHEMY_DATABASE_URI = environ.get('SQLALCHEMY_DATABASE_URI')
 
     # Monitoring
-    GRAFANA_BASE_URL = environ.get('GRAFANA_BASE_URL', 'http://localhost:3000')
-    GRAFANA_DASHBOARD_DATA_RENDER = environ.get('GRAFANA_DASHBOARD_DATA_RENDER', 'render/d-solo/ce6olif96756od')
-    GRAFANA_DASHBOARD = environ.get('GRAFANA_DASHBOARD', 'd/ce6olif96756od/circl-monitoring-misp')
-    GRAFANA_APIKEY = environ.get('GRAFANA_APIKEY', 'glsa_k94PVSfhraGiK5roLyoniHu0xFyvByne_b1604732')
+    GRAFANA_BASE_URL = environ.get('GRAFANA_BASE_URL') or 'http://localhost:3000'
+    GRAFANA_DASHBOARD_DATA_RENDER = environ.get('GRAFANA_DASHBOARD_DATA_RENDER') or 'render/d-solo/ce6olif96756od'
+    GRAFANA_DASHBOARD = environ.get('GRAFANA_DASHBOARD') or 'd/ce6olif96756od/circl-monitoring-misp'
+    # Grafana service account token used to render the monitoring graphs. No default: graphs are not
+    # rendered until it is set.
+    GRAFANA_APIKEY = environ.get('GRAFANA_APIKEY') or None
 
 
 class ProductionConfig(Config):

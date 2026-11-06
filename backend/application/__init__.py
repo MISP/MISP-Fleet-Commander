@@ -14,12 +14,19 @@ from flask_socketio import SocketIO
 
 MONITORING_SYSTEM = None
 MONITORING_SYSTEM_AVAILABLE = False
+MONITORING_UNAVAILABLE_REASON = None
 try:
     from application.monitoring.monitor import monitor
-    MONITORING_SYSTEM = monitor
-    MONITORING_SYSTEM_AVAILABLE = True
+    from application.monitoring.config import INFLUXDB_TOKEN
+    if INFLUXDB_TOKEN is None:
+        MONITORING_UNAVAILABLE_REASON = "Monitoring system is disabled: INFLUXDB_TOKEN is not set."
+    else:
+        MONITORING_SYSTEM = monitor
+        MONITORING_SYSTEM_AVAILABLE = True
 except ImportError:
-    print("The monitoring system is not avaible due to missing libraries.")
+    MONITORING_UNAVAILABLE_REASON = "Monitoring system is disabled due to missing libraries."
+if MONITORING_UNAVAILABLE_REASON is not None:
+    print(MONITORING_UNAVAILABLE_REASON)
 
 
 class FlaskRedisHuey(PriorityRedisHuey):

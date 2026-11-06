@@ -5,7 +5,7 @@ import os
 from typing import List, Union
 from pathlib import Path
 
-from application import MONITORING_SYSTEM_AVAILABLE
+from application import MONITORING_SYSTEM_AVAILABLE, MONITORING_UNAVAILABLE_REASON
 
 
 current_path = Path(__file__).resolve().parent
@@ -86,7 +86,12 @@ def loadSetting():
         settings["monitoring_enabled"]["value"] = False
         settings['monitoring_enabled']['disabled'] = True
         settings["monitoring_enabled"]["error"] = {
-            "error_message": "Monitoring system is disabled due to missing libraries.",
+            "error_message": MONITORING_UNAVAILABLE_REASON,
+            "variant": "warning",
+        }
+    elif not os.environ.get('GRAFANA_APIKEY'):  # Same source as config.GRAFANA_APIKEY; runs outside the app context too
+        settings["monitoring_enabled"]["error"] = {
+            "error_message": "Metrics are collected, but the monitoring graphs are not rendered: GRAFANA_APIKEY is not set.",
             "variant": "warning",
         }
 

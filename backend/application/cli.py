@@ -15,7 +15,7 @@ import application.models.users as userModel
 import application.models.setting as settingModel
 from application import redisModel
 
-from application import MONITORING_SYSTEM_AVAILABLE, MONITORING_SYSTEM as monitor
+from application import MONITORING_SYSTEM_AVAILABLE, MONITORING_UNAVAILABLE_REASON, MONITORING_SYSTEM as monitor
 
 socketioEmitter = SocketioEmitter()
 
@@ -61,7 +61,7 @@ def watchFleet(fleet_id: int, minute: int = 5, delay_second: int = 10):
 @click.option("--cache_images", is_flag=True, default=False)
 def monitorFleet(minute: int = 5, cache_images: bool = False):
     if not MONITORING_SYSTEM_AVAILABLE:
-        print("The monitoring system is not avaible due to missing libraries.")
+        print(MONITORING_UNAVAILABLE_REASON)
     elif not settingModel.getRefreshValue("monitoring_enabled"):
         print('Monitoring is not enabled')
     else:

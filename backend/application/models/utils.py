@@ -186,6 +186,8 @@ class MonitoringImages:
         return (Path(self.ROOT_PATH) / self.getImageBasePath()).resolve()
 
     def cacheImage(self):
+        if not self.grafana_apikey:
+            return  # Graphs can't be rendered without a Grafana token
         r = requests.get(
             self.generateGrafanaURL(),
             stream=True,
@@ -201,6 +203,11 @@ class MonitoringImages:
                 shutil.copyfileobj(r.raw, f)
 
     async def asyncCacheImage(self, callback=None):
+        if not self.grafana_apikey:
+            # Graphs can't be rendered without a Grafana token
+            if callback is not None:
+                callback()
+            return
         headers = {
             "Authorization": f"Bearer {self.grafana_apikey}",
             "Accept": "image/png",

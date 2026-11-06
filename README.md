@@ -166,28 +166,32 @@ cd backend
 pip3 install -U -r requirements_monitoring.txt
 ```
 2. If you already have Grafana and InfluxDB running, go to step 4.
-3. Start the InfluxDB and Grafana containers.
+3. Start the InfluxDB and Grafana containers. Set your own passwords and InfluxDB admin token in `.env` first.
 ```bash
 cd backend/application/monitoring/docker
+cp .env.sample .env
+vim .env  # Replace every change-me value
 docker compose up
 ```
-4. Duplicate and update the `config.py` configuration file.
+4. Configure MISP Fleet Commander through environment variables, then start (or restart) the server.
+   - `INFLUXDB_TOKEN` is required: without it the monitoring system stays disabled.
+   - `GRAFANA_APIKEY` is a Grafana service account token, used to render the monitoring graphs. Without it, metrics are still collected but graphs are not rendered.
+   - The other variables are optional; their defaults are shown below.
 ```bash
-cd backend/application/monitoring
-cp config.py.sample config.py
-vim config.py  # Update the token, org and URL based on what has been created on InfluxDB
-```
-5. If needed, restart the MISP Fleet Commander server and check if monitoring is supported.
-   - Login in MISP Fleet Commander and click on the setting button in the top right corner.
-   - If everything went right, you should be able to enable the setting `monitoring_enabled` under the `Scheduler tab`.
-6. Export the env variable before starting the server. FIXME: Provide sane values
-```bash
-GRAFANA_BASE_URL=http://localhost:3000
-GRAFANA_DASHBOARD_DATA_RENDER=render/d-solo/ce6olif96756od
-GRAFANA_DASHBOARD=d/ce6olif96756od/circl-monitoring-misp
-GRAFANA_APIKEY=glsa_k94PVSfhraGiK5roLyoniHu0xFyvByne_b1604732
+export INFLUXDB_TOKEN=<token created on InfluxDB>
+export INFLUXDB_URL=http://localhost:8086
+export INFLUXDB_ORG=org
+export INFLUXDB_BUCKET=MISP-Fleet-Commander
+export GRAFANA_APIKEY=<grafana service account token>
+export GRAFANA_BASE_URL=http://localhost:3000
+export GRAFANA_DASHBOARD_DATA_RENDER=render/d-solo/ce6olif96756od
+export GRAFANA_DASHBOARD=d/ce6olif96756od/circl-monitoring-misp
 bash start.sh
 ```
+   With Docker, put the same variables in a `.env` file next to `docker-compose.yml`; they are passed to the backend and workers.
+5. Check that monitoring is supported.
+   - Login in MISP Fleet Commander and click on the setting button in the top right corner.
+   - If everything went right, you should be able to enable the setting `monitoring_enabled` under the `Scheduler tab`.
 
 
 ## 📬 Feedback & Contributions

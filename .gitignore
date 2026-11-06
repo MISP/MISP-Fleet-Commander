@@ -29,3 +29,6 @@ yarn-error.log*
 venv
 *.db
 *.sqlite
+
+# Monitoring stack secrets (copy from .env.sample)
+backend/application/monitoring/docker/.env
