@@ -422,3 +422,80 @@ def test_deleting_a_server_forgets_its_first_seen(db, make_user):
     db.session.commit()
 
     assert not redisModel.redisClient.exists(key)
+
+
+# --- Pending registrations --------------------------------------------------------------------------------------------
+
+MISP_REGISTRATIONS = [{"Inbox": {
+    "id": str(i), "uuid": f"00000000-0000-4000-8000-00000000000{i}", "title": "User registration", "type": "registration",
+    "ip": "192.0.2.10", "user_agent": "Mozilla/5.0", "user_agent_sha256": "ab" * 32, "comment": "", "deleted": False,
+    "timestamp": "1793970000", "store_as_file": False,
+    "data": {"email": f"new{i}@example.org", "org_name": f"Org {i}", "message": "Please let me in"},
+}} for i in range(1, 6)]
+
+
+def test_registrations_are_summarized_without_personal_details():
+    from application.models.servers import summarizeRegistrations
+    summary = summarizeRegistrations(MISP_REGISTRATIONS[:1])
+    assert summary == [{"id": "1", "uuid": "00000000-0000-4000-8000-000000000001", "timestamp": "1793970000",
+                        "email": "new1@example.org", "org_name": "Org 1"}]
+    assert summarizeRegistrations([]) == []
+    assert summarizeRegistrations({"error": "Authentication error", "_status_code": 403})["error"]
+    assert summarizeRegistrations("<html>") == {"error": "Unexpected answer"}
+
+
+def withRegistrations(registrations):
+    data = copy.deepcopy(SNAPSHOT)
+    data["query_result"]["userRegistrations"] = registrations
+    return data
+
+
+@pytest.mark.parametrize("count, title, detail", [
+    (1, "1 pending account request", "new1@example.org (Org 1)"),
+    (5, "5 pending account requests",
+     "new1@example.org (Org 1), new2@example.org (Org 2), new3@example.org (Org 3) and 2 more"),
+])
+def test_pending_registrations(count, title, detail):
+    from application.models.servers import summarizeRegistrations
+    issues = [i for i in evaluate(withRegistrations(summarizeRegistrations(MISP_REGISTRATIONS[:count])))
+              if i.rule == "pending_registrations"]
+    assert [(i.id, i.severity, i.category, i.title, i.detail) for i in issues] == [
+        ("pending_registrations:1", "info", "users", title, detail)]
+    assert issues[0].evidence["count"] == count
+    assert issues[0].action == {"kind": "open_misp", "path": "/users/registrations"}
+
+
+@pytest.mark.parametrize("registrations", [
+    [],                                                          # Nothing pending
+    {"error": "Insufficent permission", "_status_code": 405},    # API user cannot see registrations: not an issue
+    None,                                                        # Snapshot taken before registrations were collected
+])
+def test_no_pending_registration_issue(registrations):
+    issues = evaluate(withRegistrations(registrations) if registrations is not None else SNAPSHOT)
+    assert not [i for i in issues if i.rule in ("pending_registrations", "fetch_error")]
+
+
+def test_full_refresh_collects_registrations(monkeypatch):
+    import asyncio
+    import application.models.servers as serverModel
+    from application import redisModel
+    srv = server(id=9003)
+    answers = {
+        "/servers/serverSettings/diagnostics/light:1": SNAPSHOT["query_result"]["serverSettings"],
+        "/users/view/me": {"User": {"id": "1"}},
+        "/servers/index": [],
+        "/users/registrations": MISP_REGISTRATIONS[:2],
+        "/users/statistics": {"stats": {}},
+    }
+
+    async def fakeFetcher(server, urls, timeout=300):
+        return [copy.deepcopy(answers[url]) for url in urls]
+    monkeypatch.setattr(serverModel, "asyncFetcher", fakeFetcher)
+    monkeypatch.setattr(redisModel, "setServerWatchedTimestamp", lambda uuid: None)
+
+    asyncio.run(serverModel.fetchServerInfoAsync(srv, {}))
+
+    stored = redisModel.getServerInfo(srv.uuid)["query_result"]["userRegistrations"]
+    assert [r["email"] for r in stored] == ["new1@example.org", "new2@example.org"]
+    assert "192.0.2.10" not in json.dumps(stored) and "Mozilla" not in json.dumps(stored)
+    redisModel.deleteServerData(srv.uuid, srv.id)

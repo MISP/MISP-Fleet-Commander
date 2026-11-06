@@ -156,6 +156,27 @@ def stripRemoteAuthkeys(connectedServers):
     return connectedServers
 
 
+def summarizeRegistrations(registrations):
+    """Pending account requests (`/users/registrations`), reduced to what identifies them: the requester's IP
+    address and user agent are not kept. Errors (e.g. an API user not allowed to see registrations) pass through"""
+    if not isinstance(registrations, list):
+        return registrations if isinstance(registrations, dict) else {'error': 'Unexpected answer'}
+    summary = []
+    for entry in registrations:
+        inbox = entry.get('Inbox') if isinstance(entry, dict) else None
+        if not isinstance(inbox, dict):
+            continue
+        data = inbox.get('data') if isinstance(inbox.get('data'), dict) else {}
+        summary.append({
+            'id': inbox.get('id'),
+            'uuid': inbox.get('uuid'),
+            'timestamp': inbox.get('timestamp'),
+            'email': data.get('email'),
+            'org_name': data.get('org_name'),
+        })
+    return summary
+
+
 def refreshServerConnectionList(server_id: int, remote_server_id=None) -> Union[dict, None]:
     server = Server.query.get(server_id)
     if server is not None:
@@ -228,12 +249,14 @@ def fetchServerInfo(server, use_cache=True):
     serverUser = mispGetRequest(server, '/users/view/me', nocache=not use_cache)
     connectedServers = stripRemoteAuthkeys(mispGetRequest(server, '/servers/index', nocache=not use_cache))
     connectedServers = attachConnectedServerStatus(server, connectedServers)
+    userRegistrations = summarizeRegistrations(mispGetRequest(server, '/users/registrations', nocache=not use_cache))
     serverContent = None
     server_query = {
         'serverSettings': serverSettings,
         'serverUsage': serverUsage,
         'serverUser': serverUser,
         'connectedServers': connectedServers,
+        'userRegistrations': userRegistrations,
         'serverContent': serverContent
     }
     fullQuery = {
@@ -306,11 +329,13 @@ async def fetchServerInfoAsync(server, clientSocketEmitterUpdateFuns):
         '/servers/serverSettings/diagnostics/light:1',
         '/users/view/me',
         '/servers/index',
+        '/users/registrations',
     ]
     results = await asyncFetcher(server, urls)
     serverSettings = results[0]
     serverUser = results[1]
     connectedServers = stripRemoteAuthkeys(results[2])
+    userRegistrations = summarizeRegistrations(results[3])
     serverUsage = {}
     serverContent = None
     server_query = {
@@ -318,6 +343,7 @@ async def fetchServerInfoAsync(server, clientSocketEmitterUpdateFuns):
         'serverUsage': serverUsage,
         'serverUser': serverUser,
         'connectedServers': connectedServers,
+        'userRegistrations': userRegistrations,
         'serverContent': serverContent
     }
     fullQuery = {

@@ -15,7 +15,7 @@ from application import redisModel
 
 SEVERITIES = ("critical", "warning", "info")
 SEVERITY_RANK = {severity: rank for rank, severity in enumerate(SEVERITIES)}
-CATEGORIES = ("availability", "version", "workers", "sync", "services", "config", "freshness")
+CATEGORIES = ("availability", "version", "workers", "sync", "services", "config", "freshness", "users")
 
 DEFAULT_WORKER_WARNING_THRESHOLD = 10
 DEFAULT_WORKER_DANGER_THRESHOLD = 100

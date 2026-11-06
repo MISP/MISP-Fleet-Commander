@@ -3,7 +3,8 @@
 Actions tell the UI what to offer next to an issue:
 - `{"kind": "test_connection"}` / `{"kind": "refresh"}`: run a connection test / a full refresh of the server;
 - `{"kind": "edit_server"}`: open the server's edit form (URL, API key);
-- `{"kind": "open_tab", "target": "diagnostic" | "connections" | "profile"}`: open the server at that tab.
+- `{"kind": "open_tab", "target": "diagnostic" | "connections" | "profile"}`: open the server at that tab;
+- `{"kind": "open_misp", "path": "/users/registrations"}`: open that page of the MISP instance itself.
 """
 
 from application.health.engine import Finding, rule, section_error
@@ -284,3 +285,17 @@ def syncLink(state, ctx):
                       evidence={"remote_id": remote.get("id"), "remote_name": remote.get("name"),
                                 "remote_url": remote.get("url"), "message": status.get("message")},
                       action=openTab("connections"))
+
+
+@rule("pending_registrations", "users")
+def pendingRegistrations(state, ctx):
+    """Account requests waiting for an administrator. Not reported when the API user cannot see registrations"""
+    registrations = state.section("userRegistrations")
+    if not isinstance(registrations, list) or not registrations:
+        return
+    count = len(registrations)
+    requesters = [f"{r.get('email') or '?'} ({r.get('org_name') or '?'})" for r in registrations if isinstance(r, dict)]
+    detail = ", ".join(requesters[:3]) + (f" and {count - 3} more" if count > 3 else "")
+    yield Finding("info", f"{count} pending account request{'s' if count > 1 else ''}", detail,
+                  evidence={"count": count, "registrations": registrations[:20]},
+                  action={"kind": "open_misp", "path": "/users/registrations"})
