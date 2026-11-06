@@ -15,7 +15,7 @@
         ></b-form-input>
         <Transition name="shake-x">
             <b-alert :show="loginError" variant="danger">
-                {{ baseErrorMessage }}: <strong>{{ errorMessage }}</strong>
+                <strong>{{ errorMessage }}</strong>
             </b-alert>
         </Transition>
         <b-button
@@ -72,10 +72,15 @@ export default {
                         this.callbackOnLoging(false)
                     }
                     this.loginError = true
-                    if (error.response.status == 401) {
+                    const response = error.response
+                    if (response === undefined) {
+                        this.errorMessage = `${this.baseErrorMessage}: the server could not be reached`
+                    } else if (response.status == 401) {
                         this.errorMessage = this.wrongCredentialError
+                    } else if (response.status == 429 && response.data?.message) {
+                        this.errorMessage = response.data.message
                     } else {
-                        this.errorMessage = `[${error.response.status}] ${error.response.statusText}`
+                        this.errorMessage = `${this.baseErrorMessage}: [${response.status}] ${response.statusText}`
                     }
                 })
                 .finally(() => {

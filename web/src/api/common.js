@@ -72,6 +72,13 @@ function handleError(error, errorCb) {
     errorCb('Something went wrong.')
 }
 
+// Images served by the API need the Authorization header, which <img src> cannot send: fetch them and
+// return an object URL. Callers release it with URL.revokeObjectURL once the image is not displayed anymore.
+function fetchImageObjectURL(url) {
+    return getClient().get(url, { responseType: "blob" })
+        .then((response) => URL.createObjectURL(response.data))
+}
+
 function appendFleetIDIfDefined(url) {
     if (store.getters["fleets/selectedFleet"] !== null) {
         const fleetID = store.getters["fleets/selectedFleet"].id
@@ -94,6 +101,7 @@ function searchAll(searchtext, errorCb) {
 export default {
     getClient,
     handleError,
+    fetchImageObjectURL,
     appendFleetIDIfDefined,
     searchAll,
 }

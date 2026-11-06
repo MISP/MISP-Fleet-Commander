@@ -1,15 +1,16 @@
 from functools import wraps
+import math
 import pathlib
 from flask import Blueprint, current_app, request, render_template, make_response, jsonify, send_from_directory
-from flask import session, abort
 import jwt
 import application.models.servers as serverModel
 import application.models.users as userModel
 import application.models.setting as settingModel
-from application.marshmallowSchemas import userSchema, serversSchema
+from application.marshmallowSchemas import serversSchema
 from application.DBModels import User, db, Server
 import os.path
 from huey.exceptions import ResultTimeout
+import redis
 
 from application.models.auth import create_access_token, get_email_from_token
 
@@ -75,8 +76,7 @@ def get_current_user(token, app):
     return user
 
 def get_current_user_api(token):
-    user = User.query.filter_by(apikey=token).first()
-    return user
+    return User.byAPIKey(token)
 
 
 def workers_health_check(timeout=2, sid=None):
@@ -113,22 +113,63 @@ def index(user, searchtext):
     return serversSchema.dump(servers)
 
 
+LOGIN_MAX_FAILURES = 5
+LOGIN_LOCKOUT_SECONDS = 15 * 60
+
+
+def loginFailuresKey(email):
+    return f"login_failures:{request.remote_addr}:{str(email or '').strip().lower()}"
+
+
+def loginLockedFor(key):
+    """Seconds left before this client can try this account again, 0 if it is not locked out"""
+    import application
+    try:
+        if int(application.redisClient.get(key) or 0) >= LOGIN_MAX_FAILURES:
+            return max(application.redisClient.ttl(key), 1)
+    except redis.RedisError:
+        pass
+    return 0
+
+
+def recordLoginFailure(key):
+    import application
+    try:
+        if application.redisClient.incr(key) == 1:
+            application.redisClient.expire(key, LOGIN_LOCKOUT_SECONDS)
+    except redis.RedisError:
+        pass
+
+
+def clearLoginFailures(key):
+    import application
+    try:
+        application.redisClient.delete(key)
+    except redis.RedisError:
+        pass
+
+
 @BPinstance.route('/login', methods=['POST'])
 def login():
-    if request.method == 'POST':
-        email = request.json.get('email')
-        password = request.json.get('password')
-        user = User.authenticate(email, password)
-        if user is None:
-            abort(401, description="Invalid credential")
+    credential = request.get_json(silent=True) or {}
+    email, password = credential.get('email'), credential.get('password')
+    failuresKey = loginFailuresKey(email)
+    lockedFor = loginLockedFor(failuresKey)
+    if lockedFor:
+        minutes = math.ceil(lockedFor / 60)
+        return jsonify({'message': f'Too many failed login attempts. Try again in {minutes} minute{"s" if minutes > 1 else ""}.'}), 429
 
-        scopes = ['test']
-        token = create_access_token(user, {
-            'user': userSchema.dump(user), 
-            'scopes': scopes, 
-        }, current_app)
-        return jsonify({"access_token": token, "token_type": "bearer"})
-    return jsonify(), 404
+    user = User.authenticate(email, password)
+    if user is None:
+        recordLoginFailure(failuresKey)
+        return jsonify({'message': 'Invalid credential'}), 401
+    clearLoginFailures(failuresKey)
+
+    # The UI only needs who is logged in; everything else is fetched with the token
+    token = create_access_token(user, {
+        'user': {'id': user.id, 'email': user.email, 'is_admin': user.is_admin},
+    }, current_app)
+    return jsonify({"access_token": token, "token_type": "bearer"})
 
 
 @BPinstance.route("/instance/settings/index", methods=["GET"])

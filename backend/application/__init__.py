@@ -96,6 +96,19 @@ def sampleEncryptedAuthkey():
         return connection.execute(text('SELECT authkey_enc FROM servers WHERE authkey_enc IS NOT NULL LIMIT 1')).scalar()
 
 
+def socketOriginChecker(allowedOrigins):
+    """socket.io accepts the origin serving the UI and the configured ones. Only hosts are compared for the
+    serving origin, so that TLS-terminating proxies that do not forward the scheme keep working."""
+    from urllib.parse import urlsplit
+
+    def isAllowed(origin, environ):
+        if origin in allowedOrigins:
+            return True
+        servingHosts = {environ.get('HTTP_HOST'), (environ.get('HTTP_X_FORWARDED_HOST') or '').split(',')[0].strip()}
+        return urlsplit(origin or '').netloc in servingHosts - {None, ''}
+    return isAllowed
+
+
 def create_app():
     """Construct the core application."""
 
@@ -107,7 +120,15 @@ def create_app():
     from application.DBModels import db as sqla_db
     db = sqla_db
 
-    CORS(flaskApp)
+    allowedOrigins = flaskApp.config['CORS_ALLOWED_ORIGINS']
+    CORS(flaskApp, resources={
+        # The bookmarklet (on the pages of MISP instances) and the browser extension enroll servers from any
+        # origin. They authenticate with the Authorization header, which other pages do not have.
+        r'/fleets/index': {'origins': '*'},
+        r'/servers/add/*': {'origins': '*'},
+        r'/users/view/me': {'origins': '*'},
+        r'/*': {'origins': allowedOrigins},
+    })
     db.init_app(flaskApp)
 
     migrate.init_app(flaskApp, db)
@@ -124,7 +145,7 @@ def create_app():
 
         socketioApp = SocketIO(
             flaskApp,
-            cors_allowed_origins="*",
+            cors_allowed_origins=socketOriginChecker(allowedOrigins),
             message_queue=os.environ.get(
                 "SOCKETIO_MESSAGE_QUEUE",
                 f"redis://localhost:{str(os.environ.get('REDIS_PORT', 6380))}/3",

@@ -68,7 +68,7 @@ def createAPIKey(user_id: User) -> Union[str, None]:
     user = get(user_id)
     if user is not None:
         token = create_API_key()
-        user.apikey = token
+        user.setAPIKey(token)
         db.session.add(user)
         db.session.commit()
         return token

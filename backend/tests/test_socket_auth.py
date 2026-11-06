@@ -63,9 +63,9 @@ def test_connection_refused_without_valid_token(socket_client, two_users):
 def test_connection_accepted_with_jwt_or_apikey(socket_client, two_users, db):
     alice, _, _ = two_users["alice"]
     assert socket_client(user=alice).is_connected()
-    alice.apikey = "A" * 40
+    alice.setAPIKey("A" * 40)
     db.session.commit()
-    assert socket_client(token=f"Apikey {alice.apikey}").is_connected()
+    assert socket_client(token=f"Apikey {'A' * 40}").is_connected()
 
 
 def test_cannot_act_on_resources_of_another_user(socket_client, two_users, queued):

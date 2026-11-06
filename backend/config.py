@@ -17,6 +17,10 @@ class Config:
     # Database
     SQLALCHEMY_DATABASE_URI = environ.get('SQLALCHEMY_DATABASE_URI')
 
+    # Origins, besides the one serving the UI, allowed to call the API and open socket.io connections
+    # (e.g. a browser extension). Comma separated, empty by default.
+    CORS_ALLOWED_ORIGINS = [origin.strip() for origin in (environ.get('CORS_ALLOWED_ORIGINS') or '').split(',') if origin.strip()]
+
     # Key encrypting the MISP authkeys in the database. When MFC_ENCRYPTION_KEY is not set, the key is read
     # from (or, on new installs, generated into) the key file
     ENCRYPTION_KEY = environ.get('MFC_ENCRYPTION_KEY') or None

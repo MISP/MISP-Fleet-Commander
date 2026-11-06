@@ -9,7 +9,7 @@ from sqlalchemy.dialects.sqlite import JSON
 # from application.baseModel import BaseModel
 from flask_sqlalchemy import SQLAlchemy
 
-from application.models.auth import create_API_key
+from application.models.auth import hash_API_key
 
 db = SQLAlchemy()
 from application.baseModel import BaseModel
@@ -49,17 +49,29 @@ class User(BaseModel):
                       index=False,
                       unique=False,
                       nullable=False)
-    apikey = db.Column(db.String(40),
-                      index=False,
-                      unique=False,
-                      nullable=True,
-                      default= create_API_key)
+    # Only the hash of the API key is stored: the key itself is shown once, when it is generated
+    apikey_hash = db.Column(db.String(64),
+                            index=True,
+                            nullable=True)
     is_admin = db.Column(db.Boolean,
                          nullable=False,
                          default=False,
                          server_default='0')
 
     user_settings = db.relationship("UserSettings", uselist=True, back_populates="user", cascade="all, delete-orphan")
+
+    @classmethod
+    def byAPIKey(cls, apikey):
+        if not apikey:
+            return None
+        return cls.query.filter_by(apikey_hash=hash_API_key(apikey)).first()
+
+    def setAPIKey(self, apikey):
+        self.apikey_hash = hash_API_key(apikey) if apikey else None
+
+    @property
+    def has_apikey(self):
+        return self.apikey_hash is not None
 
     @classmethod
     def authenticate(cls, email, password_candidate):

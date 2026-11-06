@@ -40,9 +40,10 @@ def delete(user, entry_id):
 
 
 @BPpinLists.route('/pinlists/getAvatar/<int:entry_id>.png', methods=['GET'])
-def getAvatar(entry_id):
+@token_required
+def getAvatar(user, entry_id):
     """Return the avatar of the pinned entry"""
-    entry = pinlistsModel.get(entry_id)
+    entry = pinlistsModel.getForUser(user, entry_id)
     if entry is not None:
         avatarGenerator = AvatarGenerator(entry.uuid)
         fullPath = avatarGenerator.getPath()

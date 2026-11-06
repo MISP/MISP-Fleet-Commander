@@ -127,6 +127,8 @@ Enrolling new MISP servers can be a pain: You have to generate an API key, and m
 
 Instructions for both are available on the Home page of the app.
 
+Both work from other origins than the one serving the UI, so the API endpoints they use (`/fleets/index`, `/servers/add`, `/users/view/me`) accept cross-origin requests. The rest of the API only accepts requests from the UI's origin: list any other origin that must call it in `CORS_ALLOWED_ORIGINS` (comma separated).
+
 ## 📷 Screenshots
 
 <table>

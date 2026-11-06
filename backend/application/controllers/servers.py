@@ -17,7 +17,7 @@ from application.DBModels import db, User, Server
 from application.controllers.utils import mispGetHTMLRequest, mispGetRequest, mispPostRequest, batchRequest
 from application.marshmallowSchemas import ServerSchema, serverQuerySchema, serverSchema, taskSchema, serversSchema
 import application.models.servers as serverModel
-from application.models.servers import MONITORING_PANELS
+from application.models.servers import MONITORING_PANELS, MONITORING_PANEL_BY_ID
 from application.controllers.instance import token_required
 from application.models.utils import MonitoringImages
 
@@ -319,7 +319,8 @@ def getConnection(user, server_id, connection_id):
 
 
 @BPserver.route('/servers/getUsageDashboardConfig', methods=['GET'])
-def getUsageDashboardConfig():
+@token_required
+def getUsageDashboardConfig(user):
     GRAFANA_BASE_URL = flaskApp.config['GRAFANA_BASE_URL']
     GRAFANA_DASHBOARD = flaskApp.config['GRAFANA_DASHBOARD']
     dashboardConfig = {
@@ -360,17 +361,15 @@ def getInstancePicture(user, server_id):
     return jsonify('')
 
 
-@BPserver.route('/servers/monitoringImage/<int:server_id>/<panel_id>/<from_time>', methods=['GET'])
-# @token_required
-def monitoringImage(server_id, panel_id, from_time):
-    # TODO: Find a way to add authentication here. Maybe encode it as base64?
-    # server = serverModel.getForUser(user, server_id)
-    server = serverModel.get(server_id)
-    if server is not None:
-        panelImage = MonitoringImages(server_id, panel_id, from_time)
-        (directoryPath, imagePath) = panelImage.getImagePaths()
-        return send_from_directory(directoryPath, imagePath)
-    abort(404)
+@BPserver.route('/servers/monitoringImage/<int:server_id>/<panel_id>', methods=['GET'])
+@token_required
+def monitoringImage(user, server_id, panel_id):
+    server = serverModel.getForUser(user, server_id)
+    if server is None or panel_id not in MONITORING_PANEL_BY_ID:
+        abort(404)
+    panelImage = MonitoringImages(server_id, panel_id)
+    (directoryPath, imagePath) = panelImage.getImagePaths()
+    return send_from_directory(directoryPath, imagePath, max_age=0)
 
 
 @BPserver.route('/servers/syncOvertime/<int:server_id>', methods=['GET'])

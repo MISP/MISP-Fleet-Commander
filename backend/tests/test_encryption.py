@@ -1,9 +1,6 @@
 """MISP authkeys are encrypted at rest, and a missing or wrong key is reported at startup"""
 import os
 import sqlite3
-import subprocess
-import sys
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -13,7 +10,6 @@ from sqlalchemy import text
 from application import crypto
 
 AUTHKEY = "AbCdEfGhIjKlMnOpQrStUvWxYz0123456789wxyz"
-BACKEND_DIR = Path(__file__).resolve().parent.parent
 
 
 @pytest.fixture()
@@ -111,17 +107,9 @@ def test_rotate_key(app, db, server, keep_cipher):
     db.session.commit()
 
 
-def flask(args, env):
-    return subprocess.run([sys.executable, "-m", "flask", *args], cwd=BACKEND_DIR, env=env,
-                          capture_output=True, text=True, timeout=120)
-
-
-def test_migration_encrypts_existing_authkeys(tmp_path):
-    dbPath = tmp_path / "upgrade.db"
-    env = dict(os.environ, FLASK_APP="wsgi.py", FLASK_CONFIG="config.DevelopmentConfig",
-               SQLALCHEMY_DATABASE_URI=str(dbPath), SOCKETIO_MESSAGE_QUEUE="", MFC_ENCRYPTION_KEY="", MFC_ENCRYPTION_KEY_FILE=str(tmp_path / "key"))
-    before = flask(["db", "upgrade", "c4e1a7d2b9f0"], env)
-    assert before.returncode == 0, before.stderr
+def test_migration_encrypts_existing_authkeys(flask_cli):
+    dbPath = flask_cli.db_path
+    flask_cli.upgrade("c4e1a7d2b9f0")
     with sqlite3.connect(dbPath) as connection:
         connection.execute("INSERT OR IGNORE INTO users (id, email, created, updated, hashed_password, is_admin) "
                            "VALUES (1, 'a@test.local', '2026-01-01', '2026-01-01', 'x', 1)")
@@ -131,9 +119,8 @@ def test_migration_encrypts_existing_authkeys(tmp_path):
                                "VALUES (?, 's', ?, '', 'https://s.test', 0, ?, 1, 1)",
                                [(i, f"uuid-{i}", AUTHKEY[:-4] + f"{i:04d}") for i in range(1, 301)])
 
-    after = flask(["db", "upgrade"], env)
-    assert after.returncode == 0, after.stderr
-    key = (tmp_path / "key").read_text().strip()
+    flask_cli.upgrade()
+    key = flask_cli.key_file.read_text().strip()
     with sqlite3.connect(dbPath) as connection:
         columns = {row[1] for row in connection.execute("PRAGMA table_info(servers)")}
         stored = connection.execute("SELECT authkey_enc FROM servers WHERE id = 1").fetchone()[0]
@@ -142,10 +129,10 @@ def test_migration_encrypts_existing_authkeys(tmp_path):
     assert AUTHKEY[:-4].encode() not in dbPath.read_bytes()
 
     # The app now refuses to start with another key
-    wrongKey = flask(["security", "--help"], dict(env, MFC_ENCRYPTION_KEY=Fernet.generate_key().decode()))
+    wrongKey = flask_cli.run("security", "--help", MFC_ENCRYPTION_KEY=Fernet.generate_key().decode())
     assert wrongKey.returncode != 0 and "does not decrypt" in wrongKey.stderr
 
-    downgraded = flask(["db", "downgrade", "c4e1a7d2b9f0"], env)
+    downgraded = flask_cli.run("db", "downgrade", "c4e1a7d2b9f0")
     assert downgraded.returncode == 0, downgraded.stderr
     with sqlite3.connect(dbPath) as connection:
         assert connection.execute("SELECT authkey FROM servers WHERE id = 1").fetchone()[0] == AUTHKEY[:-4] + "0001"

@@ -1,4 +1,5 @@
 import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -18,6 +19,7 @@ def app(tmp_path_factory):
     from cryptography.fernet import Fernet
     os.environ["MFC_ENCRYPTION_KEY"] = Fernet.generate_key().decode()
     os.environ["MFC_ENCRYPTION_KEY_FILE"] = str(db_path.parent / "encryption_key")
+    os.environ["CORS_ALLOWED_ORIGINS"] = "https://extension.test"
 
     # Keep the app's data off any real Redis: swap the shared client before models import it
     import fakeredis
@@ -58,6 +60,27 @@ def make_user(db):
             db.session.commit()
         return user
     return _make_user
+
+
+@pytest.fixture()
+def flask_cli(tmp_path):
+    """Runs `flask` commands in a subprocess, against a database and a key file of its own (to test migrations)"""
+    class FlaskCLI:
+        db_path = tmp_path / "cli.db"
+        key_file = tmp_path / "encryption_key"
+        env = dict(os.environ, FLASK_APP="wsgi.py", FLASK_CONFIG="config.DevelopmentConfig",
+                   SQLALCHEMY_DATABASE_URI=str(tmp_path / "cli.db"), SOCKETIO_MESSAGE_QUEUE="",
+                   MFC_ENCRYPTION_KEY="", MFC_ENCRYPTION_KEY_FILE=str(tmp_path / "encryption_key"))
+
+        def run(self, *args, **env):
+            result = subprocess.run([sys.executable, "-m", "flask", *args], cwd=BACKEND_DIR, env=dict(self.env, **env),
+                                    capture_output=True, text=True, timeout=120)
+            return result
+
+        def upgrade(self, revision="head"):
+            result = self.run("db", "upgrade", revision)
+            assert result.returncode == 0, result.stderr
+    return FlaskCLI()
 
 
 @pytest.fixture()

@@ -1,15 +1,25 @@
 <template>
     <span class="d-inline-block">
         <b-skeleton-img
-            v-show="!isImageLoaded"
+            v-if="loadingRequested || (!isLoaded && !failed)"
             no-aspect :width="`${width}px`" :height="`${height}px`"
-            :animation="retriedOnce ? 'throb' : 'wave'"
+            :animation="retried ? 'throb' : 'wave'"
         ></b-skeleton-img>
+        <span
+            v-else-if="!isLoaded"
+            class="graph-unavailable"
+            :style="{ width: `${width}px`, height: `${height}px` }"
+            :title="graphAltTitle"
+        >
+            <i class="fas fa-chart-area graph-unavailable-icon"></i>
+            <span class="graph-unavailable-title">{{ graphAltTitle }}</span>
+            <span>Graph unavailable</span>
+        </span>
         <img
             v-show="isImageLoaded"
-            @load="imgLoaded"
-            @error="imgLoadingError"
-            :src="getImageURL"
+            v-if="imageURL !== null"
+            @load="isLoaded = true"
+            :src="imageURL"
             :alt="graphAltTitle"
             :title="graphAltTitle"
             :width="width"
@@ -20,6 +30,9 @@
 
 <script>
 import { baseurl } from "@/api/apiConfig"
+import common from "@/api/common"
+
+const RETRY_DELAY_MS = 2000
 
 export default {
     name: "GrafanaRenderedGraph",
@@ -54,58 +67,86 @@ export default {
     },
     data: function() {
         return {
+            imageURL: null,
             isLoaded: false,
-            retriedOnce: false,
+            retried: false,
+            failed: false,
+            retryTimer: null,
         }
     },
     computed: {
-        getFromDate: function() {
-            const one_hour = 60 * 60 * 1000
-            return (new Date(new Date().getTime() - one_hour)).toISOString()
-        },
-        getToDate: function() {
-            return (new Date()).toISOString()
-        },
-        getInstanceName: function() {
-            return this.server.name
-        },
-        getImageURL: function() {
-            const now = new Date().getTime()
-            return `${baseurl}/servers/monitoringImage/${this.server.id}/${this.panelId}/${this.getFromDate}?ts=${now}`
+        imageEndpoint: function() {
+            return `${baseurl}/servers/monitoringImage/${this.server.id}/${this.panelId}`
         },
         isImageLoaded: function() {
             return !this.loadingRequested && this.isLoaded
         },
     },
     methods: {
-        imgLoaded() {
-            this.isLoaded = true
+        loadImage() {
+            clearTimeout(this.retryTimer)
+            common.fetchImageObjectURL(this.imageEndpoint)
+                .then((objectURL) => {
+                    this.releaseImage()
+                    this.imageURL = objectURL
+                    this.failed = false
+                })
+                .catch(() => {
+                    // The graph may not be rendered yet: try once more before giving up
+                    if (!this.retried) {
+                        this.retried = true
+                        this.retryTimer = setTimeout(this.loadImage, RETRY_DELAY_MS)
+                    } else {
+                        this.failed = true
+                    }
+                })
         },
-        retryLoading() {
-            const that = this
-            const img = new Image();
-            img.src = this.getImageURL; // this should refer to the original failed image
-            img.onerror = function() {
-                that.imgLoaded()
-            }
-        },
-        imgLoadingError() {
-            if (!this.retriedOnce) {
-                this.retryLoading()
-                this.retriedOnce = true
+        releaseImage() {
+            if (this.imageURL !== null) {
+                URL.revokeObjectURL(this.imageURL)
             }
         },
     },
     watch: {
         loadingRequested: function(newValue) {
             if (newValue === false) {
-                this.retryLoading()
+                this.retried = false
+                this.loadImage()
             }
         }
-    }
-
+    },
+    mounted() {
+        this.loadImage()
+    },
+    beforeDestroy() {
+        clearTimeout(this.retryTimer)
+        this.releaseImage()
+    },
 }
 </script>
 
 <style scoped>
+.graph-unavailable {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.15rem;
+    padding: 0.5rem;
+    border: 1px dashed #ced4da;
+    border-radius: 0.25rem;
+    background-color: #f8f9fa;
+    color: #6c757d;
+    font-size: 0.75rem;
+    text-align: center;
+    vertical-align: top;
+}
+.graph-unavailable-icon {
+    font-size: 1.25rem;
+    opacity: 0.6;
+}
+.graph-unavailable-title {
+    font-weight: 600;
+    color: #495057;
+}
 </style>
