@@ -2,7 +2,7 @@
 from datetime import datetime
 import json
 import uuid
-from sqlalchemy import func
+from sqlalchemy import event, func
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.dialects.sqlite import JSON
@@ -207,6 +207,12 @@ class Server(BaseModel):
         return redisModel.getServerMonitoredTimestamp(self.uuid)
 
     @property
+    def connection_status(self):
+        """Latest connection test, persisted in Redis"""
+        import application.redisModel as redisModel
+        return redisModel.getServerStatus(self.uuid)
+
+    @property
     def monitoring_picture_cached(self):
         import application.redisModel as redisModel
         return redisModel.getServerCachedPicturedTimestamp(self.uuid)
@@ -222,6 +228,15 @@ class Server(BaseModel):
     @monitoring_picture_cached.setter
     def monitoring_picture_cached(self, ts):
         self._monitoring_picture_cached = ts
+
+
+@event.listens_for(Server, 'after_delete')
+def forgetDeletedServer(mapper, connection, server):
+    import application.redisModel as redisModel
+    try:
+        redisModel.deleteServerData(server.uuid)
+    except Exception as e:  # Redis being down must not prevent deleting the server
+        print(f'Could not clear the cached data of server {server.uuid}: {e}')
 
 
 class ServerMinimal(Server):

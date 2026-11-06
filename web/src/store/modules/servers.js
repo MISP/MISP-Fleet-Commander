@@ -202,6 +202,10 @@ const mutations = {
             Vue.set(state.server_status_refresh_enqueued, server.id, false)
             Vue.set(state.server_query_error, server.id, false)
             Vue.set(state.server_status, server.id, {})
+            if (server.connection_status) {
+                mutations.setConnectionState(state, { server_id: server.id, connectionState: server.connection_status })
+            }
+            delete server.connection_status
             if (server.server_info && server.server_info.query_result !== undefined) {
                 setAllQueryInfo(state, server.id, server.server_info)
                 delete server.server_info.query_result

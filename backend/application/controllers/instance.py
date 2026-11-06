@@ -199,5 +199,9 @@ def settingGet(user, setting_name):
 @BPinstance.route("/instance/settings/edit/<setting_name>", methods=["POST"])
 @admin_required
 def settingEdit(user, setting_name):
-    setting_value = request.json.get("value")
+    payload = request.get_json(silent=True) or {}
+    try:
+        setting_value = settingModel.validate(setting_name, payload.get("value"))
+    except settingModel.SettingError as e:
+        return jsonify({"message": str(e)}), 404 if settingModel.get(setting_name) is None else 400
     return jsonify(settingModel.set(setting_name, setting_value))

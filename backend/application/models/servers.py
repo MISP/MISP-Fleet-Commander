@@ -91,12 +91,17 @@ def searchAll(text: str, user) -> List:
     servers = q.limit(10).all()
     return servers
 
+def recordConnectionTest(server, testConnection):
+    """Timestamp a connection test result and persist it, so that the last known state outlives the request"""
+    if isinstance(testConnection, dict):
+        testConnection['timestamp'] = int(time.time())
+    redisModel.saveServerStatus(server.uuid, testConnection)
+    return testConnection
+
 def testConnection(server_id: int, use_cache=True) -> Union[dict, None]:
     server = Server.query.get(server_id)
     if server is not None:
-        testConnection = mispGetRequest(server, '/servers/getVersion', nocache=not use_cache)
-        testConnection['timestamp'] = int(time.time())
-        return testConnection
+        return recordConnectionTest(server, mispGetRequest(server, '/servers/getVersion', nocache=not use_cache))
     else:
         return None
 
@@ -109,24 +114,34 @@ def testConnectionAsync(server_id: int) -> Union[dict, None]:
         results = asyncio.run(asyncFetcher(server, urls))
         if results is None:
             return None
-        testConnection = results[0]
-        testConnection['timestamp'] = int(time.time())
-        return testConnection
+        return recordConnectionTest(server, results[0])
     else:
         return None
 
-def testAllConnectionAsync(servers: list, clientSocketEmitterUpdateFun):
+def testAllConnectionAsync(servers: list, clientSocketEmitterUpdateFun, max_concurrency=None, timeout=300):
     url = '/servers/getVersion'
-    allResults = asyncio.run(asyncFetcherManyServer(servers, url, clientSocketEmitterUpdateFun))
+    serverByID = {server.id: server for server in servers}
+
+    def recordAndForward(server_id, testResult):
+        if not isinstance(testResult, dict):
+            testResult = {'error': str(testResult)[:200] if testResult else 'Empty response'}
+        recordConnectionTest(serverByID[server_id], testResult)
+        clientSocketEmitterUpdateFun(server_id, testResult)
+
+    reachableServers = []
+    for server in servers:
+        if server.authkey:
+            reachableServers.append(server)
+        else:
+            recordAndForward(server.id, {'error': 'No API key configured'})
+    allResults = asyncio.run(asyncFetcherManyServer(reachableServers, url, recordAndForward, timeout=timeout, max_concurrency=max_concurrency))
     return allResults
 
 
 def testConnectionForUser(user, server_id: int) -> Union[dict, None]:
     server = getForUser(user, server_id)
     if server is not None:
-        testConnection = mispGetRequest(server, '/servers/getVersion')
-        testConnection['timestamp'] = int(time.time())
-        return testConnection
+        return recordConnectionTest(server, mispGetRequest(server, '/servers/getVersion'))
     else:
         return None
 
@@ -244,6 +259,46 @@ async def doFleetInfoTaskAsync(servers: list, clientSocketEmitterUpdateFuns):
     for server in servers:
         tasks.append(fetchServerInfoAsync(server, clientSocketEmitterUpdateFuns))
     return await asyncio.gather(*tasks)
+
+
+def refreshServersInBackground(servers: list, clientSocketEmitterUpdateFuns, max_concurrency: int):
+    """Full refresh of servers that may belong to different users and fleets, at most `max_concurrency` at a time.
+    A failing server does not stop the others."""
+    return asyncio.run(refreshServersInBackgroundAsync(servers, clientSocketEmitterUpdateFuns, max_concurrency))
+
+async def refreshServersInBackgroundAsync(servers: list, clientSocketEmitterUpdateFuns, max_concurrency: int):
+    semaphore = asyncio.Semaphore(max(int(max_concurrency), 1))
+
+    async def refresh(server):
+        async with semaphore:
+            try:
+                return await fetchServerInfoAsync(server, clientSocketEmitterUpdateFuns)
+            except Exception as e:
+                print(f'Background refresh of server {server.id} failed: {e}')
+                return None
+    return await asyncio.gather(*[refresh(server) for server in servers])
+
+
+def isDue(timestamp: Union[int, None], interval_seconds: int, now: int, slack_seconds: int = 30) -> bool:
+    """True when something last done at `timestamp` should be done again. The slack lets a task that runs every
+    `interval` minutes catch items refreshed a few seconds after the previous run"""
+    return timestamp is None or now - int(timestamp) >= interval_seconds - slack_seconds
+
+def serversDueForConnectionTest(servers: list, interval_seconds: int, now: int) -> list:
+    due = []
+    for server in servers:
+        status = redisModel.getServerStatus(server.uuid)
+        if isDue(status.get('timestamp') if status else None, interval_seconds, now):
+            due.append(server)
+    return due
+
+def serversDueForRefresh(servers: list, interval_seconds: int, now: int) -> list:
+    due = []
+    for server in servers:
+        snapshot = redisModel.getServerInfo(server.uuid)
+        if isDue(snapshot.get('timestamp') if snapshot else None, interval_seconds, now):
+            due.append(server)
+    return due
 
 
 async def fetchServerInfoAsync(server, clientSocketEmitterUpdateFuns):

@@ -289,7 +289,7 @@ async def asyncFetcher(server, urls, timeout=300) -> list[dict]:
         return results
 
 
-async def asyncFetcherManyServer(servers, url, resultCallback, timeout=300):
+async def asyncFetcherManyServer(servers, url, resultCallback, timeout=300, max_concurrency=None):
     base_headers = {
         "Authorization": '---',
         "Accept": "application/json",
@@ -310,12 +310,20 @@ async def asyncFetcherManyServer(servers, url, resultCallback, timeout=300):
                     result = await response.text()
         except aiohttp.ClientConnectorError as e:
             result = {"error": "Connection Error: " + str(e)}
-        except aiohttp.ServerTimeoutError as e:
-            result = {"error": f"Timeout Exception ({timeout_sec}s)" + str(e)}
+        except (aiohttp.ServerTimeoutError, asyncio.TimeoutError):
+            result = {"error": f"Timeout Exception ({timeout_sec}s)"}
         except Exception as e:
             result = { "error": f"Unhandled Exception: `{type(e)}` {str(e)}" }
         resultCallback(server_id, result)
         return result
+
+    semaphore = asyncio.Semaphore(max_concurrency) if max_concurrency else None
+
+    async def limitedFetch(*args):
+        if semaphore is None:
+            return await fetch(*args)
+        async with semaphore:
+            return await fetch(*args)
 
     # For TCP connection to close and do the cleanup. asyncio internal need to change (see aiohttp/issues/1925)
     connector = aiohttp.TCPConnector(force_close=True, enable_cleanup_closed=True)
@@ -324,6 +332,6 @@ async def asyncFetcherManyServer(servers, url, resultCallback, timeout=300):
         for server in servers:
             headers = dict(base_headers)
             headers['Authorization'] = server.authkey
-            tasks.append(fetch(session, urljoin(server.url, url), headers, server.id, server.skip_ssl, timeout, resultCallback))
+            tasks.append(limitedFetch(session, urljoin(server.url, url), headers, server.id, server.skip_ssl, timeout, resultCallback))
         results = await asyncio.gather(*tasks)
         return results

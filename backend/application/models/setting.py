@@ -61,7 +61,83 @@ setting_configuration = {
             "variant": "info",
         },
     },
+    "health_background_refresh_enabled": {
+        "name": "Background Refresh Enabled",
+        "description": "Keep the status of every server fresh without opening the UI: periodic connection tests and full refreshes of all servers, whether their fleet is watched or not.",
+        "panel": "Scheduler",
+        "scope": "Background Refresh",
+        "type": "checkbox",
+        "default": True,
+        "disabled": False,
+        "error": False,
+    },
+    "health_connection_test_interval": {
+        "name": "Connection Test Interval",
+        "description": "How often (minutes) every server gets a connection test. Cheap: one request per server.",
+        "panel": "Scheduler",
+        "scope": "Background Refresh",
+        "type": "number",
+        "default": 5,
+        "min": 1,
+        "max": 1440,
+        "disabled": False,
+        "error": False,
+    },
+    "health_full_refresh_interval": {
+        "name": "Full Refresh Interval",
+        "description": "How often (minutes) every server is fully refreshed (settings, workers, connections, usage). Servers refreshed more recently, for example by fleet watching, are skipped.",
+        "panel": "Scheduler",
+        "scope": "Background Refresh",
+        "type": "number",
+        "default": 30,
+        "min": 5,
+        "max": 1440,
+        "disabled": False,
+        "error": False,
+    },
+    "health_max_concurrency": {
+        "name": "Maximum Concurrency",
+        "description": "How many servers the background refresh queries at the same time.",
+        "panel": "Scheduler",
+        "scope": "Background Refresh",
+        "type": "number",
+        "default": 10,
+        "min": 1,
+        "max": 100,
+        "disabled": False,
+        "error": False,
+    },
 }
+
+
+class SettingError(ValueError):
+    pass
+
+
+def validate(setting_name: str, setting_value):
+    """Check and normalise a value before saving it. Raises SettingError with a message meant for the user"""
+    config = settings.get(setting_name)
+    if config is None:
+        raise SettingError(f"Unknown setting `{setting_name}`")
+    if config.get("disabled"):
+        raise SettingError(f"Setting `{setting_name}` cannot be changed")
+    if config["type"] == "checkbox":
+        if not isinstance(setting_value, bool):
+            raise SettingError("The value must be true or false")
+    elif config["type"] == "number":
+        try:
+            number = float(setting_value)
+        except (TypeError, ValueError):
+            raise SettingError("The value must be a number")
+        if isinstance(setting_value, bool) or not number.is_integer():
+            raise SettingError("The value must be a whole number")
+        setting_value = int(number)
+        if "min" in config and setting_value < config["min"]:
+            raise SettingError(f"The value must be at least {config['min']}")
+        if "max" in config and setting_value > config["max"]:
+            raise SettingError(f"The value must be at most {config['max']}")
+    return setting_value
+
 
 def loadSetting():
     global settings, setting_configuration

@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
 import asyncio
+from functools import wraps
 import time
+import uuid
 from huey import crontab
 
 from application import create_app
@@ -168,6 +170,86 @@ def monitorMonitoredFleets():
             monitored_timestamp = redisModel.setFleetMonitoredTimestamp(fleet.id)
             if monitored_timestamp is not None:
                 socketioEmitter.fleet_update_timestamps(fleet, monitored_timestamp = monitored_timestamp)
+
+
+def backgroundRefreshSettings():
+    """Read on every run, so that changes made in the settings take effect without restarting the workers"""
+    return {
+        "enabled": settingModel.getRefreshValue("health_background_refresh_enabled"),
+        "connection_test_interval": int(settingModel.getValue("health_connection_test_interval")) * 60,
+        "full_refresh_interval": int(settingModel.getValue("health_full_refresh_interval")) * 60,
+        "max_concurrency": int(settingModel.getValue("health_max_concurrency")),
+    }
+
+
+BACKGROUND_CONNECTION_TEST_TIMEOUT = 30
+BACKGROUND_LOCK_TIMEOUT = 60 * 60  # Released by then even if a worker died while holding it
+
+
+def skipIfRunning(lock_name):
+    """Run the task only if the previous run is over. Unlike huey's lock_task, a skipped run is not an error:
+    these tasks fire every minute and a full refresh can take longer than that"""
+    def decorator(fn):
+        @wraps(fn)
+        def wrapped(*args, **kwargs):
+            token = uuid.uuid4().hex
+            if not redisModel.redisClient.set(lock_name, token, nx=True, ex=BACKGROUND_LOCK_TIMEOUT):
+                return None
+            try:
+                return fn(*args, **kwargs)
+            finally:
+                if redisModel.redisClient.get(lock_name) == token:
+                    redisModel.redisClient.delete(lock_name)
+        return wrapped
+    return decorator
+
+
+@huey_app.periodic_task(crontab(minute="*"))
+@skipIfRunning("background-connection-test-lock")
+def backgroundConnectionTest():
+    """Connection test of every server whose last test is older than the configured interval. Runs every minute
+    so that new servers, restarts and interval changes are picked up quickly; servers not due are skipped"""
+    config = backgroundRefreshSettings()
+    if not config["enabled"]:
+        return
+    servers = serverModel.serversDueForConnectionTest(serverModel.index(), config["connection_test_interval"], int(time.time()))
+    if len(servers) == 0:
+        return
+    serverByID = {server.id: server for server in servers}
+
+    def clientSocketEmitterUpdateFun(server_id, testResult):
+        testResult["server"] = serverSchemaLighter.dump(serverByID[server_id])
+        socketioEmitter.udpate_server_connection(serverByID[server_id], testResult)
+    serverModel.testAllConnectionAsync(
+        servers, clientSocketEmitterUpdateFun,
+        max_concurrency=config["max_concurrency"], timeout=BACKGROUND_CONNECTION_TEST_TIMEOUT
+    )
+
+
+@huey_app.periodic_task(crontab(minute="*"))
+@skipIfRunning("background-full-refresh-lock")
+def backgroundFullRefresh():
+    """Full refresh of every server whose snapshot is older than the configured interval. Servers kept fresh by
+    fleet watching are therefore skipped. Servers without an API key cannot be queried and are left out"""
+    config = backgroundRefreshSettings()
+    if not config["enabled"]:
+        return
+    candidates = [server for server in serverModel.index() if server.authkey]
+    servers = serverModel.serversDueForRefresh(candidates, config["full_refresh_interval"], int(time.time()))
+    if len(servers) == 0:
+        return
+    serverByID = {server.id: server for server in servers}
+
+    def clientSocketEmitterUpdateFun(server_id, testResult):
+        testResult["server"] = serverSchemaLighter.dump(serverByID[server_id])
+        socketioEmitter.udpate_server(serverByID[server_id], testResult)
+
+    clientSocketEmitterUpdateFuns = {
+        "udpate_server": clientSocketEmitterUpdateFun,
+        "udpate_server_connection_list": socketioEmitter.udpate_server_connection_list,
+        "udpate_server_usage": socketioEmitter.udpate_server_usage,
+    }
+    serverModel.refreshServersInBackground(servers, clientSocketEmitterUpdateFuns, config["max_concurrency"])
 
 
 @huey_app.periodic_task(crontab(hour="*/12"))

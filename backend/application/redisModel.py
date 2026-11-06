@@ -3,8 +3,9 @@ import time
 from typing import Union
 from application import redisClient
 
+# Snapshots never expire: their freshness is judged by their `timestamp`
 KEY_SERVER_INFO = 'server-info'
-SERVER_INFO_TTL = 60*60
+KEY_SERVER_STATUS = 'server-status'
 KEY_SERVER_MONITORED = 'server-monitored'
 KEY_SERVER_WATCHED = 'server-watched'
 KEY_FLEET_MONITORED = 'fleet-monitored'
@@ -14,9 +15,7 @@ KEY_SERVER_PICTURES_CACHED = "server-pic-cached"
 
 def saveServerInfo(server_uuid: int, info: dict) -> bool:
     infoText = json.dumps(info)
-    saved = redisClient.set(f"{KEY_SERVER_INFO}:{server_uuid}", infoText)
-    redisClient.expire(f"{KEY_SERVER_INFO}:{server_uuid}", SERVER_INFO_TTL)
-    return saved
+    return redisClient.set(f"{KEY_SERVER_INFO}:{server_uuid}", infoText)
 
 def getServerInfo(server_uuid: str) -> Union[None, dict]:
     infoText = redisClient.get(f"{KEY_SERVER_INFO}:{server_uuid}")
@@ -24,6 +23,36 @@ def getServerInfo(server_uuid: str) -> Union[None, dict]:
         return None
     else:
         return json.loads(infoText)
+
+# Fields of a connection test (`/servers/getVersion`) worth keeping
+SERVER_STATUS_FIELDS = ('version', 'error', 'message', '_latency', '_status_code', 'timestamp')
+
+
+def saveServerStatus(server_uuid: str, connectionTest) -> Union[dict, None]:
+    """Persist the latest connection test of a server, so that it survives restarts and is shared by every client"""
+    if isinstance(connectionTest, str):
+        connectionTest = {'error': connectionTest[:200] or 'Empty response'}
+    if not isinstance(connectionTest, dict):
+        return None
+    status = {field: connectionTest[field] for field in SERVER_STATUS_FIELDS if field in connectionTest}
+    status.setdefault('timestamp', int(time.time()))
+    redisClient.set(f"{KEY_SERVER_STATUS}:{server_uuid}", json.dumps(status))
+    return status
+
+
+def getServerStatus(server_uuid: str) -> Union[None, dict]:
+    statusText = redisClient.get(f"{KEY_SERVER_STATUS}:{server_uuid}")
+    if statusText is None:
+        return None
+    return json.loads(statusText)
+
+
+def deleteServerData(server_uuid: str) -> None:
+    """Forget everything cached about a server: needed now that snapshots no longer expire"""
+    redisClient.delete(*[f"{key}:{server_uuid}" for key in (
+        KEY_SERVER_INFO, KEY_SERVER_STATUS, KEY_SERVER_MONITORED, KEY_SERVER_WATCHED, KEY_SERVER_PICTURES_CACHED,
+    )])
+
 
 def getServerMonitoredTimestamp(server_uuid: str) -> Union[int, None]:
     lastMonitoredTS = redisClient.get(f"{KEY_SERVER_MONITORED}:{server_uuid}")
