@@ -48,8 +48,8 @@ export default {
             fields: [
                 "id", "name", "url", "skip_ssl",
                 {
-                    key: "authkey", formatter: value => {
-                        return (value === undefined || value === null) ? "" : value.slice(0, 4) + " … " + value.slice(36, 40)
+                    key: "authkey_hint", label: "Authkey", formatter: value => {
+                        return (value === undefined || value === null) ? "" : value
                     }
                 }
             ]

@@ -14,6 +14,8 @@ const urls = {
     getUsers: `/servers/getUsers`,
     getUsageDashboardConfig: `/servers/getUsageDashboardConfig`,
     getInstancePicture: `/servers/getInstancePicture`,
+    batchTest: `/servers/batchTest`,
+    discoverConnected: `/servers/discoverConnected`,
 }
 
 export default {
@@ -112,6 +114,17 @@ export default {
             allPromises.push(query)
         });
         return Promise.all(allPromises)
+    },
+
+    batchTest(payload) {
+        // payload: list of `{id}` (saved server) or `{url, authkey, skip_ssl}` (not saved yet)
+        return common.getClient().post(urls.batchTest, payload)
+            .then((response) => response.data)
+    },
+
+    discoverConnected(root_server_id) {
+        return common.getClient().post(urls.discoverConnected, { root_server_id })
+            .then((response) => response.data)
     },
 
     queryGetUsers(server_id, cb, errorCb) {

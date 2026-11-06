@@ -1,7 +1,7 @@
 import os
 from application import socketioApp
 from application.DBModels import Server, ServerMinimal
-from application.marshmallowSchemas import serverSchema, serversSchema
+from application.marshmallowSchemas import serverSchema
 import application.models.servers as serverModel
 from flask_socketio import SocketIO
 
@@ -14,32 +14,29 @@ def registerListeners():
     @socketioApp.on('refresh_server')
     def refresh_server(serverID):
         from application.workers.tasks import fetchServerInfoTask
-        server = ServerMinimal.query.get(serverID)
-        fetchServerInfoTask(serverSchema.dump(server))
+        fetchServerInfoTask(serverID)
 
     @socketioApp.on('refresh_fleet')
     def refresh_fleet(fleedID):
         from application.workers.tasks import doFleetInfoTask
         servers = serverModel.index(fleedID)
-        doFleetInfoTask(serversSchema.dump(servers))
+        doFleetInfoTask([server.id for server in servers])
 
     @socketioApp.on('server_connection_test')
     def serverConnectionTest(serverID):
         from application.workers.tasks import doServerConnectionTestTask
-        server = ServerMinimal.query.get(serverID)
-        doServerConnectionTestTask(serverSchema.dump(server))
+        doServerConnectionTestTask(serverID)
 
     @socketioApp.on('fleet_connection_test')
     def fleetConnectionTest(fleedID):
         from application.workers.tasks import doFleetConnectionTestTask
         servers = serverModel.index(fleedID)
-        doFleetConnectionTestTask(serversSchema.dump(servers))
+        doFleetConnectionTestTask([server.id for server in servers])
 
     @socketioApp.on("refresh_server_graphs")
     def refresh_server_graphs(serverID):
         from application.workers.tasks import doCacheMonitoringImages
-        server = ServerMinimal.query.get(serverID)
-        doCacheMonitoringImages(serverSchema.dump(server))
+        doCacheMonitoringImages(serverID)
 
     @socketioApp.on("workers_health_check")
     def workers_health_check():

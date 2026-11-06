@@ -9,13 +9,13 @@ import concurrent.futures
 from datetime import datetime as dt, timedelta, timezone
 from collections.abc import Mapping, MutableSequence
 from collections import defaultdict
-from flask import Blueprint, request, jsonify, abort, Response, send_from_directory
+from flask import Blueprint, request, jsonify, abort, send_from_directory
 from marshmallow import ValidationError
 
 from application import flaskApp
 from application.DBModels import db, User, Server
 from application.controllers.utils import mispGetHTMLRequest, mispGetRequest, mispPostRequest, batchRequest
-from application.marshmallowSchemas import ServerSchema, serverSchemaLighter, fleetSchema, serverQuerySchema, serverSchema, serversSchemaLighter, taskSchema, serverSchema, serversSchema
+from application.marshmallowSchemas import ServerSchema, serverQuerySchema, serverSchema, taskSchema, serversSchema
 import application.models.servers as serverModel
 from application.models.servers import MONITORING_PANELS
 from application.controllers.instance import token_required
@@ -102,10 +102,13 @@ def add(user, fleet_id):
 def edit(user):
     saveFields = ['name', 'comment', 'url', 'skip_ssl', 'authkey']
     server = serverModel.getForUser(user, request.json['id'])
-    if server is not None:
-        for field, value in request.json.items():
-            if field in saveFields:
-                setattr(server, field, value)
+    if server is None:
+        abort(404)
+    for field, value in request.json.items():
+        if field == 'authkey' and not value:
+            continue  # Clients never get the authkey back: an empty one means "keep the current key"
+        if field in saveFields:
+            setattr(server, field, value)
     if request.json.get('recursive_add', False):
         # recursively add servers
         pass
@@ -198,7 +201,7 @@ def queryInfoWS(user, server_id,):
     server = serverModel.getForUser(user, server_id)
     if server is not None:
         from application.workers.tasks import fetchServerInfoTask
-        server_query_task = fetchServerInfoTask(serverSchemaLighter.dump(server))
+        server_query_task = fetchServerInfoTask(server.id)
         return taskSchema.dump(
             {
                 "id": server_query_task.id,
@@ -222,80 +225,71 @@ def getUsers(user, server_id):
 @BPserver.route('/servers/batchTest', methods=['POST'])
 @token_required
 def batchTest(user):
-    test_result = []
+    """Test a list of servers. Each item is either a saved server (`{"id": ...}`, tested with its stored
+    authkey) or a server that is not saved yet (`{"url", "authkey", "skip_ssl"}`).
+    Results come back in the request order and never contain authkeys."""
+    serversToTest = {}
+    for index, item in enumerate(request.json or []):
+        if item.get('id') is not None:
+            server = serverModel.getForUser(user, item['id'])
+            if server is None:
+                continue
+            serversToTest[index] = DictToObject(id=index, name=server.name, url=server.url, skip_ssl=server.skip_ssl, authkey=server.authkey)
+        elif item.get('url'):
+            serversToTest[index] = DictToObject(id=index, name=item.get('name') or item['url'], url=item['url'],
+                                                skip_ssl=bool(item.get('skip_ssl', False)), authkey=item.get('authkey') or None)
+
     allVersionRequests = []
     allUserRequests = []
-    server_to_test = request.json
-    for index, server in enumerate(server_to_test):
-        serverObject = DictToObject(**server)
-        if 'id' not in server:
-            serverObject.id = index
+    for serverObject in serversToTest.values():
+        allVersionRequests.append({'fn': mispGetRequest, 'server': serverObject, 'path': '/servers/getVersion', 'nocache': True})
+        allUserRequests.append({'fn': mispGetRequest, 'server': serverObject, 'path': '/users/view/me', 'nocache': True})
+    versionByIndex = {r['server_id']: r for r in batchRequest(allVersionRequests)}
+    userByIndex = {r['server_id']: r for r in batchRequest(allUserRequests)}
 
-        server = serverModel.getForUser(user, serverObject.id) # Make sure user has access to this server
-        if server is None:
-            continue
-
-        allVersionRequests.append({
-            'fn': mispGetRequest,
-            'server': serverObject,
-            'path': '/servers/getVersion'
+    test_result = []
+    for index in serversToTest:
+        version = versionByIndex.get(index, {'error': 'Test failed'})
+        test_result.append({
+            'index': index,
+            'testResult': parseGetVersion(version),
+            'userResult': userByIndex.get(index, {}),
         })
-        allUserRequests.append({
-            'fn': mispGetRequest,
-            'server': serverObject,
-            'path': '/users/view/me'
-        })
-
-    allTestConnections = batchRequest(allVersionRequests)
-    allTestUsers = batchRequest(allUserRequests)
-    for index, server in enumerate(server_to_test):
-        server_id = server['id'] if 'id' in server else index
-        version = next(filter(lambda x: x['server_id'] == server_id, allTestConnections))
-        user = next(filter(lambda x: x['server_id'] == server_id, allTestUsers))
-        server['testResult'] = parseGetVersion(version)
-        server['userResult'] = user
-        test_result.append(server)
     return jsonify(test_result)
 
 @BPserver.route('/servers/discoverConnected', methods=['POST'])
 @token_required
 def discoverConnected(user):
-    rootServer = request.json
-    test_result = []
-    if rootServer:
-        rootServerObject = DictToObject(**rootServer)
+    """List the servers the root server syncs with. MISP never exposes the authkeys of its remote servers,
+    so discovered servers come back without one; reachability is probed without authentication."""
+    rootServerId = (request.json or {}).get('root_server_id')
+    rootServer = serverModel.getForUser(user, rootServerId) if rootServerId is not None else None
+    if rootServer is None:
+        abort(404, 'Unknown server')
 
-        server = serverModel.getForUser(user, rootServerObject.id) # Make sure user has access to this server
-        if server is None:
-            return jsonify({'error': 'Unkown server'})
+    rootIndex = mispGetRequest(rootServer, '/servers/index', nocache=True)
+    if type(rootIndex) != list:
+        abort(502, 'Could not fetch a valid server index from the root server')
+    rootIndex = serverModel.stripRemoteAuthkeys(rootIndex)
 
-        rootIndex = mispGetRequest(rootServerObject, '/servers/index')
-        if type(rootIndex) != list:
-            abort(404, Response('Could not fetch valid server index'))
-        allVersionRequests = []
-        allUserRequests = []
-        for server in rootIndex:
-            remoteServer = server['Server']
-            remoteServerObject = DictToObject(**remoteServer)
-            allVersionRequests.append({
-                'fn': mispGetRequest,
-                'server': remoteServerObject,
-                'path': '/servers/getVersion'
-            })
-            allUserRequests.append({
-                'fn': mispGetRequest,
-                'server': remoteServerObject,
-                'path': '/users/view/me'
-            })
-        allTestConnections = batchRequest(allVersionRequests)
-        allTestUsers = batchRequest(allUserRequests)
-        for server in rootIndex:
-            version = next(filter(lambda x: x['server_id'] == server['Server']['id'], allTestConnections))
-            user = next(filter(lambda x: x['server_id'] == server['Server']['id'], allTestUsers))
-            server['testResult'] = parseGetVersion(version)
-            server['userResult'] = user
-            test_result.append(server)
-    return jsonify(test_result)
+    probes = []
+    for index, connectedServer in enumerate(rootIndex):
+        remoteServer = connectedServer['Server']
+        probes.append({
+            'fn': mispGetRequest,
+            'server': DictToObject(id=index, name=remoteServer.get('name', ''), url=remoteServer.get('url', ''),
+                                   skip_ssl=bool(remoteServer.get('self_signed', False)), authkey=None),
+            'path': '/servers/getVersion',
+            'nocache': True,
+        })
+    probeByIndex = {r['server_id']: r for r in batchRequest(probes)}
+
+    discovered = []
+    for index, connectedServer in enumerate(rootIndex):
+        connectedServer['skip_ssl'] = bool(connectedServer['Server'].get('self_signed', False))
+        connectedServer['testResult'] = parseReachabilityProbe(probeByIndex.get(index, {'error': 'Test failed'}))
+        discovered.append(connectedServer)
+    return jsonify(discovered)
 
 @BPserver.route('/servers/network/<int:fleet_id>')
 @token_required
@@ -338,11 +332,12 @@ def getUsageDashboardConfig():
 def getInstancePicture(user, server_id):
     server = serverModel.getForUser(user, server_id)
     if server is not None:
-        server.authkey = 'foobar'  # Force to show login page with wrong API key
+        # Fetch the login page anonymously: without an authkey, MISP serves the login page
+        anonymousServer = DictToObject(id=server.id, name=server.name, url=server.url, skip_ssl=server.skip_ssl, authkey=None)
         searchStringB64 = '<img src="data:image/png;base64,'
         searchStringURI = '<img src="'
         try:
-            loginPageHtml = mispGetHTMLRequest(server, "/users/login")
+            loginPageHtml = mispGetHTMLRequest(anonymousServer, "/users/login")
             start = loginPageHtml.find(searchStringB64)
             if start != -1:
                 start += len(searchStringB64)
@@ -459,6 +454,12 @@ def getConnectedServerStatus(server, connectedServer):
     connectedServerStatus = serverModel.getConnectedServerStatus(server, connectedServer)
     return connectedServerStatus
 
+def readableRequestError(error):
+    # Request helpers report unparsable (non-JSON) answers as raw exceptions
+    if str(error).startswith('Exception'):
+        return 'Unexpected answer, not a MISP API?'
+    return error
+
 def parseGetVersion(connection):
     parsed = {
         'color': '',
@@ -466,7 +467,7 @@ def parseGetVersion(connection):
     }
     if 'error' in connection:
         parsed['color'] = 'danger'
-        parsed['message'] = connection['error']
+        parsed['message'] = readableRequestError(connection['error'])
     else:
         parsed['color'] = 'success'
         parsed['version'] = connection['version']
@@ -478,6 +479,14 @@ def parseGetVersion(connection):
             parsed['color'] = 'warning' 
             parsed['message'] = 'No perm' 
     return parsed
+
+def parseReachabilityProbe(probe):
+    """Interpret an unauthenticated /servers/getVersion request: MISP answers 403 when it is reachable"""
+    if probe.get('_status_code') == 403:
+        return {'color': 'warning', 'message': 'Reachable, authkey needed'}
+    if 'error' in probe:
+        return {'color': 'danger', 'message': readableRequestError(probe['error'])}
+    return {'color': 'warning', 'message': 'Reachable, authkey needed', 'version': probe.get('version')}
 
 def buildNetwork(servers):
     network = []

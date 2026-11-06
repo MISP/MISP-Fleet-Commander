@@ -69,13 +69,13 @@
                 <b-form-group
                     label="Authorization Key:"
                     label-for="input-authkey"
-                    description="The authorisation information of the user"
+                    :description="authkeyDescription"
                 >
-                    <ValidationProvider v-slot="validationContext" rules="required|length:40" name="User AUTHKey">
+                    <ValidationProvider v-slot="validationContext" :rules="authkeyRules" name="User AUTHKey">
                         <b-form-input
                             v-model="form.authkey"
                             :state="getValidationState(validationContext)"
-                            placeholder="3vl1KgDgQ1m0W3rwKMgB5z6MqfYkUZobGwIj3Urw"
+                            :placeholder="authkeyPlaceholder"
                             autocomplete="off"
                             type="search"
                         ></b-form-input>
@@ -139,6 +139,25 @@ export default {
         },
         modalActionText() {
             return this.modalAction == "Add" ? "Save" : this.modalAction
+        },
+        keepsCurrentAuthkey() {
+            // The backend never sends authkeys back: when editing, an empty field keeps the stored key
+            return this.isEdit && this.form.has_authkey
+        },
+        authkeyRules() {
+            return this.keepsCurrentAuthkey ? "length:40" : "required|length:40"
+        },
+        authkeyPlaceholder() {
+            if (this.keepsCurrentAuthkey) {
+                return `Current key ${this.form.authkey_hint}. Leave empty to keep it`
+            }
+            return "3vl1KgDgQ1m0W3rwKMgB5z6MqfYkUZobGwIj3Urw"
+        },
+        authkeyDescription() {
+            if (this.keepsCurrentAuthkey) {
+                return "The authorisation information of the user. Only enter a key to replace the current one"
+            }
+            return "The authorisation information of the user"
         },
     },
     data: function() {

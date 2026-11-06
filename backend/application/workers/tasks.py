@@ -30,9 +30,17 @@ def ping():
     return 'pong'
 
 
+def loadServers(server_ids):
+    """Tasks receive server IDs, never serialized servers, so that authkeys stay out of the task queue"""
+    servers = [serverModel.get(server_id) for server_id in server_ids]
+    return [server for server in servers if server is not None]
+
+
 @huey_app.task(priority=2)
-def fetchServerInfoTask(serverDict):
-    server = serverSchemaLighter.load(serverDict)
+def fetchServerInfoTask(server_id):
+    server = serverModel.get(server_id)
+    if server is None:
+        return
     socketioEmitter.server_updating(server.id)
 
     def clientSocketEmitterUpdateFun(server_id, testResult):
@@ -48,15 +56,12 @@ def fetchServerInfoTask(serverDict):
 
 
 @huey_app.task(priority=2)
-def doFleetInfoTask(servers):
-    server_ids = []
+def doFleetInfoTask(server_ids):
     serversDict = []
     serverByID = {}
-    for serverDict in servers:
-        server = serverSchemaLighter.load(serverDict)
+    for server in loadServers(server_ids):
         serversDict.append(server)
         serverByID[server.id] = server
-        server_ids.append(server.id)
         socketioEmitter.server_updating(server.id)
 
     def clientSocketEmitterUpdateFun(server_id, testResult):
@@ -77,8 +82,10 @@ def doFleetInfoTask(servers):
 
 
 @huey_app.task(priority=5)
-def doServerConnectionTestTask(serverDict):
-    server = serverSchemaLighter.load(serverDict)
+def doServerConnectionTestTask(server_id):
+    server = serverModel.get(server_id)
+    if server is None:
+        return
     socketioEmitter.server_status_updating(server.id)
     connectionInfo = serverModel.testConnectionAsync(server.id)
     if connectionInfo is not None:
@@ -87,15 +94,12 @@ def doServerConnectionTestTask(serverDict):
 
 
 @huey_app.task(priority=5)
-def doFleetConnectionTestTask(servers):
-    server_ids = []
+def doFleetConnectionTestTask(server_ids):
     serversDict = []
     serverByID = {}
-    for serverDict in servers:
-        server = serverSchemaLighter.load(serverDict)
+    for server in loadServers(server_ids):
         serversDict.append(server)
         serverByID[server.id] = server
-        server_ids.append(server.id)
         socketioEmitter.server_status_updating(server.id)
 
     def clientSocketEmitterUpdateFun(server_id, testResult):
@@ -105,8 +109,10 @@ def doFleetConnectionTestTask(servers):
 
 
 @huey_app.task()
-def doCacheMonitoringImages(serverDict):
-    server = serverSchemaLighter.load(serverDict)
+def doCacheMonitoringImages(server_id):
+    server = serverModel.get(server_id)
+    if server is None:
+        return
     socketioEmitter.server_graphs_updating(server.id)
 
     callbacks = {

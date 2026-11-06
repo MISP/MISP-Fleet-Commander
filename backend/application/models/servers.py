@@ -131,10 +131,20 @@ def testConnectionForUser(user, server_id: int) -> Union[dict, None]:
         return None
 
 
+def stripRemoteAuthkeys(connectedServers):
+    """Remove remote server authkeys from a MISP /servers/index result. Current MISP versions never include
+    them, but they must not be stored or sent to clients if a MISP instance ever does."""
+    if isinstance(connectedServers, list):
+        for connectedServer in connectedServers:
+            if isinstance(connectedServer, dict) and isinstance(connectedServer.get('Server'), dict):
+                connectedServer['Server'].pop('authkey', None)
+    return connectedServers
+
+
 def refreshServerConnectionList(server_id: int, remote_server_id=None) -> Union[dict, None]:
     server = Server.query.get(server_id)
     if server is not None:
-        connectedServers = mispGetRequest(server, '/servers/index', nocache=True)
+        connectedServers = stripRemoteAuthkeys(mispGetRequest(server, '/servers/index', nocache=True))
         if connectedServers is not None:
             if remote_server_id is None:
                 connectedServers = attachConnectedServerStatus(server, connectedServers)
@@ -201,7 +211,7 @@ def fetchServerInfo(server, use_cache=True):
     serverSettings = mispGetRequest(server, '/servers/serverSettings/diagnostics/light:1', nocache=not use_cache)
     serverUsage = mispGetRequest(server, '/users/statistics', nocache=not use_cache)
     serverUser = mispGetRequest(server, '/users/view/me', nocache=not use_cache)
-    connectedServers = mispGetRequest(server, '/servers/index', nocache=not use_cache)
+    connectedServers = stripRemoteAuthkeys(mispGetRequest(server, '/servers/index', nocache=not use_cache))
     connectedServers = attachConnectedServerStatus(server, connectedServers)
     serverContent = None
     server_query = {
@@ -245,7 +255,7 @@ async def fetchServerInfoAsync(server, clientSocketEmitterUpdateFuns):
     results = await asyncFetcher(server, urls)
     serverSettings = results[0]
     serverUser = results[1]
-    connectedServers = results[2]
+    connectedServers = stripRemoteAuthkeys(results[2])
     serverUsage = {}
     serverContent = None
     server_query = {

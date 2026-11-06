@@ -936,7 +936,8 @@ export default {
         },
         exportSelected() {
             let csv = ''
-            const fields = ['name', 'comment', 'url', 'authkey', 'skip_ssl']
+            // Authkeys never leave the backend, so the export doesn't contain them
+            const fields = ['name', 'comment', 'url', 'skip_ssl']
             this.getSelectedServer.forEach((server) => {
                 csv += fields.map((f) => server[f]).join(',') + '\n'
             })

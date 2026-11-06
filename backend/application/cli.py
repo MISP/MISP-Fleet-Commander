@@ -7,7 +7,7 @@ from pprint import pprint
 import click
 
 from flask.cli import AppGroup
-from application.marshmallowSchemas import serverSchemaLighter, serverSchema, userSchema
+from application.marshmallowSchemas import serverSchema, userSchema
 from application.controllers.websocket import SocketioEmitter
 import application.models.servers as serverModel
 import application.models.fleets as fleetModel
@@ -131,7 +131,7 @@ def doQueryFleetWs(fleet_id: int, delay_second: int = 10):
         for server in fleet.servers:
             print(f'Querying server {server.name} ({server.id})')
             timer1 = time.time()
-            fetchServerInfoTask(serverSchemaLighter.dump(server))
+            fetchServerInfoTask(server.id)
             print(f'\t Took {time.time() - timer1:.2f}')
             time.sleep(delay_second)
     else:

@@ -1,14 +1,14 @@
 <template>
     <b-modal 
         id="modal-discover-servers-result"
-        title="Servers discovered recursively"
+        title="Discover connected servers"
         size="xl"
         scrollable
         @hidden="resetModal"
         @ok.prevent="handleSubmission"
     >
-        <small class="text-muted d-block">Try to add other MISP Servers connected to this one using the known remote servers index.</small>
-        <small class="text-muted d-block">Behind the scenes, it fetches the index and the authey of associated users and save them locally.</small>
+        <small class="text-muted d-block">Find the MISP servers this one is connected to, using its remote servers index.</small>
+        <small class="text-muted d-block">MISP does not share the authkeys of its remote servers: enter a key for each server you want to add, then test them before saving.</small>
         <h5>Root server</h5>
         <b-form inline>
             <div class="d-flex w-100 mb-2">
@@ -20,7 +20,7 @@
                     ></b-input>
                     <template v-slot:append>
                         <b-input-group-text>
-                            <b-form-checkbox :value="rootServer.skip_ssl" class="force-custom-va" disabled switch>
+                            <b-form-checkbox :checked="rootServer.skip_ssl" class="force-custom-va" disabled switch>
                                 <small>Skip SSL</small>
                             </b-form-checkbox>
                         </b-input-group-text>
@@ -29,31 +29,47 @@
                 <b-input
                     class="w-50 ml-2"
                     placeholder="AuthKey"
-                    :value="rootServer.authkey"
+                    :value="rootServer.authkey_hint"
                     disabled
                 ></b-input>
             </div>
         </b-form>
 
-        <b-button
-            size="sm" variant="primary" :disabled="refreshInProgress"
-            class="mb-1"
-            @click="discoverServer"
-        >
-            <i :class="['fas fa-sync-alt', refreshInProgress ? 'fa-spin' : '']"></i>
-            Discover connected server
-        </b-button>
+        <div class="mb-1">
+            <b-button
+                size="sm" variant="primary" :disabled="refreshInProgress"
+                @click="discoverServer"
+            >
+                <i :class="['fas fa-search', refreshInProgress ? 'fa-spin' : '']"></i>
+                Discover connected servers
+            </b-button>
+            <b-button
+                v-if="discoveredServers.length > 0"
+                size="sm" variant="outline-primary" class="ml-1"
+                :disabled="testInProgress || !anyServerHasAuthkey"
+                v-b-tooltip.hover="'Test the servers for which an authkey has been entered'"
+                @click="testServers"
+            >
+                <i :class="['fas fa-plug', testInProgress ? 'fa-spin' : '']"></i>
+                Test authkeys
+            </b-button>
+        </div>
 
         <batchAddTableServer
+            ref="serverTable"
             :servers="discoveredServers"
             :busy="table.busy"
             :skip_ssl="false"
             :noRefreshButton="true"
             :selectedItems.sync="selectedServers"
+            @update:refreshInProgress="testInProgress = $event"
         ></batchAddTableServer>
 
         <template v-slot:modal-footer="{ ok, cancel }">
-            <b-button variant="primary" @click="ok()" :disabled="!haveSelectedServers || postInProgress">
+            <small v-if="haveSelectedServers && !allSelectedHaveAuthkey" class="text-muted mr-auto">
+                Enter a 40-character authkey for each selected server
+            </small>
+            <b-button variant="primary" @click="ok()" :disabled="!haveSelectedServers || !allSelectedHaveAuthkey || postInProgress">
                 <b-spinner 
                     small
                     v-if="postInProgress"
@@ -67,7 +83,7 @@
 </template>
 
 <script>
-import axios from "axios"
+import api from "@/api/servers"
 import batchAddTableServer from "@/views/servers/elements/batchAddTableServer.vue"
 
 export default {
@@ -98,6 +114,7 @@ export default {
                 ]
             },
             refreshInProgress: false,
+            testInProgress: false,
             postInProgress: false,
             discoveredServers: [],
             selectedServers: [],
@@ -106,7 +123,13 @@ export default {
     computed: {
         haveSelectedServers() {
             return this.selectedServers.length > 0
-        }
+        },
+        anyServerHasAuthkey() {
+            return this.discoveredServers.some(server => server.Server.authkey)
+        },
+        allSelectedHaveAuthkey() {
+            return this.selectedServers.every(server => /^[a-zA-Z0-9]{40}$/.test(server.Server.authkey || ""))
+        },
     },
     methods: {
         resetModal() {
@@ -121,6 +144,7 @@ export default {
             this.$store.dispatch("servers/add", payload)
                 .then(() => {
                     this.$emit("addition-success")
+                    this.$bvModal.hide("modal-discover-servers-result")
                 })
                 .catch(error => {
                     this.$bvToast.toast(error, {
@@ -129,24 +153,24 @@ export default {
                     })
                 })
                 .finally(() => {
-                    this.postInProgress = true
+                    this.postInProgress = false
                 })
         },
+        testServers() {
+            this.$refs.serverTable.refreshServers()
+        },
         discoverServer() {
-            const url = "http://10.250.138.14:5000/servers/discoverConnected"
             this.table.busy = true
             this.refreshInProgress = true
-            let server = {
-                url: this.rootServer.url,
-                authkey: this.rootServer.authkey,
-                skip_ssl: this.rootServer.skip_ssl
-            }
-            axios.post(url, server)
-                .then((response) => {
-                    this.discoveredServers = response.data
+            api.discoverConnected(this.rootServer.id)
+                .then((discoveredServers) => {
+                    discoveredServers.forEach(server => {
+                        this.$set(server.Server, "authkey", "")
+                    })
+                    this.discoveredServers = discoveredServers
                 })
                 .catch(error => {
-                    this.$bvToast.toast(error.response.statusText, {
+                    this.$bvToast.toast(error.response?.statusText || String(error), {
                         title: "Could not reach root server",
                         variant: "danger",
                     })

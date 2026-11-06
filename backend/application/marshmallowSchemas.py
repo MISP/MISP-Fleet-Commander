@@ -64,8 +64,19 @@ class FleetSchema(BaseSchema):
 def existOrNone(data):
     return
 
+def authkeyHint(authkey):
+    """Masked form of an authkey that is safe to show: only its last 4 characters"""
+    if not authkey:
+        return None
+    return f"••••{authkey[-4:]}"
+
+
 class ServerSchema(BaseSchema):
 
+    # The authkey never leaves the backend; clients only get a masked hint
+    authkey = fields.Str(load_only=True, allow_none=True)
+    authkey_hint = fields.Function(lambda server: authkeyHint(server.authkey), dump_only=True)
+    has_authkey = fields.Function(lambda server: bool(server.authkey), dump_only=True)
     fleet = mafields.Nested(lambda: FleetSchema(exclude=('servers', )), many=False)
     # server_info = mafields.Nested(lambda: ServerQuerySchema, many=False)
     server_info = fields.Nested(lambda: ServerQuerySchema, validate=existOrNone, load_default=None)

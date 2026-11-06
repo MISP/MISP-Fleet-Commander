@@ -71,6 +71,9 @@
             <template v-slot:cell(authkey)="row">
                 <b-form-input
                     v-model="row.item.Server.authkey"
+                    placeholder="Authkey"
+                    autocomplete="off"
+                    :state="row.item.Server.authkey ? /^[a-zA-Z0-9]{40}$/.test(row.item.Server.authkey) : null"
                 ></b-form-input>
             </template>
         </b-table>
@@ -78,7 +81,7 @@
 </template>
 
 <script>
-import axios from "axios"
+import api from "@/api/servers"
 import userPerms from "@/views/servers/elements/userPerms.vue"
 
 export default {
@@ -162,19 +165,32 @@ export default {
             }
         },
         refreshServers() {
+            // Only servers with an authkey are worth testing; keep the others' current status
+            const testedIndexes = []
+            this.localServers.forEach((server, index) => {
+                if (server.Server.authkey) {
+                    testedIndexes.push(index)
+                }
+            })
+            if (testedIndexes.length == 0) {
+                return
+            }
             this.refreshInProgress = true
-            const url = "http://127.0.0.1:5000/servers/batchTest"
-            let payload = this.createValidServerForm(this.localServers)
-            axios.post(url, payload)
-                .then((response) => {
-                    this.localServers.forEach((loServer, index) => {
-                        let reServer = response.data.find(reServer => {
-                            return loServer.Server.name == reServer.name && loServer.Server.url == reServer.url && loServer.Server.authkey == reServer.authkey
-                        })
-                        loServer.testResult = reServer.testResult
-                        loServer.userResult = reServer.userResult
-                        if (reServer.testResult.color == "success") {
-                            this.$refs.selectableTable.selectRow(index)
+            this.$emit("update:refreshInProgress", true)
+            let payload = this.createValidServerForm(testedIndexes.map(index => this.localServers[index]))
+            api.batchTest(payload)
+                .then((results) => {
+                    // Results carry the position of the tested server in the payload, never its authkey
+                    results.forEach(result => {
+                        const localIndex = testedIndexes[result.index]
+                        const loServer = this.localServers[localIndex]
+                        if (loServer === undefined) {
+                            return
+                        }
+                        this.$set(loServer, "testResult", result.testResult)
+                        this.$set(loServer, "userResult", result.userResult)
+                        if (result.testResult.color == "success") {
+                            this.$refs.selectableTable.selectRow(localIndex)
                         }
                     })
                 })
@@ -186,6 +202,7 @@ export default {
                 })
                 .finally(() => {
                     this.refreshInProgress = false
+                    this.$emit("update:refreshInProgress", false)
                 })
         },
         createValidServerForm(servers) {
@@ -205,11 +222,6 @@ export default {
         skip_ssl: function(newValue) {
             this.localServers.forEach(server => {
                 server.skip_ssl = newValue
-            })
-        },
-        authkey: function(newValue) {
-            this.localServers.forEach(server => {
-                server.authkey = newValue
             })
         },
         servers: function() {
