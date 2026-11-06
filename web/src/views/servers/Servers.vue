@@ -952,12 +952,11 @@ export default {
         getInstancePictures() {
             this.getIndex.forEach((server) => {
                 api.getInstancePicture(server.id, (picture) => {
-                    // this.instancePicturesB64[server.id] = b64Picture
-                    if (picture.startsWith('http')) {
-                        this.instancePicturesB64[server.id] = picture
-                    } else {
-                        this.instancePicturesB64[server.id] = `data:image/png;base64,${picture}`
+                    if (!picture) {
+                        return
                     }
+                    const src = picture.startsWith('http') ? picture : `data:image/png;base64,${picture}`
+                    this.$set(this.instancePicturesB64, server.id, src)
                 })
             })
         },
