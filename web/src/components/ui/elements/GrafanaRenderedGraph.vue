@@ -19,6 +19,8 @@
 </template>
 
 <script>
+import { baseurl } from "@/api/apiConfig"
+
 export default {
     name: "GrafanaRenderedGraph",
     props: {
@@ -69,7 +71,7 @@ export default {
         },
         getImageURL: function() {
             const now = new Date().getTime()
-            return `http://127.0.0.1:5001/servers/monitoringImage/${this.server.id}/${this.panelId}/${this.getFromDate}?ts=${now}`
+            return `${baseurl}/servers/monitoringImage/${this.server.id}/${this.panelId}/${this.getFromDate}?ts=${now}`
         },
         isImageLoaded: function() {
             return !this.loadingRequested && this.isLoaded

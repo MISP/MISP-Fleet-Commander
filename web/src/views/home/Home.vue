@@ -62,7 +62,7 @@
 import Layout from "@/components/layout/Layout.vue"
 import Fleet from "@/views/fleets/index.vue"
 import PluginIndex from "@/views/plugins/PluginIndex.vue"
-import { baseurl } from "@/api/apiConfig"
+import { absoluteBaseurl } from "@/api/apiConfig"
 
 export default {
     name: "TheHome",
@@ -76,7 +76,7 @@ export default {
         const token = this.$store.getters["auth/access_token"];
         const location = window.location.origin
         return {
-            bookmarkJS: `javascript: (function () {if (window.bookmarkletMFC !== undefined) {bookmarkletMFC();} else {localStorage.setItem("MFM_token", "${token}");localStorage.setItem("MFM_token_type", "${token_type}");localStorage.setItem("MFM_baseurl", "${location}");document.body.appendChild(document.createElement("script")).src = "${baseurl}/static/bookmarklet.js?r=" + Math.floor(Math.random() * 999999999)}})()`,
+            bookmarkJS: `javascript: (function () {if (window.bookmarkletMFC !== undefined) {bookmarkletMFC();} else {localStorage.setItem("MFM_token", "${token}");localStorage.setItem("MFM_token_type", "${token_type}");localStorage.setItem("MFM_baseurl", "${location}");document.body.appendChild(document.createElement("script")).src = "${absoluteBaseurl}/static/bookmarklet.js?r=" + Math.floor(Math.random() * 999999999)}})()`,
         }
     }
 }
