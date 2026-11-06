@@ -39,6 +39,15 @@
                 </b-form-group>
 
                 <b-form-group
+                    label="Role"
+                    :description="isSelf ? 'You cannot change your own role' : 'Administrators manage users and instance settings'"
+                >
+                    <b-form-checkbox v-model="form.is_admin" switch :disabled="isSelf">
+                        Administrator
+                    </b-form-checkbox>
+                </b-form-group>
+
+                <b-form-group
                     label="User Settings"
                     label-for="input-user-setting"
                 >
@@ -116,6 +125,10 @@ export default {
         actionType() {
             return this.modalAction == "Add" ? "add" : "edit"
         },
+        isSelf() {
+            const currentUser = this.$store.getters["auth/user"]
+            return this.isEdit && currentUser !== null && this.form.id === currentUser.id
+        },
         userSettings: {
             get: function() {
                 return this.form.user_settings !== null && typeof this.form.user_settings === 'object' ? JSON.stringify(this.form.user_settings) : this.form.user_settings
@@ -144,6 +157,7 @@ export default {
             this.form.email = ""
             this.form.password = ""
             this.form.user_settings = ""
+            this.form.is_admin = false
             this.$emit("update:modalAction", "Add")
         },
         handleSubmission(evt) {

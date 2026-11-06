@@ -47,10 +47,10 @@ def db(app):
 def make_user(db):
     from application.DBModels import User
 
-    def _make_user(email):
+    def _make_user(email, is_admin=False):
         user = User.query.filter_by(email=email).first()
         if user is None:
-            user = User(email=email, password="Password1234")
+            user = User(email=email, password="Password1234", is_admin=is_admin)
             db.session.add(user)
             db.session.commit()
         return user

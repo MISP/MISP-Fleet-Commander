@@ -57,6 +57,18 @@ def token_required(f):
 
     return _verify
 
+def admin_required(f):
+    """Like token_required, and the user must be an administrator"""
+    @wraps(f)
+    @token_required
+    def _verify(user, *args, **kwargs):
+        if not user.is_admin:
+            return jsonify({'message': 'Administrator role required', 'authenticated': True}), 403
+        return f(user, *args, **kwargs)
+
+    return _verify
+
+
 def get_current_user(token, app):
     email = get_email_from_token(token, app)
     user = userModel.getByEmail(email)
@@ -132,7 +144,7 @@ def settingGet(user, setting_name):
 
 
 @BPinstance.route("/instance/settings/edit/<setting_name>", methods=["POST"])
-@token_required
+@admin_required
 def settingEdit(user, setting_name):
     setting_value = request.json.get("value")
     return jsonify(settingModel.set(setting_name, setting_value))

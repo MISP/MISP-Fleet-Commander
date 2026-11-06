@@ -157,6 +157,7 @@ let router =  new Router({
             component: () => import("./views/users/Users.vue"),
             meta: {
                 requiresFleet: false,
+                requiresAdmin: true,
                 breadcrumbs: {
                     text: "Commanders",
                     to: { name: "users" },
@@ -174,6 +175,11 @@ router.beforeEach((to, from, next) => {
     const authRequired = !publicRoutes.includes(to.path);
     if (authRequired && !store.getters["auth/isAuthenticated"]) {
         next({ name: 'login', query: { redirect: to.fullPath } })
+        return
+    }
+    if (to.matched.some(record => record.meta.requiresAdmin) && !store.getters["auth/isAdmin"]) {
+        next({ name: 'home' })
+        return
     }
 
     if (to.matched.some(record => record.meta.requiresFleet)) {

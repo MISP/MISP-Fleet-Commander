@@ -3,7 +3,7 @@
         <ul class="sidebar-list">
             <li 
                 class="sidebar-item"
-                v-for="item in items"
+                v-for="item in visibleItems"
                 v-bind:key="item.name"
             >
                 <router-link
@@ -58,6 +58,7 @@ export default {
                     name: "Commanders",
                     to: { name: "users" },
                     scope: "users",
+                    adminOnly: true,
                 }
             ]
         }
@@ -66,8 +67,12 @@ export default {
     },
     computed: {
         ...mapGetters({
-            selectedFleet: "fleets/selectedFleet"
+            selectedFleet: "fleets/selectedFleet",
+            isAdmin: "auth/isAdmin",
         }),
+        visibleItems() {
+            return this.items.filter(item => !item.adminOnly || this.isAdmin)
+        },
     },
     methods: {
         canBeAccessed(item) {

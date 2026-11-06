@@ -10,7 +10,7 @@ import application.models.userSettings as userSettingsModel
 
 from application.models.auth import create_API_key
 
-editFields = ['email', 'password']
+editFields = ['email', 'password', 'is_admin']
 
 def index() -> List[User]:
     q = User.query
@@ -26,13 +26,14 @@ def getByEmail(email: str) -> Union[User, None]:
     return User.query.filter_by(email=email).first()
 
 
-def add(user: dict) -> User:
-    user = User(email=user['email'],
-                password=user['password'])
+def add(userData: dict) -> User:
+    user = User(email=userData['email'],
+                password=userData['password'],
+                is_admin=bool(userData.get('is_admin', False)))
     db.session.add(user)
     db.session.commit()
-    if 'user_settings' in user and len(user['user_settings']) > 0:
-        userSettingsModel.add(user.id, user['user_settings'])
+    if len(userData.get('user_settings') or []) > 0:
+        userSettingsModel.add(user.id, userData['user_settings'])
     return user
 
 

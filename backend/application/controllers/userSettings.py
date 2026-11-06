@@ -10,39 +10,38 @@ import application.models.userSettings as userSettingsModel
 BPuserSetting = Blueprint('userSettings', __name__)
 
 
+def ownedSetting(loggedUser, id):
+    """A setting of the logged user. Administrators can reach the settings of every user"""
+    userSetting = userSettingsModel.get(id)
+    if userSetting is None or (userSetting.user_id != loggedUser.id and not loggedUser.is_admin):
+        abort(404)
+    return userSetting
+
+
+def targetUserId(loggedUser, user_id):
+    """Users manage their own settings; administrators manage the settings of every user"""
+    if user_id != loggedUser.id and not loggedUser.is_admin:
+        abort(403, description='Administrator role required')
+    return user_id
+
+
 @BPuserSetting.route('/user-settings/view/<int:id>', methods=['GET'])
 @token_required
 def view(loggedUser, id):
-    userSetting = userSettingsModel.get(id)
-    return userSettingSchema.dump(userSetting)
+    return userSettingSchema.dump(ownedSetting(loggedUser, id))
 
 
 @BPuserSetting.route('/user-settings/get-for-user/<int:user_id>/<string:setting_name>', methods=['GET'])
 @token_required
 def getForUser(loggedUser, user_id, setting_name):
-    if user_id == 'me':
-        user_id = loggedUser.id
-    else:
-        try:
-            user_id = int(user_id)
-        except ValueError:
-            abort(400)
-            
-    userSetting = userSettingsModel.getForUser(user_id, setting_name)
+    userSetting = userSettingsModel.getForUser(targetUserId(loggedUser, user_id), setting_name)
     return userSettingSchema.dump(userSetting)
 
 
 @BPuserSetting.route('/user-settings/edit-for-user/<int:user_id>', methods=['POST', 'PUT'])
 @token_required
 def editForUser(loggedUser, user_id):
-    if user_id == 'me':
-        user_id = loggedUser.id
-    else:
-        try:
-            user_id = int(user_id)
-        except ValueError:
-            abort(400)
-
+    user_id = targetUserId(loggedUser, user_id)
     if request.json is not None:
         userSetting = userSettingsModel.editForUser(user_id, request.json)
         return userSettingSchema.dump(userSetting)
@@ -52,14 +51,16 @@ def editForUser(loggedUser, user_id):
 @BPuserSetting.route('/user-settings/index', methods=['GET'])
 @token_required
 def index(loggedUser):
-    users = userSettingsModel.index()
-    return userSettingsSchema.dump(users)
+    """Settings of the logged user"""
+    userSettings = userSettingsModel.indexForUser(loggedUser.id)
+    return userSettingsSchema.dump(userSettings)
 
 
 @BPuserSetting.route('/user-settings/add', methods=['POST', 'PUT'])
 @token_required
 def add(loggedUser):
-    newUserSettings = userSettingsModel.add(request.json)
+    """Add a setting for the logged user"""
+    newUserSettings = userSettingsModel.add(loggedUser.id, request.json)
     if newUserSettings is not None:
         return userSettingSchema.dump(newUserSettings)
     else:
@@ -69,7 +70,9 @@ def add(loggedUser):
 @BPuserSetting.route('/user-settings/edit', methods=['POST'])
 @token_required
 def edit(loggedUser):
-    updatedUserSettings = userSettingsModel.edit(request.json)
+    """Edit a setting by its ID: `{"id": ..., "value": ...}`"""
+    userSetting = ownedSetting(loggedUser, (request.json or {}).get('id'))
+    updatedUserSettings = userSettingsModel.edit(userSetting.id, request.json)
     if updatedUserSettings is not None:
         return userSettingSchema.dump(updatedUserSettings)
     else:
@@ -79,8 +82,8 @@ def edit(loggedUser):
 @BPuserSetting.route('/user-settings/delete/<int:id>', methods=['DELETE', 'POST'])
 @token_required
 def delete(loggedUser, id):
-    """Delete a user"""
-    userSettingToDelete = userSettingsModel.delete(id)
+    """Delete a user setting"""
+    userSettingToDelete = userSettingsModel.delete(ownedSetting(loggedUser, id).id)
     if userSettingToDelete:
         return jsonify([id])
     else:

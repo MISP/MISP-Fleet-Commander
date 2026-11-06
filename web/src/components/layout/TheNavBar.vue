@@ -71,7 +71,7 @@
                     </b-nav-item-dropdown>
                 </template>
 
-                <div class="d-flex align-items-center justify-content-center">
+                <div v-if="isAdmin" class="d-flex align-items-center justify-content-center">
                     <b-button title="Settings" variant="outline-secondary" class="ml-1" size="sm" v-b-modal.modal-settings>
                         <i class="fa fa-cogs"></i>
                     </b-button>
@@ -125,7 +125,8 @@ export default {
         }),
         ...mapGetters({
             wsConnected: "websocket/wsConnected",
-            user: "auth/user"
+            user: "auth/user",
+            isAdmin: "auth/isAdmin",
         }),
         fleetText() {
             return this.getSelectedFleet !== null ? this.getSelectedFleet.name : ""

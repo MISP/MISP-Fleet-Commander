@@ -23,6 +23,10 @@ class UserSchema(BaseSchema):
 
     hashed_password = fields.Str(load_only=True)
     password = fields.Str(load_only=True)
+    # API keys are only shown once, in the response that generates them
+    apikey = fields.Str(load_only=True)
+    has_apikey = fields.Function(lambda user: bool(user.apikey), dump_only=True)
+    is_admin = fields.Boolean(dump_only=True)
     # user_settings = mafields.Nested(lambda: UserSettingSchema(), many=True, dump_only=True)
     user_settings = mafields.Nested(lambda: UserSettingSchema(), many=True, dump_only=True)
 

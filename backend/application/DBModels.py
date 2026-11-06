@@ -21,7 +21,7 @@ def generate_uuid():
 
 def init_defaults():
     if User.query.first() is None:
-        user = User(email='admin@admin.test', password='Password1234')
+        user = User(email='admin@admin.test', password='Password1234', is_admin=True)
         db.session.add(user)
         db.session.commit()
 
@@ -54,6 +54,10 @@ class User(BaseModel):
                       unique=False,
                       nullable=True,
                       default= create_API_key)
+    is_admin = db.Column(db.Boolean,
+                         nullable=False,
+                         default=False,
+                         server_default='0')
 
     user_settings = db.relationship("UserSettings", uselist=True, back_populates="user", cascade="all, delete-orphan")
 

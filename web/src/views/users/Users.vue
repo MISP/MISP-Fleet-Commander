@@ -77,11 +77,21 @@
                 </div>
             </template>
 
-            <template v-slot:cell(apikey)="row">
-                <span
-                    @click="(e) => e.target.classList.toggle('blurred')"
-                    class="blurred"
-                >{{ row.value }}</span>
+            <template v-slot:cell(email)="row">
+                {{ row.value }}
+                <b-badge v-if="row.item.id === currentUser.id" variant="info" class="ml-1">you</b-badge>
+            </template>
+
+            <template v-slot:cell(is_admin)="row">
+                <b-badge v-if="row.value" variant="warning">Admin</b-badge>
+                <span v-else class="text-muted">User</span>
+            </template>
+
+            <template v-slot:cell(has_apikey)="row">
+                <span v-if="row.value" class="text-nowrap" title="API keys are only shown when generated">
+                    <i class="fas fa-key text-success"></i> Set
+                </span>
+                <span v-else class="text-muted">None</span>
             </template>
 
             <template v-slot:cell(action)="row">
@@ -95,12 +105,14 @@
                         </b-button>
                         <b-button
                             variant="danger"
+                            :disabled="row.item.id === currentUser.id"
+                            :title="row.item.id === currentUser.id ? 'You cannot delete your own account' : 'Delete user'"
                             @click="openDeleteModal(row.item.id)"
                         >
                             <i class="fas fa-trash"></i>
                         </b-button>
                         <b-button
-                            title="Resfresh API Key"
+                            title="Generate a new API key"
                             variant="primary"
                             @click="openAPIKeyModal(row.item.id)"
                         >
@@ -124,7 +136,7 @@
        ></DeleteModal>
         <APIKeyModal
             :userIDToGenAPIKey="userIDToGenAPIKey"
-            @deletion-success="handleDelete"
+            @addition-success="handleAdd"
        ></APIKeyModal>
         <UserSettingSaveModal
             :selectedUser="selectedUser"
@@ -183,7 +195,13 @@ export default {
                         sortable: true,
                     },
                     {
-                        key: "apikey",
+                        key: "is_admin",
+                        label: "Role",
+                        sortable: true,
+                    },
+                    {
+                        key: "has_apikey",
+                        label: "API key",
                         sortable: false,
                     },
                     {
@@ -207,6 +225,7 @@ export default {
         ...mapGetters({
             userCount: "users/userCount",
             userList: "users/getUserList",
+            currentUser: "auth/user",
         }),
         validUserToEdit() {
             return this.userToEdit.formData

@@ -65,6 +65,9 @@ def get(user, server_id):
 @BPserver.route('/servers/add/<int:fleet_id>', methods=['POST'])
 @token_required
 def add(user, fleet_id):
+    import application.models.fleets as fleetModel
+    if fleetModel.getForUser(user, fleet_id) is None:
+        abort(404, 'Unknown fleet')
     servers = []
     # TODO: If password provided, fetch the associated API key
     if isinstance(request.json, list):

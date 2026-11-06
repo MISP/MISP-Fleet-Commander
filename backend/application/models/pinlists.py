@@ -58,8 +58,8 @@ def delete(entry: PinList):
     avatarGenerator = AvatarGenerator(entry.uuid)
     avatarGenerator.delete()
 
-def deleteFromServer(server_id: int, entry: PinList):
-    server = serverModel.get(server_id)
+def deleteFromServer(user, server_id: int, entry: PinList):
+    server = serverModel.getForUser(user, server_id)
     url = __genDeleteURLFromModel(entry)
     if server and url is not None:
         deletion = mispPostRequest(server, url)
@@ -67,8 +67,8 @@ def deleteFromServer(server_id: int, entry: PinList):
         return deletion
     return []
 
-def deleteFromServers(fleet_id: int, entry: PinList):
-    servers = serverModel.index(fleet_id)
+def deleteFromServers(user, fleet_id: int, entry: PinList):
+    servers = serverModel.indexForUser(user, fleet_id)
     allRequests = []
     url = __genDeleteURLFromModel(entry)
     if servers and url is not None:
@@ -83,8 +83,8 @@ def deleteFromServers(fleet_id: int, entry: PinList):
         return allDeletion
     return []
 
-def refreshAllServers(fleet_id: int, entry: PinList):
-    servers = serverModel.index(fleet_id)
+def refreshAllServers(user, fleet_id: int, entry: PinList):
+    servers = serverModel.indexForUser(user, fleet_id)
     allRequests = []
     url = __genViewURLFromModel(entry)
     if servers and url is not None:
@@ -99,8 +99,8 @@ def refreshAllServers(fleet_id: int, entry: PinList):
         allRefresh = batchRequest(allRequests)
         __handleRefreshResults(allRefresh)
 
-def refreshServerEntry(server_id: int, entry: PinList):
-    server = serverModel.get(server_id)
+def refreshServerEntry(user, server_id: int, entry: PinList):
+    server = serverModel.getForUser(user, server_id)
     url = __genViewURLFromModel(entry)
     if server:
         refreshResult = mispGetRequest(server, url)
@@ -108,8 +108,8 @@ def refreshServerEntry(server_id: int, entry: PinList):
         refreshResult['_passAlong']['server_id'] = server.id
         __handleRefreshResults([refreshResult])
 
-def publishEventOnServer(server_id: int, entry: PinList):
-    server = serverModel.get(server_id)
+def publishEventOnServer(user, server_id: int, entry: PinList):
+    server = serverModel.getForUser(user, server_id)
     url = __genActionURLFromModel(entry, 'publish')
     if server is not None:
         result = mispPostRequest(server, url)

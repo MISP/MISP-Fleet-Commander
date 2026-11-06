@@ -18,6 +18,8 @@ const getters = {
         return !!state.access_token && !!state.decoded_access_token && state.decoded_access_token.exp > Date.now() / 1000;
     },
     user: state => state.decoded_access_token?.data?.user || null,
+    // UI hint only: the backend enforces the role on every admin route
+    isAdmin: (state, getters) => getters.user?.is_admin === true,
     access_token: (state, getter) => getter.isAuthenticated ? state.access_token : null, 
     access_token_type: (state, getter) => getter.isAuthenticated ? state.access_token_type : null,
     get_user_settings: (state, getter) => state.decoded_access_token?.data?.user?.user_settings || [],
