@@ -16,6 +16,7 @@ from application.marshmallowSchemas import serverSchemaLighter
 import application.models.servers as serverModel
 import application.models.fleets as fleetModel
 import application.models.setting as settingModel
+import application.models.jobs as jobModel
 from application import redisModel
 
 from application import MONITORING_SYSTEM_AVAILABLE, MONITORING_SYSTEM as monitor
@@ -296,6 +297,14 @@ def backgroundFullRefresh():
         "udpate_server_usage": socketioEmitter.udpate_server_usage,
     }
     serverModel.refreshServersInBackground(servers, clientSocketEmitterUpdateFuns, config["max_concurrency"])
+
+
+@huey_app.periodic_task(crontab(hour="3", minute="17"))
+@skipIfRunning("job-purge-lock")
+def purgeOldJobs():
+    """Jobs are kept for the configured number of days, then deleted with their results"""
+    retention_days = int(settingModel.getRefreshValue("job_retention_days"))
+    return jobModel.purge(retention_days)
 
 
 @huey_app.periodic_task(crontab(hour="*/12"))

@@ -239,6 +239,8 @@ def forgetDeletedServer(mapper, connection, server):
     except Exception as e:  # Redis being down must not prevent deleting the server
         print(f'Could not clear the cached data of server {server.uuid}: {e}')
     connection.execute(HealthAck.__table__.delete().where(HealthAck.__table__.c.server_id == server.id))
+    connection.execute(JobResult.__table__.update().where(JobResult.__table__.c.server_id == server.id)
+                       .values(server_id=None))
     from application.models.health import publishServerRemoved
     publishServerRemoved(server)
 
@@ -378,3 +380,124 @@ class HealthAck(BaseModel):
                      default='')
     created = db.Column(db.Integer,
                         nullable=False)
+
+
+JOB_KINDS = ('plugin_action', 'plugin_quick_action', 'rest_query', 'baseline_remediation', 'server_management',
+             'edit_connection')
+JOB_STATUSES = ('queued', 'running', 'done', 'partial', 'failed', 'cancelled')
+JOB_RESULT_STATUSES = ('ok', 'error', 'skipped', 'cancelled')
+
+
+class Job(BaseModel):
+    """A write sent to one or more servers, with one JobResult per server. Jobs are the audit log, so they outlive
+    the user, fleet and servers they mention: those references are set to NULL on deletion (SQLite may reuse a
+    deleted row's ID, which would hand the history to someone else), while the names copied at creation remain"""
+    __tablename__ = 'jobs'
+
+    id = db.Column(db.CHAR(36),
+                   primary_key=True,
+                   default=generate_uuid)
+    user_id = db.Column(db.Integer,
+                        db.ForeignKey('users.id', ondelete='SET NULL'),
+                        nullable=True,
+                        index=True)
+    user_email = db.Column(db.String(80),
+                           nullable=False,
+                           default='')
+    fleet_id = db.Column(db.Integer,
+                         db.ForeignKey('fleets.id', ondelete='SET NULL'),
+                         nullable=True,
+                         index=True)
+    fleet_name = db.Column(db.String(120),
+                           nullable=False,
+                           default='')
+    kind = db.Column(db.String(32),
+                     nullable=False,
+                     index=True)
+    title = db.Column(db.String(255),
+                      nullable=False,
+                      default='')
+    # Redacted before being stored: see application.models.jobs.redact
+    params = db.Column(db.JSON,
+                       nullable=False,
+                       default=dict)
+    status = db.Column(db.String(16),
+                       nullable=False,
+                       default='queued',
+                       index=True)
+    total = db.Column(db.Integer,
+                      nullable=False,
+                      default=0)
+    succeeded = db.Column(db.Integer,
+                          nullable=False,
+                          default=0)
+    failed = db.Column(db.Integer,
+                       nullable=False,
+                       default=0)
+    # UNIX times, with sub-second precision for durations
+    created = db.Column(db.Float,
+                        nullable=False,
+                        index=True)
+    started = db.Column(db.Float,
+                        nullable=True)
+    finished = db.Column(db.Float,
+                         nullable=True)
+
+    results = db.relationship('JobResult', back_populates='job', cascade='all, delete-orphan',
+                              order_by='JobResult.id')
+
+
+class JobResult(BaseModel):
+    """The outcome of a job on one server"""
+    __tablename__ = 'job_results'
+
+    id = db.Column(db.Integer,
+                   primary_key=True)
+    job_id = db.Column(db.CHAR(36),
+                       db.ForeignKey('jobs.id', ondelete='CASCADE'),
+                       nullable=False,
+                       index=True)
+    server_id = db.Column(db.Integer,
+                          db.ForeignKey('servers.id', ondelete='SET NULL'),
+                          nullable=True,
+                          index=True)
+    server_name = db.Column(db.String(120),
+                            nullable=False,
+                            default='')
+    server_url = db.Column(db.String(256),
+                           nullable=False,
+                           default='')
+    status = db.Column(db.String(16),
+                       nullable=False)
+    http_status = db.Column(db.Integer,
+                            nullable=True)
+    summary = db.Column(db.String(1024),
+                        nullable=False,
+                        default='')
+    # Redacted, and cut to a preview string when its JSON is too large (`response_truncated`)
+    response = db.Column(db.JSON,
+                         nullable=True)
+    response_truncated = db.Column(db.Boolean,
+                                   nullable=False,
+                                   default=False,
+                                   server_default='0')
+    # The value replaced by the job when it is known, e.g. a setting's previous value (redacted too)
+    before = db.Column(db.JSON,
+                       nullable=True)
+    started = db.Column(db.Float,
+                        nullable=True)
+    finished = db.Column(db.Float,
+                         nullable=True)
+
+    job = db.relationship('Job', back_populates='results')
+
+
+# SQLite does not enforce foreign keys here, so the ON DELETE clauses above are applied by these listeners
+@event.listens_for(User, 'after_delete')
+def detachDeletedUserJobs(mapper, connection, user):
+    connection.execute(Job.__table__.update().where(Job.__table__.c.user_id == user.id).values(user_id=None))
+
+
+@event.listens_for(Fleet, 'after_delete')
+def detachDeletedFleetJobs(mapper, connection, fleet):
+    connection.execute(Job.__table__.update().where(Job.__table__.c.fleet_id == fleet.id).values(fleet_id=None))

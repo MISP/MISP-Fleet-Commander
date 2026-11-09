@@ -107,6 +107,18 @@ setting_configuration = {
         "disabled": False,
         "error": False,
     },
+    "job_retention_days": {
+        "name": "Job Retention",
+        "description": "How long (days) jobs and their per-server results are kept. They form the record of the changes made to the servers; older ones are deleted once a day.",
+        "panel": "Jobs",
+        "scope": "History",
+        "type": "number",
+        "default": 90,
+        "min": 1,
+        "max": 3650,
+        "disabled": False,
+        "error": False,
+    },
 }
 
 
