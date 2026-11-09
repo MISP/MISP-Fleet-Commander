@@ -219,7 +219,7 @@ export default {
 
             node = nodeGroup
                 .selectAll("foreignObject")
-                .data(newData.nodes)
+                .data(newData.nodes, d => d.id) // by id: raising a node reorders the elements
             const nodeEnter = node.enter()
                 .append("foreignObject")
                 .attr("id", d => `node-${d.id}`)
@@ -228,6 +228,8 @@ export default {
                 .classed("nodeFO", true)
                 .on("click", function(event, node) {
                     event.stopPropagation()
+                    // Drawn above the others, so that a card opened on a long tab is not covered by its neighbours
+                    d3.select(this).raise()
                     eventHandlers.nodeClick(node)
                 })
                 .call(drag(simulation))
@@ -371,6 +373,7 @@ export default {
                 .scale(scale)
             const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
             svg.transition().duration(reduceMotion ? 0 : 600).call(zoom.transform, transform)
+            d3.select(nodeElement).raise()
             nodeElement.classList.remove('node-located')
             void nodeElement.getBBox() // Restarts the animation when the same node is located twice
             nodeElement.classList.add('node-located')
