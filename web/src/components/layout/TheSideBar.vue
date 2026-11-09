@@ -205,10 +205,11 @@ export default {
     position: relative;
 }
 
+/* Stays inside the 50px collapsed sidebar, hover shift and outline included */
 .attention-badge {
     position: absolute;
     top: -6px;
-    right: -9px;
+    right: -2px;
     min-width: 18px;
     height: 18px;
     padding: 0 4px;
