@@ -540,24 +540,53 @@ def parseMISPUserConnectionOutput(userConnection):
         parsed['role_color'] = "success"
     return parsed
 
+# `status` codes of MISP's /servers/testConnection other than 1 (OK)
+CONNECTION_TEST_STATUSES = {
+    2: ("danger", "Server unreachable"),
+    3: ("danger", "Unexpected error"),
+    4: ("danger", "Authentication failed"),
+    5: ("danger", "Password change required"),
+    6: ("danger", "Terms not accepted"),
+    7: ("warning", "Remote user is not a sync user"),
+    8: ("warning", "Syncing sightings only"),
+}
+
+
+def connectionTestError(connection):
+    """Why asking MISP to test a connection gave no test result (request error, HTTP error answer), or None"""
+    if 'error' in connection:
+        return str(connection['error'])
+    statusCode = connection.get('_status_code')
+    if isinstance(statusCode, int) and statusCode >= 400:
+        return str(connection.get('message') or connection.get('name') or f"HTTP {statusCode}")
+    return None
+
+
 def parseMISPConnectionOutput(connection):
+    """Turn MISP's /servers/testConnection answer into what the UI shows. `status.code`, `compatibility.mismatch`/
+    `newer` and `post.code` keep MISP's raw values for the link health classification; `timestamp` is when the test
+    ran; `test_error` is set when the request to the local MISP failed, i.e. the link itself was not tested"""
+    statusCode = connection.get('status', None)
     parsed = {
-        'status': { 'message': "", 'color': "danger", "authorized": False},
+        'status': { 'message': "", 'color': "danger", "authorized": False,
+                    'code': statusCode if isinstance(statusCode, int) else None},
         'compatibility': {'message': "", 'color': ""},
         'post': { 'result': "", 'color': "danger", 'success': False },
         'localVersion': "",
         'remoteVersion': "",
         'uuid': "?",
+        'timestamp': connection.get('timestamp'),
     }
-    if connection.get('status', None) == 1:
+    if statusCode == 1:
         parsed['status']['color'] = "success"
         parsed['status']['message'] = "OK"
         parsed["status"]["authorized"] = True
         parsed['compatibility']['color'] = "success"
         parsed['compatibility']['message'] = "Compatible"
+        parsed['compatibility']['mismatch'] = connection.get('mismatch')
+        parsed['compatibility']['newer'] = connection.get('newer')
         parsed['localVersion'] = connection['local_version']
         parsed['remoteVersion'] = connection['version']
-        parsed["authorized"] = True
         if 'uuid' in connection:
             parsed['uuid'] = connection['uuid']
         if connection['mismatch'] == "hotfix":
@@ -588,6 +617,7 @@ def parseMISPConnectionOutput(connection):
 
         if connection['post'] != False:
             parsed['post']['color'] = "danger"
+            parsed['post']['code'] = connection['post']
             if connection['post'] == 1:
                 parsed['post']['result'] = "Received sent package"
                 parsed['post']['color'] = "success"
@@ -607,33 +637,15 @@ def parseMISPConnectionOutput(connection):
             else:
                 parsed['post']['result'] = "Remote too old for this test"
 
-    elif connection.get('status', None) == 2:
-        parsed['status']['color'] = "danger"
-        parsed['status']['message'] = "Server unreachable"
-    elif connection.get('status', None) == 3:
-        parsed['status']['color'] = "danger"
-        parsed['status']['message'] = "Unexpected error"
-    elif connection.get('status', None) == 4:
-        parsed['status']['color'] = "danger"
-        parsed['status']['message'] = "Authentication failed"
-    elif connection.get('status', None) == 5:
-        parsed['status']['color'] = "danger"
-        parsed['status']['message'] = "Password change required"
-    elif connection.get('status', None) == 6:
-        parsed['status']['color'] = "danger"
-        parsed['status']['message'] = "Terms not accepted"
-    elif connection.get('status', None) == 7:
-        parsed['status']['color'] = "warning"
-        parsed["status"]["message"] = "Remote user is not a sync user"
-        parsed["status"]["authorized"] = True
-    elif connection.get('status', None) == 8:
-        parsed['status']['color'] = "warning"
-        parsed['status']['message'] = "Syncing sightings only"
-        parsed["status"]["authorized"] = True
+    elif statusCode in CONNECTION_TEST_STATUSES:
+        parsed['status']['color'], parsed['status']['message'] = CONNECTION_TEST_STATUSES[statusCode]
+        parsed['status']['authorized'] = statusCode in (7, 8)
     else:
         parsed['status']['color'] = "danger"
-        if 'error' in connection:
-            parsed['status']['message'] = connection['error']
+        testError = connectionTestError(connection)
+        if testError is not None:
+            parsed['status']['message'] = testError
+            parsed['test_error'] = testError
         else:
             parsed['status']['message'] = "Unkown response status"
     return parsed

@@ -8,6 +8,7 @@ Actions tell the UI what to offer next to an issue:
 """
 
 from application.health.engine import Finding, rule, section_error
+from application.health.links import classify_link, latest_release_for
 from application.health.versions import format_version, how_far_behind, parse_version
 
 SLOW_LATENCY_SECONDS = 2
@@ -31,6 +32,13 @@ MODULE_STATUS = {
     0: "OK",
     1: "System not enabled",
     2: "No modules found",
+}
+
+# Sync link level → issue severity and title prefix
+SYNC_LINK_ISSUES = {
+    "broken": ("critical", "Broken sync link to"),
+    "degraded": ("warning", "Degraded sync link to"),
+    "unknown": ("info", "Untested sync link to"),
 }
 
 TEST_CONNECTION = {"kind": "test_connection"}
@@ -136,8 +144,7 @@ def outdated(state, ctx):
     snapshotVersion = state.server_settings.get("version")
     snapshotVersion = snapshotVersion if isinstance(snapshotVersion, dict) else {}
     currentText = (state.status or {}).get("version") or snapshotVersion.get("current")
-    # GitHub's latest release, or the one MISP itself reports when GitHub cannot be reached from here
-    latestText = ctx.latest_release or snapshotVersion.get("newest")
+    latestText = latest_release_for(state.snapshot, ctx.latest_release)
     current, latest = parse_version(currentText), parse_version(latestText)
     behind = how_far_behind(current, latest)
     if behind is None:
@@ -265,25 +272,29 @@ def modules(state, ctx):
 
 @rule("sync_link", "sync")
 def syncLink(state, ctx):
-    """Basic version: the colour of each sync connection's test, as in the connection summary"""
+    """One issue per sync link that is not `ok` (see `health/links.py`). A link that is configured but not used is
+    reported as info only, whatever its test says: nothing depends on it"""
     links = state.section("connectedServers")
     if not isinstance(links, list):
         return
+    latest = latest_release_for(state.snapshot, ctx.latest_release)
     for link in links:
         if not isinstance(link, dict) or not isinstance(link.get("Server"), dict):
             continue
-        status = (link.get("connectionTest") or {}).get("status")
-        if not isinstance(status, dict):
-            continue  # Not tested yet
-        color = status.get("color")
-        if color not in ("warning", "danger"):
+        health = classify_link(link, latest)
+        if health["level"] == "ok" and not health["disabled"]:
             continue
         remote = link["Server"]
         name = remote.get("name") or remote.get("url") or f"#{remote.get('id')}"
-        yield Finding("critical" if color == "danger" else "warning", f"Sync link to {name}",
-                      status.get("message") or "", subject=remote.get("id"),
+        if health["disabled"]:
+            severity, title = "info", f"Unused sync link to {name}"
+            detail = "; ".join(["Push, pull and caching are all off"] + [r["message"] for r in health["reasons"]])
+        else:
+            severity, title = SYNC_LINK_ISSUES[health["level"]]
+            title, detail = f"{title} {name}", "; ".join(r["message"] for r in health["reasons"])
+        yield Finding(severity, title, detail, subject=remote.get("id"),
                       evidence={"remote_id": remote.get("id"), "remote_name": remote.get("name"),
-                                "remote_url": remote.get("url"), "message": status.get("message")},
+                                "remote_url": remote.get("url"), **health},
                       action=openTab("connections"))
 
 

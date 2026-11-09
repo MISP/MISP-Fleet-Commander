@@ -19,6 +19,8 @@ from application.marshmallowSchemas import ServerSchema, serverQuerySchema, serv
 import application.models.servers as serverModel
 from application.models.servers import MONITORING_PANELS, MONITORING_PANEL_BY_ID
 from application.controllers.instance import token_required
+from application.health.links import classify_link, latest_release_for
+import application.health.versions as healthVersions
 from application.models.utils import MonitoringImages
 
 DEFAULT_PULL_RULE = {
@@ -492,17 +494,19 @@ def parseReachabilityProbe(probe):
 
 def buildNetwork(servers):
     network = []
+    latest = healthVersions.latest_release()
     for server in servers:
         if server.server_info is not None:
             destinations = server.server_info['query_result']['connectedServers']
             link = {}
             if isinstance(destinations, list):
                 for connectedServer in destinations:
-                    link = updateConnectionForNetwork(server, connectedServer)
+                    link = updateConnectionForNetwork(server, connectedServer, latest)
                     network.append(link)
     return network
 
-def updateConnectionForNetwork(server, connectedServer):
+def updateConnectionForNetwork(server, connectedServer, latest=None):
+    '''A sync link as the UI shows it. `latest` is GitHub's latest MISP release, looked up (cached) when not given'''
     link = {
         'source': ServerSchema(exclude=('server_info', )).dump(server),
         'last_refresh': server.server_info['timestamp'],
@@ -510,6 +514,10 @@ def updateConnectionForNetwork(server, connectedServer):
     link['destination'] = connectedServer
     link['vid'] = f"{link['source']['id']}-{connectedServer['Server']['id']}"
     link['status'] = connectedServer.get('connectionTest', {})
+    link['tested_at'] = link['status'].get('timestamp')
+    if latest is None:
+        latest = healthVersions.latest_release()
+    link['health'] = classify_link(connectedServer, latest_release_for(server.server_info, latest))
     link['pull'] = connectedServer['Server']['pull']
     link['push'] = connectedServer['Server']['push']
     pull_rules = json.loads(connectedServer['Server']['pull_rules'])

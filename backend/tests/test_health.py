@@ -122,11 +122,10 @@ def test_real_snapshot():
     issues = byRule(evaluate())
     assert set(issues) == {"modules", "sync_link"}
     assert [(i.subject, i.severity) for i in issues["modules"]] == [("AI", "info")]  # Cortex: not enabled ≠ broken
-    links = {link["Server"]["id"]: link["connectionTest"]["status"]["color"]
-             for link in SNAPSHOT["query_result"]["connectedServers"]}
-    expected = {remote_id: {"danger": "critical", "warning": "warning"}[color]
-                for remote_id, color in links.items() if color != "success"}
-    assert {i.subject: i.severity for i in issues["sync_link"]} == expected
+    # 1: pushes sightings, test fails · 2, 4: unused, test fails · 3: pull, unreachable · 5: push, test fails ·
+    # 6: pull, OK (no issue) · 7: push + pull, unreachable · 9: unused, OK
+    assert {i.subject: i.severity for i in issues["sync_link"]} == {
+        "1": "critical", "2": "info", "3": "critical", "4": "info", "5": "critical", "7": "critical", "9": "info"}
     assert all(i.category == "sync" and i.action == {"kind": "open_tab", "target": "connections"}
                for i in issues["sync_link"])
 
@@ -302,17 +301,47 @@ def test_modules():
 
 
 def test_sync_links():
-    def link(remote_id, color, message="msg"):
-        return {"Server": {"id": remote_id, "name": f"Remote {remote_id}", "url": "https://r.example.org"},
-                "connectionTest": {"status": {"color": color, "message": message}}}
+    """One issue per link that is not OK, severity from its level (see test_links.py for the classification)"""
+    from application.models.servers import parseMISPConnectionOutput
+
+    def link(remote_id, test, push=True, pull=True):
+        return {"Server": {"id": remote_id, "name": f"Remote {remote_id}", "url": "https://r.example.org",
+                           "push": push, "pull": pull},
+                "connectionTest": None if test is None else parseMISPConnectionOutput({**test, "timestamp": NOW - 5}),
+                "connectionUser": {"email": "sync@r.example.org", "sync_flag": True}}
+    ok = {"status": 1, "version": "2.5.51", "local_version": "3.0.0", "mismatch": False, "newer": False, "post": 1}
     data = copy.deepcopy(SNAPSHOT)
     data["query_result"]["connectedServers"] = [
-        link("1", "success"), link("2", "warning", "Pull only"), link("3", "danger", "Server unreachable"),
-        {"Server": {"id": "4", "name": "Untested"}},
+        link("1", ok), link("2", {**ok, "mismatch": "hotfix", "newer": "local"}), link("3", {"status": 4}),
+        link("4", None), link("5", {"status": 2}, push=False, pull=False), link("6", ok, push=False, pull=False),
     ]
     issues = [i for i in evaluate(data) if i.rule == "sync_link"]
-    assert [(i.id, i.severity, i.detail) for i in issues] == [
-        ("sync_link:1:3", "critical", "Server unreachable"), ("sync_link:1:2", "warning", "Pull only")]
+    assert [(i.id, i.severity, i.title, i.detail) for i in issues] == [
+        ("sync_link:1:3", "critical", "Broken sync link to Remote 3", "Authentication failed"),
+        ("sync_link:1:2", "warning", "Degraded sync link to Remote 2", "MISP versions differ (local 3.0.0, remote 2.5.51): the remote instance should be updated"),
+        ("sync_link:1:4", "info", "Untested sync link to Remote 4", "The link has not been tested yet"),
+        ("sync_link:1:5", "info", "Unused sync link to Remote 5", "Push, pull and caching are all off; Server unreachable"),
+        ("sync_link:1:6", "info", "Unused sync link to Remote 6", "Push, pull and caching are all off"),
+    ]
+    broken = issues[0].evidence
+    assert broken["level"] == "broken" and broken["tested_at"] == NOW - 5 and broken["push"] and broken["pull"]
+    assert broken["reasons"] == [{"level": "broken", "code": "status", "message": "Authentication failed"}]
+    assert (broken["remote_id"], broken["remote_name"]) == ("3", "Remote 3")
+
+
+def test_outdated_remote_falls_back_to_the_version_misp_reports():
+    """Without GitHub, a remote behind the `newest` version the local MISP reports is degraded"""
+    from application.models.servers import parseMISPConnectionOutput
+    data = copy.deepcopy(SNAPSHOT)
+    data["query_result"]["serverSettings"]["version"]["newest"] = "v3.0.1"
+    data["query_result"]["connectedServers"] = [{
+        "Server": {"id": "1", "name": "R", "push": False, "pull": True},
+        "connectionTest": parseMISPConnectionOutput({"status": 1, "version": "3.0.0", "local_version": "3.0.0",
+                                                     "mismatch": False, "newer": False, "post": False}),
+        "connectionUser": {"email": "sync@r", "sync_flag": True}}]
+    assert [(i.severity, i.detail) for i in evaluate(data, latest_release=None) if i.rule == "sync_link"] == [
+        ("warning", "The remote runs 3.0.0, the latest release is 3.0.1")]
+    assert [i for i in evaluate(data) if i.rule == "sync_link"] == []  # GitHub's v2.5.51 is older
 
 
 # --- Engine -----------------------------------------------------------------------------------------------------------
