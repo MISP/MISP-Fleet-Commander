@@ -24,7 +24,14 @@ export function worstSeverity(issues) {
     return worst
 }
 
-function emptyCounts() {
+// Most severe first, then the oldest
+export function compareIssues(a, b) {
+    return severityRank(a.severity) - severityRank(b.severity)
+        || (a.first_seen || 0) - (b.first_seen || 0)
+        || a.id.localeCompare(b.id)
+}
+
+export function emptyCounts() {
     return { critical: 0, warning: 0, info: 0 }
 }
 
@@ -67,6 +74,17 @@ const getters = {
             counts[issue.fleet_id][issue.severity] += 1
         })
         return counts
+    },
+    // server_id -> unacknowledged issues, most severe first
+    serverActiveIssues: (state) => {
+        const byServer = {}
+        Object.entries(state.issuesByServer).forEach(([server_id, issues]) => {
+            byServer[server_id] = issues.filter(issue => issue.ack === null).sort(compareIssues)
+        })
+        return byServer
+    },
+    topIssues: (state, getters) => (limit) => {
+        return getters.activeIssues.slice().sort(compareIssues).slice(0, limit)
     },
     serverWorst: (state) => {
         const worst = {}

@@ -253,7 +253,7 @@ import AddModal from "@/views/servers/AddModal.vue"
 import moment from "moment"
 import { websocketMixin } from "@/helpers/websocketMixin"
 import serversApi from "@/api/servers"
-import { SEVERITIES, CATEGORIES, severityRank, worstSeverity } from "@/store/modules/health"
+import { SEVERITIES, CATEGORIES, severityRank, worstSeverity, compareIssues } from "@/store/modules/health"
 import { SEVERITY_META, CATEGORY_LABELS, RULE_LABELS, countsText } from "./healthLabels"
 import IssueRow from "./IssueRow.vue"
 import AckModal from "./AckModal.vue"
@@ -274,12 +274,6 @@ function countBySeverity(issues) {
     const counts = { critical: 0, warning: 0, info: 0 }
     issues.forEach((issue) => { counts[issue.severity] += 1 })
     return counts
-}
-
-function compareIssues(a, b) {
-    return severityRank(a.severity) - severityRank(b.severity)
-        || (a.first_seen || 0) - (b.first_seen || 0)
-        || a.id.localeCompare(b.id)
 }
 
 export default {
@@ -474,9 +468,16 @@ export default {
                 this.selectedFleets = fleets
             }
         },
+        "$route.query.server_id"() {
+            this.jumpFromQuery()
+        },
+        loaded() {
+            this.jumpFromQuery()
+        },
     },
     mounted() {
         this.$store.dispatch("health/init")
+        this.jumpFromQuery()
         this.$store.dispatch("fleets/initFetch", { use_cache: true }).catch(() => {})
         this.nowTimer = setInterval(() => {
             this.now = Math.floor(Date.now() / 1000)
@@ -536,6 +537,21 @@ export default {
         openIssue(issue) {
             const action = issue.action || {}
             this.openServer(issue.server_id, action.kind === "open_tab" ? action.target : undefined)
+        },
+        // `?server_id=` (from a health badge) opens the page on that server, once
+        jumpFromQuery() {
+            const server_id = parseInt(this.$route.query.server_id, 10)
+            if (!this.loaded || Number.isNaN(server_id)) {
+                return
+            }
+            const query = Object.assign({}, this.$route.query)
+            delete query.server_id
+            this.$router.replace({ query }).catch(() => {})
+            const server = this.allServers.find(item => item.id === server_id)
+            if (server && !this.inFleetScope(server.fleet_id)) {
+                this.selectedFleets = []
+            }
+            this.jumpToServer(server_id)
         },
         jumpToServer(server_id) {
             if (this.groupBy !== "server") {
@@ -635,18 +651,6 @@ export default {
 
 <style scoped>
 .attention-page {
-    --health-critical: #dc3545;
-    --health-critical-ink: #b52a37;
-    --health-critical-tint: #fdf0f1;
-    --health-warning: #ffc107;
-    --health-warning-ink: #9a6b00;
-    --health-warning-tint: #fff7e0;
-    --health-info: #17a2b8;
-    --health-info-ink: #117a8b;
-    --health-info-tint: #e9f6f8;
-    --health-ok: #3aa564;
-    --health-rule: #e4e7ec;
-    --health-focus-bg: #f2f7fb;
     max-width: 1180px;
     margin: 0 auto;
     padding: 1.5rem 1.25rem 3rem;

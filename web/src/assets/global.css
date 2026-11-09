@@ -9,6 +9,21 @@
     --var-color-backgroundsteel : #cacdcf;
     --var-width-sidebar: 160px;
 
+    /* Health severities, shared by every view that shows issues */
+    --health-critical: #dc3545;
+    --health-critical-ink: #b52a37;
+    --health-critical-tint: #fdf0f1;
+    --health-warning: #ffc107;
+    --health-warning-ink: #9a6b00;
+    --health-warning-tint: #fff7e0;
+    --health-info: #17a2b8;
+    --health-info-ink: #117a8b;
+    --health-info-tint: #e9f6f8;
+    --health-ok: #3aa564;
+    --health-ok-ink: #2a7a49;
+    --health-rule: #e4e7ec;
+    --health-focus-bg: #f2f7fb;
+
     --var-color-main-dark-blue: #003a5a;
     --var-color-giantorganedarker: #d9510d;
     --var-color-light-grey: #dfe1e2;
