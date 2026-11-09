@@ -1,6 +1,6 @@
 <template>
-    <b-tabs @input="handleTabChange" ref="tabs" card>
-        <b-tab class="p-1" no-body lazy active>
+    <b-tabs v-model="tabIndex" @input="handleTabChange" ref="tabs" card>
+        <b-tab class="p-1" no-body lazy>
             <template #title>
                 <i class="fas fa-tools mr-1"></i><strong>Remote administration</strong>
             </template>
@@ -169,6 +169,13 @@ import MISPConnectedServers from "@/views/servers/elements/MISPConnectedServers.
 import instanceUsage from "@/views/servers/elements/instanceUsage.vue"
 import pluginActions from "@/views/servers/elements/pluginActions.vue"
 
+// Position of the tabs that can be opened by name
+const TAB_INDEX = {
+    diagnostic: 3,
+    profile: 4,
+    connections: 5,
+}
+
 export default {
     name: "serverInfoAndManagements",
     components: {
@@ -189,10 +196,16 @@ export default {
         max_content_size: {
             type: String,
             default: "700px"
-        }
+        },
+        // Tab to open, by name (see TAB_INDEX), e.g. from a link to `?tab=diagnostic`
+        tab: {
+            type: String,
+            default: "",
+        },
     },
     data: function() {
         return {
+            tabIndex: TAB_INDEX[this.tab] || 0,
             diagnosticTabularView: [],
             diagnosticListView: ["dbDiagnostics", "dbSchemaDiagnostic", "moduleStatus", "readableFiles", "redisInfo", "version", "writeableDirs", "writeableFiles"],
             initDone: false,
@@ -248,6 +261,19 @@ export default {
             }
         }
     },
+    watch: {
+        tab(name) {
+            if (TAB_INDEX[name] !== undefined) {
+                this.tabIndex = TAB_INDEX[name]
+                this.scrollToTabs()
+            }
+        },
+    },
+    mounted() {
+        if (TAB_INDEX[this.tab] !== undefined) {
+            this.scrollToTabs()
+        }
+    },
     methods: {
         refreshDiagnostic() {
             this.$emit("actionRefresh", "no_cache")
@@ -271,6 +297,13 @@ export default {
         },
         isJson(value) {
             return typeof value === "object"
+        },
+        scrollToTabs() {
+            this.$nextTick(() => {
+                if (this.$refs.tabs) {
+                    this.$refs.tabs.$el.scrollIntoView(true)
+                }
+            })
         },
         handleTabChange(tabIndex) {
             if (this.initDone) {

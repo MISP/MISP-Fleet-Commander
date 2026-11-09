@@ -36,6 +36,7 @@
                     <b-overlay :show="server_refresh_enqueued[server_id]" rounded="sm">
                         <serverInfoAndManagements 
                             :server_id="server_id"
+                            :tab="$route.query.tab || ''"
                             max_content_size="80vh"
                         ></serverInfoAndManagements>
                     </b-overlay>
