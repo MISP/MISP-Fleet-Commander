@@ -23,6 +23,10 @@ function getClient() {
     client.interceptors.response.use(
         (response) => response,
         (error) => {
+            if (error.response === undefined) {
+                // No answer at all (network error, server down): nothing more to inspect
+                return Promise.reject(error)
+            }
             if (error.response.status === 401) {
                 return new Promise((resolve, reject) => {
                     showLoginModal(
@@ -68,15 +72,17 @@ function handleError(error, errorCb) {
         errorCb(error)
         return
     }
-    if (error !== undefined) {
+    if (error !== undefined && error !== null) {
         if (error.message) {
             if (error._showToLoginPage) {
                 showGoToLoginPageToast(error)
-            } else {
-                errorCb(error.message)
             }
-        } else {
+            errorCb(error.message)
+            return
+        }
+        if (typeof error.toJSON === "function" && error.toJSON().message) {
             errorCb(error.toJSON().message)
+            return
         }
     }
     errorCb('Something went wrong.')
