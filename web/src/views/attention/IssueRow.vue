@@ -206,8 +206,24 @@ export default {
     white-space: nowrap;
 }
 
+/* Every state is set here: a white background alone would win over Bootstrap's hover, which turns the text white */
 .action-button {
     background-color: #fff;
+    color: #495057;
+    border-color: #adb5bd;
+}
+
+.action-button:hover,
+.action-button:focus,
+.action-button:not(:disabled):not(.disabled):active {
+    background-color: #eef3f8;
+    color: var(--var-color-yankeesblue);
+    border-color: var(--var-color-lapislazuli);
+}
+
+.action-button:focus,
+.action-button:not(:disabled):not(.disabled):active:focus {
+    box-shadow: 0 0 0 0.2rem rgba(41, 120, 160, 0.25);
 }
 
 .action-button i {
