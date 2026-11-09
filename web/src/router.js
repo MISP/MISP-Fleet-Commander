@@ -116,6 +116,19 @@ let router =  new Router({
             ]
         },
         {
+            path: "/attention",
+            name: "attention",
+            component: () => import("./views/attention/Attention.vue"),
+            meta: {
+                requiresFleet: false,
+                breadcrumbs: {
+                    text: "Needs attention",
+                    to: { name: "attention" },
+                    icon: "heart-pulse"
+                }
+            }
+        },
+        {
             path: "/connections",
             name: "connections",
             component: () => import("./views/connections/Connections.vue"),

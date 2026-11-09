@@ -7,6 +7,7 @@ const urls = {
     batchTestConnection: `/servers/batchTestConnection`,
     queryInfo: `/servers/queryInfo`,
     index: `/servers/index`,
+    get: `/servers/get`,
     add: `/servers/add`,
     edit: `/servers/edit`,
     delete: `/servers/delete`,
@@ -147,6 +148,14 @@ export default {
             })
     },
 
+    get(server_id, cb, errorCb) {
+        return common.getClient().get(`${urls.get}/${server_id}`)
+            .then((response) => {
+                cb(response.data)
+            }).catch(error => {
+                common.handleError(error, errorCb)
+            })
+    },
     getInstancePicture(server_id, cb, errorCb) {
         const url = `${urls.getInstancePicture}/${server_id}`
         return common.getClient().get(url)

@@ -9,11 +9,17 @@
                 <router-link
                     :class="{'sidebar-link text-decoration-none': true, 'inactive': !canBeAccessed(item)}"
                     v-b-tooltip.hover.right.d0
-                    :title="!canBeAccessed(item) ? 'No fleet selected' : item.name"
+                    :title="itemTitle(item)"
+                    :aria-label="itemTitle(item)"
                     :to="item.to"
                 >
                     <span class="icon">
                         <iconForScope :scope="item.scope"></iconForScope>
+                        <span
+                            v-if="item.scope === 'attention' && attentionCount > 0"
+                            :class="['attention-badge', healthCounts.critical > 0 ? 'attention-critical' : 'attention-warning']"
+                            aria-hidden="true"
+                        >{{ attentionCount > 99 ? "99+" : attentionCount }}</span>
                     </span>
                     <span class="link-text text-nowrap">{{ item.name }}</span>
                 </router-link>
@@ -38,6 +44,11 @@ export default {
                     name: "Home",
                     to: { name: "home" },
                     scope: "home",
+                },
+                {
+                    name: "Needs attention",
+                    to: { name: "attention" },
+                    scope: "attention",
                 },
                 {
                     name: "MISP Servers",
@@ -69,12 +80,34 @@ export default {
         ...mapGetters({
             selectedFleet: "fleets/selectedFleet",
             isAdmin: "auth/isAdmin",
+            attentionCount: "health/attentionCount",
+            healthCounts: "health/counts",
         }),
         visibleItems() {
             return this.items.filter(item => !item.adminOnly || this.isAdmin)
         },
     },
+    mounted() {
+        // The sidebar is on every page: load health once, then live updates keep it current
+        this.$store.dispatch("health/init")
+    },
     methods: {
+        itemTitle(item) {
+            if (!this.canBeAccessed(item)) {
+                return "No fleet selected"
+            }
+            if (item.scope === "attention" && this.attentionCount > 0) {
+                const parts = []
+                if (this.healthCounts.critical > 0) {
+                    parts.push(`${this.healthCounts.critical} critical`)
+                }
+                if (this.healthCounts.warning > 0) {
+                    parts.push(`${this.healthCounts.warning} ${this.healthCounts.warning === 1 ? "warning" : "warnings"}`)
+                }
+                return `${item.name}: ${parts.join(", ")}`
+            }
+            return item.name
+        },
         canBeAccessed(item) {
             const { route } = this.$router.resolve({
                 name: item.to.name,
@@ -169,6 +202,33 @@ export default {
     display: block;
     width: 30px;
     height: 30px;
+    position: relative;
+}
+
+.attention-badge {
+    position: absolute;
+    top: -6px;
+    right: -9px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 9px;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 18px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    box-shadow: 0 0 0 2px var(--var-color-yankeesblue);
+}
+
+.attention-critical {
+    background-color: #dc3545;
+    color: #fff;
+}
+
+.attention-warning {
+    background-color: #ffc107;
+    color: #212529;
 }
 
 .link-text {

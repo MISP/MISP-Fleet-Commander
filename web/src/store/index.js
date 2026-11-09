@@ -11,6 +11,7 @@ import fleets from "./modules/fleets"
 import plugins from "./modules/plugins"
 import pinlists from "./modules/pinlists"
 import websocket from "./modules/websocket"
+import health from "./modules/health"
 
 Vue.use(Vuex)
 
@@ -30,6 +31,7 @@ export default new Vuex.Store({
         pinlists,
         plugins,
         websocket,
+        health,
     },
     strict: debug,
 })
