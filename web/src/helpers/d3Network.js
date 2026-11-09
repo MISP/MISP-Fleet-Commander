@@ -340,6 +340,7 @@ export default {
             updateData: updateData,
             setFocus: setFocus,
             focusNode: focusNode,
+            focusLink: focusLink,
         }
 
         function setFocus(newFocus) {
@@ -379,6 +380,34 @@ export default {
             nodeElement.classList.add('node-located')
             setTimeout(() => nodeElement.classList.remove('node-located'), 2000)
             return true
+        }
+
+        // Fit both ends of a link in the view and select it. Returns the link, or null when it is not drawn
+        function focusLink(vid) {
+            const theLink = d3data.links.find(l => l.vid === vid)
+            const pathNode = svgNode.querySelector(`.links path.link#line_${CSS.escape(String(vid))}`)
+            if (theLink === undefined || pathNode === null || typeof theLink.source !== 'object' || typeof theLink.target !== 'object') {
+                return null
+            }
+            const boxes = [theLink.source, theLink.target].map(end => {
+                const element = svgNode.querySelector(`#node-${CSS.escape(String(end.id))}`)
+                const box = element !== null ? element.getBBox() : { width: 0, height: 0 }
+                return { x1: end.x, y1: end.y, x2: end.x + box.width, y2: end.y + box.height }
+            })
+            const x1 = Math.min(...boxes.map(b => b.x1))
+            const y1 = Math.min(...boxes.map(b => b.y1))
+            const x2 = Math.max(...boxes.map(b => b.x2))
+            const y2 = Math.max(...boxes.map(b => b.y2))
+            const margin = 80
+            const fit = Math.min(svgNode.clientWidth / (x2 - x1 + 2 * margin), svgNode.clientHeight / (y2 - y1 + 2 * margin))
+            const scale = Math.max(0.15, Math.min(1, fit))
+            const transform = d3.zoomIdentity
+                .translate(svgNode.clientWidth / 2 - scale * (x1 + x2) / 2, svgNode.clientHeight / 2 - scale * (y1 + y2) / 2)
+                .scale(scale)
+            const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+            svg.transition().duration(reduceMotion ? 0 : 600).call(zoom.transform, transform)
+            selectLink({ target: pathNode }, theLink)
+            return theLink
         }
 
         function genMarkersForAllKnownPathColor() {

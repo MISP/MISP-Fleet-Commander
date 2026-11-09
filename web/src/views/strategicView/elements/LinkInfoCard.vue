@@ -19,9 +19,7 @@
                         {{ getSourceServer.url }}
                         <sup class="fa fa-external-link-alt text-muted"></sup>
                     </a>
-                    <i class="fa fa-arrow-down my-1" style="font-size: 1.5em;"
-                        :style="{color: !connectionHasRules ? '#2ca1db' : '#f5854d', filter: !connectionHasRules ? 'drop-shadow(0px 1px 1px rgba(0, 0, 0, .7))' : 'drop-shadow(0px 1px 1px #5b4a4299)'}"
-                    ></i>
+                    <i :class="['fa', 'fa-arrow-down', 'my-1', 'link-arrow', `link-arrow-${health.level}`, { 'is-unused': health.unused }]" aria-hidden="true"></i>
                     <h6 class="mb-0">{{ getTargetServer.name }}</h6>
                     <a
                         :href="getTargetServer.url"
@@ -34,6 +32,39 @@
                     </a>
                 </div>
             </div>
+            <section class="link-health" aria-label="Link health">
+                <div class="link-health-head">
+                    <LinkHealthLevel :level="health.level" :unused="health.unused"></LinkHealthLevel>
+                    <span class="link-tested" :title="health.testedTitle">
+                        <template v-if="health.testing">
+                            <i class="fas fa-circle-notch fa-spin" aria-hidden="true"></i> Testing…
+                        </template>
+                        <template v-else>{{ health.testedLabel }}</template>
+                    </span>
+                    <button
+                        type="button"
+                        class="btn btn-outline-secondary btn-sm link-test-button"
+                        :disabled="health.testing || !getSourceServer || getTargetServerIDForSource === null"
+                        :title="health.testing ? 'Testing this link…' : 'Test this link'"
+                        aria-label="Test this link"
+                        @click="testThisLink"
+                    >
+                        <i :class="['fas', health.testing ? 'fa-circle-notch fa-spin' : 'fa-redo-alt']" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <ul v-if="health.reasons.length > 0" class="link-reasons">
+                    <li
+                        v-for="reason in health.reasons"
+                        :key="reason.code + reason.message"
+                        :class="`reason-${reason.level}`"
+                    >{{ reason.message }}</li>
+                </ul>
+                <p v-else-if="health.level === 'ok'" class="link-reasons-none">Tested without issue.</p>
+                <p v-if="health.unused" class="link-unused-note">Push, pull and caching are off: nothing depends on this link.</p>
+                <p v-if="health.testError" class="link-test-error" role="status">
+                    <i class="fas fa-exclamation-circle" aria-hidden="true"></i> Could not test: {{ health.testError }}
+                </p>
+            </section>
             <b-tabs
                 card fill pills
                 nav-wrapper-class="px-3 py-1"
@@ -232,10 +263,15 @@ import ConnectionUserRole from "@/views/servers/elements/connectionStates/connec
 import ConnectionCompatibility from "@/views/servers/elements/connectionStates/connectionCompatibility.vue";
 import ConnectionPostTest from "@/views/servers/elements/connectionStates/connectionPostTest.vue";
 import ConnectionRules from "@/views/strategicView/elements/ConnectionRules.vue";
+import moment from "moment"
+import LinkHealthLevel from "@/components/health/LinkHealthLevel.vue"
+import { agoLabel, linkIsUnused, linkLevel, linkReasons, linkTestedAt, linkTestMixin } from "@/helpers/linkHealth"
 
 export default {
     name: "TheLinkInfoCard",
+    mixins: [linkTestMixin],
     components: {
+        LinkHealthLevel,
         connectionStatus,
         ConnectionLocalVersion,
         ConnectionRemoteVersion,
@@ -278,6 +314,22 @@ export default {
                 return connection.vid == this.link_id
             })[0] || {}
         },
+        health() {
+            const link = this.getConnection
+            const testedAt = linkTestedAt(link)
+            const sourceID = this.getSourceServer ? this.getSourceServer.id : null
+            const remoteID = this.getTargetServerIDForSource
+            const state = sourceID !== null && remoteID !== null ? this.linkTestState(sourceID, remoteID) : { testing: false, error: null }
+            return {
+                level: linkLevel(link),
+                unused: linkIsUnused(link),
+                reasons: linkReasons(link),
+                testedLabel: testedAt ? `tested ${agoLabel(testedAt, this.now)}` : "never tested",
+                testedTitle: testedAt ? moment.unix(testedAt).format("LLL") : null,
+                testing: state.testing || (sourceID !== null && this.serverTesting(sourceID)),
+                testError: state.error,
+            }
+        },
         getSourceServer: function() {
             return this.getConnection.source || null
         },
@@ -291,11 +343,10 @@ export default {
             return this.servers[target] || (link.target !== null && typeof link.target === 'object' ? link.target : null) || link.remote_sync_server || {}
         },
         getTargetServerIDForSource: function() {
-            return this.getTargetServerForSource.id || null
+            return (this.getTargetServerForSource && this.getTargetServerForSource.id) || null
         },
         getTargetServerForSource: function() {
-            // return this.link.destination.Server || null
-            return this.getConnection.destination.Server || null
+            return (this.getConnection.destination && this.getConnection.destination.Server) || null
         },
         connectionHasRules: function() {
             return this.connectionRuleNumber > 0
@@ -317,6 +368,9 @@ export default {
         }
     },
     methods: {
+        testThisLink() {
+            this.testLink(this.getSourceServer.id, this.getTargetServerIDForSource)
+        },
         submitConnectionForm() {
             const payload = {
                 server_id: this.getSourceServer.id,
@@ -350,6 +404,91 @@ export default {
 </script>
 
 <style scoped>
+.link-arrow {
+    font-size: 1.5em;
+    color: var(--link-unknown);
+    filter: drop-shadow(0px 1px 1px rgba(0, 0, 0, .35));
+}
+
+.link-arrow-ok {
+    color: var(--link-ok);
+}
+
+.link-arrow-degraded {
+    color: var(--link-degraded);
+}
+
+.link-arrow-broken {
+    color: var(--link-broken);
+}
+
+.link-arrow.is-unused {
+    opacity: 0.45;
+}
+
+.link-health {
+    padding: 0.6em 0.75em;
+    border-bottom: 1px solid var(--health-rule);
+    font-size: 0.9em;
+}
+
+.link-health-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+}
+
+.link-tested {
+    margin-left: auto;
+    color: #6c757d;
+    font-size: 0.9em;
+    white-space: nowrap;
+}
+
+.link-test-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.9em;
+    height: 1.9em;
+    padding: 0;
+    font-size: 0.85em;
+}
+
+.link-reasons {
+    margin: 0.35em 0 0;
+    padding: 0 0 0 1.75em;
+    list-style: none;
+    line-height: 1.35;
+}
+
+.link-reasons li + li {
+    margin-top: 0.2em;
+}
+
+.reason-broken {
+    color: var(--health-critical-ink);
+}
+
+.reason-degraded {
+    color: var(--health-warning-ink);
+}
+
+.reason-unknown {
+    color: #5a6270;
+}
+
+.link-reasons-none,
+.link-unused-note {
+    margin: 0.3em 0 0 1.75em;
+    color: #6c757d;
+}
+
+.link-test-error {
+    margin: 0.3em 0 0 1.75em;
+    color: var(--health-critical-ink);
+}
+
     .close-button {
         right: 4px;
         top: 0;

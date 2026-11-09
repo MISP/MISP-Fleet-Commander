@@ -187,15 +187,9 @@
 import { mapGetters, mapState } from "vuex"
 import moment from "moment"
 import api from "@/api/servers"
-import { websocketMixin } from "@/helpers/websocketMixin"
+import { LINK_LEVEL_META as LEVEL_META, agoLabel, linkTestMixin } from "@/helpers/linkHealth"
+import { LINK_LEVELS as LEVEL_ORDER } from "@/store/modules/connections"
 
-const LEVEL_META = {
-    broken: { label: "Broken", glyph: "fa-times" },
-    degraded: { label: "Degraded", glyph: "fa-exclamation" },
-    unknown: { label: "Not tested", glyph: "fa-question" },
-    ok: { label: "OK", glyph: "fa-check" },
-}
-const LEVEL_ORDER = ["broken", "degraded", "unknown", "ok"]
 const PULL_COUNTERS = [
     ["events", "event", "events"],
     ["proposals", "proposal", "proposals"],
@@ -208,8 +202,6 @@ const PUSH_COUNTERS = [
     ["events", "event", "events"],
     ["collections", "collection", "collections"],
 ]
-// A single-link test reports back through the server's link test state; past this, the button is usable again
-const TEST_GIVE_UP_MS = 2 * 60 * 1000
 const SPARK_BAR = 6
 const SPARK_GAP = 2
 const SPARK_HEIGHT = 16
@@ -220,7 +212,7 @@ function plural(count, one, many) {
 
 export default {
     name: "ServerSync",
-    mixins: [websocketMixin],
+    mixins: [linkTestMixin],
     props: {
         server_id: {
             type: Number,
@@ -229,10 +221,6 @@ export default {
     },
     data() {
         return {
-            now: Date.now(),
-            ticker: null,
-            // "<server_id>-<remote_id>" -> time the test was asked for
-            testsAsked: {},
             activity: null,
             activityError: null,
             activityLoading: false,
@@ -247,7 +235,6 @@ export default {
     computed: {
         ...mapState({
             servers: state => state.servers.servers,
-            server_link_test: state => state.servers.server_link_test,
             remote_connections: state => state.servers.remote_connections,
         }),
         // Asked for, and the server has not reported a start or an end since (workers may be busy)
@@ -354,24 +341,7 @@ export default {
     },
     methods: {
         ago(timestamp) {
-            const seconds = Math.max(0, Math.round(this.now / 1000 - timestamp))
-            return seconds < 60 ? "just now" : `${moment.duration(seconds, "seconds").humanize()} ago`
-        },
-        serverTesting(serverID) {
-            return Boolean(this.server_link_test[serverID] && this.server_link_test[serverID].testing)
-        },
-        // The test asked for this link is still running (or has not started yet)
-        linkTestState(serverID, remoteID) {
-            const askedAt = this.testsAsked[`${serverID}-${remoteID}`]
-            if (askedAt === undefined) {
-                return { testing: false, error: null }
-            }
-            const state = this.server_link_test[serverID] || {}
-            const reported = (state.updated || 0) >= askedAt
-            if (reported && !state.testing) {
-                return { testing: false, error: state.error || null }
-            }
-            return { testing: this.now - askedAt < TEST_GIVE_UP_MS, error: null }
+            return agoLabel(timestamp, this.now)
         },
         linkRow(link, serverID) {
             const health = link.health || {}
@@ -471,11 +441,6 @@ export default {
                 .catch(() => { this.connectionsError = true })
                 .finally(() => { this.connectionsLoading = false })
         },
-        testLink(serverID, remoteID) {
-            this.$set(this.testsAsked, `${serverID}-${remoteID}`, Date.now())
-            this.now = Date.now()
-            this.wsServerLinkTest(serverID, Number(remoteID))
-        },
         loadActivity(refresh = false) {
             this.activityLoading = true
             this.activityError = null
@@ -511,10 +476,8 @@ export default {
         // Mounted when the tab is first opened: the log search can be slow
         this.loadConnections()
         this.loadActivity()
-        this.ticker = setInterval(() => { this.now = Date.now() }, 15 * 1000)
     },
     beforeDestroy() {
-        clearInterval(this.ticker)
         clearTimeout(this.reloadTimer)
     },
 }

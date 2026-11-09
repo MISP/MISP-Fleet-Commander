@@ -166,6 +166,13 @@ const mutations = {
         }
     },
     setConnections(state, connections) {
+        // keep the expanded rows expanded when the list is reloaded
+        const expanded = new Set(state.all.filter(c => c._showDetails).map(c => c.vid))
+        connections.forEach(connection => {
+            if (expanded.has(connection.vid)) {
+                connection._showDetails = true
+            }
+        })
         state.all = connections
     },
     setConnection(state, connection) {

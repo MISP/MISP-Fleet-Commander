@@ -173,6 +173,7 @@ export default {
         return {
             refreshInProgress: false,
             graphReady: false,
+            layoutDone: false,
             network: null,
             problemsOnly: readProblemsOnly(),
             linkTest: {
@@ -325,6 +326,28 @@ export default {
             if (node !== undefined && node._managed_server) {
                 this.selectNode(node)
             }
+        },
+        // `?link=<vid>` (from the Connections page): show that link and its card, then drop it from the URL
+        focusLinkFromRoute() {
+            const vid = this.$route.query.link
+            if (!vid || this.network === null || !this.layoutDone) {
+                return
+            }
+            const query = { ...this.$route.query }
+            delete query.link
+            // The sidebar closes on route changes: select the link once the URL is updated
+            this.$router.replace({ query }).catch(() => {}).then(() => {
+                const link = this.network.focusLink(String(vid))
+                if (link !== null) {
+                    this.selectLink(link)
+                    this.showSidebar = true
+                } else {
+                    this.$bvToast.toast("It is not part of this fleet's graph: the fleet or its links may have changed.", {
+                        title: "Link not found",
+                        variant: "warning",
+                    })
+                }
+            })
         },
         fleetLinkTest() {
             // Disabled right away: the workers report the start of each server's test a moment later
@@ -481,7 +504,11 @@ export default {
             }
             if (this.$refs["networkContainer"] !== undefined) {
                 let callbacks = {
-                    simulationDone: () => { console.info("simu done") }
+                    // The layout has settled: a link asked for in the URL can be shown
+                    simulationDone: () => {
+                        this.layoutDone = true
+                        this.focusLinkFromRoute()
+                    }
                 }
                 const network = d3Network.constructNetwork(
                     this.$refs["networkSVG"],
@@ -494,7 +521,7 @@ export default {
                 this.svgSelection = network.svgSelection
                 this.zoom = network.zoom
                 this.updateData = network.updateData
-                this.network = Object.freeze({ setFocus: network.setFocus, focusNode: network.focusNode })
+                this.network = Object.freeze({ setFocus: network.setFocus, focusNode: network.focusNode, focusLink: network.focusLink })
                 this.graphReady = true
                 this.applyProblemFocus()
             }
@@ -624,6 +651,9 @@ export default {
         },
         getConnectionList: function() {
             this.updateWithStore()
+        },
+        "$route.query.link": function() {
+            this.focusLinkFromRoute()
         },
         problemsOnly: function(enabled) {
             try {
