@@ -116,7 +116,7 @@ def mispGetRequest(server, url, data={}, rawResponse=False, nocache=False):
 
 
 @timer
-def mispPostRequest(server, url, data={}, rawResponse=False, nocache=True):
+def mispPostRequest(server, url, data={}, rawResponse=False, nocache=True, timeout=None):
     requestMISPSession = getMISPRequestSession()
     requestSession = getRequestPSession()
 
@@ -128,9 +128,9 @@ def mispPostRequest(server, url, data={}, rawResponse=False, nocache=True):
     full_url = urljoin(server.url, url)
     try:
         if nocache:
-            response = requestSession.post(full_url, json=data, headers=headers, verify=(not getattr(server, 'skip_ssl', True)))
+            response = requestSession.post(full_url, json=data, headers=headers, verify=(not getattr(server, 'skip_ssl', True)), timeout=timeout)
         else:
-            response = requestMISPSession.post(full_url, json=data, headers=headers, verify=(not getattr(server, 'skip_ssl', True)))
+            response = requestMISPSession.post(full_url, json=data, headers=headers, verify=(not getattr(server, 'skip_ssl', True)), timeout=timeout)
         error = handleStatusCode(response)
         if error is not None:
             if rawResponse:
@@ -148,6 +148,8 @@ def mispPostRequest(server, url, data={}, rawResponse=False, nocache=True):
             return jsonResponse
     except requests.exceptions.SSLError:
         return { "error": "SSL Error" }
+    except requests.exceptions.Timeout:
+        return { "error": "Request timed out" }
     except requests.exceptions.ConnectionError:
         return { "error": "Server unreachable" }
     except Exception as e:

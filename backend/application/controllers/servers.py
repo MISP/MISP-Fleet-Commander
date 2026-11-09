@@ -8,7 +8,6 @@ import re
 import concurrent.futures
 from datetime import datetime as dt, timedelta, timezone
 from collections.abc import Mapping, MutableSequence
-from collections import defaultdict
 from flask import Blueprint, request, jsonify, abort, send_from_directory
 from marshmallow import ValidationError
 
@@ -17,6 +16,7 @@ from application.DBModels import db, User, Server
 from application.controllers.utils import mispGetHTMLRequest, mispGetRequest, mispPostRequest, batchRequest
 from application.marshmallowSchemas import ServerSchema, serverQuerySchema, serverSchema, taskSchema, serversSchema
 import application.models.servers as serverModel
+import application.models.syncActivity as syncActivityModel
 from application.models.servers import MONITORING_PANELS, MONITORING_PANEL_BY_ID
 from application.controllers.instance import token_required
 from application.health.links import classify_link, latest_release_for
@@ -377,19 +377,13 @@ def monitoringImage(user, server_id, panel_id):
 @BPserver.route('/servers/syncOvertime/<int:server_id>', methods=['GET'])
 @token_required
 def syncOvertime(user, server_id):
+    """Pulls and pushes of the last 7 days per sync server, from the server's MISP logs. Cached 10 minutes;
+    `?refresh=1` reads the logs again"""
     server = serverModel.getForUser(user, server_id)
-    if server is not None:
-        syncLogs = mispPostRequest(server, '/logs/admin_search/search', {"Log":{"model":"Server","action":"pull","email":"","org":"","model_id":"","title":"","change":"", "ip": ""}})
-        if 'error' in syncLogs:
-            return jsonify(syncLogs)
-        syncOvertime = parseGetSyncOvertime(syncLogs)
-        result = {
-            'timestamp': int(time.time()),
-            'data': syncOvertime
-        }
-        return jsonify(result)
-    else:
-        return jsonify({})
+    if server is None:
+        abort(404)
+    refresh = request.args.get('refresh', '0') not in ('', '0', 'false')
+    return jsonify(syncActivityModel.getSyncActivity(server, refresh=refresh))
 
 @BPserver.route('/servers/loginOvertime/<int:server_id>', methods=['GET'])
 @token_required
@@ -542,31 +536,6 @@ def _toAwareUTC(value):
         return value.replace(tzinfo=timezone.utc)
     return value.astimezone(timezone.utc)
 
-
-def parseGetSyncOvertime(syncLogs, afterTime=None):
-    if afterTime is None:
-        afterTime = dt.now(timezone.utc) - timedelta(days=7)
-    afterTime = _toAwareUTC(afterTime)
-    servers = defaultdict(dict)
-    for logEntry in syncLogs:
-        title = logEntry['Log']['title']
-        if title.startswith('Pull from'):
-            created = dt.fromisoformat(logEntry['Log']['created'])
-            if _toAwareUTC(created) > afterTime:
-                urlMatch = re.search(r'Pull from (?P<url>[\S]+) .*', title)
-                change = logEntry['Log']['change']
-                parsedChange = re.search(r'(?P<events>[\d]+) events, (?P<proposals>[\d]+) proposals and (?P<sightings>[\d]+) sightings pulled or updated. (?P<events_failed>[\d]+) events failed or didn\'t need an update.', change)
-                if urlMatch is None or parsedChange is None:
-                    continue
-                url = urlMatch.group('url')
-                syncMetrics = {
-                    'events': parsedChange.group('events'),
-                    'events_failed': parsedChange.group('events_failed'),
-                    'proposals': parsedChange.group('proposals'),
-                    'sightings': parsedChange.group('sightings')
-                }
-                servers[url][created.isoformat()] = syncMetrics
-    return servers
 
 def parseGetLoginLogs(loginLogs, afterTime=None):
     if afterTime is None:

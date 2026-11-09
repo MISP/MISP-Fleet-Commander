@@ -12,6 +12,8 @@ KEY_SERVER_WATCHED = 'server-watched'
 KEY_FLEET_MONITORED = 'fleet-monitored'
 KEY_FLEET_WATCHED = 'fleet-watched'
 KEY_SERVER_PICTURES_CACHED = "server-pic-cached"
+# Expires on its own (models/syncActivity.py)
+KEY_SYNC_ACTIVITY = 'sync-activity'
 
 
 def saveServerInfo(server_uuid: int, info: dict) -> bool:
@@ -55,6 +57,7 @@ def deleteServerData(server_uuid: str, server_id: Union[int, None] = None) -> No
     )]
     if server_id is not None:
         keys.append(f"{KEY_HEALTH_FIRST_SEEN}:{server_id}")
+        keys.append(f"{KEY_SYNC_ACTIVITY}:{server_id}")
     redisClient.delete(*keys)
 
 
