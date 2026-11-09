@@ -42,6 +42,7 @@ def serializeAck(ack: HealthAck) -> dict:
 def serializeIssue(issue, server, ack: Optional[HealthAck], now: int) -> dict:
     data = issue.to_dict()
     data["server_name"] = server.name
+    data["server_url"] = server.url
     data["fleet_name"] = server.fleet.name if server.fleet is not None else None
     data["ack"] = serializeAck(ack) if ackApplies(ack, issue, now) else None
     return data
@@ -108,7 +109,8 @@ def emptyCounts() -> dict:
 
 
 def summaryForUser(user) -> dict:
-    """Counts of the issues that are not acknowledged: in total, per fleet, and the worst severity per server"""
+    """Counts of the issues that are not acknowledged: in total, per fleet, and the worst severity of each server
+    (listed with its name and fleet, so that healthy servers can be shown too)"""
     ctx = Context.for_user(user)
     servers = ownedServers(user)
     issues = evaluateServers(user, servers, ctx)
@@ -132,7 +134,8 @@ def summaryForUser(user) -> dict:
         "totals": totals,
         "acknowledged": acknowledged,
         "fleets": fleets,
-        "servers": {server_id: worstSeverity(serverIssues) for server_id, serverIssues in issuesByServer.items()},
+        "servers": {server.id: {"name": server.name, "fleet_id": server.fleet_id,
+                                "worst": worstSeverity(issuesByServer[server.id])} for server in servers},
         "server_count": len(servers),
         "oldest_refresh": min(snapshotTimes) if snapshotTimes else None,
         "newest_refresh": max(snapshotTimes) if snapshotTimes else None,

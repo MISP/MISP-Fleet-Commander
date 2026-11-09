@@ -124,6 +124,7 @@ def test_issue_fields(client, auth_headers, fleet, clock):
     unreachable = next(issue for issue in issues if issue["id"] == f"unreachable:{fleet.servers['down'].id}")
     assert unreachable["severity"] == "critical" and unreachable["category"] == "availability"
     assert unreachable["server_name"] == "down" and unreachable["fleet_name"] == "Fleet A"
+    assert unreachable["server_url"] == "https://down.test"
     assert unreachable["fleet_id"] == fleet.fleets["A"].id
     assert unreachable["first_seen"] == clock[0] and unreachable["ack"] is None
 
@@ -189,7 +190,11 @@ def test_summary(client, auth_headers, fleet, clock):
     for severity in ("critical", "warning", "info"):
         assert summary["totals"][severity] == len([i for i in issues if i["severity"] == severity])
     down, up = fleet.servers["down"], fleet.servers["up"]
-    assert summary["servers"] == {str(down.id): "critical", str(up.id): _worst([i for i in issues if i["server_id"] == up.id])}
+    assert summary["servers"] == {
+        str(down.id): {"name": "down", "fleet_id": fleet.fleets["A"].id, "worst": "critical"},
+        str(up.id): {"name": "up", "fleet_id": fleet.fleets["B"].id,
+                     "worst": _worst([i for i in issues if i["server_id"] == up.id])},
+    }
     assert summary["fleets"][str(fleet.fleets["A"].id)] == {"critical": 1, "warning": 0, "info": 0}
     assert summary["fleets"][str(fleet.fleets["C"].id)] == {"critical": 0, "warning": 0, "info": 0}
     assert str(fleet.fleets["bob"].id) not in summary["fleets"]
@@ -237,7 +242,7 @@ def test_acknowledged_issue_is_hidden(client, auth_headers, fleet, clock):
     _, summary = get(client, auth_headers, fleet.alice, "/health/summary")
     assert summary["acknowledged"] == 1
     assert summary["totals"]["critical"] == before["totals"]["critical"] - 1
-    assert summary["servers"][str(fleet.servers["down"].id)] is None
+    assert summary["servers"][str(fleet.servers["down"].id)]["worst"] is None
     assert summary["fleets"][str(fleet.fleets["A"].id)]["critical"] == 0
 
 
