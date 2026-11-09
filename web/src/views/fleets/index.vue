@@ -23,9 +23,12 @@
                 :variant="getSelectedFleetId == fleet.id ? 'primary' : ''"
                 @click="selectFleet(fleet)"
             >
-                <div class="d-flex w-100 justify-content-between">
+                <div class="d-flex w-100 justify-content-between align-items-start">
                     <h5 class="mb-1">{{ fleet.name }}</h5>
-                    <small>{{ fleet.server_count }} {{ fleet.server_count > 1 ? "servers" : "server"}}</small>
+                    <span class="d-flex align-items-center flex-shrink-0" style="gap: 0.5em;">
+                        <FleetHealthCounts :fleet_id="fleet.id" :server_count="fleet.server_count"></FleetHealthCounts>
+                        <small class="text-nowrap">{{ fleet.server_count }} {{ fleet.server_count === 1 ? "server" : "servers"}}</small>
+                    </span>
                 </div>
                 <div class="d-flex">
                     <span class="d-flex flex-row justify-content-center align-items-center" style="gap: 0.5em;">
@@ -86,6 +89,7 @@ import { mapState, mapGetters } from "vuex"
 import iconButton from "@/components/ui/elements/iconButton.vue"
 import AddModal from "@/views/fleets/AddModal.vue"
 import DeleteModal from "@/views/fleets/DeleteModal.vue"
+import FleetHealthCounts from "@/components/health/FleetHealthCounts.vue"
 import router from "@/router"
 
 export default {
@@ -94,6 +98,7 @@ export default {
         iconButton,
         AddModal,
         DeleteModal,
+        FleetHealthCounts,
     },
     data: function () {
         return {

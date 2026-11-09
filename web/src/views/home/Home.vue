@@ -47,6 +47,11 @@
             </div>
             <div class="row">
                 <div class="col">
+                    <HealthOverview class="mt-2"></HealthOverview>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col">
                     <Fleet class="mt-3"></Fleet>
                 </div>
                 <div class="col">
@@ -62,6 +67,7 @@
 import Layout from "@/components/layout/Layout.vue"
 import Fleet from "@/views/fleets/index.vue"
 import PluginIndex from "@/views/plugins/PluginIndex.vue"
+import HealthOverview from "@/components/health/HealthOverview.vue"
 import { absoluteBaseurl } from "@/api/apiConfig"
 
 export default {
@@ -69,7 +75,8 @@ export default {
     components: {
         Layout,
         Fleet,
-        PluginIndex
+        PluginIndex,
+        HealthOverview,
     },
     data: function () {
         const token_type = this.$store.getters["auth/access_token_type"];
