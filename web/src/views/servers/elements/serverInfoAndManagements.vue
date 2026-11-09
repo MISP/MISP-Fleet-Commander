@@ -126,6 +126,14 @@
             </b-card>
             </keep-alive>
         </b-tab>
+        <b-tab title="Synchronization" no-body lazy>
+            <template #title>
+                <i class="fas fa-sync-alt mr-1"></i><strong>Synchronization</strong>
+            </template>
+            <div :style="getMaxHeight">
+                <ServerSync :server_id="server_id"></ServerSync>
+            </div>
+        </b-tab>
         <b-tab title="Content" class="p-1" no-body disabled lazy>
             <template #title>
                 <i class="fas fa-database mr-1"></i><strong>Content</strong>
@@ -168,12 +176,14 @@ import MISPSchemaDiagnostic from "@/views/servers/elements/MISPSchemaDiagnostic.
 import MISPConnectedServers from "@/views/servers/elements/MISPConnectedServers.vue"
 import instanceUsage from "@/views/servers/elements/instanceUsage.vue"
 import pluginActions from "@/views/servers/elements/pluginActions.vue"
+import ServerSync from "@/views/servers/elements/ServerSync.vue"
 
 // Position of the tabs that can be opened by name
 const TAB_INDEX = {
     diagnostic: 3,
     profile: 4,
     connections: 5,
+    sync: 6,
 }
 
 export default {
@@ -187,6 +197,7 @@ export default {
         MISPConnectedServers,
         instanceUsage,
         pluginActions,
+        ServerSync,
     },
     props: {
         server_id: {
