@@ -1,6 +1,6 @@
 from typing import List, Optional, Union
 from application.DBModels import Server
-from application.controllers.utils import mispGetRequest, mispPostRequest
+from application.controllers.utils import mispGetRequest, mispPostRequest, mispRequestError, responseJson
 from application.models.plugins import BasePlugin, ErrorPluginResponse, PluginResponse, SuccessPluginResponse, FailPluginResponse
 
 
@@ -30,15 +30,17 @@ class QueryOrganisation(BasePlugin):
     def getOrganisation(cls, server: Server, org_name_or_uuid: str) -> PluginResponse:
         url = f'/organisations/view/{org_name_or_uuid}'
         result = mispGetRequest(server, url, rawResponse=True, nocache=True)
-        data = result.json()
-        if 'error' in result:
-            actionResponse = FailPluginResponse(result, [result['error']], None, result)
-        else:
-            if result.status_code == 404:
-                actionResponse = FailPluginResponse(data, [data['message']], None, result)
-            else:
-                data['message'] = f"Organisation `{data['Organisation']['name']}` exists on server `{server.name}`"
-                actionResponse = SuccessPluginResponse(data, None, None, result)
-
-        return actionResponse
+        error = mispRequestError(result)
+        if isinstance(result, dict):  # The request failed
+            return FailPluginResponse({}, [error])
+        data = responseJson(result)
+        if result.status_code == 404:
+            message = data.get('message') if isinstance(data, dict) else None
+            return FailPluginResponse(data, [message or f'Organisation `{org_name_or_uuid}` not found'], None, result)
+        if error is not None:
+            return FailPluginResponse(data, [error], None, result)
+        if not isinstance(data, dict) or 'Organisation' not in data:
+            return FailPluginResponse(data, ['Unexpected answer'], None, result)
+        data['message'] = f"Organisation `{data['Organisation']['name']}` exists on server `{server.name}`"
+        return SuccessPluginResponse(data, None, None, result)
 

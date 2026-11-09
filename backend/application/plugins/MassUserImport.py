@@ -1,7 +1,7 @@
 import json
 from typing import List, Optional, Union
 from application.DBModels import Server
-from application.controllers.utils import mispGetRequest, mispPostRequest
+from application.controllers.utils import mispGetRequest, mispPostRequest, mispRequestError
 from application.models.plugins import BasePlugin, ErrorPluginResponse, PluginResponse, SuccessPluginResponse, FailPluginResponse
 
 
@@ -87,17 +87,7 @@ class MassUserImport(BasePlugin):
     def addUser(cls, server: Server, user: dict):
         url = '/admin/users/add'
         result = mispPostRequest(server, url, data=user, rawResponse=True, nocache=True)
-        data = result.json()
-        if 'error' in data:
-            actionResponse = data['error']
-        else:
-            if result.ok:
-                actionResponse = True
-            else:
-                if 'error' in data:
-                    return data['error']
-                elif 'errors' in data:
-                    return user['email'] + ' - ' + ', '.join(list(data['errors'].values())[0])
-                actionResponse = data
-
-        return actionResponse
+        error = mispRequestError(result)
+        if error is None:
+            return True
+        return f"{user.get('email')} - {error}"

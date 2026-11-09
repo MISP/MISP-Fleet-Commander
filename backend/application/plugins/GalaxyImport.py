@@ -1,7 +1,7 @@
 import json
 from typing import List, Optional, Union
 from application.DBModels import Server
-from application.controllers.utils import mispGetRequest, mispPostRequest
+from application.controllers.utils import mispGetRequest, mispPostRequest, mispRequestError, responseJson
 from application.models.plugins import BasePlugin, PluginResponse, SuccessPluginResponse, FailPluginResponse
 
 
@@ -36,14 +36,10 @@ class GalaxyImport(BasePlugin):
     def doImport(cls, server: Server, payload: dict) -> PluginResponse:
         url = '/galaxies/import'
         result = mispPostRequest(server, url, data=payload, rawResponse=True, nocache=True)
-        data = result.json()
-        if 'error' in data:
-            actionResponse = FailPluginResponse(data, [data['error']], None, result)
-        else:
-            if result.ok:
-                actionResponse = SuccessPluginResponse(data, None, None, result)
-            else:
-                actionResponse = FailPluginResponse(data, [data['errors']], None, result)
-
-
-        return actionResponse
+        error = mispRequestError(result)
+        if isinstance(result, dict):  # The request failed
+            return FailPluginResponse({}, [error])
+        data = responseJson(result)
+        if error is not None:
+            return FailPluginResponse(data, [error], None, result)
+        return SuccessPluginResponse(data, None, None, result)

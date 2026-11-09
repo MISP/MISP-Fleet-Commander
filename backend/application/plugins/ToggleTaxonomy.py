@@ -1,7 +1,7 @@
 from typing import List, Optional, Union
 from requests import Response as requestsResponse
 from application.DBModels import Server
-from application.controllers.utils import mispGetRequest, mispPostRequest
+from application.controllers.utils import mispGetRequest, mispPostRequest, mispRequestError, responseJson
 from application.models.plugins import BasePlugin, ErrorPluginResponse, PluginResponse, SuccessPluginResponse, FailPluginResponse
 
 
@@ -60,7 +60,7 @@ class ToggleTaxonomy(BasePlugin):
             return result
 
         taxonomyIDByName = ToggleTaxonomy.fetchAllIDs(server)
-        if type(taxonomyIDByName) is requestsResponse:
+        if isinstance(taxonomyIDByName, PluginResponse):
             return taxonomyIDByName
 
         for taxonomy in taxonomies:
@@ -104,12 +104,15 @@ class ToggleTaxonomy(BasePlugin):
             return FailPluginResponse(data, errors)
 
     @classmethod
-    def fetchAllIDs(cls, server: Server) -> Union[int, requestsResponse]:
+    def fetchAllIDs(cls, server: Server) -> Union[dict, PluginResponse]:
         urlTaxonomyIndex = f'/taxonomies/index'
         result = mispGetRequest(server, urlTaxonomyIndex, {}, rawResponse=True, nocache=True)
-        data = result.json()
-        if 'Taxonomy' not in data[0]:
-            return result
+        error = mispRequestError(result)
+        if error is not None:
+            return FailPluginResponse({}, [f'Could not list the taxonomies: {error}'])
+        data = responseJson(result)
+        if not isinstance(data, list) or any('Taxonomy' not in entry for entry in data):
+            return FailPluginResponse({}, ['Could not list the taxonomies: unexpected answer'])
         taxonomyIDByName = {}
         for taxonomy in data:
             taxonomyIDByName[taxonomy['Taxonomy']['namespace']] = int(taxonomy['Taxonomy']['id'])
@@ -122,27 +125,21 @@ class ToggleTaxonomy(BasePlugin):
         urlAddTags = f'/taxonomies/addTag/{taxonomyID}'
 
         resultEnable = mispPostRequest(server, urlEnable, {}, rawResponse=True, nocache=True)
-        if 'error' in resultEnable:
-            actionResponse = resultEnable['error']
-        else:
-            resultAdd = mispPostRequest(server, urlAddTags, {}, rawResponse=True, nocache=True)
-            if 'error' in resultAdd:
-                actionResponse = resultAdd['error']
-            else:
-                actionResponse = True
-
-        return actionResponse
+        error = mispRequestError(resultEnable)
+        if error is not None:
+            return error
+        resultAdd = mispPostRequest(server, urlAddTags, {}, rawResponse=True, nocache=True)
+        error = mispRequestError(resultAdd)
+        if error is not None:
+            return f'Enabled, but its tags could not be created: {error}'
+        return True
 
     @classmethod
     def disableTaxonomy(cls, server: Server, taxonomyID: int) -> PluginResponse:
         url = f'/taxonomies/disable/{taxonomyID}'
         result = mispPostRequest(server, url, {}, rawResponse=True, nocache=True)
-        if 'error' in result:
-            actionResponse = result['error']
-        else:
-            actionResponse = True
-
-        return actionResponse
+        error = mispRequestError(result)
+        return True if error is None else error
 
 
 ALL_TAXONOMIES = [

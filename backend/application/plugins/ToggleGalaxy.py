@@ -1,7 +1,7 @@
 from typing import List, Optional, Union
 from requests import Response as requestsResponse
 from application.DBModels import Server
-from application.controllers.utils import mispGetRequest, mispPostRequest
+from application.controllers.utils import mispGetRequest, mispPostRequest, mispRequestError, responseJson
 from application.models.plugins import BasePlugin, PluginResponse, SuccessPluginResponse, FailPluginResponse, ErrorPluginResponse
 
 
@@ -52,7 +52,7 @@ class ToggleGalaxy(BasePlugin):
             return result
 
         galaxyIDByUUID = ToggleGalaxy.fetchAllIDs(server)
-        if type(galaxyIDByUUID) is requestsResponse:
+        if isinstance(galaxyIDByUUID, PluginResponse):
             return galaxyIDByUUID
 
         for galaxy_uuid in galaxies_uuid:
@@ -96,12 +96,15 @@ class ToggleGalaxy(BasePlugin):
             return FailPluginResponse(data, errors)
 
     @classmethod
-    def fetchAllIDs(cls, server: Server) -> Union[list, requestsResponse]:
+    def fetchAllIDs(cls, server: Server) -> Union[dict, PluginResponse]:
         url = f'/galaxies/index'
         result = mispGetRequest(server, url, {}, rawResponse=True, nocache=True)
-        data = result.json()
-        if 'Galaxy' not in data[0]:
-            return result
+        error = mispRequestError(result)
+        if error is not None:
+            return FailPluginResponse({}, [f'Could not list the galaxies: {error}'])
+        data = responseJson(result)
+        if not isinstance(data, list) or any('Galaxy' not in entry for entry in data):
+            return FailPluginResponse({}, ['Could not list the galaxies: unexpected answer'])
         galaxyIDByUUID = {}
         for galaxy in data:
             galaxyIDByUUID[galaxy['Galaxy']['uuid']] = int(galaxy['Galaxy']['id'])
@@ -111,24 +114,15 @@ class ToggleGalaxy(BasePlugin):
     def enableGalaxy(cls, server: Server, galaxyID: int) -> Union[bool, str]:
         url = f'/galaxies/enable/{galaxyID}'
         result = mispPostRequest(server, url, {}, rawResponse=True, nocache=True)
-        data = result.json()
-        if 'error' in result:
-            actionResponse = result['error']
-        else:
-            actionResponse = True
-
-        return actionResponse
+        error = mispRequestError(result)
+        return True if error is None else error
 
     @classmethod
     def disableGalaxy(cls, server: Server, galaxyID: int) -> Union[bool, str]:
         url = f'/galaxies/disable/{galaxyID}'
         result = mispPostRequest(server, url, {}, rawResponse=True, nocache=True)
-        if 'error' in result:
-            actionResponse = result['error']
-        else:
-            actionResponse = True
-
-        return actionResponse
+        error = mispRequestError(result)
+        return True if error is None else error
 
 
 ALL_GALAXIES = [
