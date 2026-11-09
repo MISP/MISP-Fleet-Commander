@@ -17,6 +17,7 @@ const urls = {
     getInstancePicture: `/servers/getInstancePicture`,
     batchTest: `/servers/batchTest`,
     discoverConnected: `/servers/discoverConnected`,
+    syncOvertime: `/servers/syncOvertime`,
 }
 
 export default {
@@ -125,6 +126,14 @@ export default {
 
     discoverConnected(root_server_id) {
         return common.getClient().post(urls.discoverConnected, { root_server_id })
+            .then((response) => response.data)
+    },
+
+    // Pulls and pushes of the last days per sync server, read from the server's MISP logs (cached by the backend
+    // unless `refresh`)
+    syncOvertime(server_id, refresh = false) {
+        const url = `${urls.syncOvertime}/${server_id}${refresh ? "?refresh=1" : ""}`
+        return common.getClient().get(url)
             .then((response) => response.data)
     },
 

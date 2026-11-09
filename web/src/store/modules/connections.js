@@ -36,6 +36,37 @@ const getters = {
         })
         return bySource
     },
+    // server_id -> { outgoing, incoming }: its links, and the links of the other managed servers that lead to it
+    linksOfServer: (state, getters, rootState, rootGetters) => (serverID) => {
+        const serversByUUID = rootGetters["servers/serversByUUID"]
+        const serversByURL = rootGetters["servers/serversByURL"]
+        const outgoing = []
+        const incoming = []
+        state.all.forEach(link => {
+            const sourceID = link.source && link.source.id
+            if (sourceID === serverID) {
+                outgoing.push(link)
+            } else {
+                const target = managedTarget(link, serversByUUID, serversByURL)
+                if (target && target.id === serverID) {
+                    incoming.push(link)
+                }
+            }
+        })
+        return { outgoing, incoming }
+    },
+}
+
+// The managed server a link leads to, if any: matched on the remote's MISP UUID (known once the link was tested),
+// else on its URL
+export function managedTarget(link, serversByUUID, serversByURL) {
+    const destination = (link.destination && link.destination.Server) || {}
+    const uuid = link.destination && link.destination.connectionTest && link.destination.connectionTest.uuid
+    if (uuid && serversByUUID[uuid]) {
+        return serversByUUID[uuid]
+    }
+    const url = (destination.url || "").replace(/\/+$/, "")
+    return serversByURL[url] || null
 }
 
 // Most severe first

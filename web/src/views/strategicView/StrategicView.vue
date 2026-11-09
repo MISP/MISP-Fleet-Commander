@@ -140,7 +140,7 @@ import ThePinCard from "@/views/strategicView/elements/PinCard.vue"
 import NetworkLegend from "@/views/strategicView/elements/NetworkLegend.vue"
 import NetworkNodeSearch from "@/views/strategicView/elements/NetworkNodeSearch.vue"
 import d3Network from "@/helpers/d3Network.js"
-import { LINK_LEVELS, isProblemLink } from "@/store/modules/connections"
+import { LINK_LEVELS, isProblemLink, managedTarget } from "@/store/modules/connections"
 
 const LINK_TEST_START_TIMEOUT = 15000
 const PROBLEMS_ONLY_KEY = "mfc.strategicView.problemsOnly"
@@ -546,15 +546,7 @@ export default {
             this.d3data.links.forEach((link, index) => { // remap source -> origin
                 link.origin = link.source
                 link.source = parseInt(link.origin.id)
-                const destinationURL = link.destination.Server.url
-                const destinationURLWithoutTrailing = destinationURL.endsWith('/') ? destinationURL.substr(0, destinationURL.length - 1) : destinationURL
-                const destinationUUID = link.destination.connectionTest?.uuid
-                let knownDestination
-                if (this.serversByUUID[destinationUUID]) {
-                    knownDestination = this.serversByUUID[destinationUUID]
-                } else if (this.serversByURL[destinationURLWithoutTrailing]) {
-                    knownDestination = this.serversByURL[destinationURLWithoutTrailing]
-                }
+                const knownDestination = managedTarget(link, this.serversByUUID, this.serversByURL)
                 if (knownDestination) {
                     link.target = parseInt(knownDestination.id)
                     link._managed_server = true

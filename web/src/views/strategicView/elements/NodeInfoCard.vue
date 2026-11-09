@@ -47,8 +47,8 @@
                     >
                     </b-table>
                 </b-tab>
-                <b-tab title="Diagnostic">
-                    Diagnostic
+                <b-tab title="Health" no-body>
+                    <ServerIssueList :server_id="server_id" :fleet_id="getServer.fleet_id || null"></ServerIssueList>
                 </b-tab>
                 <b-tab title="Content">
                     Event pic and data
@@ -63,12 +63,14 @@
 import { mapState, mapGetters } from "vuex"
 import { websocketMixin } from "@/helpers/websocketMixin"
 import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
+import ServerIssueList from "@/components/health/ServerIssueList.vue"
 
 export default {
     name: "TheNodeInfoCard",
     mixins: [websocketMixin],
     components: {
-        timeSinceRefresh
+        timeSinceRefresh,
+        ServerIssueList,
     },
     props: {
         server_id: {

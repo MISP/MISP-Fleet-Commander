@@ -32,8 +32,8 @@
                     <b-tab title="Usage">
                         <ServerNodeUsage :usage="getServerUsage" :server="getServer"></ServerNodeUsage>
                     </b-tab>
-                    <b-tab title="Synchronization">
-                        <ServerNodeSync :sync="{}"></ServerNodeSync>
+                    <b-tab title="Synchronization" lazy>
+                        <ServerNodeSync :server_id="server_id"></ServerNodeSync>
                     </b-tab>
                     <b-tab title="Pinned content">
                         <ServerNodePinnedContent :server="getServer"></ServerNodePinnedContent>
@@ -84,6 +84,7 @@ export default {
     data: function () {
         return {
             tabIndex: 0,
+            resizeObserver: null,
         }
     },
     computed: {
@@ -121,10 +122,16 @@ export default {
             })
         },
         resizeParentForeignObject() { // sync SVG's ForeignObject dimensions with those of this child node
+            if (!this.$el || !this.$el.closest) {
+                return
+            }
             const tranformScale = d3.zoomTransform(this.d3SVGNode).k
             const tranformScaleInverse = 1 / tranformScale
             const divBoundingRect = this.$el.getBoundingClientRect()
             const parentSVG = this.$el.closest("foreignObject.nodeFO")
+            if (parentSVG === null) {
+                return
+            }
             parentSVG.setAttribute("width", `${divBoundingRect.width * tranformScaleInverse}px`)
             parentSVG.setAttribute("height", `${divBoundingRect.height * tranformScaleInverse}px`)
         },
@@ -158,6 +165,16 @@ export default {
     },
     mounted() {
         this.tabChanged()
+        // Tabs load their content after opening (sync activity): follow the card's size, not only tab changes
+        if (typeof ResizeObserver !== "undefined") {
+            this.resizeObserver = new ResizeObserver(() => this.resizeParentForeignObject())
+            this.resizeObserver.observe(this.$el)
+        }
+    },
+    beforeDestroy() {
+        if (this.resizeObserver !== null) {
+            this.resizeObserver.disconnect()
+        }
     }
 }
 </script>
