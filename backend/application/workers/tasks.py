@@ -228,7 +228,7 @@ def backgroundRefreshSettings():
     }
 
 
-BACKGROUND_CONNECTION_TEST_TIMEOUT = 30
+BACKGROUND_CONNECTION_TEST_TIMEOUT = serverModel.CONNECTION_TEST_TIMEOUT
 BACKGROUND_LOCK_TIMEOUT = 60 * 60  # Released by then even if a worker died while holding it
 
 

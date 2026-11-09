@@ -105,6 +105,10 @@ def publishHealth(server):
     from application.models.health import publishServerHealth
     publishServerHealth(server)
 
+# A connection test (`/servers/getVersion`) taking longer than this counts as unreachable. Without it, a server that
+# drops packets keeps a worker busy for minutes, and a few clicks on "Quick refresh" can block every worker
+CONNECTION_TEST_TIMEOUT = 30
+
 def testConnection(server_id: int, use_cache=True) -> Union[dict, None]:
     server = Server.query.get(server_id)
     if server is not None:
@@ -118,14 +122,15 @@ def testConnectionAsync(server_id: int) -> Union[dict, None]:
         urls = [
             '/servers/getVersion',
         ]
-        results = asyncio.run(asyncFetcher(server, urls))
+        results = asyncio.run(asyncFetcher(server, urls, timeout=CONNECTION_TEST_TIMEOUT))
         if results is None:
             return None
         return recordConnectionTest(server, results[0])
     else:
         return None
 
-def testAllConnectionAsync(servers: list, clientSocketEmitterUpdateFun, max_concurrency=None, timeout=300):
+def testAllConnectionAsync(servers: list, clientSocketEmitterUpdateFun, max_concurrency=None, timeout=None):
+    timeout = CONNECTION_TEST_TIMEOUT if timeout is None else timeout
     url = '/servers/getVersion'
     serverByID = {server.id: server for server in servers}
 

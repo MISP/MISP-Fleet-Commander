@@ -88,6 +88,26 @@ def test_connection_test_is_persisted(monkeypatch, servers):
     assert status == {"version": "2.5.1", "_latency": 0.12, "_status_code": 200, "timestamp": result["timestamp"]}
 
 
+def test_connection_tests_asked_from_the_ui_time_out_like_background_ones(monkeypatch, servers):
+    """A server that does not answer must not keep a worker busy for minutes"""
+    import application.models.servers as serverModel
+    server = servers["bg-alice@test.local"][2][0]
+    timeouts = []
+
+    async def fakeFetcher(srv, urls, timeout=300):
+        timeouts.append(timeout)
+        return [{"error": f"Timeout Exception ({timeout}s)"}]
+
+    async def fakeManyFetcher(srvs, url, callback, timeout=300, max_concurrency=None):
+        timeouts.append(timeout)
+    monkeypatch.setattr(serverModel, "asyncFetcher", fakeFetcher)
+    monkeypatch.setattr(serverModel, "asyncFetcherManyServer", fakeManyFetcher)
+
+    serverModel.testConnectionAsync(server.id)  # "Test connection" on one server
+    serverModel.testAllConnectionAsync([server], lambda *a: None)  # "Quick refresh" of a fleet
+    assert timeouts == [serverModel.CONNECTION_TEST_TIMEOUT] * 2 and serverModel.CONNECTION_TEST_TIMEOUT == 30
+
+
 def test_non_json_connection_test_is_stored_as_error(servers):
     from application import redisModel
     server = servers["bg-alice@test.local"][2][0]
