@@ -11,6 +11,8 @@ const init_state = () => {
         server_refresh_enqueued: {},
         server_status_refresh_enqueued: {},
         server_graphs_refresh_enqueued: {},
+        // server_id -> {testing, error, updated}: link tests in progress, why the last one could not be done
+        server_link_test: {},
         server_query_error: {},
         server_user: {},
         remote_connections: {},
@@ -240,6 +242,13 @@ const mutations = {
         const server_id = payload.server_id
         const is_enqueued = payload.is_enqueued
         state.server_status_refresh_enqueued[server_id] = is_enqueued
+    },
+    setServerLinkTest(state, payload) {
+        Vue.set(state.server_link_test, payload.server_id, {
+            testing: payload.testing,
+            error: payload.error || null,
+            updated: Date.now(),
+        })
     },
     setServerGraphsRefreshEnqueued(state, payload) {
         const server_id = payload.server_id

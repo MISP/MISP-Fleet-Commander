@@ -112,6 +112,52 @@ def doFleetConnectionTestTask(server_ids):
     serverModel.testAllConnectionAsync(serversDict, clientSocketEmitterUpdateFun)
 
 
+LINK_TEST_LOCK_TIMEOUT = 10 * 60  # Released by then even if a worker died while holding it
+
+
+@huey_app.task(priority=4)
+def doLinkTestTask(server_ids, remote_server_id=None):
+    """Re-test the sync links of these servers (only the link to `remote_server_id` when given). A server whose links
+    are already being tested is skipped, so repeated clicks do not pile tests up on its MISP"""
+    servers, tokens = [], {}
+    for server in loadServers(server_ids):
+        token = uuid.uuid4().hex
+        if redisModel.redisClient.set(f"link-test-lock:{server.id}", token, nx=True, ex=LINK_TEST_LOCK_TIMEOUT):
+            tokens[server.id] = token
+            servers.append(server)
+            socketioEmitter.server_link_test(server, testing=True)
+    if not servers:
+        return
+
+    done = set()
+
+    def linkTestDone(server, result):
+        done.add(server.id)
+        lockName = f"link-test-lock:{server.id}"
+        if redisModel.redisClient.get(lockName) == tokens.get(server.id):
+            redisModel.redisClient.delete(lockName)
+        socketioEmitter.server_link_test(server, testing=False, error=(result or {}).get("error"))
+
+    def clientSocketEmitterUpdateFun(server_id, testResult):  # Only for a server refreshed in full (no data yet)
+        server = next(s for s in servers if s.id == server_id)
+        testResult["server"] = serverSchemaLighter.dump(server)
+        socketioEmitter.udpate_server(server, testResult)
+
+    callbacks = {
+        "link_test_done": linkTestDone,
+        "udpate_server": clientSocketEmitterUpdateFun,
+        "udpate_server_connection_list": socketioEmitter.udpate_server_connection_list,
+        "udpate_server_usage": socketioEmitter.udpate_server_usage,
+    }
+    try:
+        serverModel.testLinks(servers, callbacks, remote_server_id=remote_server_id,
+                              max_concurrency=int(settingModel.getValue("health_max_concurrency")))
+    finally:
+        for server in servers:
+            if server.id not in done:
+                linkTestDone(server, {"error": "The link test failed unexpectedly"})
+
+
 @huey_app.task()
 def doCacheMonitoringImages(server_id):
     server = serverModel.get(server_id)

@@ -93,6 +93,28 @@ def registerListeners():
         if fleet is not None:
             doFleetConnectionTestTask([server.id for server in fleet.servers])
 
+    @socketioApp.on('fleet_link_test')
+    def fleetLinkTest(fleedID):
+        from application.workers.tasks import doLinkTestTask
+        fleet = ownedFleet(fleedID)
+        if fleet is not None:
+            doLinkTestTask([server.id for server in fleet.servers])
+
+    @socketioApp.on('server_link_test')
+    def serverLinkTest(payload):
+        """A server ID tests all its links; `{"server_id": .., "remote_server_id": ..}` tests one of them"""
+        from application.workers.tasks import doLinkTestTask
+        remoteServerID = None
+        if isinstance(payload, dict):
+            serverID, remoteServerID = payload.get('server_id'), payload.get('remote_server_id')
+            if remoteServerID is not None and not str(remoteServerID).isdigit():
+                return
+        else:
+            serverID = payload
+        server = ownedServer(serverID)
+        if server is not None:
+            doLinkTestTask([server.id], remote_server_id=None if remoteServerID is None else int(remoteServerID))
+
     @socketioApp.on("refresh_server_graphs")
     def refresh_server_graphs(serverID):
         from application.workers.tasks import doCacheMonitoringImages
@@ -173,6 +195,14 @@ class SocketioEmitter:
 
     def server_status_updating(self, server):
         self._emitToServerOwner('SERVER_STATUS_UPDATING', server, self._id(server))
+
+    def server_link_test(self, server, testing, error=None):
+        """`{server_id, testing}`: a link test of the server started (`true`) or ended (`false`, with `error` if it
+        could not be done; the links are then unchanged)"""
+        payload = {"server_id": self._id(server), "testing": testing}
+        if error:
+            payload["error"] = error
+        self._emitToServerOwner('SERVER_LINK_TEST', server, payload)
 
     def server_graphs_updating(self, server):
         self._emitToServerOwner("SERVER_GRAPHS_UPDATING", server, self._id(server))

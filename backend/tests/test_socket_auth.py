@@ -109,3 +109,24 @@ def test_pong_only_goes_to_the_asking_socket(monkeypatch, socket_client, two_use
 
     assert [event["name"] for event in aliceClient.get_received()] == ["PONG"]
     assert bobClient.get_received() == []
+
+
+def test_link_tests_only_for_ones_own_servers(monkeypatch, socket_client, two_users):
+    import application.workers.tasks as tasks
+    calls = []
+    monkeypatch.setattr(tasks, "doLinkTestTask",
+                        lambda server_ids, remote_server_id=None: calls.append((server_ids, remote_server_id)))
+    alice, aliceFleet, aliceServer = two_users["alice"]
+    bob, bobFleet, bobServer = two_users["bob"]
+    bobClient = socket_client(user=bob)
+
+    bobClient.emit("fleet_link_test", aliceFleet.id)
+    bobClient.emit("server_link_test", aliceServer.id)
+    bobClient.emit("server_link_test", {"server_id": aliceServer.id, "remote_server_id": 3})
+    bobClient.emit("server_link_test", {"server_id": bobServer.id, "remote_server_id": "3; drop"})
+    assert calls == []
+
+    bobClient.emit("fleet_link_test", bobFleet.id)
+    bobClient.emit("server_link_test", bobServer.id)
+    bobClient.emit("server_link_test", {"server_id": bobServer.id, "remote_server_id": "3"})
+    assert calls == [([bobServer.id], None), ([bobServer.id], None), ([bobServer.id], 3)]

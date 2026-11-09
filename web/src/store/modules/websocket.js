@@ -62,6 +62,9 @@ const actions = {
         }
         commit("servers/setServerStatusRefreshEnqueued", payload, { root: true })
     },
+    SOCKET_SERVER_LINK_TEST({ commit }, payload) {
+        commit("servers/setServerLinkTest", payload, { root: true })
+    },
     SOCKET_SERVER_GRAPHS_UPDATING({ commit }, serverData) {
         const payload = {
             server_id: serverData,

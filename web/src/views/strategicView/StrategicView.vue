@@ -58,10 +58,28 @@
                     variant="primary"
                     class="ml-auto"
                     size="sm"
-                    title="Quick refresh"
+                    title="Quick refresh: check that each server answers"
+                    aria-label="Quick refresh"
                     @click="fleetStatusRefresh()"
                 >
                     <i class="fas fa-redo-alt"></i>
+                </b-button>
+                <b-button
+                    :variant="linkTestInProgress ? 'dark' : 'primary'"
+                    :disabled="linkTestInProgress || serverCount === 0"
+                    size="sm"
+                    class="text-nowrap"
+                    title="Test every sync link of the fleet, without a full refresh"
+                    @click="fleetLinkTest()"
+                >
+                    <span v-if="linkTestInProgress">
+                        <i class="fas fa-circle-notch fa-spin"></i>
+                        Testing links<span v-if="linkTestRunning > 1"> ({{ linkTestRunning }} servers)</span>
+                    </span>
+                    <span v-else>
+                        <i class="fas fa-link"></i>
+                        Test links
+                    </span>
                 </b-button>
                 <b-button
                     :variant="getRefreshEnqueued ? 'dark' : 'primary'"
@@ -118,6 +136,8 @@ import TheLinkInfoCard from "@/views/strategicView/elements/LinkInfoCard.vue"
 import ThePinCard from "@/views/strategicView/elements/PinCard.vue"
 import d3Network from "@/helpers/d3Network.js"
 
+const LINK_TEST_START_TIMEOUT = 15000
+
 export default {
     name: "TheStrategicView",
     mixins: [websocketMixin],
@@ -131,6 +151,11 @@ export default {
     data: function () {
         return {
             refreshInProgress: false,
+            linkTest: {
+                startedAt: null, // When the link test was asked for from here, until its outcome is reported
+                waiting: false, // Asked for, not started by the workers yet
+                timer: null,
+            },
             showSidebar: false,
             nodeInfoCard: {
                 show: false,
@@ -169,6 +194,7 @@ export default {
             selectedFleet: state => state.fleets.selected,
             remote_connections: state => state.servers.remote_connections,
             server_refresh_enqueued: state => state.servers.server_refresh_enqueued,
+            server_link_test: state => state.servers.server_link_test,
         }),
         ...mapGetters({
             serverCount: "servers/serverCount",
@@ -185,10 +211,62 @@ export default {
             // the server list only holds the servers of the selected fleet
             return this.getServerList.some(server => this.server_refresh_enqueued[server.id])
         },
+        linkTestRunning() {
+            return this.getServerList.filter(server => this.server_link_test[server.id]?.testing).length
+        },
+        linkTestSeen() {
+            // Servers the workers reported on since the test was asked for. Compared by time, not by watching the
+            // running count: a server without API key starts and ends within the same tick
+            if (this.linkTest.startedAt === null) {
+                return []
+            }
+            return this.getServerList.filter(server => (this.server_link_test[server.id]?.updated || 0) >= this.linkTest.startedAt)
+        },
+        linkTestInProgress() {
+            return this.linkTestRunning > 0 || (this.linkTest.waiting && this.linkTestSeen.length === 0)
+        },
+        linkTestFinished() {
+            return this.linkTest.startedAt !== null && this.linkTestSeen.length > 0 && this.linkTestRunning === 0
+        },
     },
     methods: {
         fleetRefresh() {
             this.wsFleetRefresh(this.selectedFleet.id)
+        },
+        fleetLinkTest() {
+            // Disabled right away: the workers report the start of each server's test a moment later
+            this.linkTest.startedAt = Date.now()
+            this.linkTest.waiting = true
+            clearTimeout(this.linkTest.timer)
+            this.linkTest.timer = setTimeout(() => {
+                // Still queued: the button is usable again, and the outcome is reported if the test starts later
+                this.linkTest.waiting = false
+                if (this.linkTest.startedAt !== null && this.linkTestSeen.length === 0) {
+                    this.$bvToast.toast("The workers have not started it yet: they may be busy with other tasks, or not running. It runs as soon as one is free.", {
+                        title: "Link test waiting",
+                        variant: "warning",
+                    })
+                }
+            }, LINK_TEST_START_TIMEOUT)
+            this.wsFleetLinkTest(this.selectedFleet.id)
+        },
+        reportLinkTest() {
+            const failed = this.linkTestSeen
+                .filter(server => this.server_link_test[server.id]?.error)
+                .map(server => `${server.name}: ${this.server_link_test[server.id].error}`)
+            if (failed.length > 0) {
+                const h = this.$createElement
+                this.$bvToast.toast([h("ul", { class: "mb-0 pl-3" }, failed.map(text => h("li", text)))], {
+                    title: `Links of ${failed.length} server${failed.length > 1 ? "s" : ""} could not be tested`,
+                    variant: "danger",
+                })
+            } else {
+                this.$bvToast.toast("The links are shown with their latest test results.", {
+                    title: "Links tested",
+                    variant: "success",
+                    autoHideDelay: 3000,
+                })
+            }
         },
         fleetStatusRefresh() {
             this.wsFleetConnectionTest(this.selectedFleet.id)
@@ -443,6 +521,7 @@ export default {
             })
     },
     destroyed() {
+        clearTimeout(this.linkTest.timer)
         this.allNodeInstances.forEach(nodeInstance => {
             nodeInstance.$destroy() // We have to manually destroy the mounted nodes as it's not done automatically
         })
@@ -453,6 +532,14 @@ export default {
         },
         getConnectionList: function() {
             this.updateWithStore()
+        },
+        linkTestFinished: function(finished) {
+            if (finished) {
+                this.reportLinkTest()
+                this.linkTest.startedAt = null
+                this.linkTest.waiting = false
+                clearTimeout(this.linkTest.timer)
+            }
         },
         remote_connections: {
             handler: function() {

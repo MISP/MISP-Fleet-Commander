@@ -19,6 +19,13 @@ export const websocketMixin = {
         wsFleetConnectionTest: function (fleetID) {
             this.$socket.emit('fleet_connection_test', fleetID);
         },
+        wsFleetLinkTest: function (fleetID) {
+            this.$socket.emit('fleet_link_test', fleetID);
+        },
+        wsServerLinkTest: function (serverID, remoteServerID) {
+            const payload = remoteServerID === undefined ? serverID : { server_id: serverID, remote_server_id: remoteServerID }
+            this.$socket.emit('server_link_test', payload);
+        },
         wsServerGraphsRefresh: function (serverID) {
             this.$socket.emit('refresh_server_graphs', serverID);
         },

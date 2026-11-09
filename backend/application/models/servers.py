@@ -380,6 +380,12 @@ async def fetchServerInfoAsync(server, clientSocketEmitterUpdateFuns):
     return fullQuery
 
 
+# Sync links of one server tested at the same time, during a full refresh or a link test
+LINK_TEST_CONCURRENCY = 4
+# Listing a server's sync connections before testing them
+LINK_TEST_INDEX_TIMEOUT = 30
+
+
 def attachConnectedServerStatus(server, connectedServers):
     if type(connectedServers) is list:
         with concurrent.futures.ThreadPoolExecutor(max(len(connectedServers), 1)) as executor:
@@ -393,12 +399,91 @@ def attachConnectedServerStatus(server, connectedServers):
                     print('%r generated an exception: %s' % (connectedServers[j], exc))
     return connectedServers
 
-async def attachConnectedServerStatusAsync(server, connectedServers):
+async def attachConnectedServerStatusAsync(server, connectedServers, max_concurrency=LINK_TEST_CONCURRENCY):
+    """Test a server's sync links, a few at a time: each test makes that MISP contact the remote. A test that
+    fails unexpectedly is recorded as not completed instead of stopping the others"""
     if type(connectedServers) is list:
-        for i, connectedServer in enumerate(connectedServers):
-            serverStatus = await getConnectedServerStatusAsync(server, connectedServer)
-            connectedServers[i] = serverStatus
+        semaphore = asyncio.Semaphore(max(int(max_concurrency), 1))
+
+        async def test(connectedServer):
+            async with semaphore:
+                try:
+                    return await getConnectedServerStatusAsync(server, connectedServer)
+                except Exception as e:
+                    connectedServer['connectionTest'] = parseMISPConnectionOutput(
+                        {'error': f'Unhandled Exception: {e}', 'timestamp': int(time.time())})
+                    connectedServer['connectionUser'] = parseMISPUserConnectionOutput({})
+                    return connectedServer
+        connectedServers[:] = await asyncio.gather(*[test(connectedServer) for connectedServer in connectedServers])
     return connectedServers
+
+
+def testLinks(servers: list, callbacks: dict, remote_server_id=None, max_concurrency: int = 10):
+    """Re-test the sync links of servers without the rest of a full refresh (diagnostics, users, usage).
+    `remote_server_id` restricts the test to that link (the other links keep their last result). Callbacks:
+    `link_test_done(server, result)` once per server, whatever happens, and `udpate_server_connection_list`"""
+    return asyncio.run(testLinksAsync(servers, callbacks, remote_server_id, max_concurrency))
+
+
+async def testLinksAsync(servers: list, callbacks: dict, remote_server_id=None, max_concurrency: int = 10):
+    semaphore = asyncio.Semaphore(max(int(max_concurrency), 1))
+
+    async def test(server):
+        async with semaphore:
+            result = {}
+            try:
+                result = await testServerLinksAsync(server, callbacks, remote_server_id)
+            except Exception as e:
+                print(f'Link test of server {server.id} failed: {e}')
+                result = {'error': 'The link test failed unexpectedly'}
+            finally:
+                if 'link_test_done' in callbacks:
+                    callbacks['link_test_done'](server, result)
+            return result
+    return await asyncio.gather(*[test(server) for server in servers])
+
+
+async def testServerLinksAsync(server, callbacks: dict, remote_server_id=None) -> dict:
+    """`{"tested": n}`, `{"full_refresh": True}` for a server with no data yet (there is nothing to update, so it
+    gets a full refresh instead), or `{"error": ...}`, in which case the last known links are kept"""
+    if not server.authkey:
+        return {'error': 'No API key configured'}
+    previous = redisModel.getServerInfo(server.uuid)
+    if previous is None:
+        await fetchServerInfoAsync(server, callbacks)
+        return {'full_refresh': True}
+
+    results = await asyncFetcher(server, ['/servers/index'], timeout=LINK_TEST_INDEX_TIMEOUT)
+    connectedServers = stripRemoteAuthkeys(results[0])
+    if not isinstance(connectedServers, list):
+        answer = connectedServers if isinstance(connectedServers, dict) else {}
+        error = answer.get('error') or answer.get('message') or answer.get('name') or 'Unexpected answer'
+        return {'error': f'Could not list the sync connections: {error}'}
+
+    if remote_server_id is None:
+        toTest = connectedServers
+    else:
+        toTest = [c for c in connectedServers if str(c.get('Server', {}).get('id')) == str(remote_server_id)]
+        if not toTest:
+            return {'error': f'No sync connection with ID {remote_server_id}'}
+        previousLinks = previous.get('query_result', {}).get('connectedServers')
+        previousByID = {str(link['Server']['id']): link for link in previousLinks
+                        if isinstance(link, dict) and isinstance(link.get('Server'), dict)} \
+            if isinstance(previousLinks, list) else {}
+        for connectedServer in connectedServers:
+            remoteID = str(connectedServer.get('Server', {}).get('id'))
+            old = previousByID.get(remoteID)
+            if remoteID != str(remote_server_id) and old is not None:
+                for key in ('connectionTest', 'connectionUser', 'vid'):
+                    if key in old:
+                        connectedServer[key] = old[key]
+
+    await attachConnectedServerStatusAsync(server, toTest)
+    savePartialInfo(server, 'connectedServers', connectedServers)
+    if 'udpate_server_connection_list' in callbacks:
+        callbacks['udpate_server_connection_list'](server, connectedServers)
+    publishHealth(server)
+    return {'tested': len(toTest)}
 
 def attachConnectedServerStatusFor(server, connectedServers, remote_server_id):
     '''Recover old connection states for all other remote servers but refresh the one that has been requested'''
