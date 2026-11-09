@@ -21,7 +21,7 @@
                         <div class="ml-auto node-badges">
                             <ServerHealthBadge :server_id="server_id" :fleet_id="getServer.fleet_id || null"></ServerHealthBadge>
                             <NodeLinkHealth :server_id="server_id"></NodeLinkHealth>
-                            <span :class="['badge', getServerStatus.error ? 'badge-danger' : 'badge-success']">{{ getServerStatus.data }}</span>
+                            <span :class="['badge', connectionStatusBadgeClass(server_id, getServerStatus)]">{{ getServerStatus.data }}</span>
                         </div>
                     </div>
                 </template>
@@ -40,7 +40,7 @@
                     </b-tab>
                     <template v-slot:tabs-end>
                         <a class="nav-link disabled ml-auto border-0" href="#" style="pointer-events: auto;">
-                            <timeSinceRefresh :timestamp="lastRefreshTimestamp" :clockNoMargin="true"></timeSinceRefresh>
+                            <timeSinceRefresh :timestamp="lastRefreshTimestamp" :server_id="server_id" :clockNoMargin="true"></timeSinceRefresh>
                             <button type="button" class="btn btn-sm btn-link sync-btn p-0" @click.prevent.stop="wsStatusRefresh()">
                                 <i class="fas fa-sync"></i>
                             </button>
@@ -66,10 +66,11 @@ import ServerNodeSync from "@/views/strategicView/elements/nodeElements/ServerNo
 import ServerNodePinnedContent from "@/views/strategicView/elements/nodeElements/ServerNodePinnedContent.vue"
 import ServerHealthBadge from "@/components/health/ServerHealthBadge.vue"
 import NodeLinkHealth from "@/views/strategicView/elements/NodeLinkHealth.vue"
+import { healthCellMixin } from "@/helpers/healthCells"
 
 export default {
     name: "ServerNode",
-    mixins: [websocketMixin],
+    mixins: [websocketMixin, healthCellMixin],
     components: {
         ServerHealthBadge,
         NodeLinkHealth,

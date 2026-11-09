@@ -2,7 +2,7 @@
     <div class="nodeContainer">
         <div class="nodeServer nodeServerMicro p-2 top-header">
             <h1 class="text-monospace text-nowrap mb-0 p-2">
-                <span :class="[getServerStatus.error ? 'text-danger' : 'text-success']">
+                <span :class="connectionStatusClass(server_id, getServerStatus)">
                     <b-icon icon="circle-fill"></b-icon>
                 </span>
                 <span class="ml-2">{{ getServer.name }}</span>
@@ -22,9 +22,11 @@ import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
 import iconButton from "@/components/ui/elements/iconButton.vue"
 import NodeIssuesChip from "@/views/strategicView/elements/NodeIssuesChip.vue"
 import NodeLinkHealth from "@/views/strategicView/elements/NodeLinkHealth.vue"
+import { healthCellMixin } from "@/helpers/healthCells"
 
 export default {
     name: "ServerNodeMicro",
+    mixins: [healthCellMixin],
     components: {
         timeSinceRefresh,
         NodeIssuesChip,

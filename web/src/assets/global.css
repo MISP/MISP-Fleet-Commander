@@ -21,6 +21,10 @@
     --health-info-tint: #e9f6f8;
     --health-ok: #3aa564;
     --health-ok-ink: #2a7a49;
+    /* Acknowledged issues: the severity's hue, desaturated (the problem is still there, it no longer asks for attention) */
+    --health-critical-muted: #b4858a;
+    --health-warning-muted: #a39064;
+    --health-info-muted: #76a0a7;
     --health-rule: #e4e7ec;
     --health-focus-bg: #f2f7fb;
     /* Sync link health, drawn as lines on a white canvas: the warning amber is darkened to stay visible */
@@ -257,3 +261,33 @@ table.table-no-select tbody, table.table-no-select thead > tr {
 .table-sm.condensed td {
     padding: 0.15rem;
 }
+
+/* Status cells coloured from the health issues (helpers/healthCells.js) */
+.health-ink-warning {
+    color: var(--health-warning-ink) !important;
+}
+
+.health-acked-critical {
+    --health-acked: var(--health-critical-muted);
+}
+
+.health-acked-warning {
+    --health-acked: var(--health-warning-muted);
+}
+
+.health-acked-info {
+    --health-acked: var(--health-info-muted);
+}
+
+.health-acked {
+    color: var(--health-acked) !important;
+}
+
+.badge.health-acked-badge {
+    color: var(--health-acked);
+    background-color: #fff;
+    outline: 1px dashed var(--health-acked);
+    outline-offset: -1px;
+    font-weight: 600;
+}
+

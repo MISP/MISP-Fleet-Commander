@@ -12,7 +12,7 @@
                 <h5 id="sidebar-no-header-title" class="mb-0 d-flex">
                     <span>{{ getServer.name }}</span>
                     <span style="font-size: 0.66em;" class="ml-auto">
-                        <timeSinceRefresh :timestamp="lastRefreshTimestamp" :clockNoMargin="true"></timeSinceRefresh>
+                        <timeSinceRefresh :timestamp="lastRefreshTimestamp" :server_id="server_id" :clockNoMargin="true"></timeSinceRefresh>
                         <b-button
                             variant="primary"
                             class="ml-auto"

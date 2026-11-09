@@ -1,32 +1,45 @@
 <template>
     <span
         v-if="proxy !== '' && proxy !== undefined"
-        :class="printable === true ? 'text-success' : 'text-danger'"
+        :class="['text-nowrap', textClass]"
+        :title="title"
     >
-        <span :class="['fas', printable === true ? 'fa-check' : 'fa-times']"></span>
-        {{ printable === true ? '' : printable }}
-    </span>    
+        <span :class="['fas', working ? 'fa-check' : 'fa-times']"></span>
+        {{ working ? '' : proxy }}
+    </span>
 </template>
 
 <script>
+import { healthCellMixin, isProblem, toneTextClass, toneTitle } from "@/helpers/healthCells"
+
+const NOT_CONFIGURED = "not configured (so not tested)"
+
 export default {
     name: "proxyStatus",
+    mixins: [healthCellMixin],
     props: {
-        proxy: {}
+        proxy: {},
+        server_id: {
+            type: Number,
+            default: null,
+        },
     },
     computed: {
-        printable() {
-            return this.proxy == "not configured (so not tested)" ? true : this.proxy
-        }
+        tone() {
+            return this.healthTone(this.server_id, "proxy")
+        },
+        // Without health: only an unconfigured proxy is fine, as before
+        working() {
+            return this.tone === null ? this.proxy == NOT_CONFIGURED : !isProblem(this.tone)
+        },
+        textClass() {
+            return this.tone === null ? (this.working ? "text-success" : "text-danger") : toneTextClass(this.tone)
+        },
+        title() {
+            const status = this.proxy == NOT_CONFIGURED ? "Not configured" : this.proxy
+            const why = toneTitle(this.tone)
+            return why ? `${status}\n${why}` : status
+        },
     },
-    data: function() {
-        return {}
-    },
-    methods: {
-    }
 }
 </script>
-
-<style scoped>
-
-</style>

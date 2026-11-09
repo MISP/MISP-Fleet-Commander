@@ -1,6 +1,7 @@
 <template>
     <span
-        :class="{'text-nowrap': true, 'text-danger': getServerStatus.error, 'text-success': !getServerStatus.error}"
+        :class="['text-nowrap', statusClass]"
+        :title="statusTitle"
     >
         <b-icon v-if="getServerStatus.data !== undefined" icon="circle-fill"></b-icon>
         <template v-if="getServerStatus.error"> 
@@ -13,7 +14,8 @@
         <template v-else> {{ getServerStatus.data }}</template>
         <small
                 v-if="getServerStatus.latency !== undefined && !full_message"
-                :class="{'text-success': getServerStatus.latency < 0.3, 'text-warning': getServerStatus.latency >= 0.3 && getServerStatus.latency < 2, 'text-danger': getServerStatus.latency >= 2}"
+                :class="latencyTextClass"
+                :title="latencyTitle"
         >
             {{ parseInt(getServerStatus.latency*1000) }}ms
         </small>
@@ -22,9 +24,11 @@
 
 <script>
 import { mapState } from "vuex"
+import { healthCellMixin, toneTitle } from "@/helpers/healthCells"
 
 export default {
     name: "ServerConnectionTestResult",
+    mixins: [healthCellMixin],
     props: {
         server_id: {
             required: true,
@@ -44,8 +48,20 @@ export default {
             server_status: state => state.servers.server_status,
         }),
         getServerStatus() {
-            return this.server_status[this.server_id] || null
-        }
+            return this.server_status[this.server_id] || {}
+        },
+        statusClass() {
+            return this.connectionStatusClass(this.server_id, this.getServerStatus)
+        },
+        latencyTextClass() {
+            return this.latencyClass(this.server_id, this.getServerStatus.latency)
+        },
+        statusTitle() {
+            return toneTitle(this.connectionStatusTone(this.server_id))
+        },
+        latencyTitle() {
+            return toneTitle(this.latencyTone(this.server_id)) || "Connection test duration"
+        },
     },
     methods: {
         formatErrorMessage(message) {

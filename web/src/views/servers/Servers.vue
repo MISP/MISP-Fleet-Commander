@@ -231,6 +231,7 @@
                                 <timeSinceRefresh
                                     :key="table.timeKey"
                                     :timestamp="row.value"
+                                    :server_id="row.item.id"
                                 ></timeSinceRefresh>
                             </loaderPlaceholder>
                             <span v-show="server_refresh_enqueued[row.item.id]">
@@ -283,6 +284,7 @@
                     <connectionsSummary
                         v-if="(typeof row.value !== 'string')"
                         :connections="row.value"
+                        :server_id="row.item.id"
                         :row_index="row.index"
                     ></connectionsSummary>
                 </loaderPlaceholder>
@@ -290,13 +292,13 @@
 
             <template v-slot:cell(proxy)="row">
                 <loaderPlaceholder :loading="!server_query_in_progress[row.item.id]">
-                    <proxyStatus :proxy="row.value"></proxyStatus>
+                    <proxyStatus :proxy="row.value" :server_id="row.item.id"></proxyStatus>
                 </loaderPlaceholder>
             </template>
 
             <template v-slot:cell(submodule)="row">
                 <loaderPlaceholder :loading="!server_query_in_progress[row.item.id]">
-                    <submodulesStatus :submodules="row.value"></submodulesStatus>
+                    <submodulesStatus :submodules="row.value" :server_id="row.item.id"></submodulesStatus>
                 </loaderPlaceholder>
             </template>
 

@@ -233,6 +233,7 @@
                         <loaderPlaceholder :loading="!row.value._loading">
                             <timeSinceRefresh
                                 :timestamp="row.value"
+                                :server_id="row.item.source.id"
                             ></timeSinceRefresh>
                         </loaderPlaceholder>
                     </span>

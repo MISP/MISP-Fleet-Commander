@@ -25,12 +25,16 @@
                                 Server Status
                             </b-th>
                             <b-td>
-                                <span :class="['text-nowrap', 'my-auto', 'h6', {'text-danger': getServerStatus.error, 'text-success': !getServerStatus.error}]">
+                                <span
+                                    :class="['text-nowrap', 'my-auto', 'h6', connectionStatusClass(server_id, getServerStatus)]"
+                                    :title="toneTitle(connectionStatusTone(server_id))"
+                                >
                                     <b-icon v-if="getServerStatus.data !== undefined" icon="circle-fill" class=""></b-icon>
                                     {{ serverStatusText }}
                                     <small
                                         v-if="getServerStatus.latency !== undefined"
-                                        :class="{'text-success': getServerStatus.latency < 0.3, 'text-warning': getServerStatus.latency >= 0.3 && getServerStatus.latency < 2, 'text-danger': getServerStatus.latency >= 2}"
+                                        :class="latencyClass(server_id, getServerStatus.latency)"
+                                        :title="toneTitle(latencyTone(server_id)) || 'Connection test duration'"
                                     >
                                         ({{ (getServerStatus.latency*1000).toFixed(0) }}ms)
                                     </small>
@@ -134,9 +138,11 @@ import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
 import ServerConnectionTestResult from "@/components/ui/elements/ServerConnectionTestResult.vue"
 import api from "@/api/servers"
 import TheSettingsModal from "@/views/settings/TheSettingsModal.vue"
+import { healthCellMixin, toneTitle } from "@/helpers/healthCells"
 
 export default {
     name: "ServerViewProfile",
+    mixins: [healthCellMixin],
     components: {
         pluginValueRenderer,
         ServerConnectionTestResult,
@@ -230,6 +236,7 @@ export default {
                 "Last refresh": {
                     data: {
                         timestamp: this.last_refresh[this.server_id],
+                        server_id: this.server_id,
                         type: "ddd DD/MM/YYYY HH:mm",
                     },
                     component: timeSinceRefresh,
@@ -240,6 +247,7 @@ export default {
                 "Proxy": {
                     data: {
                         proxy: this.getProxy,
+                        server_id: this.server_id,
                     },
                     component: proxyStatus,
                 },
@@ -253,6 +261,7 @@ export default {
                 "Remote Connections": {
                     data: {
                         connections: this.getRemoteConnections,
+                        server_id: this.server_id,
                         row_index: 0,
                     },
                     component: connectionsSummary,
@@ -268,6 +277,7 @@ export default {
                 "Sub-modules": {
                     data: {
                         submodules: this.getSubmodules,
+                        server_id: this.server_id,
                     },
                     component: submodulesStatus,
                 },
@@ -294,6 +304,7 @@ export default {
         }
     },
     methods: {
+        toneTitle,
         fullRefresh() {
             this.$emit("fullRefresh")
         },

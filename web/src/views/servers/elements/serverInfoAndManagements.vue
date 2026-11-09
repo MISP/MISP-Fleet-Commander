@@ -121,6 +121,7 @@
                 <div class="p-2" :style="getMaxHeight">
                     <MISPConnectedServers
                         :servers="getRemoteConnections"
+                        :server_id="server_id"
                     ></MISPConnectedServers>
                 </div>
             </b-card>
@@ -147,6 +148,7 @@
             <b-nav-item href="#" class="ml-auto rightmost-action" link-classes="no-pointer">
                 <timeSinceRefresh
                     :timestamp="getLastRefresh"
+                    :server_id="server_id"
                     type="ddd DD/MM/YYYY HH:mm"
                 ></timeSinceRefresh>
                 <template v-if="inServerIndex">

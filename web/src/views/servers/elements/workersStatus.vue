@@ -2,23 +2,29 @@
     <div v-if="serverHasSettings">
         <div v-if="workerCount > 0 && backgroundJobEnabled">
             <div :id="`badge-workers-${server_id}`" class="badge-list d-flex flex-nowrap">
-                <b-badge v-b-tooltip.hover.html="getTitle('cache', workerCache)" class="rounded-left flat-right" :variant="workerCache.variant">{{ workerCache.jobCount }}</b-badge>
-                <b-badge v-b-tooltip.hover.html="getTitle('default', workerDefault)" class="rounded-0 border-right" :variant="workerDefault.variant">{{ workerDefault.jobCount }}</b-badge>
-                <b-badge v-b-tooltip.hover.html="getTitle('prio', workerPrio)" class="rounded-0" :variant="workerPrio.variant">{{ workerPrio.jobCount }}</b-badge>
-                <b-badge v-b-tooltip.hover.html="getTitle('update', workerUpdate)" class="rounded-0" :variant="workerUpdate.variant">{{ workerUpdate.jobCount }}</b-badge>
-                <b-badge v-b-tooltip.hover.html="getTitle('mail', workerMail)" class="rounded-right flat-left" :variant="workerMail.variant">{{ workerMail.jobCount }}</b-badge>
+                <b-badge
+                    v-for="(queue, index) in queues"
+                    :key="queue.key"
+                    v-b-tooltip.hover.html="{ title: queue.title }"
+                    :class="[roundedClass(index), queue.badge.class]"
+                    :variant="queue.badge.variant"
+                >{{ queue.jobCount }}</b-badge>
             </div>
         </div>
         <b-badge
             v-else-if="backgroundJobEnabled && workerCount == 0"
-            variant="danger"
+            :variant="noWorkerBadge.variant"
+            :class="noWorkerBadge.class"
+            :title="noWorkerTitle"
             rounded
         >
             Background job enabled but no worker running
         </b-badge>
         <b-badge
             v-else
-            variant="danger"
+            :variant="disabledBadge.variant"
+            :class="disabledBadge.class"
+            :title="disabledTitle"
             rounded
         >
             Background job disabled
@@ -28,9 +34,31 @@
 
 <script>
 import { mapState, mapGetters } from "vuex"
+import { healthCellMixin, toneBadge, toneTitle } from "@/helpers/healthCells"
+
+// In the order of the cell. `key` is the queue name in MISP's diagnostics (and the issue's subject)
+const QUEUES = [
+    { key: "cache", label: "cache" },
+    { key: "default", label: "default" },
+    { key: "prio", label: "prio" },
+    { key: "update", label: "update", noBacklog: true },
+    { key: "email", label: "mail" },
+]
+const QUEUE_RULES = ["workers_none", "workers_dead", "jobs_backlog"]
+
+function escapeHtml(text) {
+    return String(text).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]))
+}
+
+function aliveNumbers(queue) {
+    const workers = Object.values((queue && queue.workers) || {})
+    const dead = workers.filter(worker => !worker.ok).length
+    return { dead, alive: workers.length - dead, total: workers.length }
+}
 
 export default {
     name: "workersStatus",
+    mixins: [healthCellMixin],
     props: {
         workers: {
         },
@@ -46,6 +74,7 @@ export default {
         ...mapGetters({
             getLoggedUserSettingByName: "userSettings/getLoggedUserSettingsByName",
         }),
+        // Only used until health is loaded: the engine applies the same user settings
         workerWarningThreshold() {
             if (this.getLoggedUserSettingByName && this.getLoggedUserSettingByName['UI.server_index.worker_warning_threshold']) {
                 return parseInt(this.getLoggedUserSettingByName['UI.server_index.worker_warning_threshold'])
@@ -65,91 +94,66 @@ export default {
             return this.final_settings[this.server_id] !== undefined && Object.keys(this.final_settings[this.server_id]).length > 0
         },
         workerCount() {
-            return Object.keys(this.workers).length
+            return Object.keys(this.workers || {}).length
         },
-        workerCache() {
-            return {
-                jobCount: this.workers?.cache?.jobCount,
-                variant: this.getVariantFromAliveAndJobCount(this.workers?.cache),
-                ...this.getAliveNumbers(this.workers?.cache)
-            }
+        queues() {
+            return QUEUES.map((meta) => {
+                const queue = (this.workers && this.workers[meta.key]) || {}
+                const numbers = aliveNumbers(queue)
+                const tone = this.healthTone(this.server_id, QUEUE_RULES, { subject: meta.key })
+                return {
+                    ...meta,
+                    jobCount: queue.jobCount,
+                    badge: tone === null ? { variant: this.fallbackVariant(meta, queue, numbers), class: "" } : toneBadge(tone),
+                    title: this.queueTitle(meta.label, queue.jobCount, numbers, tone),
+                }
+            })
         },
-        workerDefault() {
-            return {
-                jobCount: this.workers?.default?.jobCount,
-                variant: this.getVariantFromAliveAndJobCount(this.workers?.default),
-                ...this.getAliveNumbers(this.workers?.default)
-            }
+        noWorkerTone() {
+            return this.healthTone(this.server_id, "workers_none")
         },
-        workerPrio() {
-            return {
-                jobCount: this.workers.prio?.jobCount,
-                variant: this.getVariantFromAliveAndJobCount(this.workers?.prio),
-                ...this.getAliveNumbers(this.workers?.prio)
-            }
+        noWorkerBadge() {
+            return this.noWorkerTone === null ? { variant: "danger", class: "" } : toneBadge(this.noWorkerTone, "secondary")
         },
-        workerUpdate() {
-            return {
-                jobCount: this.workers?.update?.jobCount,
-                variant: this.getVariantFromAlive(this.workers?.update),
-                ...this.getAliveNumbers(this.workers?.update)
-            }
+        noWorkerTitle() {
+            return toneTitle(this.noWorkerTone)
         },
-        workerMail() {
-            return {
-                jobCount: this.workers?.email?.jobCount,
-                variant: this.getVariantFromAliveAndJobCount(this.workers?.email),
-                ...this.getAliveNumbers(this.workers?.email)
-            }
-        }
-    },
-    data: function() {
-        return {}
+        disabledTone() {
+            return this.healthTone(this.server_id, "background_jobs_disabled")
+        },
+        disabledBadge() {
+            return this.disabledTone === null ? { variant: "danger", class: "" } : toneBadge(this.disabledTone, "secondary")
+        },
+        disabledTitle() {
+            return toneTitle(this.disabledTone)
+        },
     },
     methods: {
-        getVariantFromAliveAndJobCount(workerType) {
-            const aliveNumber = this.getAliveNumbers(workerType)
-            if (aliveNumber.total == 0) {
+        fallbackVariant(meta, queue, numbers) {
+            if (numbers.total == 0) {
                 return "danger"
             }
-            const deadCount = aliveNumber.dead
-            return deadCount == 0 ? 
-                (workerType.jobCount <= this.workerWarningThreshold ? "" : (workerType.jobCount <= this.workerDangerThreshold ? "warning" : "danger")) :
-                (deadCount == workerType.workers.length ? "danger" : "warning")
-        },
-        getVariantFromAlive(workerType) {
-            const aliveNumber = this.getAliveNumbers(workerType)
-            if (aliveNumber.total == 0) {
-                return "danger"
+            if (numbers.dead > 0) {
+                return numbers.dead == numbers.total ? "danger" : "warning"
             }
-            const deadCount = aliveNumber.dead
-            return deadCount == 0 ? 
-                "" :
-                (deadCount == workerType.workers.length ? "danger" : "warning")
-        },
-        getAliveNumbers(workerType) {
-            let deadCount = 0
-            if (workerType.workers === undefined) {
-                workerType.workers = {}
+            if (meta.noBacklog || queue.jobCount <= this.workerWarningThreshold) {
+                return ""
             }
-            Object.values(workerType.workers).forEach(worker => {
-                if (!worker.ok) {
-                    deadCount++
-                }
-            });
-            return {dead: deadCount, alive: Object.values(workerType.workers).length-deadCount, total: Object.values(workerType.workers).length}
+            return queue.jobCount <= this.workerDangerThreshold ? "warning" : "danger"
         },
-        getTitle(workerName, workerType) {
-            let title = ''
-            if (workerType.total == 0) {
-                title = `Worker <strong>${workerName}</strong><div class="text-left">${workerType.jobCount} in queue</br>No worker running</div>`
-            } else [
-                title = `Worker <strong>${workerName}</strong><div class="text-left">${workerType.jobCount} in queue</br>${workerType.alive}/${workerType.total} alive</div>`
-            ]
-            return {
-                title: title
+        queueTitle(label, jobCount, numbers, tone) {
+            const workers = numbers.total == 0 ? "No worker running" : `${numbers.alive}/${numbers.total} alive`
+            const why = toneTitle(tone)
+            return `Worker <strong>${escapeHtml(label)}</strong><div class="text-left">${escapeHtml(jobCount ?? "?")} in queue<br>${workers}`
+                + (why ? `<br><em>${escapeHtml(why).replace(/\n/g, "<br>")}</em>` : "")
+                + "</div>"
+        },
+        roundedClass(index) {
+            if (index === 0) {
+                return "rounded-left flat-right"
             }
-        }
+            return index === QUEUES.length - 1 ? "rounded-right flat-left" : "rounded-0"
+        },
     }
 }
 </script>

@@ -33,6 +33,7 @@
             <template v-slot:cell(connectionTest.status)="row">
                 <connectionsSummary
                     :connections="[row.item]"
+                    :server_id="server_id"
                     :row_index="row.index"
                     :text_in_badge="row.value.message"
                     :use_diode="true"
@@ -81,7 +82,11 @@ export default {
         servers: {
             type: Object,
             required: true
-        }
+        },
+        server_id: {
+            type: Number,
+            default: null,
+        },
     },
     data: function() {
         return {

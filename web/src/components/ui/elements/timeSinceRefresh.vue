@@ -1,5 +1,5 @@
 <template>
-    <span :class="['mr-1', 'align-middle', 'text-nowrap', noformat ? '' : (moreThanOneDay ? 'text-danger' : 'text-muted')]" style="cursor: auto;" :title="timestampTitle">
+    <span :class="['mr-1', 'align-middle', 'text-nowrap', colourClass]" style="cursor: auto;" :title="fullTitle">
         <i v-if="!noicon" :class="['far fa-clock', clockMarginClass]"></i>
         <component 
             v-if="validTimestamp !== false && integerTimestamp !== 0" 
@@ -21,10 +21,17 @@
 
 <script>
 import moment from "moment"
+import { healthCellMixin, toneTextClass, toneTitle } from "@/helpers/healthCells"
 
 export default {
     name: "timeSinceRefresh",
+    mixins: [healthCellMixin],
     props: {
+        // When the timestamp is a server's last refresh: coloured from its "data is out of date" issue
+        server_id: {
+            type: Number,
+            default: null,
+        },
         timestamp: {
         },
         type: {
@@ -61,8 +68,24 @@ export default {
         validTimestamp() {
             return Number.isInteger(this.integerTimestamp) ? this.integerTimestamp : false
         },
-        moreThanOneDay() {
+        moreThanOneHour() {
             return (new Date()).getTime()/1000 - this.integerTimestamp > 3600
+        },
+        staleTone() {
+            return this.healthTone(this.server_id, "stale", { subject: "snapshot", content: false })
+        },
+        colourClass() {
+            if (this.noformat) {
+                return ""
+            }
+            if (this.staleTone !== null) {
+                return toneTextClass(this.staleTone, "text-muted")
+            }
+            return this.moreThanOneHour ? "text-danger" : "text-muted"
+        },
+        fullTitle() {
+            const why = toneTitle(this.staleTone)
+            return why ? `${this.timestampTitle}\n${why}` : this.timestampTitle
         },
         clockMarginClass() {
             return this.clockNoMargin ? "" : "mr-1"
@@ -88,7 +111,7 @@ export default {
             this.timestampDynamicText = this.genFromNow();
         }, 3000)
     },
-    unmounted() {
+    beforeDestroy() {
         clearInterval(this.interval)
     }
 }

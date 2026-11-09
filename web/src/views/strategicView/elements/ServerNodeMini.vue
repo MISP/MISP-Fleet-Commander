@@ -11,11 +11,11 @@
                 </a>
             </h5>
             <div class="d-flex justify-content-between align-items-center">
-                <span :class="['badge', 'big-badge', getServerStatus.error ? 'badge-danger' : 'badge-success']">
+                <span :class="['badge', 'big-badge', connectionStatusBadgeClass(server_id, getServerStatus)]">
                     {{ getServerStatus.data }}
                 </span>
                 <span class="ml-2 border-0" href="#" style="pointer-events: auto; font-size: 1.3rem;">
-                    <timeSinceRefresh :timestamp="lastRefreshTimestamp" :clockNoMargin="true"></timeSinceRefresh>
+                    <timeSinceRefresh :timestamp="lastRefreshTimestamp" :server_id="server_id" :clockNoMargin="true"></timeSinceRefresh>
                     <button type="button" class="btn btn-sm btn-link sync-btn p-0">
                         <i class="fas fa-sync"></i>
                     </button>
@@ -38,9 +38,11 @@ import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
 import iconButton from "@/components/ui/elements/iconButton.vue"
 import NodeIssuesChip from "@/views/strategicView/elements/NodeIssuesChip.vue"
 import NodeLinkHealth from "@/views/strategicView/elements/NodeLinkHealth.vue"
+import { healthCellMixin } from "@/helpers/healthCells"
 
 export default {
     name: "ServerNodeMini",
+    mixins: [healthCellMixin],
     components: {
         timeSinceRefresh,
         NodeIssuesChip,

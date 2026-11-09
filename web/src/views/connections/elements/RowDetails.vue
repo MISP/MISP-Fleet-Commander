@@ -102,6 +102,7 @@
                             <b-nav-item href="#" class="ml-auto rightmost-action">
                                 <timeSinceRefresh
                                     :timestamp="connection.last_refresh"
+                                    :server_id="connection.source.id"
                                     type="ddd DD/MM/YYYY HH:mm"
                                 ></timeSinceRefresh>
                                 <b-button variant="primary" size="sm" @click="refreshDiagnostic()">
