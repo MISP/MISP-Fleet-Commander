@@ -14,6 +14,40 @@ const getters = {
     getConnectionList: state => {
         return state.all
     },
+    // server_id -> {total, unused, ok, degraded, broken, unknown, worst}: health of the server's outgoing links.
+    // Unused links are counted apart: nothing depends on them
+    linkHealthBySource: state => {
+        const bySource = {}
+        state.all.forEach(link => {
+            const sourceID = link.source && link.source.id
+            if (sourceID === undefined) {
+                return
+            }
+            const entry = bySource[sourceID] || (bySource[sourceID] = { ...emptyLinkCounts(), worst: null })
+            entry.total += 1
+            if (link.health && link.health.disabled) {
+                entry.unused += 1
+            } else {
+                entry[(link.health && link.health.level) || "unknown"] += 1
+            }
+        })
+        Object.values(bySource).forEach(entry => {
+            entry.worst = LINK_LEVELS.find(level => entry[level] > 0) || null
+        })
+        return bySource
+    },
+}
+
+// Most severe first
+export const LINK_LEVELS = ["broken", "degraded", "unknown", "ok"]
+
+export function emptyLinkCounts() {
+    return { total: 0, unused: 0, ok: 0, degraded: 0, broken: 0, unknown: 0 }
+}
+
+export function isProblemLink(link) {
+    const health = link.health || {}
+    return !health.disabled && (health.level === "broken" || health.level === "degraded")
 }
 
 // actions

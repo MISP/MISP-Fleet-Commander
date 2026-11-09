@@ -23,6 +23,11 @@
     --health-ok-ink: #2a7a49;
     --health-rule: #e4e7ec;
     --health-focus-bg: #f2f7fb;
+    /* Sync link health, drawn as lines on a white canvas: the warning amber is darkened to stay visible */
+    --link-ok: #3aa564;
+    --link-degraded: #e09a00;
+    --link-broken: #dc3545;
+    --link-unknown: #9aa1a7;
 
     --var-color-main-dark-blue: #003a5a;
     --var-color-giantorganedarker: #d9510d;

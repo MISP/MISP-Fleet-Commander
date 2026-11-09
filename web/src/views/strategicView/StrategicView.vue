@@ -50,10 +50,10 @@
         </b-sidebar>
 
         <div
-            class="position-absolute border overflow-hidden py-1 px-2 bg-white shadow"
+            class="network-action-bar position-absolute border py-1 px-2 bg-white shadow"
             :style="actionBarPosition"
         >
-            <div class="d-flex flex-row" style="gap: 0.25em">
+            <div class="action-group" role="group" aria-label="Refresh">
                 <b-button
                     variant="primary"
                     class="ml-auto"
@@ -99,23 +99,27 @@
                     </span>
                 </b-button>
             </div>
+            <div class="action-group action-group-view" role="group" aria-label="View">
+                <NetworkNodeSearch :nodes="searchableNodes" @select="locateNode"></NetworkNodeSearch>
+                <b-form-checkbox
+                    v-model="problemsOnly"
+                    switch
+                    class="problems-switch text-nowrap"
+                    title="Dim the healthy links and servers"
+                >
+                    Problems only
+                    <span
+                        v-if="problemsOnly"
+                        :class="['problems-count', problemFocus.links.size > 0 ? 'has-problems' : '']"
+                    >{{ problemFocus.links.size }}</span>
+                </b-form-checkbox>
+            </div>
+            <div v-if="problemsOnly && graphReady && problemFocus.links.size === 0 && problemFocus.nodes.size === 0" class="problems-none" role="status">
+                <i class="fas fa-check" aria-hidden="true"></i> No broken or degraded link, no server with issues
+            </div>
         </div>
 
-        <div
-            class="position-absolute border overflow-hidden p-1 bg-white"
-            :style="minimapPosition"
-        >
-            <!-- <NetworkMinimap
-                v-if="svgSelection !== null"
-                ref="minimap"
-                :network="d3data"
-                :svgRootNode="svg"
-                :networkSvgSelection="svgSelection"
-                :zoom="zoom"
-                :redrawCount="minimapRedrawCount"
-                :selectedNode="selectedNode"
-            ></NetworkMinimap> -->
-        </div>
+        <NetworkLegend class="network-legend-position position-absolute"></NetworkLegend>
     </div>
 </Layout>
 </template>
@@ -130,13 +134,29 @@ import ServerNodeGeneric from "@/views/strategicView/elements/ServerNodeGeneric.
 import ServerNode from "@/views/strategicView/elements/ServerNode.vue"
 import ServerNodeMini from "@/views/strategicView/elements/ServerNodeMini.vue"
 import ServerNodeMicro from "@/views/strategicView/elements/ServerNodeMicro.vue"
-// import NetworkMinimap from "@/views/strategicView/elements/NetworkMinimap.vue"
 import TheNodeInfoCard from "@/views/strategicView/elements/NodeInfoCard.vue"
 import TheLinkInfoCard from "@/views/strategicView/elements/LinkInfoCard.vue"
 import ThePinCard from "@/views/strategicView/elements/PinCard.vue"
+import NetworkLegend from "@/views/strategicView/elements/NetworkLegend.vue"
+import NetworkNodeSearch from "@/views/strategicView/elements/NetworkNodeSearch.vue"
 import d3Network from "@/helpers/d3Network.js"
+import { LINK_LEVELS, isProblemLink } from "@/store/modules/connections"
 
 const LINK_TEST_START_TIMEOUT = 15000
+const PROBLEMS_ONLY_KEY = "mfc.strategicView.problemsOnly"
+
+function endpointID(endpoint) {
+    // d3's force layout replaces a link's source and target IDs by the node objects
+    return endpoint !== null && typeof endpoint === "object" ? endpoint.id : endpoint
+}
+
+function readProblemsOnly() {
+    try {
+        return window.localStorage.getItem(PROBLEMS_ONLY_KEY) === "1"
+    } catch (e) {
+        return false
+    }
+}
 
 export default {
     name: "TheStrategicView",
@@ -146,11 +166,15 @@ export default {
         TheNodeInfoCard,
         TheLinkInfoCard,
         ThePinCard,
-        // NetworkMinimap
+        NetworkLegend,
+        NetworkNodeSearch,
     },
     data: function () {
         return {
             refreshInProgress: false,
+            graphReady: false,
+            network: null,
+            problemsOnly: readProblemsOnly(),
             linkTest: {
                 startedAt: null, // When the link test was asked for from here, until its outcome is reported
                 waiting: false, // Asked for, not started by the workers yet
@@ -183,7 +207,6 @@ export default {
             zoom: null,
             updateData: null,
             scaleInfo: {x: 0, y: 0, k: 1},
-            minimapPosition: {top: "unset", right: "unset", left: "20px", bottom: "20px"},
             actionBarPosition: {top: "15px", right: "unset", left: "15px", bottom: "unset"},
             minimapRedrawCount: 0,
             allNodeInstances: [],
@@ -203,7 +226,63 @@ export default {
             serversByUUID: "servers/serversByUUID",
             getServerRefreshEnqueued: "servers/getServerRefreshEnqueued",
             getConnectionList: "connections/getConnectionList",
+            serverWorst: "health/serverWorst",
         }),
+        // What stays visible with "Problems only": broken and degraded links (unused ones aside), their two ends,
+        // and the servers with critical or warning issues
+        problemFocus() {
+            const links = new Set()
+            const nodes = new Set()
+            this.d3data.links.forEach(link => {
+                if (isProblemLink(link)) {
+                    links.add(link.vid)
+                    nodes.add(endpointID(link.source))
+                    nodes.add(endpointID(link.target))
+                }
+            })
+            this.getServerList.forEach(server => {
+                const worst = this.serverWorst[server.id]
+                if (worst === "critical" || worst === "warning") {
+                    nodes.add(server.id)
+                }
+            })
+            return { links, nodes }
+        },
+        // Worst level of the links reaching each node, for the search results
+        incomingLinkLevel() {
+            const levels = {}
+            this.d3data.links.forEach(link => {
+                if (link.health && link.health.disabled) {
+                    return
+                }
+                const target = endpointID(link.target)
+                const level = (link.health && link.health.level) || "unknown"
+                if (levels[target] === undefined || LINK_LEVELS.indexOf(level) < LINK_LEVELS.indexOf(levels[target])) {
+                    levels[target] = level
+                }
+            })
+            return levels
+        },
+        searchableNodes() {
+            return this.d3data.nodes.map(node => {
+                if (node._managed_server) {
+                    return {
+                        id: node.id,
+                        name: node.name || node.url || `#${node.id}`,
+                        url: node.url || "",
+                        managed: true,
+                        level: this.serverWorst[node.id] || "ok",
+                    }
+                }
+                return {
+                    id: node.id,
+                    name: node.name || node.url || String(node.id),
+                    url: node.url || "",
+                    managed: false,
+                    level: this.incomingLinkLevel[node.id] || "unknown",
+                }
+            })
+        },
         hasActiveSelection() {
             return this.selectedNodeID !== null || this.selectedLinkID !== null
         },
@@ -232,6 +311,20 @@ export default {
     methods: {
         fleetRefresh() {
             this.wsFleetRefresh(this.selectedFleet.id)
+        },
+        applyProblemFocus() {
+            if (this.network !== null) {
+                this.network.setFocus(this.problemsOnly ? this.problemFocus : null)
+            }
+        },
+        locateNode(nodeID) {
+            if (this.network === null || !this.network.focusNode(nodeID)) {
+                return
+            }
+            const node = this.d3data.nodes.find(n => n.id === nodeID)
+            if (node !== undefined && node._managed_server) {
+                this.selectNode(node)
+            }
         },
         fleetLinkTest() {
             // Disabled right away: the workers report the start of each server's test a moment later
@@ -401,6 +494,9 @@ export default {
                 this.svgSelection = network.svgSelection
                 this.zoom = network.zoom
                 this.updateData = network.updateData
+                this.network = Object.freeze({ setFocus: network.setFocus, focusNode: network.focusNode })
+                this.graphReady = true
+                this.applyProblemFocus()
             }
         },
         refreshServers(force=true) {
@@ -500,6 +596,10 @@ export default {
                         const newConnectionLinkHasRules = newConnectionLink.filtering_rules.push_rule_number > 0 || newConnectionLink.filtering_rules.pull_rule_number > 0
                         this.d3data.links[i]._has_rules = newConnectionLinkHasRules
                         this.d3data.links[i]._internal_sync = newConnectionLink.destination.Server.internal
+                        this.d3data.links[i].filtering_rules = newConnectionLink.filtering_rules
+                        this.d3data.links[i].destination = newConnectionLink.destination
+                        this.d3data.links[i].health = newConnectionLink.health
+                        this.d3data.links[i].tested_at = newConnectionLink.tested_at
                     }
                 }
             })
@@ -532,6 +632,19 @@ export default {
         },
         getConnectionList: function() {
             this.updateWithStore()
+        },
+        problemsOnly: function(enabled) {
+            try {
+                window.localStorage.setItem(PROBLEMS_ONLY_KEY, enabled ? "1" : "0")
+            } catch (e) {
+                // Not remembered, no harm
+            }
+            this.applyProblemFocus()
+        },
+        problemFocus: function() {
+            if (this.problemsOnly) {
+                this.applyProblemFocus()
+            }
         },
         linkTestFinished: function(finished) {
             if (finished) {
@@ -570,69 +683,208 @@ export default {
     height: calc(100vh - 41px);
 }
 
+/* Sync links: colour and line style tell the health only. Arrowheads take the colour of their line */
 path.link {
-    filter: drop-shadow(0px 1px 1px rgba(0, 0, 0, .7));
+    stroke: var(--link-unknown);
+    stroke-width: 5px;
+    filter: drop-shadow(0px 1px 1px rgba(0, 0, 0, .35));
     cursor: pointer;
-    transition: stroke-width .1s cubic-bezier(0.22, 0.61, 0.36, 1);
-    stroke: #bcc0c2;
+    transition: stroke-width .1s cubic-bezier(0.22, 0.61, 0.36, 1), opacity .2s ease;
+}
+path.link.link-ok {
+    stroke: var(--link-ok);
+}
+path.link.link-degraded {
+    stroke: var(--link-degraded);
+}
+path.link.link-broken {
+    stroke: var(--link-broken);
+}
+path.link.link-unknown {
+    stroke: var(--link-unknown);
+    stroke-dasharray: 10 9;
+}
+/* Links to servers this fleet does not manage: slightly lighter */
+path.link.unmanaged_server {
+    stroke-width: 4px;
+}
+/* Configured but not used (push, pull and caching off) */
+path.link.link-unused {
+    stroke-width: 2.5px;
+    opacity: .45;
 }
 path.link:hover {
-    filter: drop-shadow(0px 2px 2px rgba(0, 0, 0, .7));
-    stroke-width: 7px !important;
-    cursor: pointer;
-}
-path.link.has_rules {
-    stroke: #f8a57c;
-    filter: drop-shadow(0px 1px 1px #5b4a4299) !important;
+    stroke-width: 7px;
+    filter: drop-shadow(0px 2px 2px rgba(0, 0, 0, .45));
 }
 path.link.selected {
-    stroke-width: 7px !important;
-    stroke: #2ca1db;
-    filter: drop-shadow(0px 1px 1px #2ca1db99);
-}
-path.link.has_rules.selected {
-    stroke: #f5854d;
-}
-path.link.internal_sync {
-    stroke-dasharray: 20,10,5,5,5,10;
+    stroke-width: 7px;
+    opacity: 1;
+    filter: drop-shadow(0 0 2px var(--var-color-misp-blue)) drop-shadow(0 0 4px var(--var-color-misp-blue));
 }
 
 path.marker.selected {
     stroke: #e4e6e7 !important;
 }
-path.marker.has_rules.selected {
-    stroke: #ffdf0a !important;
-}
-
-.badge-container {
-    cursor: default;
-    font-family: FontAwesome;
-    padding: 2px 4px;
-    background-color: #ffffffaa;
-    border: 1px solid #828383;
-    border-radius: 3px;
-    width: min-content;
-    line-height: calc(24px - 4px - 2px);
-    text-wrap: nowrap;
-}
 
 .link-badge {
     overflow: visible;
+    cursor: pointer;
+    transition: opacity .2s ease;
+}
+
+.badge-container {
+    font-family: FontAwesome;
+    padding: 2px 5px;
+    background-color: #ffffffee;
+    border: 1px solid #adb5bd;
+    border-radius: 4px;
+    width: min-content;
+    line-height: calc(24px - 4px - 2px);
+    text-wrap: nowrap;
+    color: #343a40;
+}
+.badge-empty {
+    display: none;
+}
+.badge-icons i {
+    font-size: 0.8em;
+}
+.badge-icons .badge-health {
+    margin-right: 1px;
+    font-size: 0.85em;
+}
+.badge-icons .badge-rules,
+.badge-icons .badge-internal {
+    color: #6c757d;
+}
+.badge-health-broken {
+    color: var(--link-broken);
+}
+.badge-health-degraded {
+    color: var(--link-degraded);
+}
+.badge-health-unknown {
+    color: #6c757d;
+}
+.link-badge.link-broken .badge-container {
+    border-color: var(--link-broken);
+    background-color: #fff6f7ee;
+}
+.link-badge.link-degraded .badge-container {
+    border-color: var(--link-degraded);
+    background-color: #fffaf0ee;
+}
+.link-badge.link-unknown .badge-container {
+    border-style: dashed;
+}
+.link-badge.link-unused {
+    opacity: .6;
 }
 .link-badge.selected .badge-container {
-    border-color: #2ca1dbaa;
-    filter: drop-shadow(0px 1px 1px #2ca1db99);
+    box-shadow: 0 0 0 2px #2ca1db66;
 }
-.link-badge.has_rules .badge-container {
-    border-color: #f8a57c;
-    filter: drop-shadow(0px 1px 1px #5b4a4299);
+
+/* "Problems only": the rest stays in place, faded, so that the layout does not move */
+path.link.dimmed,
+.link-badge.dimmed,
+foreignObject.nodeFO.dimmed {
+    opacity: .15;
 }
-.link-badge.has_rules.selected .badge-container {
-    filter: drop-shadow(0px 1px 1px #5b4a4299);
+foreignObject.nodeFO {
+    transition: opacity .2s ease;
+}
+
+/* A node found with the search */
+foreignObject.nodeFO.node-located > div {
+    animation: node-located 1s ease-out 2;
+}
+@keyframes node-located {
+    0% { filter: drop-shadow(0 0 0 rgba(44, 161, 219, 0)); }
+    40% { filter: drop-shadow(0 0 14px rgba(44, 161, 219, .95)); }
+    100% { filter: drop-shadow(0 0 0 rgba(44, 161, 219, 0)); }
+}
+@media (prefers-reduced-motion: reduce) {
+    foreignObject.nodeFO.node-located > div {
+        animation: none;
+        filter: drop-shadow(0 0 10px rgba(44, 161, 219, .95));
+    }
+    path.link, .link-badge, foreignObject.nodeFO {
+        transition: none;
+    }
 }
 </style>
 
 <style scoped>
+
+.network-action-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 0.75rem;
+    max-width: calc(100% - 30px);
+    border-radius: 0.3rem;
+    z-index: 5;
+}
+
+.action-group {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.action-group-view {
+    gap: 0.75rem;
+    padding-left: 0.75rem;
+    border-left: 1px solid var(--health-rule);
+}
+
+.problems-switch {
+    font-size: 0.85rem;
+    user-select: none;
+}
+
+.problems-count {
+    display: inline-block;
+    min-width: 1.3rem;
+    margin-left: 0.2rem;
+    padding: 0 0.35rem;
+    border-radius: 0.6rem;
+    background: #eef8f2;
+    color: var(--health-ok-ink);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+.problems-count.has-problems {
+    background: var(--health-critical-tint);
+    color: var(--health-critical-ink);
+}
+
+.problems-none {
+    flex-basis: 100%;
+    font-size: 0.8rem;
+    color: var(--health-ok-ink);
+}
+
+.network-legend-position {
+    left: 15px;
+    bottom: 15px;
+    z-index: 4;
+}
+
+@media (max-width: 767.98px) {
+    .action-group-view {
+        flex-wrap: wrap;
+        padding-left: 0;
+        border-left: 0;
+    }
+    .action-group-view >>> .node-search {
+        width: 100%;
+    }
+}
 
 .network-container {
     background-image: linear-gradient(to right, #66666612 1px, transparent 1px), linear-gradient(to bottom, #66666612 1px, transparent 1px);

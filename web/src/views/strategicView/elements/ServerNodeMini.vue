@@ -21,6 +21,10 @@
                     </button>
                 </span>
             </div>
+            <div class="node-chips">
+                <NodeIssuesChip :server_id="server_id"></NodeIssuesChip>
+                <NodeLinkHealth :server_id="server_id" large></NodeLinkHealth>
+            </div>
         </div>
     </div>
 </template>
@@ -32,11 +36,15 @@ import * as d3 from "d3"
 import loaderPlaceholder from "@/components/ui/elements/loaderPlaceholder.vue"
 import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
 import iconButton from "@/components/ui/elements/iconButton.vue"
+import NodeIssuesChip from "@/views/strategicView/elements/NodeIssuesChip.vue"
+import NodeLinkHealth from "@/views/strategicView/elements/NodeLinkHealth.vue"
 
 export default {
     name: "ServerNodeMini",
     components: {
         timeSinceRefresh,
+        NodeIssuesChip,
+        NodeLinkHealth,
     },
     props: {
         server_id: {
@@ -134,6 +142,17 @@ export default {
 
 .badge.big-badge {
     font-size: 1.7rem;
+}
+
+.node-chips {
+    display: flex;
+    gap: 0.4rem;
+    margin-top: 0.5rem;
+    font-size: 2.4rem;
+}
+
+.node-chips:empty {
+    display: none;
 }
 
 .server-url .fa {

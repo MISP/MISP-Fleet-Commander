@@ -136,9 +136,3 @@ export default {
     /* line-height: 0.75em; */
 }
 </style>
-
-<style>
-line.link.unmanaged_server {
-    stroke-dasharray: 5
-}
-</style>

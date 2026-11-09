@@ -18,7 +18,9 @@
                                 </a>
                             </span>
                         </div>
-                        <div class="ml-auto">
+                        <div class="ml-auto node-badges">
+                            <ServerHealthBadge :server_id="server_id" :fleet_id="getServer.fleet_id || null"></ServerHealthBadge>
+                            <NodeLinkHealth :server_id="server_id"></NodeLinkHealth>
                             <span :class="['badge', getServerStatus.error ? 'badge-danger' : 'badge-success']">{{ getServerStatus.data }}</span>
                         </div>
                     </div>
@@ -62,11 +64,15 @@ import ServerNodeInfo from "@/views/strategicView/elements/nodeElements/ServerNo
 import ServerNodeUsage from "@/views/strategicView/elements/nodeElements/ServerNodeUsage.vue"
 import ServerNodeSync from "@/views/strategicView/elements/nodeElements/ServerNodeSync.vue"
 import ServerNodePinnedContent from "@/views/strategicView/elements/nodeElements/ServerNodePinnedContent.vue"
+import ServerHealthBadge from "@/components/health/ServerHealthBadge.vue"
+import NodeLinkHealth from "@/views/strategicView/elements/NodeLinkHealth.vue"
 
 export default {
     name: "ServerNode",
     mixins: [websocketMixin],
     components: {
+        ServerHealthBadge,
+        NodeLinkHealth,
         timeSinceRefresh,
         ServerNodeInfo,
         ServerNodeUsage,
@@ -221,6 +227,16 @@ foreignObject.nodeFO {
 }
 
 .node-container > .card > .card-body > table th {
+}
+
+.node-badges {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.node-badges >>> .server-health {
+    min-width: 0;
 }
 
 .server-url {

@@ -1,5 +1,17 @@
 import * as d3 from "d3"
 
+const LEVEL_LABELS = {
+    ok: "Link OK",
+    degraded: "Degraded link",
+    broken: "Broken link",
+    unknown: "Link not tested",
+}
+const LEVEL_ICONS = {
+    degraded: "fa-exclamation",
+    broken: "fa-times",
+    unknown: "fa-question",
+}
+
 export default {
     constructNetwork(svgNode, networkContainer, d3data, componentGenerator, eventHandlers, callbacks) {
         const containerBoundingRect = networkContainer.getBoundingClientRect()
@@ -11,14 +23,13 @@ export default {
 
         const linkColor = '#bcc0c2'
         const movingMarkerColor = '#2ca1db'
-        const linkColorRules = '#f5854d'
-        const movingMarkerColorRules = '#fff000'
-        const linkColorSelected = '#2ca1db'
         const endMarkerSize = 4
         const linkBadgeStartOffset = 35
 
         let selectedLink = null
         let zoomLevel = 1
+        // `{links: Set(vid), nodes: Set(id)}`: everything else is dimmed. null: nothing is
+        let focus = null
 
         const generatedMarkerColors = []
 
@@ -116,11 +127,6 @@ export default {
                 .attr("class", function (d) {
                     return updateClassList('link', d)
                 })
-                .style("stroke-width", function(d) { return d.weight ? d.weight : 5 })
-                .attr("data-fake-update-callback", (d) => {
-                    const pathNode = svgNode.querySelector(`.links path.link#line_${d.vid}`)
-                    updateMarker({target: pathNode})
-                })
 
             const linkEnter = link
                 .enter().append("path")
@@ -139,10 +145,11 @@ export default {
                 .attr("class", function (d) {
                     return updateClassList('link', d)
                 })
-                .style("stroke-width", function(d) { return d.weight ? d.weight : 5 })
+            linkEnter.append("title")
 
             link.exit().remove();
             link = linkEnter.merge(link)
+            link.select("title").text(linkTitle)
 
             if (allowLinkAnimation) {
                 markers = markerGroup
@@ -187,18 +194,28 @@ export default {
                 .attr('id', (d) => `badge_${d.vid}`)
                 .attr('vid', (d) => d.vid)
                 .attr("height", '24px')
-                .attr("width", '80px')
+                .attr("width", '120px')
                 .attr("class", function (d) {
                     return updateClassList('link-badge', d)
                 })
+                .on("click", function(event, d) {
+                    event.stopPropagation()
+                    const pathNode = svgNode.querySelector(`.links path.link#line_${d.vid}`)
+                    selectLink({target: pathNode}, d)
+                    eventHandlers.linkClicked(d)
+                })
             badgeEnter
                 .append('xhtml:div')
-                .attr('class', function (d) { return hasActiveSyncMechanism(d) ? 'badge-container' : '' })
                 .append('div')
-                .html(getHTMLIconsFromLinkConfig)
+                .attr('class', 'badge-icons')
 
             badge.exit().remove();
             badge = badgeEnter.merge(badge)
+            badge.select('div')
+                .attr('class', function (d) { return getHTMLIconsFromLinkConfig(d) !== '' ? 'badge-container' : 'badge-empty' })
+                .attr('title', linkTitle)
+            badge.select('div.badge-icons')
+                .html(getHTMLIconsFromLinkConfig)
 
             node = nodeGroup
                 .selectAll("foreignObject")
@@ -222,6 +239,8 @@ export default {
                     componentGenerator.genericNodeComponent(selection, htmlNode, d3Node, d3SVGNode)
                 })
             node = nodeEnter.merge(node)
+            applyFocus()
+            updateMarkers()
 
             simulation 
                 .nodes(newData.nodes)
@@ -317,6 +336,46 @@ export default {
             simulation: simulation,
             zoom: zoom,
             updateData: updateData,
+            setFocus: setFocus,
+            focusNode: focusNode,
+        }
+
+        function setFocus(newFocus) {
+            focus = newFocus
+            applyFocus()
+        }
+
+        function applyFocus() {
+            if (link === undefined) {
+                return
+            }
+            const dimLink = (d) => focus !== null && !focus.links.has(d.vid)
+            link.classed('dimmed', dimLink)
+            badge.classed('dimmed', dimLink)
+            node.classed('dimmed', (d) => focus !== null && !focus.nodes.has(d.id))
+        }
+
+        // Center the view on a node and make it stand out for a moment
+        function focusNode(nodeID) {
+            const theNode = d3data.nodes.find(n => n.id === nodeID)
+            const nodeElement = svgNode.querySelector(`#node-${CSS.escape(String(nodeID))}`)
+            if (theNode === undefined || nodeElement === null) {
+                return false
+            }
+            const box = nodeElement.getBBox()
+            const scale = Math.max(zoomLevel, 0.6)
+            const centerX = theNode.x + box.width / 2
+            const centerY = theNode.y + box.height / 2
+            const transform = d3.zoomIdentity
+                .translate(svgNode.clientWidth / 2 - scale * centerX, svgNode.clientHeight / 2 - scale * centerY)
+                .scale(scale)
+            const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+            svg.transition().duration(reduceMotion ? 0 : 600).call(zoom.transform, transform)
+            nodeElement.classList.remove('node-located')
+            void nodeElement.getBBox() // Restarts the animation when the same node is located twice
+            nodeElement.classList.add('node-located')
+            setTimeout(() => nodeElement.classList.remove('node-located'), 2000)
+            return true
         }
 
         function genMarkersForAllKnownPathColor() {
@@ -379,8 +438,18 @@ export default {
             }
         }
 
+        function linkLevel(d) {
+            return (d.health && d.health.level) || 'unknown'
+        }
+
         function updateClassList(elemBaseClass, d) {
-            let classes = [elemBaseClass]
+            let classes = [elemBaseClass, `link-${linkLevel(d)}`]
+            if (d.health && d.health.disabled) {
+                classes.push('link-unused')
+            }
+            if (focus !== null && !focus.links.has(d.vid)) {
+                classes.push('dimmed')
+            }
             if (d.vid == selectedLink) {
                 classes.push('selected')
             }
@@ -396,8 +465,25 @@ export default {
             return classes.join(' ')
         }
 
+        function escapeHTML(text) {
+            return String(text).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
+        }
+
+        // Shown on hover over the link and its badge: the health and why
+        function linkTitle(d) {
+            const level = linkLevel(d)
+            const lines = [`${LEVEL_LABELS[level]}${d.health && d.health.disabled ? ' · unused (push, pull and caching off)' : ''}`]
+            const reasons = (d.health && d.health.reasons) || []
+            reasons.forEach(reason => lines.push(`- ${reason.message}`))
+            return lines.join('\n')
+        }
+
         function getHTMLIconsFromLinkConfig(d) {
             let icons = []
+            const level = linkLevel(d)
+            if (level !== 'ok') {
+                icons.push(`<i class="fas ${LEVEL_ICONS[level]} badge-health badge-health-${level}" aria-hidden="true"></i>`)
+            }
             const serverConnection = d.destination.Server
             if (serverConnection.push) {
                 const enabledMechanism = [
@@ -422,12 +508,14 @@ export default {
                     icons.push(`<span title="PULL is enabled. The following other elements will also be synchronized:\n${enabledMechanism.join('')}">\uf063</span>`)
                 }
             }
+            if (d._has_rules) {
+                const rules = d.filtering_rules || {}
+                icons.push(`<i class="fas fa-filter badge-rules" title="${escapeHTML(`Filtering rules: ${rules.push_rule_number || 0} on push, ${rules.pull_rule_number || 0} on pull`)}"></i>`)
+            }
+            if (d._internal_sync) {
+                icons.push(`<i class="fas fa-building badge-internal" title="Internal sync: the remote belongs to the same organisation"></i>`)
+            }
             return icons.join(' ')
-        }
-
-        function hasActiveSyncMechanism(d) {
-            const serverConnection = d.destination.Server
-            return serverConnection.push || serverConnection.pull
         }
 
         function calcEdgePathCoordinate(source, target) {

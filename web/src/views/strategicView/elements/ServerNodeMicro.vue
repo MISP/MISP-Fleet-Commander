@@ -6,6 +6,8 @@
                     <b-icon icon="circle-fill"></b-icon>
                 </span>
                 <span class="ml-2">{{ getServer.name }}</span>
+                <NodeIssuesChip :server_id="server_id" class="ml-3"></NodeIssuesChip>
+                <NodeLinkHealth :server_id="server_id" large class="ml-2"></NodeLinkHealth>
             </h1>
         </div>
     </div>
@@ -18,11 +20,15 @@ import * as d3 from "d3"
 import loaderPlaceholder from "@/components/ui/elements/loaderPlaceholder.vue"
 import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
 import iconButton from "@/components/ui/elements/iconButton.vue"
+import NodeIssuesChip from "@/views/strategicView/elements/NodeIssuesChip.vue"
+import NodeLinkHealth from "@/views/strategicView/elements/NodeLinkHealth.vue"
 
 export default {
     name: "ServerNodeMicro",
     components: {
         timeSinceRefresh,
+        NodeIssuesChip,
+        NodeLinkHealth,
     },
     props: {
         server_id: {
