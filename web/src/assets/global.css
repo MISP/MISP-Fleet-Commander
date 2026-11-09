@@ -110,6 +110,8 @@ body {
 }
 
 .main-body {
+    /* Lets wide content (tables) scroll in its own wrapper instead of widening the page */
+    min-width: 0;
     margin-left: 50px;
     -webkit-transition: margin-left .2s;
     transition: margin-left .2s;
