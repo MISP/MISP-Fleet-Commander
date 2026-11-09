@@ -1,7 +1,7 @@
 <template>
 <Layout name="LayoutDefault">
     <div>
-        <div class="d-flex justify-content-between">
+        <div class="table-header">
             <div class="d-flex" style="margin-top: -5px">
                 <b-button-group class="text-nowrap mr-2 pb-1">
                     <b-button
@@ -36,14 +36,26 @@
                     <MonitoringStatusBadge :show_for_selected_fleet="true"></MonitoringStatusBadge>
                 </div>
             </div>
-            <div class="w-25">
+            <div class="table-tools">
                 <b-button-toolbar class="justify-content-end flex-nowrap">
+                    <b-button
+                        size="sm"
+                        :variant="table.onlyIssues ? 'secondary' : 'outline-secondary'"
+                        :pressed="table.onlyIssues"
+                        :disabled="!healthLoaded"
+                        class="issues-toggle mr-2 align-self-end"
+                        title="Only show servers with unacknowledged issues"
+                        @click="table.onlyIssues = !table.onlyIssues"
+                    >
+                        <i class="fas fa-filter mr-1" aria-hidden="true"></i>With issues
+                        <span v-if="healthLoaded" class="issues-toggle-count">{{ serversWithIssuesCount }}</span>
+                    </b-button>
                     <b-input-group size="sm" class="px-0 col">
                         <b-form-input
                             v-model="table.filter"
                             type="search"
                             id="filterInput"
-                            placeholder="Type to Search"
+                            placeholder="Search name, URL or issue"
                             class="table-search-box border-bottom-0 rounded-top align-self-end"
                             style="border-radius: 0"
                         ></b-form-input>
@@ -144,8 +156,8 @@
             :busy.sync="table.isBusy"
             :items="getIndex" 
             :fields="table.fields"
-            :filterIncludedFields="table.filterFields"
-            :filter="table.filter"
+            :filter="tableFilter"
+            :filter-function="filterServer"
             :no-provider-paging="true"
             :no-provider-sorting="true"
             :no-provider-filtering="true"
@@ -175,6 +187,10 @@
 
             <template v-slot:head(server_status)>
                 Status
+            </template>
+
+            <template v-slot:cell(health)="row">
+                <ServerHealthBadge :server_id="row.item.id" :fleet_id="selectedFleet ? selectedFleet.id : null"></ServerHealthBadge>
             </template>
 
             <template v-slot:cell(name)="row">
@@ -402,6 +418,7 @@ import DiscoverServers from "@/views/servers/DiscoverServers.vue"
 import iconButton from "@/components/ui/elements/iconButton.vue"
 import MonitoringStatusBadge from "@/components/ui/elements/MonitoringStatusBadge.vue"
 import FleetWatchingStatusBadge from "@/components/ui/elements/FleetWatchingStatusBadge.vue"
+import ServerHealthBadge from "@/components/health/ServerHealthBadge.vue"
 
 
 export default {
@@ -432,6 +449,7 @@ export default {
         BatchPluginAction,
         MonitoringStatusBadge,
         FleetWatchingStatusBadge,
+        ServerHealthBadge,
     },
     data: function() {
         return {
@@ -448,15 +466,27 @@ export default {
                 isBusy: false,
                 filtered: "",
                 filter: null,
+                onlyIssues: false,
                 totalRows: 0,
                 currentPage: 1,
                 perPage: 30,
                 optionsPerPage: [{ text: 30, value: 30 }, { text: 50, value: 50 }, { text: 100, value: 100 }],
-                filterFields: ["name", "url"],
                 fields: [
                     {
                         key: "selected",
                         label: ""
+                    },
+                    {
+                        key: "health",
+                        label: "Health",
+                        sortable: true,
+                        sortByFormatted: true,
+                        sortDirection: "desc", // first click: most severe first
+                        class: "align-middle",
+                        headerTitle: "Most severe unacknowledged issue, and how many there are",
+                        formatter: (value, key, item) => {
+                            return this.healthSortKey(item.id)
+                        }
                     },
                     {
                         key: "name",
@@ -577,12 +607,14 @@ export default {
             server_users: state => state.servers.server_users,
             last_refresh: state => state.servers.last_refresh,
             diagnostic_full: state => state.servers.diagnostic_full,
+            healthLoaded: state => state.health.loaded,
         }),
         ...mapGetters({
             serverCount: "servers/serverCount",
             getServerList: "servers/getServerList",
             indexPlugins: "plugins/indexPlugins",
             quickActionPlugins: "plugins/quickActionPlugins",
+            serverActiveIssues: "health/serverActiveIssues",
         }),
         getIndex() {
             return (this.getServerList || []).map(server => ({ ...server }))
@@ -601,7 +633,35 @@ export default {
         },
         displayedTotalRows() {
             return Math.min(this.table.totalRows, this.table.perPage)
-        }
+        },
+        serversWithIssuesCount() {
+            return this.getIndex.filter(server => (this.serverActiveIssues[server.id] || []).length > 0).length
+        },
+        // IDs of the servers to show, or null when nothing filters the table.
+        // Recomputed on live health updates, but the table only re-filters (and clears its selection)
+        // when the set of matching servers actually changes.
+        matchingServerIds() {
+            const search = (this.table.filter || "").trim().toLowerCase().replace(/\s+/g, " ")
+            if (search === "" && !this.table.onlyIssues) {
+                return null
+            }
+            return this.getIndex
+                .filter((server) => {
+                    const issues = this.serverActiveIssues[server.id] || []
+                    if (this.table.onlyIssues && issues.length === 0) {
+                        return false
+                    }
+                    if (search === "") {
+                        return true
+                    }
+                    const haystack = [server.name, server.url].concat(issues.map(issue => issue.title))
+                    return haystack.some(text => String(text || "").toLowerCase().includes(search))
+                })
+                .map(server => server.id)
+        },
+        tableFilter() {
+            return this.matchingServerIds === null ? null : { ids: this.matchingServerIds.join(",") }
+        },
     },
     methods: {
         setCheckOnServers(checked) {
@@ -622,9 +682,23 @@ export default {
                 this.$refs.serverTable.unselectRow(index)
             }
         },
+        filterServer(server, criteria) {
+            return criteria.ids.split(",").includes(String(server.id))
+        },
+        // Most severe first when sorted descending: criticals, then warnings, then info, by count
+        healthSortKey(server_id) {
+            if (!this.healthLoaded) {
+                return -1
+            }
+            const weights = { critical: 1000000, warning: 1000, info: 1 }
+            return (this.serverActiveIssues[server_id] || [])
+                .reduce((total, issue) => total + (weights[issue.severity] || 0), 0)
+        },
         onFiltered(filteredItems) {
             this.table.totalRows = filteredItems.length
-            this.table.currentPage = 1
+            // Live health updates may shrink the list: stay on the current page while it exists
+            const lastPage = Math.max(1, Math.ceil(filteredItems.length / this.table.perPage))
+            this.table.currentPage = Math.min(this.table.currentPage, lastPage)
         },
         onSorted() {
             this.table.currentPage = 1
@@ -962,6 +1036,12 @@ export default {
         },
     },
     watch: {
+        "table.filter": function() {
+            this.table.currentPage = 1
+        },
+        "table.onlyIssues": function() {
+            this.table.currentPage = 1
+        },
         fetching_servers_in_progress: function() {
             this.table.timeKey += 1 // used to force reload of the timeSinceLastRefresh component
         },
@@ -995,5 +1075,46 @@ export default {
 <style>
 .table-primary-background {
     background-color: #b8daff;
+}
+</style>
+
+<style scoped>
+/* The tools wrap below the pagination when both do not fit */
+.table-header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-end;
+    column-gap: 1rem;
+    row-gap: 0.5rem;
+}
+
+.table-tools {
+    flex: 0 1 30rem;
+    margin-left: auto;
+}
+
+.table-tools .input-group {
+    min-width: 11rem;
+}
+
+.issues-toggle {
+    white-space: nowrap;
+}
+
+.issues-toggle-count {
+    display: inline-block;
+    min-width: 1.3em;
+    margin-left: 0.3rem;
+    padding: 0 0.3rem;
+    border-radius: 0.6rem;
+    background: rgba(0, 0, 0, 0.08);
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.issues-toggle.active .issues-toggle-count {
+    background: rgba(255, 255, 255, 0.25);
 }
 </style>
