@@ -5,9 +5,10 @@ who changed what on which server, so what it stores is redacted (no credentials)
 import json
 import re
 import time
+from dataclasses import dataclass
 from typing import Any, Iterable, Optional
 
-from application.DBModels import JOB_KINDS, JOB_RESULT_STATUSES, Fleet, Job, JobResult, Server, User, db
+from application.DBModels import JOB_KINDS, JOB_RESULT_FINAL_STATUSES, Fleet, Job, JobResult, Server, User, db
 
 REDACTED = '***'
 RESPONSE_MAX_BYTES = 64 * 1024
@@ -38,12 +39,16 @@ def isSensitiveSetting(name: Any) -> bool:
 
 
 def redact(data: Any) -> Any:
-    """A copy of `data` where values of credential-looking keys are replaced by `***`, at any depth"""
+    """A copy of `data` where values of credential-looking keys are replaced by `***`, at any depth. A key holding
+    an object or a list is redacted inside instead: MISP wraps records in their model name (`{"AuthKey": {"id": 9,
+    "authkey": "…"}}`), and the record itself is worth keeping"""
     if isinstance(data, dict):
         valueIsSensitive = any(isSensitiveSetting(data.get(key)) for key in VALUE_NAMING_KEYS)
         redacted = {}
         for key, value in data.items():
-            if isSensitiveKey(key) or (key == 'value' and valueIsSensitive):
+            if isinstance(value, (dict, list, tuple)):
+                redacted[key] = redact(value)
+            elif isSensitiveKey(key) or (key == 'value' and valueIsSensitive):
                 redacted[key] = REDACTED if value not in (None, '') else value
             else:
                 redacted[key] = redact(value)
@@ -84,8 +89,27 @@ def finalStatus(succeeded: int, failed: int, cancelled: bool = False) -> str:
     return 'partial'
 
 
+@dataclass
+class UnitResult:
+    """The outcome of one job unit (the job's write on one server), as the unit executors return it"""
+    ok: bool
+    http_status: Optional[int] = None
+    summary: str = ''
+    response: Any = None
+    before: Any = None
+    skipped: bool = False
+
+    @property
+    def status(self) -> str:
+        if self.skipped:
+            return 'skipped'
+        return 'ok' if self.ok else 'error'
+
+
 def create(user: User, kind: str, servers: Iterable[Server], params: Optional[dict] = None, title: str = '',
            fleet: Optional[Fleet] = None, commit: bool = True) -> Job:
+    """A queued job with one pending result per server. `params` are stored twice: redacted for display, and as
+    given, encrypted, for the runner and for retries"""
     if kind not in JOB_KINDS:
         raise ValueError(f'Unknown job kind `{kind}`')
     servers = list(servers)
@@ -101,6 +125,10 @@ def create(user: User, kind: str, servers: Iterable[Server], params: Optional[di
         total=len(servers),
         created=time.time(),
     )
+    job.secret_params = params or {}
+    for server in servers:
+        job.results.append(JobResult(server_id=server.id, server_name=server.name, server_url=server.url,
+                                     status='pending'))
     db.session.add(job)
     if commit:
         db.session.commit()
@@ -115,29 +143,25 @@ def start(job: Job, commit: bool = True) -> Job:
     return job
 
 
-def addResult(job: Job, server: Server, status: str, http_status: Optional[int] = None, summary: str = '',
-              response: Any = None, before: Any = None, started: Optional[float] = None,
-              finished: Optional[float] = None, commit: bool = True) -> JobResult:
-    """Record the outcome of the job on one server and update the job's counters. `before` should already be
-    redacted with `redactValue` when it is a named value; it is redacted again as a whole"""
-    if status not in JOB_RESULT_STATUSES:
+def recordResult(result: JobResult, status: str, http_status: Optional[int] = None, summary: str = '',
+                 response: Any = None, before: Any = None, started: Optional[float] = None,
+                 finished: Optional[float] = None, commit: bool = True) -> JobResult:
+    """Record the outcome of a pending result and update its job's counters. `before` should already be redacted
+    with `redactValue` when it is a named value; it is redacted again as a whole"""
+    if status not in JOB_RESULT_FINAL_STATUSES:
         raise ValueError(f'Unknown job result status `{status}`')
+    if result.status != 'pending':
+        raise ValueError(f'The result of job {result.job_id} on server {result.server_name} is already recorded')
     storedResponse, truncated = boundedResponse(response)
-    result = JobResult(
-        job_id=job.id,
-        server_id=server.id,
-        server_name=server.name,
-        server_url=server.url,
-        status=status,
-        http_status=http_status,
-        summary=(summary or '')[:SUMMARY_MAX_LENGTH],
-        response=storedResponse,
-        response_truncated=truncated,
-        before=redact(before),
-        started=started,
-        finished=finished if finished is not None else time.time(),
-    )
-    job.results.append(result)
+    result.status = status
+    result.http_status = http_status
+    result.summary = (summary or '')[:SUMMARY_MAX_LENGTH]
+    result.response = storedResponse
+    result.response_truncated = truncated
+    result.before = redact(before)
+    result.started = started
+    result.finished = finished if finished is not None else time.time()
+    job = result.job
     if status == 'ok':
         job.succeeded = (job.succeeded or 0) + 1
     elif status == 'error':
@@ -147,12 +171,61 @@ def addResult(job: Job, server: Server, status: str, http_status: Optional[int] 
     return result
 
 
+def recordUnit(result: JobResult, unit: UnitResult, started: Optional[float] = None,
+               finished: Optional[float] = None, commit: bool = True) -> JobResult:
+    return recordResult(result, unit.status, http_status=unit.http_status, summary=unit.summary,
+                        response=unit.response, before=unit.before, started=started, finished=finished,
+                        commit=commit)
+
+
 def finish(job: Job, cancelled: bool = False, commit: bool = True) -> Job:
     job.status = finalStatus(job.succeeded or 0, job.failed or 0, cancelled)
     job.finished = time.time()
     if commit:
         db.session.commit()
     return job
+
+
+def serializeResult(result: JobResult) -> dict:
+    return {
+        'id': result.id,
+        'job_id': result.job_id,
+        'server_id': result.server_id,
+        'server_name': result.server_name,
+        'server_url': result.server_url,
+        'status': result.status,
+        'http_status': result.http_status,
+        'summary': result.summary,
+        'response': result.response,
+        'response_truncated': bool(result.response_truncated),
+        'before': result.before,
+        'started': result.started,
+        'finished': result.finished,
+    }
+
+
+def serializeJob(job: Job, withResults: bool = False) -> dict:
+    """Never includes the encrypted parameters: `params` is the redacted copy"""
+    serialized = {
+        'id': job.id,
+        'user_id': job.user_id,
+        'user_email': job.user_email,
+        'fleet_id': job.fleet_id,
+        'fleet_name': job.fleet_name,
+        'kind': job.kind,
+        'title': job.title,
+        'params': job.params,
+        'status': job.status,
+        'total': job.total,
+        'succeeded': job.succeeded,
+        'failed': job.failed,
+        'created': job.created,
+        'started': job.started,
+        'finished': job.finished,
+    }
+    if withResults:
+        serialized['results'] = [serializeResult(result) for result in job.results]
+    return serialized
 
 
 def purge(retention_days: int, now: Optional[float] = None) -> int:

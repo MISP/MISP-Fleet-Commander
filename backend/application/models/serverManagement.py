@@ -19,10 +19,17 @@ def setPassword(server: Server, user_id: int, payload: dict) -> Union[dict, None
         'confirm_password': payload.get('confirm_password', None),
         'change_pw': 0,
     }
+    # Raw, because MISP explains a refused password (policy) in the body of its 403
     response = mispPostRequest(server, url, data, rawResponse=True)
-    if response.status_code == 403:
-        return response.json()
-    return response.json()
+    if isinstance(response, dict):  # The request itself failed
+        return response
+    try:
+        result = response.json()
+    except ValueError:
+        return {'error': f'Unexpected answer (HTTP {response.status_code})', '_status_code': response.status_code}
+    if isinstance(result, dict):
+        result.setdefault('_status_code', response.status_code)
+    return result
 
 
 def resetPassword(server: Server, user_id: int) -> Union[dict, None]:

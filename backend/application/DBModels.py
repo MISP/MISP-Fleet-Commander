@@ -385,7 +385,9 @@ class HealthAck(BaseModel):
 JOB_KINDS = ('plugin_action', 'plugin_quick_action', 'rest_query', 'baseline_remediation', 'server_management',
              'edit_connection')
 JOB_STATUSES = ('queued', 'running', 'done', 'partial', 'failed', 'cancelled')
-JOB_RESULT_STATUSES = ('ok', 'error', 'skipped', 'cancelled')
+# `pending` until the server's unit is over; the others are final
+JOB_RESULT_STATUSES = ('pending', 'ok', 'error', 'skipped', 'cancelled')
+JOB_RESULT_FINAL_STATUSES = ('ok', 'error', 'skipped', 'cancelled')
 
 
 class Job(BaseModel):
@@ -417,10 +419,14 @@ class Job(BaseModel):
     title = db.Column(db.String(255),
                       nullable=False,
                       default='')
-    # Redacted before being stored: see application.models.jobs.redact
+    # Redacted before being stored, for display: see application.models.jobs.redact
     params = db.Column(db.JSON,
                        nullable=False,
                        default=dict)
+    # The parameters as given, encrypted at rest like server authkeys: the runner and retries need the real values.
+    # Use the `secret_params` property
+    params_enc = db.Column(db.Text,
+                           nullable=True)
     status = db.Column(db.String(16),
                        nullable=False,
                        default='queued',
@@ -446,9 +452,22 @@ class Job(BaseModel):
     results = db.relationship('JobResult', back_populates='job', cascade='all, delete-orphan',
                               order_by='JobResult.id')
 
+    @property
+    def secret_params(self):
+        from application import crypto
+        if self.params_enc is None:
+            return {}
+        return json.loads(crypto.decrypt(self.params_enc))
+
+    @secret_params.setter
+    def secret_params(self, params):
+        from application import crypto
+        self.params_enc = crypto.encrypt(json.dumps(params or {}))
+
 
 class JobResult(BaseModel):
-    """The outcome of a job on one server"""
+    """The outcome of a job on one server. Created `pending` with the job, so that a job lists its servers from the
+    start"""
     __tablename__ = 'job_results'
 
     id = db.Column(db.Integer,

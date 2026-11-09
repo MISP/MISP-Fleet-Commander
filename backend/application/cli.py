@@ -163,7 +163,7 @@ def generateKey():
 
 @security_cli.command('rotate-key')
 def rotateKey():
-    """Re-encrypt the stored MISP authkeys with the first configured key.
+    """Re-encrypt the stored MISP authkeys and job parameters with the first configured key.
 
     \b
     1. Generate a key with `flask security generate-key`
@@ -172,9 +172,12 @@ def rotateKey():
     3. Run this command, then keep only the new key
     """
     from application import crypto, db
-    from application.DBModels import Server
+    from application.DBModels import Job, Server
     servers = Server.query.filter(Server.authkey_enc.isnot(None)).all()
     for server in servers:
         server.authkey_enc = crypto.rotate(server.authkey_enc)
+    jobs = Job.query.filter(Job.params_enc.isnot(None)).all()
+    for job in jobs:
+        job.params_enc = crypto.rotate(job.params_enc)
     db.session.commit()
-    print(f'Re-encrypted the authkeys of {len(servers)} servers with the first configured key')
+    print(f'Re-encrypted the authkeys of {len(servers)} servers and the parameters of {len(jobs)} jobs with the first configured key')

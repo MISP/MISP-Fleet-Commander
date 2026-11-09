@@ -147,20 +147,25 @@ def delete(user):
 @BPserver.route('/servers/editConnection/<int:server_id>/<int:remote_server_id>', methods=['POST'])
 @token_required
 def editConnection(user, server_id, remote_server_id):
-    payload = request.json
-    updatedConnection = serverModel.editConnection(user, server_id, remote_server_id, payload)
-    if updatedConnection:
-        server = serverModel.getForUser(user, server_id)
-        if server is not None:
-            serverConnectionList = serverModel.refreshServerConnectionList(server.id, remote_server_id)
-            if serverConnectionList is not None:
-                return jsonify(updatedConnection)
-            else:
-                return jsonify({'error': 'Something went wrong when getting updated connection lits'})
-        else:
-            return jsonify({'error': 'Server does not exist'})
-    else:
-        return jsonify({'error': 'Something went wrong when trying to update connection'})
+    """Edit a sync connection of the server, recorded as a one-server job. A change MISP refuses is a 502 whose
+    message says why"""
+    from application.controllers.websocket import socketEmitter
+    import application.models.jobRunner as jobRunner
+    payload = request.json or {}
+    server = serverModel.getForUser(user, server_id)
+    if server is None:
+        return jsonify({'error': 'Server does not exist'})
+    remoteName = payload.get('name') if isinstance(payload, dict) else None
+    title = f'Edit the sync connection to {remoteName or f"#{remote_server_id}"} on {server.name}'
+    unit = jobRunner.runInline(user, 'edit_connection', server,
+                               {'remote_server_id': remote_server_id, 'payload': payload}, title=title,
+                               emitter=socketEmitter)
+    if not unit.ok:
+        return jsonify({'error': unit.summary, 'message': f'MISP did not save the change: {unit.summary}'}), 502
+    serverConnectionList = serverModel.refreshServerConnectionList(server.id, remote_server_id)
+    if serverConnectionList is None:
+        return jsonify({'error': 'Something went wrong when getting updated connection lits'})
+    return jsonify(unit.response)
 
 
 @BPserver.route('/servers/testConnection/<int:server_id>', methods=['GET'])
@@ -405,40 +410,20 @@ def loginOvertime(user, server_id):
 @BPserver.route('/servers/restQuery/<int:server_id>', methods=['POST'])
 @token_required
 def restQuery(user, server_id):
-    queryURL = request.json['url']
-    queryData = request.json['data']
-    queryMethod = request.json['method']
+    """A raw query to one server. POST queries can change the server, so they are recorded as one-server jobs"""
+    from application.controllers.websocket import socketEmitter
+    import application.models.jobRunner as jobRunner
+    from application.models.jobUnits import restQuery as sendRestQuery
+    body = request.json or {}
+    queryURL, queryData, queryMethod = body.get('url'), body.get('data'), (body.get('method') or 'GET').upper()
     server = serverModel.getForUser(user, server_id)
-    if server is not None:
-        if queryMethod == 'POST':
-            try:
-                queryData = json.loads(queryData)
-            except:
-                pass
-            response = mispPostRequest(server, queryURL, queryData, rawResponse=True, nocache=True)
-        else:
-            response = mispGetRequest(server, queryURL, rawResponse=True, nocache=True)
-        if isinstance(response, dict):
-            # Request helpers return an error dict instead of a Response on failure
-            return jsonify(response)
-        responseData = ""
-        try:
-            responseData = response.json()
-        except json.decoder.JSONDecodeError as e:
-            responseData = response.text
-        result = {
-            'timestamp': int(time.time()),
-            'data': responseData,
-            'headers': dict(response.headers),
-            'status_code': response.status_code,
-            'reason': response.reason,
-            'elapsed_time': str(response.elapsed),
-            'url': response.url,
-            'server_id': server_id,
-        }
-        return jsonify(result)
-    else:
+    if server is None:
         return jsonify({})
+    if queryMethod != 'POST':
+        return jsonify(sendRestQuery(server, queryMethod, queryURL, queryData))
+    unit = jobRunner.runInline(user, 'rest_query', server, {'method': queryMethod, 'url': queryURL, 'data': queryData},
+                               title=f'POST {queryURL} on {server.name}', emitter=socketEmitter)
+    return jsonify(unit.response)
 
 
 def fetchServerUsers(server):

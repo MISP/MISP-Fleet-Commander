@@ -231,31 +231,6 @@ def getServerInfo(server_id, cache=True) -> Union[dict, None]:
     else:
         return None
 
-def editConnection(user, server_id, remote_server_id, payload):
-    url = f'/servers/edit/{remote_server_id}'
-    server = getForUser(user, server_id)
-    if server is not None:
-        response = mispPostRequest(server, url, data=payload, rawResponse=True, nocache=True)
-        responseData = ""
-        try:
-            responseData = response.json()
-        except json.decoder.JSONDecodeError as e:
-            responseData = response.text
-
-        return {
-            'timestamp': int(time.time()),
-            'data': responseData,
-            'headers': dict(response.headers),
-            'status_code': response.status_code,
-            'reason': response.reason,
-            'elapsed_time': str(response.elapsed),
-            'url': response.url,
-            'server_id': server_id,
-        }
-    else:
-        return None
-
-
 def fetchServerInfo(server, use_cache=True):
     serverSettings = mispGetRequest(server, '/servers/serverSettings/diagnostics/light:1', nocache=not use_cache)
     serverUsage = mispGetRequest(server, '/users/statistics', nocache=not use_cache)

@@ -83,17 +83,24 @@ with open(script_dir / relative_path, 'rb') as f:
     all_user_settings = tomllib.load(f)
 
 
+ENCRYPTED_COLUMNS = (('servers', 'authkey_enc'), ('jobs', 'params_enc'))
+
+
 def sampleEncryptedAuthkey():
-    """An encrypted authkey from the database, to check the encryption key against. None when there is none,
-    including before the migration introducing the encryption has run."""
+    """An encrypted value from the database (a server authkey, else job parameters), to check the encryption key
+    against. None when there is none, including before the migrations introducing these columns have run."""
     from sqlalchemy import inspect, text
     inspector = inspect(db.engine)
-    if not inspector.has_table('servers'):
-        return None
-    if 'authkey_enc' not in {column['name'] for column in inspector.get_columns('servers')}:
-        return None
-    with db.engine.connect() as connection:
-        return connection.execute(text('SELECT authkey_enc FROM servers WHERE authkey_enc IS NOT NULL LIMIT 1')).scalar()
+    for table, column in ENCRYPTED_COLUMNS:
+        if not inspector.has_table(table):
+            continue
+        if column not in {existing['name'] for existing in inspector.get_columns(table)}:
+            continue
+        with db.engine.connect() as connection:
+            sample = connection.execute(text(f'SELECT {column} FROM {table} WHERE {column} IS NOT NULL LIMIT 1')).scalar()
+        if sample is not None:
+            return sample
+    return None
 
 
 def socketOriginChecker(allowedOrigins):

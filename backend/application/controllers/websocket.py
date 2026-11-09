@@ -229,6 +229,18 @@ class SocketioEmitter:
         }
         self._emitToServerOwner("SERVER_GRAPH_REFRESH_STATUS", serverID, payload)
 
+    def job_progress(self, job, payload):
+        """`{job_id, done, total, succeeded, failed, result}`: one server's unit of the job is over"""
+        if job.user_id is not None:
+            self.socketio.emit('JOB_PROGRESS', payload, to=userRoom(job.user_id))
+
+    def job_done(self, job):
+        """`{job_id, status, total, succeeded, failed}`: the job is over"""
+        if job.user_id is not None:
+            payload = {'job_id': job.id, 'status': job.status, 'total': job.total, 'succeeded': job.succeeded,
+                       'failed': job.failed}
+            self.socketio.emit('JOB_DONE', payload, to=userRoom(job.user_id))
+
     def fleet_update_timestamps(self, fleet, watched_timestamp = None, monitored_timestamp = None):
         user_id = self._fleetOwner(fleet)
         if user_id is None:

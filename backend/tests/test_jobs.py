@@ -51,6 +51,14 @@ def test_redaction_reaches_nested_dicts_and_lists():
     }
 
 
+def test_records_under_a_credential_like_model_name_are_redacted_inside():
+    from application.models.jobs import redact
+    data = {"AuthKey": {"id": 9, "user_id": 3, "authkey": "k" * 40, "authkey_start": "kkkk"},
+            "Tokens": [{"token": "t", "comment": "ci"}]}
+    assert redact(data) == {"AuthKey": {"id": 9, "user_id": 3, "authkey": "***", "authkey_start": "***"},
+                            "Tokens": [{"token": "***", "comment": "ci"}]}
+
+
 def test_redaction_does_not_modify_its_input():
     from application.models.jobs import redact
     data = {"authkey": "k", "nested": {"token": "t"}}
@@ -157,10 +165,10 @@ def test_a_job_records_its_results_and_counters(db, fleetWithServers):
 
     jobModel.start(job)
     assert job.status == "running" and job.started is not None
-    jobModel.addResult(job, servers[0], "ok", http_status=200, summary="Saved", response={"saved": True},
+    jobModel.recordResult(job.results[0], "ok", http_status=200, summary="Saved", response={"saved": True},
                        before={"value": False}, started=time.time())
-    jobModel.addResult(job, servers[1], "error", http_status=500, summary="x" * 5000)
-    jobModel.addResult(job, servers[2], "skipped", summary="Already enabled")
+    jobModel.recordResult(job.results[1], "error", http_status=500, summary="x" * 5000)
+    jobModel.recordResult(job.results[2], "skipped", summary="Already enabled")
     jobModel.finish(job)
 
     stored = db.session.get(Job, job.id)
@@ -181,16 +189,16 @@ def test_unknown_kinds_and_statuses_are_refused(db, fleetWithServers):
         jobModel.create(user, "format_disk", servers)
     job = jobModel.create(user, "rest_query", servers)
     with pytest.raises(ValueError):
-        jobModel.addResult(job, servers[0], "maybe")
+        jobModel.recordResult(job.results[0], "maybe")
 
 
 def test_a_cancelled_job_is_cancelled_whatever_its_counters(db, fleetWithServers):
     import application.models.jobs as jobModel
     user, fleet, servers = fleetWithServers
     job = jobModel.create(user, "rest_query", servers)
-    jobModel.addResult(job, servers[0], "ok")
-    jobModel.addResult(job, servers[1], "cancelled")
-    jobModel.addResult(job, servers[2], "cancelled")
+    jobModel.recordResult(job.results[0], "ok")
+    jobModel.recordResult(job.results[1], "cancelled")
+    jobModel.recordResult(job.results[2], "cancelled")
     jobModel.finish(job, cancelled=True)
     assert (job.status, job.succeeded, job.failed) == ("cancelled", 1, 0)
 
@@ -202,7 +210,7 @@ def test_deleting_a_server_keeps_its_results_detached(db, fleetWithServers):
     from application.DBModels import JobResult
     user, fleet, servers = fleetWithServers
     job = jobModel.create(user, "plugin_action", servers, fleet=fleet)
-    result = jobModel.addResult(job, servers[0], "ok")
+    result = jobModel.recordResult(job.results[0], "ok")
     resultId, serverId = result.id, servers[0].id
     db.session.delete(servers[0])
     db.session.commit()
@@ -218,14 +226,14 @@ def test_deleting_a_fleet_keeps_its_jobs_detached(db, fleetWithServers):
     from application.DBModels import Job
     user, fleet, servers = fleetWithServers
     job = jobModel.create(user, "plugin_action", servers, fleet=fleet)
-    jobModel.addResult(job, servers[0], "ok")
+    jobModel.recordResult(job.results[0], "ok")
     jobId = job.id
     db.session.delete(fleet)  # Deletes its servers too
     db.session.commit()
     db.session.expire_all()
     stored = db.session.get(Job, jobId)
     assert stored.fleet_id is None and stored.fleet_name == "Jobs fleet"
-    assert [r.server_id for r in stored.results] == [None]
+    assert [r.server_id for r in stored.results] == [None, None, None]
 
 
 def test_deleting_a_user_keeps_their_jobs_detached(db, make_user):
@@ -250,10 +258,10 @@ def test_purge_deletes_jobs_older_than_the_retention_with_their_results(db, flee
     user, fleet, servers = fleetWithServers
     now = time.time()
     old = jobModel.create(user, "rest_query", servers)
-    jobModel.addResult(old, servers[0], "ok")
+    jobModel.recordResult(old.results[0], "ok")
     old.created = now - 91 * DAY
     recent = jobModel.create(user, "rest_query", servers)
-    jobModel.addResult(recent, servers[0], "ok")
+    jobModel.recordResult(recent.results[0], "ok")
     recent.created = now - 89 * DAY
     db.session.commit()
     oldId, recentId = old.id, recent.id
@@ -263,7 +271,7 @@ def test_purge_deletes_jobs_older_than_the_retention_with_their_results(db, flee
     assert db.session.get(Job, oldId) is None
     assert JobResult.query.filter_by(job_id=oldId).count() == 0
     assert db.session.get(Job, recentId) is not None
-    assert JobResult.query.filter_by(job_id=recentId).count() == 1
+    assert JobResult.query.filter_by(job_id=recentId).count() == 3
 
 
 def test_the_purge_task_reads_the_retention_setting(db, fleetWithServers, monkeypatch):

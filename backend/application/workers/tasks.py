@@ -17,6 +17,7 @@ import application.models.servers as serverModel
 import application.models.fleets as fleetModel
 import application.models.setting as settingModel
 import application.models.jobs as jobModel
+import application.models.jobRunner as jobRunner
 from application import redisModel
 
 from application import MONITORING_SYSTEM_AVAILABLE, MONITORING_SYSTEM as monitor
@@ -171,6 +172,13 @@ def doCacheMonitoringImages(server_id):
         "server_graphs_update_done": socketioEmitter.server_graphs_update_done,
     }
     serverModel.cacheMonitoringImages([server], force=True, callbacks=callbacks)
+
+
+@huey_app.task(priority=3)
+def runJob(job_id):
+    """Run a queued job; its parameters are read from the job (encrypted), never passed through the queue"""
+    max_concurrency = int(settingModel.getRefreshValue("job_max_concurrency"))
+    jobRunner.run(job_id, socketioEmitter, max_concurrency=max_concurrency)
 
 
 ###
