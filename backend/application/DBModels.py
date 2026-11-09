@@ -64,6 +64,7 @@ class User(BaseModel):
                                      server_default='0')
 
     user_settings = db.relationship("UserSettings", uselist=True, back_populates="user", cascade="all, delete-orphan")
+    health_acks = db.relationship("HealthAck", uselist=True, cascade="all, delete-orphan")
 
     @classmethod
     def byAPIKey(cls, apikey):
@@ -237,6 +238,9 @@ def forgetDeletedServer(mapper, connection, server):
         redisModel.deleteServerData(server.uuid, server.id)
     except Exception as e:  # Redis being down must not prevent deleting the server
         print(f'Could not clear the cached data of server {server.uuid}: {e}')
+    connection.execute(HealthAck.__table__.delete().where(HealthAck.__table__.c.server_id == server.id))
+    from application.models.health import publishServerRemoved
+    publishServerRemoved(server)
 
 
 class ServerMinimal(Server):
@@ -344,3 +348,33 @@ class PinListEntry(BaseModel):
 
     pinlist = db.relationship('PinList', back_populates="pinlist_entries")
         # backref=db.backref('pinlist_entries', lazy='joined', cascade="all, delete-orphan"))
+
+
+class HealthAck(BaseModel):
+    """A user acknowledging a health issue: it is hidden until `until` passes, if set, or until it clears.
+    `issue_first_seen` identifies the occurrence that was acknowledged: when the issue clears and comes back, it gets
+    a new first-seen time and the acknowledgement no longer applies"""
+    __tablename__ = 'health_acks'
+    __table_args__ = (UniqueConstraint('user_id', 'issue_id'),)
+
+    id = db.Column(db.Integer,
+                   primary_key=True)
+    user_id = db.Column(db.Integer,
+                        db.ForeignKey('users.id'),
+                        nullable=False,
+                        index=True)
+    server_id = db.Column(db.Integer,
+                          db.ForeignKey('servers.id'),
+                          nullable=False,
+                          index=True)
+    issue_id = db.Column(db.String(255),
+                         nullable=False)
+    issue_first_seen = db.Column(db.Integer,
+                                 nullable=False)
+    until = db.Column(db.Integer,
+                      nullable=True)
+    note = db.Column(db.String(500),
+                     nullable=False,
+                     default='')
+    created = db.Column(db.Integer,
+                        nullable=False)

@@ -96,7 +96,14 @@ def recordConnectionTest(server, testConnection):
     if isinstance(testConnection, dict):
         testConnection['timestamp'] = int(time.time())
     redisModel.saveServerStatus(server.uuid, testConnection)
+    publishHealth(server)
     return testConnection
+
+
+def publishHealth(server):
+    """Send the server's re-evaluated health to its owner, once its new data is saved"""
+    from application.models.health import publishServerHealth
+    publishServerHealth(server)
 
 def testConnection(server_id: int, use_cache=True) -> Union[dict, None]:
     server = Server.query.get(server_id)
@@ -187,6 +194,7 @@ def refreshServerConnectionList(server_id: int, remote_server_id=None) -> Union[
             else:
                 connectedServers = attachConnectedServerStatusFor(server, connectedServers, remote_server_id)
             savePartialInfo(server, 'connectedServers', connectedServers)
+            publishHealth(server)
             return connectedServers
     return None
 
@@ -265,6 +273,7 @@ def fetchServerInfo(server, use_cache=True):
     }
     saveInfo(server, fullQuery)
     redisModel.setServerWatchedTimestamp(server.uuid)
+    publishHealth(server)
     return fullQuery
 
 
@@ -367,6 +376,7 @@ async def fetchServerInfoAsync(server, clientSocketEmitterUpdateFuns):
     savePartialInfo(server, "serverUsage", serverUsage)
     if "udpate_server_usage" in clientSocketEmitterUpdateFuns:
         clientSocketEmitterUpdateFuns["udpate_server_usage"](server, serverUsage)
+    publishHealth(server)
     return fullQuery
 
 

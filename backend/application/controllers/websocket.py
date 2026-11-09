@@ -164,6 +164,10 @@ class SocketioEmitter:
     def udpate_server_connection(self, server, data):
         self._emitToServerOwner('UPDATE_SERVER_CONNECTION', server, data)
 
+    def health_updated(self, server, payload):
+        """`{server_id, fleet_id, issues}`: the server's current issues, acknowledged ones included"""
+        self._emitToServerOwner('HEALTH_UPDATED', server, payload)
+
     def server_updating(self, server):
         self._emitToServerOwner('SERVER_UPDATING', server, self._id(server))
 

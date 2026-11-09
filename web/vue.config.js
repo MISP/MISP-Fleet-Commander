@@ -5,7 +5,7 @@ const { defineConfig } = require('@vue/cli-service');
 const backend = process.env.MFC_BACKEND_URL || 'http://127.0.0.1:5001';
 const apiPrefixes = [
   'login', 'instance', 'users', 'fleets', 'servers', 'server-management',
-  'plugins', 'pinlists', 'user-settings', 'static', 'socket.io',
+  'plugins', 'pinlists', 'user-settings', 'health', 'static', 'socket.io',
 ];
 
 module.exports = defineConfig({
