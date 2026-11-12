@@ -27,9 +27,11 @@ def getByEmail(email: str) -> Union[User, None]:
 
 
 def add(userData: dict) -> User:
+    """Users created by an administrator choose their own password at their first login"""
     user = User(email=userData['email'],
                 password=userData['password'],
-                is_admin=bool(userData.get('is_admin', False)))
+                is_admin=bool(userData.get('is_admin', False)),
+                must_change_password=True)
     db.session.add(user)
     db.session.commit()
     if len(userData.get('user_settings') or []) > 0:
@@ -38,11 +40,14 @@ def add(userData: dict) -> User:
 
 
 def edit(user: dict) -> Union[User, None]:
+    """A password set here is set by an administrator for someone else: its owner must change it at the next login"""
     oldUser = get(user['id'])
     if oldUser is not None:
         for field, value in user.items():
             if field in editFields:
                 setattr(oldUser, field, value)
+        if user.get('password'):
+            oldUser.must_change_password = True
         db.session.commit()
         if 'user_settings' in user:
             # try:

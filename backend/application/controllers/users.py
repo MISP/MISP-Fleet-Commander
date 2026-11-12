@@ -48,10 +48,24 @@ def get(loggedUser, user_id):
         return jsonify({})
 
 
+def passwordError(password):
+    """Why an administrator cannot give this password to a user, None if they can"""
+    if not isinstance(password, str) or len(password) < MIN_PASSWORD_LENGTH:
+        return jsonify({'message': f'The password must be at least {MIN_PASSWORD_LENGTH} characters long',
+                        'field': 'password'}), 400
+    return None
+
+
 @BPuser.route('/users/add', methods=['POST', 'PUT'])
 @admin_required
 def add(loggedUser):
-    newUser = userModel.add(request.json)
+    userData = request.get_json(silent=True) or {}
+    if not str(userData.get('email') or '').strip():
+        return jsonify({'message': 'The email is required', 'field': 'email'}), 400
+    error = passwordError(userData.get('password'))
+    if error:
+        return error
+    newUser = userModel.add(userData)
     if newUser is not None:
         return userSchema.dump(newUser)
     else:
@@ -61,12 +75,23 @@ def add(loggedUser):
 @BPuser.route('/users/edit', methods=['POST'])
 @token_required
 def edit(loggedUser):
-    userData = dict(request.json or {})
+    userData = dict(request.get_json(silent=True) or {})
     userData['id'] = resolveUserId(loggedUser, userData.get('id', 'me'))
     if 'is_admin' in userData:
         # Only administrators change roles, and never their own: an instance can't lose its last administrator this way
         if not loggedUser.is_admin or userData['id'] == loggedUser.id:
             userData.pop('is_admin')
+    if 'password' in userData:
+        if not userData['password']:
+            userData.pop('password')  # Left empty: unchanged
+        elif userData['id'] == loggedUser.id:
+            # Changing your own password requires the current one: a token alone is not enough
+            return jsonify({'message': 'Change your own password from the Change password page',
+                            'field': 'password'}), 400
+        else:
+            error = passwordError(userData['password'])
+            if error:
+                return error
     updatedUser = userModel.edit(userData)
     if updatedUser is not None:
         return userSchema.dump(updatedUser)

@@ -80,6 +80,12 @@
             <template v-slot:cell(email)="row">
                 {{ row.value }}
                 <b-badge v-if="row.item.id === currentUser.id" variant="info" class="ml-1">you</b-badge>
+                <b-badge
+                    v-if="row.item.must_change_password"
+                    variant="light"
+                    class="ml-1 border"
+                    title="Their password was set by an administrator or is the default one: they can do nothing else until they choose a new one"
+                ><i class="fas fa-key"></i> Must change password</b-badge>
             </template>
 
             <template v-slot:cell(is_admin)="row">

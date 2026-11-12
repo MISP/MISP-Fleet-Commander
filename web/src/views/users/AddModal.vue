@@ -23,16 +23,27 @@
                     </ValidationProvider>
                 </b-form-group>
 
+                <b-form-group v-if="isSelf" label="Password">
+                    <p class="mb-0 text-muted">
+                        Change your own password from the
+                        <router-link :to="{ name: 'change-password', query: { redirect: $route.fullPath } }" @click.native="$bvModal.hide('modal-add')">Change password</router-link>
+                        page: it asks for your current one.
+                    </p>
+                </b-form-group>
                 <b-form-group
+                    v-else
                     label="Password"
-                    label-for="input-name"
+                    label-for="input-password"
+                    :description="passwordDescription"
                 >
-                    <ValidationProvider v-slot="validationContext" :rules="`${actionType == 'add' ? 'required' : ''}|min:6|max:2048`" name="Password">
+                    <ValidationProvider v-slot="validationContext" :rules="`${actionType == 'add' ? 'required|' : ''}passwordLength:${minPasswordLength}|max:2048`" name="Password">
                         <b-form-input
+                            id="input-password"
                             v-model="form.password"
                             :state="getValidationState(validationContext)"
                             type="password"
-                            placeholder=""
+                            autocomplete="new-password"
+                            :placeholder="isEdit ? 'Unchanged' : ''"
                         ></b-form-input>
                         <b-form-invalid-feedback v-for="(error, index) in validationContext.errors" v-bind:key="index">{{ error }}</b-form-invalid-feedback>
                     </ValidationProvider>
@@ -90,6 +101,11 @@ extend("required", required)
 extend("min", min)
 extend("max", max)
 extend("email", email)
+extend("passwordLength", {
+    params: ["length"],
+    validate: (value, { length }) => String(value || "").length >= Number(length),
+    message: "The password must be at least {length} characters long",
+})
 extend('isJSON', value => {
     if (typeof value === 'object') {
         return true
@@ -129,6 +145,12 @@ export default {
             const currentUser = this.$store.getters["auth/user"]
             return this.isEdit && currentUser !== null && this.form.id === currentUser.id
         },
+        passwordDescription() {
+            const rule = `At least ${this.minPasswordLength} characters.`
+            return this.isEdit
+                ? `Leave empty to keep the current password. ${rule} A new password must be changed at the next login.`
+                : `${rule} The user must choose a new password at their first login.`
+        },
         userSettings: {
             get: function() {
                 return this.form.user_settings !== null && typeof this.form.user_settings === 'object' ? JSON.stringify(this.form.user_settings) : this.form.user_settings
@@ -146,6 +168,8 @@ export default {
         return {
             form: this.userForm,
             postInProgress: false,
+            // Same minimum as the server's
+            minPasswordLength: 12,
         }
     },
     methods: {
@@ -172,6 +196,9 @@ export default {
         submitForm() {
             this.postInProgress = true
             const payload = JSON.parse(JSON.stringify(this.form))
+            if (this.isSelf || !payload.password) {
+                delete payload.password
+            }
             this.$store.dispatch(`users/${this.actionType}`, payload)
                 .then(() => {
                     this.$nextTick(() => {
