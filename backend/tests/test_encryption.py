@@ -4,7 +4,7 @@ import sqlite3
 from types import SimpleNamespace
 
 import pytest
-from cryptography.fernet import Fernet, MultiFernet
+from cryptography.fernet import Fernet
 from sqlalchemy import text
 
 from application import crypto
@@ -97,14 +97,16 @@ def test_malformed_key_fails(tmp_path, keep_cipher):
 def test_rotate_key(app, db, server, keep_cipher):
     oldKey, newKey = os.environ["MFC_ENCRYPTION_KEY"], Fernet.generate_key().decode()
     crypto._cipher = crypto.buildCipher(crypto.parseKeys(f"{newKey},\n{oldKey}"))
-    result = app.test_cli_runner().invoke(args=["security", "rotate-key"])
-    assert result.exit_code == 0, result.output
-    stored = storedValue(db, server)
-    assert Fernet(newKey).decrypt(stored.encode()).decode() == AUTHKEY
-    # Put the session key back on the row for the other tests
-    crypto._cipher = MultiFernet([Fernet(oldKey)])
-    server.authkey = AUTHKEY
-    db.session.commit()
+    try:
+        result = app.test_cli_runner().invoke(args=["security", "rotate-key"])
+        assert result.exit_code == 0, result.output
+        stored = storedValue(db, server)
+        assert Fernet(newKey).decrypt(stored.encode()).decode() == AUTHKEY
+    finally:
+        # Back on the session's key, for every row the rotation touched (servers other tests left behind included)
+        crypto._cipher = crypto.buildCipher(crypto.parseKeys(f"{oldKey},\n{newKey}"))
+        app.test_cli_runner().invoke(args=["security", "rotate-key"])
+        db.session.expire_all()
 
 
 def test_migration_encrypts_existing_authkeys(flask_cli):
