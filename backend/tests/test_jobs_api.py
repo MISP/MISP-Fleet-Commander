@@ -303,3 +303,75 @@ def test_jobs_api_end_to_end(db, client, auth_headers, owner, monkeypatch, plugi
     body = client.get(f"/jobs/{job_id}", headers=auth_headers(user)).get_json()
     assert (body["status"], body["succeeded"], body["done"]) == ("done", 2, 2)
     assert {r["summary"] for r in body["results"]} == {"quick"}
+
+
+# The jobs view: search, period, server results, admins
+
+def test_search_period_and_server_results(db, client, auth_headers, owner):
+    user, fleets, servers = owner
+    a = makeJob(user, servers[:2], status="partial", created=1000, fleet=fleets[0], results=["ok", "error"])
+    b = makeJob(user, servers[3:], kind="plugin_action", status="done", created=2000, fleet=fleets[1], results=["ok"])
+    headers = auth_headers(user)
+
+    def ids(query):
+        response = client.get(f"/jobs{query}", headers=headers)
+        assert response.status_code == 200, response.get_json()
+        return [job["id"] for job in response.get_json()["jobs"]]
+    assert ids("?q=PLUGIN_ACTION") == [b.id]  # Title, any case
+    assert ids(f"?q={servers[1].name}") == [a.id]  # A server's name
+    assert ids("?q=Beta") == [b.id]  # The fleet's name
+    assert ids(f"?q={user.email}") == [b.id, a.id]  # The user's email
+    assert ids("?q=100%25") == [] and ids("?q=_x") == []  # LIKE wildcards are literal
+    assert ids("?since=1500") == [b.id]
+    body = client.get(f"/jobs?server_id={servers[1].id}", headers=headers).get_json()
+    result = body["jobs"][0]["server_result"]
+    assert (result["server_id"], result["status"]) == (servers[1].id, "error")
+    assert "response" not in result and body["scope"] == "mine"
+    assert "server_result" not in client.get("/jobs", headers=headers).get_json()["jobs"][0]
+
+
+@pytest.mark.parametrize("query, message", [
+    ("?scope=everyone", "`scope`"), ("?since=-1", "`since`"), ("?since=yesterday", "`since` must be an integer"),
+])
+def test_invalid_view_filters(db, client, auth_headers, owner, query, message):
+    user, fleets, servers = owner
+    response = client.get(f"/jobs{query}", headers=auth_headers(user))
+    assert response.status_code == 400 and message in response.get_json()["message"]
+
+
+def test_admins_see_and_cancel_everyones_jobs_but_retry_only_their_own(db, client, auth_headers, owner, make_user,
+                                                                       queued):
+    import application.models.jobRunner as jobRunner
+    from application.DBModels import User
+    user, fleets, servers = owner
+    tag = uuid.uuid4().hex[:8]
+    admin = make_user(f"admin-{tag}@test.test", is_admin=True)
+    gone = make_user(f"gone-{tag}@test.test")
+    mine = makeJob(user, servers[:1], status="failed", results=["error"])
+    running = makeJob(user, servers[1:2], status="running")
+    orphan = makeJob(gone, [], status="done")
+    db.session.delete(db.session.get(User, gone.id))
+    db.session.commit()
+    db.session.refresh(orphan)
+    assert orphan.user_id is None and orphan.user_email == f"gone-{tag}@test.test"
+
+    # A user sees only their own jobs, and may not ask for everyone's
+    assert client.get("/jobs?scope=all", headers=auth_headers(user)).status_code == 403
+    # An admin sees only their own by default, everyone's on demand, deleted users included
+    adminHeaders = auth_headers(admin)
+    assert client.get("/jobs", headers=adminHeaders).get_json()["total"] == 0
+    everyone = client.get(f"/jobs?scope=all&q=gone-{tag}", headers=adminHeaders).get_json()
+    assert [job["id"] for job in everyone["jobs"]] == [orphan.id] and everyone["jobs"][0]["user_id"] is None
+    assert {mine.id, running.id} <= {job["id"] for job in client.get(
+        f"/jobs?scope=all&q={user.email}&limit=100", headers=adminHeaders).get_json()["jobs"]}
+    # Opens any job, cancels any running one
+    assert client.get(f"/jobs/{orphan.id}", headers=adminHeaders).status_code == 200
+    assert post(client, adminHeaders, f"/jobs/{running.id}/cancel").status_code == 202
+    assert jobRunner.cancelRequested(running.id)
+    jobRunner.clearCancel(running.id)
+    # But does not run anything on someone else's servers
+    response = post(client, adminHeaders, f"/jobs/{mine.id}/retry")
+    assert response.status_code == 403 and "Only the user who started" in response.get_json()["message"]
+    assert queued == []
+    # The owner still can
+    assert post(client, auth_headers(user), f"/jobs/{mine.id}/retry").status_code == 202

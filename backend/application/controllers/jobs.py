@@ -48,8 +48,9 @@ def create(user):
 @BPjobs.route('/jobs', methods=['GET'])
 @token_required
 def index(user):
-    """The user's jobs, newest first: `fleet_id`, `server_id`, `status` and `kind` (comma-separated), `page`,
-    `limit`"""
+    """The user's jobs, newest first: `fleet_id`, `server_id`, `status` and `kind` (comma-separated), `q` (title,
+    user, fleet or server name), `since` (UNIX time), `page`, `limit`. Admins may ask for `scope=all`: the jobs of
+    every user, deleted users included"""
     try:
         return jsonify(userJobs.listForUser(
             user,
@@ -59,6 +60,9 @@ def index(user):
             kind=request.args.get('kind'),
             page=intArg('page', 1),
             limit=intArg('limit', userJobs.DEFAULT_PAGE_SIZE),
+            scope=request.args.get('scope') or 'mine',
+            q=request.args.get('q'),
+            since=intArg('since'),
         ))
     except userJobs.JobError as e:
         return errorResponse(e)
@@ -87,7 +91,8 @@ def cancel(user, job_id):
 @BPjobs.route('/jobs/<job_id>/retry', methods=['POST'])
 @token_required
 def retry(user, job_id):
-    """A new job with the same parameters: `{only_failed: true}` (default) on the servers that failed, else on all"""
+    """A new job with the same parameters: `{only_failed: true}` (default) on the servers that failed, else on all.
+    Only the job's owner may retry it (403 for an admin looking at someone else's job)"""
     try:
         body = jsonBody()
         onlyFailed = body.get('only_failed', True) in TRUE_VALUES

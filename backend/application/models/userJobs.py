@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Jobs as the API offers them: created, listed, cancelled and retried by their owner"""
+"""Jobs as the API offers them: created, listed, cancelled and retried by their owner. Admins may also list, open
+and cancel the jobs of everyone, including those of deleted users (the jobs table is the audit log), but they retry
+only their own: a retry runs on the owner's servers, with the owner's keys"""
 
 from typing import List, Optional, Tuple
 
-from sqlalchemy import func
+from sqlalchemy import func, or_
 
 import application
 import application.models.jobRunner as jobRunner
@@ -19,6 +21,8 @@ MAX_SERVERS = 1000
 DEFAULT_PAGE_SIZE = 25
 MAX_PAGE_SIZE = 100
 UNFINISHED = ('queued', 'running')
+SCOPES = ('mine', 'all')
+SEARCH_MAX_LENGTH = 200
 
 
 class JobError(Exception):
@@ -119,10 +123,23 @@ def createForUser(user, kind, server_ids, params, title=None) -> Job:
     return enqueue(job)
 
 
+def isAdmin(user) -> bool:
+    return bool(getattr(user, 'is_admin', False))
+
+
 def getForUser(user, job_id) -> Job:
+    """A job its owner, or an admin, may see. Others get the same answer as for a job that does not exist"""
     job = db.session.get(Job, job_id) if isinstance(job_id, str) else None
-    if job is None or job.user_id != user.id:
+    if job is None or (job.user_id != user.id and not isAdmin(user)):
         raise JobError('Unknown job', 404)
+    return job
+
+
+def getOwnForUser(user, job_id) -> Job:
+    """A job of the user's own: an admin may see another user's job, but not act on that user's servers"""
+    job = getForUser(user, job_id)
+    if job.user_id != user.id:
+        raise JobError('Only the user who started this job can run it again', 403)
     return job
 
 
@@ -146,16 +163,55 @@ def doneCounts(job_ids: List[str]) -> dict:
     return dict(rows)
 
 
-def listForUser(user, fleet_id=None, server_id=None, status=None, kind=None, page=1, limit=DEFAULT_PAGE_SIZE) -> dict:
-    """The user's jobs, newest first, a page at a time. `status` and `kind` take comma-separated values"""
+def resultsFor(job_ids: List[str], server_id: int) -> dict:
+    """job_id → that server's result in the job (without its response), in one query"""
+    if not job_ids:
+        return {}
+    rows = JobResult.query.filter(JobResult.job_id.in_(job_ids), JobResult.server_id == server_id).all()
+    results = {}
+    for row in rows:
+        serialized = jobModel.serializeResult(row)
+        serialized.pop('response', None)
+        serialized.pop('before', None)
+        results[row.job_id] = serialized
+    return results
+
+
+def likePattern(text: str) -> str:
+    escaped = text.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
+    return f'%{escaped}%'
+
+
+def listForUser(user, fleet_id=None, server_id=None, status=None, kind=None, page=1, limit=DEFAULT_PAGE_SIZE,
+                scope='mine', q=None, since=None) -> dict:
+    """The user's jobs (with `scope='all'`, an admin's view of everyone's), newest first, a page at a time. `status`
+    and `kind` take comma-separated values; `q` matches the title, the user's email, the fleet name and the server
+    names; `since` is a UNIX time. With `server_id`, each job carries that server's result as `server_result`"""
     from application.DBModels import JOB_KINDS, JOB_STATUSES
     statuses = parseChoices(status, JOB_STATUSES, 'status')
     kinds = parseChoices(kind, JOB_KINDS, 'kind')
+    if scope not in SCOPES:
+        raise JobError(f"`scope` must be one of: {', '.join(SCOPES)}")
+    if scope == 'all' and not isAdmin(user):
+        raise JobError('Only admins can list the jobs of every user', 403)
     if page < 1:
         raise JobError('`page` starts at 1')
     if not 1 <= limit <= MAX_PAGE_SIZE:
         raise JobError(f'`limit` must be between 1 and {MAX_PAGE_SIZE}')
-    query = Job.query.filter(Job.user_id == user.id)
+    if since is not None and since < 0:
+        raise JobError('`since` must be a UNIX time')
+    query = Job.query if scope == 'all' else Job.query.filter(Job.user_id == user.id)
+    if since is not None:
+        query = query.filter(Job.created >= since)
+    search = (q or '').strip()[:SEARCH_MAX_LENGTH]
+    if search:
+        pattern = likePattern(search)
+        query = query.filter(or_(
+            Job.title.ilike(pattern, escape='\\'),
+            Job.user_email.ilike(pattern, escape='\\'),
+            Job.fleet_name.ilike(pattern, escape='\\'),
+            Job.results.any(JobResult.server_name.ilike(pattern, escape='\\')),
+        ))
     if fleet_id is not None:
         query = query.filter(Job.fleet_id == fleet_id)
     if server_id is not None:
@@ -166,13 +222,17 @@ def listForUser(user, fleet_id=None, server_id=None, status=None, kind=None, pag
         query = query.filter(Job.kind.in_(kinds))
     total = query.count()
     jobs = query.order_by(Job.created.desc()).offset((page - 1) * limit).limit(limit).all()
-    done = doneCounts([job.id for job in jobs])
+    jobIds = [job.id for job in jobs]
+    done = doneCounts(jobIds)
+    serverResults = resultsFor(jobIds, server_id) if server_id is not None else {}
     serialized = []
     for job in jobs:
         entry = jobModel.serializeJob(job)
         entry['done'] = done.get(job.id, 0)
+        if server_id is not None:
+            entry['server_result'] = serverResults.get(job.id)
         serialized.append(entry)
-    return {'jobs': serialized, 'total': total, 'page': page, 'limit': limit}
+    return {'jobs': serialized, 'total': total, 'page': page, 'limit': limit, 'scope': scope}
 
 
 def cancel(user, job_id) -> Job:
@@ -185,8 +245,8 @@ def cancel(user, job_id) -> Job:
 
 def retry(user, job_id, only_failed=True) -> Job:
     """A new job with the same parameters, on the servers that failed (or on all of them), skipping servers that
-    were deleted since"""
-    job = getForUser(user, job_id)
+    were deleted since. Only the job's owner may retry it"""
+    job = getOwnForUser(user, job_id)
     if job.status in UNFINISHED:
         raise JobError('This job is still running', 409)
     rows = [row for row in job.results if row.server_id is not None and (not only_failed or row.status == 'error')]
