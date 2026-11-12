@@ -215,7 +215,7 @@ def queryInfoWS(user, server_id,):
         return taskSchema.dump(
             {
                 "id": server_query_task.id,
-                "status": server_query_task.status,
+                "status": "queued",
                 "message": f"Queued Server({server_id}).queryInfo",
             }
         )
