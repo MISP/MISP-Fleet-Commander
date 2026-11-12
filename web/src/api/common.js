@@ -31,6 +31,12 @@ function getClient() {
                 return new Promise((resolve, reject) => {
                     showLoginModal(
                         () => {
+                            if (store.getters["auth/mustChangePassword"]) {
+                                // The account logged back in must change its password: the request would be refused
+                                goToPasswordChange()
+                                reject("You must change your password first")
+                                return
+                            }
                             const axios_config = Object.assign({}, error.config)
                             axios_config.headers.Authorization = getAuthorizationHeaderValue()
                             resolve(axios(axios_config))
@@ -43,9 +49,7 @@ function getClient() {
                     )
                 });
             } else if (error.response.status === 403 && error.response.data?.password_change_required) {
-                if (router.currentRoute.name !== "change-password") {
-                    router.push({ name: "change-password", query: { redirect: router.currentRoute.fullPath } }).catch(() => {})
-                }
+                goToPasswordChange()
                 return Promise.reject(error.response.data.message)
             } else if (error.response.data?.message !== undefined) {
                 return Promise.reject(error.response.data.message);
@@ -54,6 +58,12 @@ function getClient() {
         }
     )
     return client
+}
+
+function goToPasswordChange() {
+    if (router.currentRoute.name !== "change-password") {
+        router.push({ name: "change-password", query: { redirect: router.currentRoute.fullPath } }).catch(() => {})
+    }
 }
 
 function getAuthorizationHeaderValue() {
