@@ -7,6 +7,7 @@ const urls = {
     resetPassword: `/server-management/user/reset-password`,
     genAuthkey: `/server-management/user/gen-authkey`,
     addUser: `/server-management/user/add`,
+    addUserOptions: `/server-management/user/add-options`,
 }
 
 export default {
@@ -49,6 +50,15 @@ export default {
     genAuthkey(server_id, user_id, cb, errorCb) {
         const url = `${urls.genAuthkey}/${server_id}/${user_id}`
         return common.getClient().post(url)
+            .then((response) => {
+                cb(response.data)
+            }).catch(error => {
+                common.handleError(error, errorCb)
+            })
+    },
+    addUserOptions(server_id, cb, errorCb) {
+        const url = `${urls.addUserOptions}/${server_id}`
+        return common.getClient().get(url)
             .then((response) => {
                 cb(response.data)
             }).catch(error => {

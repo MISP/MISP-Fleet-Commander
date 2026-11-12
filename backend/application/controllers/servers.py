@@ -226,11 +226,13 @@ def queryInfoWS(user, server_id,):
 @token_required
 def getUsers(user, server_id):
     server = serverModel.getForUser(user, server_id)
-    if server is not None:
-        server_query_users = fetchServerUsers(server)
-        return jsonify(server_query_users)
-    else:
-        return jsonify({'error': 'Unkown server'})
+    if server is None:
+        return jsonify({'message': 'Unknown server'}), 404
+    users = fetchServerUsers(server)
+    if not isinstance(users, list):
+        reason = users.get('error') or users.get('message') if isinstance(users, dict) else None
+        return jsonify({'message': f'Could not list the users of {server.name}: {reason or "unexpected answer"}'}), 502
+    return jsonify(users)
 
 @BPserver.route('/servers/batchTest', methods=['POST'])
 @token_required
@@ -432,11 +434,9 @@ def restQuery(user, server_id):
 
 
 def fetchServerUsers(server):
-    # Not cached: the list must reflect user administration actions immediately
-    users = mispGetRequest(server, 'admin/users/index', nocache=True)
-    if 'error' in users:
-        return []
-    return users
+    """The users of the MISP instance, or MISP's error. Not cached: the list must reflect user administration
+    actions immediately"""
+    return mispGetRequest(server, 'admin/users/index', nocache=True)
 
 def getConnectedServerStatus(server, connectedServer):
     connectedServerStatus = serverModel.getConnectedServerStatus(server, connectedServer)

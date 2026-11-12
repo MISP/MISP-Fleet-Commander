@@ -240,19 +240,21 @@ export default {
             this.table.isBusy = true
             this.$store.dispatch("servers/getUsers", this.server.id)
                 .then(() => {
-                    this.table.isBusy = false
-                    this.users = Object.values(this.getServerUsers)
-                    this.users.forEach(user => { // needed for b-table filters
-                        user.email = user.User.email
-                        user.orgname = user.Organisation.name
-                    })
+                    this.users = (this.getServerUsers || [])
+                        .filter(user => user && user.User)
+                        .map(user => Object.assign({}, user, { // needed for b-table filters
+                            email: user.User.email,
+                            orgname: user.Organisation ? user.Organisation.name : "",
+                        }))
                 })
                 .catch(error => {
-                    this.$bvToast.toast(error.message, {
-                        title: "Could not fetch server info",
-                        
+                    this.$bvToast.toast(typeof error === "string" ? error : (error && error.message) || "Something went wrong", {
+                        title: "Could not fetch the users",
                         variant: "danger",
                     })
+                })
+                .finally(() => {
+                    this.table.isBusy = false
                 })
         }
     },

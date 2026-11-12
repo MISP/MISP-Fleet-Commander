@@ -2,7 +2,32 @@
 
 from typing import List, Union
 from application.DBModels import Server
-from application.controllers.utils import mispPostRequest
+from application.controllers.utils import mispGetRequest, mispPostRequest
+
+
+class MISPListError(Exception):
+    """A list could not be read from the MISP instance"""
+
+
+def readList(server: Server, url: str, model: str) -> List[dict]:
+    answer = mispGetRequest(server, url, nocache=True)
+    if not isinstance(answer, list):
+        reason = answer.get('error') or answer.get('message') if isinstance(answer, dict) else None
+        raise MISPListError(reason or 'Unexpected answer')
+    return [entry[model] for entry in answer if isinstance(entry, dict) and isinstance(entry.get(model), dict)]
+
+
+def addUserOptions(server: Server) -> dict:
+    """The organisations and roles a new user of the MISP instance can get. Users are added to local
+    organisations only; `default` marks the role MISP gives new users."""
+    organisations = [{'id': str(org['id']), 'name': org.get('name') or f"#{org['id']}"}
+                     for org in readList(server, '/organisations/index/scope:local', 'Organisation')
+                     if org.get('local', True)]
+    roles = [{'id': str(role['id']), 'name': role.get('name') or f"#{role['id']}",
+              'default': bool(role.get('default_role') or role.get('default'))}
+             for role in readList(server, '/roles/index', 'Role')]
+    return {'organisations': sorted(organisations, key=lambda org: org['name'].lower()),
+            'roles': sorted(roles, key=lambda role: role['name'].lower())}
 
 
 def addUser(server: Server, payload: dict) -> Union[dict, None]:

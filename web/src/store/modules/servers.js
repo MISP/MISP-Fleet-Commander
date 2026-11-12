@@ -345,10 +345,8 @@ const mutations = {
         state.diagnostic_full[payload.server_id] = Object.assign({}, state.diagnostic_full[payload.server_id], payload.diagnostic_full)
     },
     updateUsers(state, { server_id, users }) {
-        if (state.server_users[server_id] === undefined) {
-            Vue.set(state.server_users, server_id, {})
-        }
-        state.server_users[server_id] = Object.assign({}, state.server_users[server_id], users)
+        // The whole list: users deleted on the instance must disappear
+        Vue.set(state.server_users, server_id, Array.isArray(users) ? users : [])
     },
 }
 

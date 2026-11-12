@@ -3,8 +3,12 @@
         id="modal-administration-user-add"
         :title="`Add User`"
         @ok="addUser"
+        @show="loadOptions"
         @hidden="resetForm"
     >
+        <b-alert :show="optionsError !== null" variant="warning" class="small py-2">
+            {{ optionsError }}. Only the organisations and roles of existing users are listed.
+        </b-alert>
         <b-row class="my-1">
             <b-col sm="3">
                 <label for="user-add-email">Email</label>
@@ -18,7 +22,7 @@
                 <label for="user-add-org">Organisation</label>
             </b-col>
             <b-col sm="9">
-                <b-form-select id="user-add-org" v-model="form.org_id" :options="orgOptions" :state="orgState"></b-form-select>
+                <b-form-select id="user-add-org" v-model="form.org_id" :options="orgOptions" :state="orgState" :disabled="optionsLoading"></b-form-select>
             </b-col>
         </b-row>
         <b-row class="my-1">
@@ -26,7 +30,7 @@
                 <label for="user-add-role">Role</label>
             </b-col>
             <b-col sm="9">
-                <b-form-select id="user-add-role" v-model="form.role_id" :options="roleOptions" :state="roleState"></b-form-select>
+                <b-form-select id="user-add-role" v-model="form.role_id" :options="roleOptions" :state="roleState" :disabled="optionsLoading"></b-form-select>
             </b-col>
         </b-row>
         <b-row class="my-1">
@@ -81,14 +85,18 @@ export default {
         return {
             requestInProgress: false,
             form: this.getDefaultForm(),
+            // The instance's local organisations and roles, null until listed
+            options: null,
+            optionsLoading: false,
+            optionsError: null,
         }
     },
     computed: {
         orgOptions: function() {
-            return this.buildOptions(this.users.map(u => u.Organisation))
+            return this.buildOptions(this.options ? this.options.organisations : this.users.map(u => u.Organisation))
         },
         roleOptions: function() {
-            return this.buildOptions(this.users.map(u => u.Role))
+            return this.buildOptions(this.options ? this.options.roles : this.users.map(u => u.Role))
         },
         emailState: function() {
             if (this.form.email === '') {
@@ -119,9 +127,29 @@ export default {
         resetForm() {
             this.form = this.getDefaultForm()
         },
+        loadOptions() {
+            this.optionsLoading = true
+            this.optionsError = null
+            api.addUserOptions(
+                this.server.id,
+                (options) => {
+                    this.options = options
+                    const defaultRole = options.roles.find(role => role.default)
+                    if (defaultRole && this.form.role_id === null) {
+                        this.form.role_id = defaultRole.id
+                    }
+                    this.optionsLoading = false
+                },
+                (error) => {
+                    this.options = null
+                    this.optionsError = error || "Could not list the organisations and roles of this server"
+                    this.optionsLoading = false
+                }
+            )
+        },
         buildOptions(items) {
             const seen = {}
-            const options = [{ value: null, text: 'Select...', disabled: true }]
+            const options = [{ value: null, text: this.optionsLoading ? 'Loading...' : 'Select...', disabled: true }]
             items.forEach(item => {
                 if (item !== undefined && item !== null && seen[item.id] === undefined) {
                     seen[item.id] = true

@@ -27,6 +27,20 @@ def runOperation(user, server_id, operation, title, failureMessage, user_id=None
     return jsonify(unit.response)
 
 
+@BPserverManagement.route('/server-management/user/add-options/<int:server_id>', methods=['GET'])
+@token_required
+def addUserOptions(user, server_id):
+    """The organisations and roles of the MISP instance, to choose from when adding a user"""
+    import application.models.serverManagement as serverManagementModel
+    server = serverModel.getForUser(user, server_id)
+    if server is None:
+        return jsonify({'message': 'Unknown server'}), 404
+    try:
+        return jsonify(serverManagementModel.addUserOptions(server))
+    except serverManagementModel.MISPListError as e:
+        return jsonify({'message': f'Could not list the organisations and roles of {server.name}: {e}'}), 502
+
+
 @BPserverManagement.route('/server-management/user/add/<int:server_id>', methods=['POST'])
 @token_required
 def addUser(user, server_id):
