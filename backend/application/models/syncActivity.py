@@ -152,7 +152,7 @@ def parseSyncLogs(entries: list, now: int, windowDays: int = WINDOW_DAYS) -> lis
     return [remotes[remoteID] for remoteID in sorted(remotes)]
 
 
-def _readableError(answer: dict) -> str:
+def readableLogError(answer: dict) -> str:
     status = answer.get('_status_code')
     if status in (403, 405):
         return "MISP refused to list its logs: the API key needs admin rights"
@@ -175,7 +175,7 @@ def fetchSyncLogs(server, windowDays: int) -> dict:
     if not isinstance(answer, dict):
         return {'error': 'Unexpected answer from MISP'}
     if 'error' in answer or (answer.get('_status_code') or 200) >= 400 or not isinstance(answer.get('data'), list):
-        return {'error': _readableError(answer)}
+        return {'error': readableLogError(answer)}
     return {'entries': answer['data']}
 
 

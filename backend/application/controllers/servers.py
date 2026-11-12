@@ -393,19 +393,24 @@ def syncOvertime(user, server_id):
 @BPserver.route('/servers/loginOvertime/<int:server_id>', methods=['GET'])
 @token_required
 def loginOvertime(user, server_id):
+    """Logins and failed logins of the last 7 days on the server, from its MISP logs: `{timestamp, data: {login,
+    auth_fail}}`, or `{error}` when MISP does not list them (its API key needs admin rights)"""
     server = serverModel.getForUser(user, server_id)
-    if server is not None:
-        loginLogs = mispPostRequest(server, '/logs/admin_search/search', {"Log":{"model":"User","action":["login", "auth_fail"],"email":"","org":"","model_id":"","title":"","change":"", "ip": ""}})
-        if 'error' in loginLogs:
-            return jsonify(loginLogs)
-        loginLogs = parseGetLoginLogs(loginLogs)
-        result = {
-            'timestamp': int(time.time()),
-            'data': loginLogs
-        }
-        return jsonify(result)
-    else:
+    if server is None:
         return jsonify({})
+    loginLogs = mispPostRequest(server, '/admin/logs/index', {
+        'model': 'User',
+        'action': ['login', 'auth_fail'],
+        'created': f'{LOGIN_WINDOW_DAYS}d',
+        'limit': LOGIN_MAX_ENTRIES,
+    }, timeout=syncActivityModel.REQUEST_TIMEOUT)
+    if not isinstance(loginLogs, dict) or 'error' in loginLogs or (loginLogs.get('_status_code') or 200) >= 400 \
+            or not isinstance(loginLogs.get('data'), list):
+        return jsonify({'error': syncActivityModel.readableLogError(loginLogs if isinstance(loginLogs, dict) else {})})
+    return jsonify({
+        'timestamp': int(time.time()),
+        'data': parseGetLoginLogs(loginLogs['data']),
+    })
 
 @BPserver.route('/servers/restQuery/<int:server_id>', methods=['POST'])
 @token_required
@@ -522,36 +527,44 @@ def _toAwareUTC(value):
     return value.astimezone(timezone.utc)
 
 
+LOGIN_WINDOW_DAYS = 7
+LOGIN_MAX_ENTRIES = 5000
+LOGIN_TITLE_RE = re.compile(r'User \((?P<userid>\d+)\): (?P<email>\S+)')
+
+
 def parseGetLoginLogs(loginLogs, afterTime=None):
+    """MISP log entries (`{"Log": {…}}` or the bare entry) → `{login: [...], auth_fail: [...]}` with the user, IP and
+    time of each, newer than `afterTime` (7 days by default). MISP log times are read as UTC; entries it cannot
+    date or that are not logins are skipped"""
     if afterTime is None:
-        afterTime = dt.now(timezone.utc) - timedelta(days=7)
+        afterTime = dt.now(timezone.utc) - timedelta(days=LOGIN_WINDOW_DAYS)
     afterTime = _toAwareUTC(afterTime)
     logins = {
         'login': [],
         'auth_fail': []
     }
     for logEntry in loginLogs:
-        created = dt.fromisoformat(logEntry['Log']['created'])
-        if _toAwareUTC(created) > afterTime:
-            action = logEntry['Log']['action']
-            title = logEntry['Log']['title']
-            ip = logEntry['Log'].get('ip', '')
-            if action == 'login':
-                parsedTitle = re.search(r'User \((?P<userid>[\d]+)\): (?P<email>[\S]+)', title)
-                loginMetrics = {
-                    'userid': int(parsedTitle.group('userid')),
-                    'email': parsedTitle.group('email'),
-                    'ip': ip,
-                    'created': int(created.timestamp())
-                }
-            elif action == 'auth_fail':
-                loginMetrics = {
-                    'userid': None,
-                    'email': None,
-                    'ip': ip,
-                    'created': int(created.timestamp())
-                }
-            logins[action].append(loginMetrics)
+        log = logEntry.get('Log', logEntry) if isinstance(logEntry, dict) else None
+        if not isinstance(log, dict) or log.get('action') not in logins:
+            continue
+        try:
+            created = _toAwareUTC(dt.fromisoformat(str(log.get('created'))))
+        except ValueError:
+            continue
+        if created <= afterTime:
+            continue
+        userid, email = None, None
+        if log['action'] == 'login':
+            parsedTitle = LOGIN_TITLE_RE.search(log.get('title') or '')
+            if parsedTitle:
+                userid, email = int(parsedTitle.group('userid')), parsedTitle.group('email')
+            email = email or log.get('email') or None
+        logins[log['action']].append({
+            'userid': userid,
+            'email': email,
+            'ip': log.get('ip') or '',
+            'created': int(created.timestamp()),
+        })
     return logins
 
 
