@@ -250,7 +250,16 @@ class MonitoringImages:
         os.unlink(self.getImageFullPath())
 
 
-async def asyncFetcher(server, urls, timeout=300) -> list[dict]:
+def defaultMispTimeout() -> int:
+    """Seconds a request may take in total when its caller sets no limit: the configured `misp_request_timeout`
+    plus the time to connect, like synchronous requests. Without it, a server that drops packets held a worker for
+    5 minutes per request"""
+    from application.controllers.utils import MISP_CONNECT_TIMEOUT, mispReadTimeout
+    return MISP_CONNECT_TIMEOUT + mispReadTimeout()
+
+
+async def asyncFetcher(server, urls, timeout=None) -> list[dict]:
+    timeout = defaultMispTimeout() if timeout is None else timeout
     headers = {
         "Authorization": server.authkey,
         "Accept": "application/json",
@@ -289,7 +298,8 @@ async def asyncFetcher(server, urls, timeout=300) -> list[dict]:
         return results
 
 
-async def asyncFetcherManyServer(servers, url, resultCallback, timeout=300, max_concurrency=None):
+async def asyncFetcherManyServer(servers, url, resultCallback, timeout=None, max_concurrency=None):
+    timeout = defaultMispTimeout() if timeout is None else timeout
     base_headers = {
         "Authorization": '---',
         "Accept": "application/json",

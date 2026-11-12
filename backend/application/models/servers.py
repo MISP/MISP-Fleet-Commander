@@ -362,13 +362,20 @@ async def fetchServerInfoAsync(server, clientSocketEmitterUpdateFuns):
     if "udpate_server_connection_list" in clientSocketEmitterUpdateFuns:
         clientSocketEmitterUpdateFuns['udpate_server_connection_list'](server, connectedServers)
 
-    serverUsageResult = await asyncFetcher(server, ["/users/statistics"])
-    serverUsage = serverUsageResult[0]
-    savePartialInfo(server, "serverUsage", serverUsage)
-    if "udpate_server_usage" in clientSocketEmitterUpdateFuns:
-        clientSocketEmitterUpdateFuns["udpate_server_usage"](server, serverUsage)
+    # A server none of these requests reached would only make the usage statistics wait for the timeout again
+    if not all(isUnanswered(result) for result in results):
+        serverUsageResult = await asyncFetcher(server, ["/users/statistics"])
+        serverUsage = serverUsageResult[0]
+        savePartialInfo(server, "serverUsage", serverUsage)
+        if "udpate_server_usage" in clientSocketEmitterUpdateFuns:
+            clientSocketEmitterUpdateFuns["udpate_server_usage"](server, serverUsage)
     publishHealth(server)
     return fullQuery
+
+
+def isUnanswered(result) -> bool:
+    """A request that got no HTTP answer at all: connection refused or reset, timeout"""
+    return isinstance(result, dict) and 'error' in result and '_status_code' not in result
 
 
 # Sync links of one server tested at the same time, during a full refresh or a link test
