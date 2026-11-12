@@ -21,7 +21,8 @@ export default {
         this.$parent.$emit("update:layout", this.name)
     },
     render () {
-        return this.$slots.default[0]
+        // The slot can be empty while a view (re-)renders: render nothing rather than throw
+        return (this.$slots.default || [])[0]
     }
 }
 </script>
