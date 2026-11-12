@@ -417,7 +417,6 @@
 </template>
 
 <script>
-import store from "@/store/index"
 import pluginAPI from "@/api/plugins"
 import api from "@/api/servers"
 import { websocketMixin } from "@/helpers/websocketMixin"
@@ -1130,20 +1129,6 @@ export default {
                 this.populatePluginFields()
             })
         this.getInstancePictures()
-    },
-    beforeRouteEnter(to, from, next) {
-        if (store.getters["fleets/selectedFleet"] === null) {
-            // No redirect: this navigation already goes to the fleet page, and the redirect would drop its query
-            // (e.g. `?tab=jobs`)
-            store.dispatch("fleets/selectFleet", {data: {id: to.params.fleet_id}, redirect: false}).then(() => {
-                store.dispatch("servers/fetchServers", {force: true})
-                next()
-            }).catch(() => {
-                next("/home")
-            })
-        } else {
-            next()
-        }
     },
 }
 </script>

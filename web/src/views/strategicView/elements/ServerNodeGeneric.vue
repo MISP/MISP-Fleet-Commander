@@ -1,7 +1,9 @@
 <template>
     <div v-if="nodeData._managed_server">
+        <!-- Nothing while the server is not in the store: switching fleets empties it before the network is rebuilt -->
+        <template v-if="!serverLoaded"></template>
         <ServerNodeMicro
-            v-if="scale < 0.2"
+            v-else-if="scale < 0.2"
             :server_id="server_id"
             :d3Node="d3Node"
             :d3SVGNode="d3SVGNode"
@@ -72,7 +74,10 @@ export default {
     computed: {
         scale() {
             return this.scaleInfo.k
-        }
+        },
+        serverLoaded() {
+            return this.$store.state.servers.servers[this.server_id] !== undefined
+        },
     },
     methods: {
         propagatedNodeFunctions(nodeFunctions) {

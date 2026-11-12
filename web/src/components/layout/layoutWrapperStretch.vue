@@ -1,6 +1,7 @@
 <template>
     <Layout name="LayoutStretch">
-        <router-view></router-view>
+        <!-- Another fleet is another network: the Strategic View is built again rather than patched -->
+        <router-view :key="$route.params.fleet_id"></router-view>
     </Layout>
 </template>
 

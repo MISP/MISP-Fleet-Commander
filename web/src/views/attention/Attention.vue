@@ -544,23 +544,11 @@ export default {
         },
         // The fleet page's Baseline tab, on the drifting rule
         openBaseline(fleet_id, rule_id) {
-            const open = () => {
-                this.$router.push({
-                    name: "fleet.view",
-                    params: { fleet_id },
-                    query: { tab: "baseline", rule: String(rule_id) },
-                }).catch(() => {})
-            }
-            const selected = this.$store.getters["fleets/selectedFleet"]
-            if (selected && selected.id === fleet_id) {
-                open()
-                return
-            }
-            this.$store.dispatch("fleets/selectFleet", { data: { id: fleet_id }, redirect: false })
-                .then(open)
-                .catch(() => {
-                    this.$bvToast.toast("This fleet could not be opened.", { title: "Could not open the baseline", variant: "danger" })
-                })
+            this.$router.push({
+                name: "fleet.view",
+                params: { fleet_id },
+                query: { tab: "baseline", rule: String(rule_id) },
+            }).catch(() => {})
         },
         // `?server_id=` (from a health badge) opens the page on that server, once
         jumpFromQuery() {

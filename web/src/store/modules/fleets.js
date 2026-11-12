@@ -2,6 +2,9 @@ import api from "@/api/fleets"
 import Vue from "vue"
 import router from "@/router"
 
+// Pages about one fleet, whose URL names it
+const FLEET_PAGES = ["fleet.view", "strategicView"]
+
 // initial state
 const state = {
     all: {},
@@ -63,6 +66,11 @@ const actions = {
             api.get(
                 id,
                 fleet => {
+                    // An unknown fleet (or another user's) comes back as `{}`
+                    if (!fleet || fleet.id === undefined) {
+                        reject("Unknown fleet")
+                        return
+                    }
                     commit("setFleet", fleet)
                     resolve(fleet)
                 },
@@ -78,7 +86,7 @@ const actions = {
                 dispatch("servers/resetState", undefined, {root: true})
                 commit("selectFleet", { data: fleet, redirect: redirect })
                 resolve()
-            })
+            }).catch(reject)
         })
     },
     selectFleetFromServerId({ commit, dispatch }, server_id) {
@@ -138,7 +146,18 @@ const mutations = {
         const fleet = payload.data
         const redirect = payload.redirect !== undefined ? payload.redirect : true
         state.selected = fleet
-        if (redirect && router.history.current.name !== 'fleet.view') {
+        if (!redirect) {
+            return
+        }
+        const current = router.history.current
+        if (FLEET_PAGES.includes(current.name)) {
+            // Stay on the page, now about the new fleet: its URL names it (a rule highlighted belongs to the old one)
+            if (Number.parseInt(current.params.fleet_id, 10) !== fleet.id) {
+                const query = Object.assign({}, current.query)
+                delete query.rule
+                router.replace({ name: current.name, params: { fleet_id: fleet.id }, query }).catch(() => {})
+            }
+        } else {
             router.push({ name: 'fleet.view', params: { fleet_id: fleet.id }, replace: true })
         }
     },

@@ -11,7 +11,21 @@ import store from "./store/index"
 Vue.use(Router)
 
 const fleetSelected = (to, from, next) => {
-    if (store.getters["fleets/selectedFleet"] === null) {
+    // The fleet named in the URL wins over the one selected, so that links and bookmarks open the fleet they name
+    const wanted = Number.parseInt(to.params.fleet_id, 10)
+    const selected = store.getters["fleets/selectedFleet"]
+    if (!Number.isNaN(wanted) && (selected === null || selected.id !== wanted)) {
+        store.dispatch("fleets/selectFleet", { data: { id: wanted }, redirect: false })
+            .then(() => {
+                store.dispatch("servers/fetchServers", { force: true })
+                next()
+            })
+            .catch(() => {
+                next({ name: "home" })
+            })
+        return
+    }
+    if (selected === null) {
         if (noFleetPassThrough.includes(to.name)) {
             if (
                 (to.name == 'fleet.view' && to.params.fleet_id !== undefined) ||

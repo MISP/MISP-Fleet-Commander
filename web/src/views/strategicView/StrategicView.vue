@@ -126,7 +126,6 @@
 
 <script>
 import Vue from "vue"
-import store from "@/store/index"
 import { mapState, mapGetters } from "vuex"
 import { websocketMixin } from "@/helpers/websocketMixin"
 import Layout from "@/components/layout/Layout.vue"
@@ -682,18 +681,6 @@ export default {
             },
             deep: true,
         },
-    },
-    beforeRouteEnter(to, from, next) {
-        if (store.getters["fleets/selectedFleet"] === null) {
-            store.dispatch("fleets/selectFleet", {data: {id: to.params.fleet_id}}).then(() => {
-                store.dispatch("servers/fetchServers", {force: true})
-                next()
-            }).catch(() => {
-                next("/home")
-            })
-        } else {
-            next()
-        }
     },
 }
 </script>
