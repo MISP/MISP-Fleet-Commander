@@ -14,6 +14,7 @@ from application.controllers.utils import mispGetRequest, mispPostRequest
 from application.marshmallowSchemas import ServerSchema, serverQuerySchema
 
 from application.models.utils import MonitoringImages, asyncFetcher, asyncFetcherManyServer
+from application.models import baselineDrift
 
 import nest_asyncio
 nest_asyncio.apply()
@@ -238,6 +239,7 @@ def fetchServerInfo(server, use_cache=True):
     connectedServers = stripRemoteAuthkeys(mispGetRequest(server, '/servers/index', nocache=not use_cache))
     connectedServers = attachConnectedServerStatus(server, connectedServers)
     userRegistrations = summarizeRegistrations(mispGetRequest(server, '/users/registrations', nocache=not use_cache))
+    contentTypes = baselineDrift.contentTypesOfFleet(server.fleet_id)
     serverContent = None
     server_query = {
         'serverSettings': serverSettings,
@@ -247,12 +249,16 @@ def fetchServerInfo(server, use_cache=True):
         'userRegistrations': userRegistrations,
         'serverContent': serverContent
     }
+    if contentTypes:
+        server_query['baselineState'] = baselineDrift.contentState(contentTypes, [
+            mispGetRequest(server, url, nocache=not use_cache) for url in baselineDrift.contentUrls(contentTypes)])
     fullQuery = {
         'timestamp': int(time.time()),
         'query_result': server_query,
     }
     saveInfo(server, fullQuery)
     redisModel.setServerWatchedTimestamp(server.uuid)
+    baselineDrift.afterContentFetched(server, server_query.get('baselineState'))
     publishHealth(server)
     return fullQuery
 
@@ -320,7 +326,9 @@ async def fetchServerInfoAsync(server, clientSocketEmitterUpdateFuns):
         '/servers/index',
         '/users/registrations',
     ]
-    results = await asyncFetcher(server, urls)
+    # Taxonomies, galaxies or object templates, when the fleet's baseline has rules about them
+    contentTypes = baselineDrift.contentTypesOfFleet(server.fleet_id)
+    results = await asyncFetcher(server, urls + baselineDrift.contentUrls(contentTypes))
     serverSettings = results[0]
     serverUser = results[1]
     connectedServers = stripRemoteAuthkeys(results[2])
@@ -335,10 +343,13 @@ async def fetchServerInfoAsync(server, clientSocketEmitterUpdateFuns):
         'userRegistrations': userRegistrations,
         'serverContent': serverContent
     }
+    if contentTypes:
+        server_query['baselineState'] = baselineDrift.contentState(contentTypes, results[len(urls):])
     fullQuery = {
         'timestamp': int(time.time()),
         'query_result': server_query,
     }
+    baselineDrift.afterContentFetched(server, server_query.get('baselineState'))
     fullQueryWithServer = dict(fullQuery)
     fullQueryWithServer['server'] = server
     if "udpate_server" in clientSocketEmitterUpdateFuns:

@@ -62,6 +62,8 @@ class Context:
     latest_release: Optional[str] = None
     connection_test_interval: int = DEFAULT_CONNECTION_TEST_INTERVAL
     full_refresh_interval: int = DEFAULT_FULL_REFRESH_INTERVAL
+    # Baseline rules per fleet, read from the database on first use (see `drift.rulesFor`)
+    baseline_rules: dict = field(default_factory=dict)
 
     @classmethod
     def for_user(cls, user, now: Optional[int] = None, latest_release: Optional[str] = None) -> "Context":
@@ -196,14 +198,25 @@ def _runRules(rules: Iterable[Rule], state: ServerState, ctx: Context) -> List[I
     return issues
 
 
+def is_blocking(issue: Issue) -> bool:
+    """A critical availability issue: the snapshot's content cannot be trusted while it lasts"""
+    return issue.category == "availability" and issue.severity == "critical"
+
+
 def evaluate_state(state: ServerState, ctx: Context) -> List[Issue]:
     """Run every rule on one server, without touching first-seen tracking"""
     ensure_rules_loaded()
     issues = _runRules([registered for registered in RULES if not registered.requires_reachable], state, ctx)
-    unreachable = any(issue.category == "availability" and issue.severity == "critical" for issue in issues)
-    if not unreachable:
+    if not any(is_blocking(issue) for issue in issues):
         issues += _runRules([registered for registered in RULES if registered.requires_reachable], state, ctx)
     return sort_issues(issues)
+
+
+def blocking_issue(state: ServerState, ctx: Context) -> Optional[Issue]:
+    """The issue that stops rules reading the snapshot's content (unreachable, authentication failed, no API key)"""
+    ensure_rules_loaded()
+    issues = _runRules([registered for registered in RULES if not registered.requires_reachable], state, ctx)
+    return next((issue for issue in issues if is_blocking(issue)), None)
 
 
 def evaluate_server(server, ctx: Context, snapshot: Optional[dict] = None, status: Optional[dict] = None,
@@ -253,4 +266,5 @@ def ensure_rules_loaded():
     global _rulesLoaded
     if not _rulesLoaded:
         import application.health.rules  # noqa: F401  (registers the built-in rules)
+        import application.health.drift  # noqa: F401  (baseline drift)
         _rulesLoaded = True

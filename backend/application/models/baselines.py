@@ -207,13 +207,17 @@ def settingExpected(name: str, expected: Any, comparator: str, settings: FleetSe
     return expected
 
 
+def galaxyLabel(namespace: Optional[str], name: str) -> str:
+    return f'{namespace} :: {name}' if namespace else name
+
+
 def knownLabel(type: str, key: str) -> str:
     """The name of a galaxy or object template MISP ships, from the plugins' lists"""
     if type == 'galaxy_enabled':
         from application.plugins.ToggleGalaxy import ALL_GALAXIES
         for galaxy in ALL_GALAXIES:
             if str(galaxy.get('uuid', '')).lower() == key:
-                return f"{galaxy.get('namespace', '-')} :: {galaxy['name']}" if galaxy.get('namespace') else galaxy['name']
+                return galaxyLabel(galaxy.get('namespace'), galaxy['name'])
     if type == 'object_template_active':
         from application.plugins.ToggleObject import ALL_TEMPLATES
         for template in ALL_TEMPLATES:
@@ -314,6 +318,11 @@ def serializeRule(rule: BaselineRule) -> dict:
     }
 
 
+def serializedRulesOfFleet(fleet_id: int) -> List[dict]:
+    rules = BaselineRule.query.join(Baseline).filter(Baseline.fleet_id == fleet_id).order_by(BaselineRule.id).all()
+    return [serializeRule(rule) for rule in rules]
+
+
 def serializeBaseline(fleet: Fleet) -> dict:
     baseline = fleet.baseline
     return {
@@ -410,6 +419,7 @@ def addRules(user, fleet_id: int, rules: Any, onConflict: str = 'error') -> dict
     valid = validateRules(rules, FleetSettings(fleet))
     applyRules(fleet, valid, onConflict, int(time.time()))
     db.session.commit()
+    rulesChanged(fleet)
     return serializeBaseline(fleet)
 
 
@@ -430,6 +440,7 @@ def updateRule(user, rule_id: int, changes: Any) -> dict:
     rule.updated = now
     rule.baseline.updated = now
     db.session.commit()
+    rulesChanged(rule.baseline.fleet)
     return serializeRule(rule)
 
 
@@ -443,6 +454,7 @@ def deleteRules(user, fleet_id: int, rule_ids: Any) -> dict:
     if rule_ids is None:
         fleet.baseline = None
         db.session.commit()
+        rulesChanged(fleet)
         return serializeBaseline(fleet)
     if not isinstance(rule_ids, list) or any(isinstance(id, bool) or not isinstance(id, int) for id in rule_ids):
         raise BaselineError('`rule_ids` must be a list of rule IDs', field='rule_ids')
@@ -454,6 +466,7 @@ def deleteRules(user, fleet_id: int, rule_ids: Any) -> dict:
         fleet.baseline.rules.remove(byId[id])
     fleet.baseline.updated = int(time.time())
     db.session.commit()
+    rulesChanged(fleet)
     return serializeBaseline(fleet)
 
 
@@ -463,6 +476,7 @@ def deleteRule(user, rule_id: int) -> None:
     baseline.rules.remove(rule)
     baseline.updated = int(time.time())
     db.session.commit()
+    rulesChanged(baseline.fleet)
 
 
 def copyFromFleet(user, fleet_id: int, fromFleetId: Any, mode: str = 'replace') -> dict:
@@ -491,5 +505,11 @@ def copyFromFleet(user, fleet_id: int, fromFleetId: Any, mode: str = 'replace') 
         db.session.flush()
     applyRules(fleet, valid, 'replace', now)
     db.session.commit()
+    rulesChanged(fleet)
     return serializeBaseline(fleet)
 
+
+def rulesChanged(fleet: Fleet) -> None:
+    """Drift and health follow the new rules at once; servers missing content the rules now need are checked"""
+    from application.models import baselineDrift
+    baselineDrift.rulesChanged(fleet)

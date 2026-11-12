@@ -25,13 +25,30 @@ def checked(result, context: Optional[str] = None):
     return result
 
 
-def listing(server, url: str, model: str, what: str) -> list:
-    """`[{model: {…}}, …]` from a MISP index"""
-    response = checked(mispGetRequest(server, url, {}, rawResponse=True, nocache=True), f'Could not list the {what}')
-    data = responseJson(response)
+def records(data, model: str, what: str, response=None) -> list:
+    """The records of a MISP index answer (`[{model: {…}}, …]`), already decoded"""
     if not isinstance(data, list) or any(not isinstance(entry, dict) or model not in entry for entry in data):
         raise MispOpError(f'Could not list the {what}: unexpected answer', response)
     return [entry[model] for entry in data]
+
+
+def listing(server, url: str, model: str, what: str) -> list:
+    """The records of a MISP index"""
+    response = checked(mispGetRequest(server, url, {}, rawResponse=True, nocache=True), f'Could not list the {what}')
+    return records(responseJson(response), model, what, response)
+
+
+def decodedRecords(data, model: str, what: str) -> list:
+    """The records of an index fetched by another client (the refresh's async fetcher), which answers the decoded
+    JSON or an error object"""
+    if isinstance(data, dict):
+        status = data.get('_status_code')
+        if 'error' in data:
+            raise MispOpError(f"Could not list the {what}: {data['error']}")
+        if isinstance(status, int) and status >= 400:
+            reason = data.get('message') or data.get('name') or ''
+            raise MispOpError(f"Could not list the {what}: HTTP {status}{f': {reason}' if reason else ''}")
+    return records(data, model, what)
 
 
 def flag(value) -> bool:
@@ -56,11 +73,18 @@ def post(server, url: str, payload: Optional[dict] = None):
 
 # Taxonomies, by namespace
 
+TAXONOMY_INDEX = ('/taxonomies/index', 'Taxonomy', 'taxonomies')
+
+
 def taxonomies(server) -> Dict[str, dict]:
+    return parseTaxonomies(listing(server, *TAXONOMY_INDEX))
+
+
+def parseTaxonomies(taxonomyRecords: list) -> Dict[str, dict]:
     """namespace → {id, enabled}"""
     return {
         taxonomy['namespace']: {'id': int(taxonomy['id']), 'enabled': flag(taxonomy.get('enabled'))}
-        for taxonomy in listing(server, '/taxonomies/index', 'Taxonomy', 'taxonomies')
+        for taxonomy in taxonomyRecords
     }
 
 
@@ -78,7 +102,14 @@ def setTaxonomyEnabled(server, taxonomyId: int, enabled: bool) -> None:
 
 # Galaxies, by UUID (the same on every instance for the galaxies MISP ships), lowercased
 
+GALAXY_INDEX = ('/galaxies/index', 'Galaxy', 'galaxies')
+
+
 def galaxies(server) -> Dict[str, dict]:
+    return parseGalaxies(listing(server, *GALAXY_INDEX))
+
+
+def parseGalaxies(galaxyRecords: list) -> Dict[str, dict]:
     """uuid → {id, enabled, name, namespace, type}"""
     return {
         uuidKey(galaxy['uuid']): {
@@ -88,7 +119,7 @@ def galaxies(server) -> Dict[str, dict]:
             'namespace': galaxy.get('namespace') or '',
             'type': galaxy.get('type') or '',
         }
-        for galaxy in listing(server, '/galaxies/index', 'Galaxy', 'galaxies')
+        for galaxy in galaxyRecords
     }
 
 
@@ -98,11 +129,18 @@ def setGalaxyEnabled(server, galaxyId: int, enabled: bool) -> None:
 
 # Object templates, by UUID, lowercased
 
+OBJECT_TEMPLATE_INDEX = ('/objectTemplates/index/all', 'ObjectTemplate', 'object templates')
+
+
 def objectTemplates(server) -> Dict[str, dict]:
+    return parseObjectTemplates(listing(server, *OBJECT_TEMPLATE_INDEX))
+
+
+def parseObjectTemplates(templateRecords: list) -> Dict[str, dict]:
     """uuid → {id, active, name, meta_category, version}, inactive templates included. MISP keeps the earlier
     versions of a template, with the same UUID: only the latest one counts"""
     latest = {}
-    for template in listing(server, '/objectTemplates/index/all', 'ObjectTemplate', 'object templates'):
+    for template in templateRecords:
         uuid = uuidKey(template['uuid'])
         rank = (number(template.get('version')), number(template.get('id')))
         if uuid not in latest or rank > latest[uuid][0]:

@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request
 
 from application.controllers.instance import token_required
 import application.models.baselines as baselineModel
+import application.models.baselineDrift as baselineDrift
 
 BPbaselines = Blueprint('baselines', __name__)
 
@@ -82,6 +83,29 @@ def copy(user, fleet_id):
         body = jsonBody()
         return jsonify(baselineModel.copyFromFleet(user, fleet_id, body.get('from_fleet_id'),
                                                    body.get('mode') or 'replace'))
+    except baselineModel.BaselineError as e:
+        return errorResponse(e)
+
+
+@BPbaselines.route('/baselines/fleet/<int:fleet_id>/drift', methods=['GET'])
+@token_required
+def drift(user, fleet_id):
+    """Every rule against every server of the fleet: `servers[].results` maps a rule ID to `{state, actual,
+    reason}`, `state` being `match`, `drift` or `unknown`. Results of a server that cannot be reached are `unknown`
+    (and `stale`), with its last known values"""
+    try:
+        return jsonify(baselineDrift.driftForUser(user, fleet_id))
+    except baselineModel.BaselineError as e:
+        return errorResponse(e)
+
+
+@BPbaselines.route('/baselines/fleet/<int:fleet_id>/check', methods=['POST'])
+@token_required
+def check(user, fleet_id):
+    """Lists again, in the background, the taxonomies, galaxies and object templates the rules need on every server
+    of the fleet (settings and versions come with the usual refresh). Answers 202 with the servers checked"""
+    try:
+        return jsonify(baselineDrift.checkFleet(user, fleet_id)), 202
     except baselineModel.BaselineError as e:
         return errorResponse(e)
 

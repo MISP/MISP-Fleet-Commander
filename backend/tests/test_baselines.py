@@ -21,6 +21,15 @@ SETTINGS = [
 ]
 
 
+@pytest.fixture(autouse=True)
+def checks(monkeypatch):
+    """Baseline checks handed to the workers, without running them"""
+    from application.workers import tasks
+    calls = []
+    monkeypatch.setattr(tasks, "checkBaselineTask", lambda server_ids: calls.append(server_ids))
+    return calls
+
+
 @pytest.fixture()
 def owner(db, make_user):
     from application import redisModel
@@ -37,7 +46,18 @@ def owner(db, make_user):
     db.session.add(server)
     db.session.commit()
     redisModel.saveServerInfo(server.uuid, snapshot(SETTINGS))
-    return user, fleets
+    fleet_ids = [fleet.id for fleet in fleets]
+    yield user, fleets
+    dropBaselines(db, fleet_ids)
+
+
+def dropBaselines(db, fleet_ids):
+    """Other test files evaluate health for fleets by ID: leave no rules behind"""
+    from application.DBModels import Baseline
+    db.session.rollback()
+    for baseline in Baseline.query.filter(Baseline.fleet_id.in_(fleet_ids)).all():
+        db.session.delete(baseline)
+    db.session.commit()
 
 
 @pytest.fixture()

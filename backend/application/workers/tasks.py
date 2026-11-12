@@ -181,6 +181,13 @@ def runJob(job_id):
     jobRunner.run(job_id, socketioEmitter, max_concurrency=max_concurrency)
 
 
+@huey_app.task(priority=3)
+def checkBaselineTask(server_ids):
+    """List again the taxonomies, galaxies and object templates the servers' baseline rules need"""
+    from application.models import baselineDrift
+    baselineDrift.checkServers(loadServers(server_ids), backgroundRefreshSettings()["max_concurrency"])
+
+
 ###
 ### SCHEDULER
 ###

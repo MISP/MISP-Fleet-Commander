@@ -34,6 +34,7 @@ export const RULE_LABELS = {
     modules: "Modules unavailable",
     sync_link: "Broken sync links",
     pending_registrations: "Pending account requests",
+    baseline_drift: "Baseline drift",
 }
 
 const TAB_ACTIONS = {
