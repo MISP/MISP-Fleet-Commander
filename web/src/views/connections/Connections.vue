@@ -276,6 +276,7 @@
                     :connection="row.item"
                     :serverSource="row.item.source"
                     :serverDestination="row.item.destination"
+                    :refreshing="linkTestState(row.item.source.id, row.item.destination.Server.id).testing"
                     @actionRefresh="handleRefreshInfo({connection: row.item, method: $event})"
                     @actionClose="row.toggleDetails"
                 ></RowDetails>
@@ -589,7 +590,12 @@ export default {
             this.testLink(connection.source.id, connection.destination.Server.id)
         },
         handleRefreshInfo(data) {
-            this.refreshInfo(data.connection)
+            const connection = data.connection
+            if (data.method === "no_cache") {
+                // Fresh from MISP: re-test this link. The links reload when the test reports back
+                this.testLink(connection.source.id, connection.destination.Server.id)
+            }
+            this.refreshInfo(connection)
         },
         refreshInfo(connection) {
             this.$store.dispatch("connections/getConnection", connection)

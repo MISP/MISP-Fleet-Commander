@@ -14,13 +14,14 @@
                         <small class="align-middle">{{ getDetails.query_result.timestamp | moment("from") }}</small>
                     </span>
                     <b-button 
-                        size="sm" variant="primary" title="Refresh"
+                        size="sm" variant="primary" :title="refreshing ? 'Testing the link...' : 'Re-test the link'"
+                        :disabled="refreshing"
                         @click="refreshDiagnostic()"
-                    ><b-icon icon="arrow-clockwise"></b-icon></b-button>
+                    ><b-icon icon="arrow-clockwise" :animation="refreshing ? 'spin' : ''"></b-icon></b-button>
                     <b-button 
-                        size="sm" variant=""
+                        size="sm" variant="" title="Close"
                         @click="closeDetails()"
-                    ><b-icon icon="arrow-clockwise"></b-icon></b-button>
+                    ><b-icon icon="x"></b-icon></b-button>
                 </div>
                 <b-alert show variant="danger">
                     Error while accessing details:
@@ -105,10 +106,10 @@
                                     :server_id="connection.source.id"
                                     type="ddd DD/MM/YYYY HH:mm"
                                 ></timeSinceRefresh>
-                                <b-button variant="primary" size="sm" @click="refreshDiagnostic()">
+                                <b-button variant="primary" size="sm" :disabled="refreshing" title="Re-test the link" @click="refreshDiagnostic()">
                                     <iconButton
-                                        text="Refresh"
-                                        icon="sync-alt"
+                                        :text="refreshing ? 'Testing...' : 'Refresh'"
+                                        :icon="refreshing ? 'sync-alt fa-spin' : 'sync-alt'"
                                         :tight="true"
                                     ></iconButton>
                                 </b-button>
@@ -150,7 +151,12 @@ export default {
         serverDestination: {
             type: Object,
             required: true
-        }
+        },
+        // The link is being re-tested
+        refreshing: {
+            type: Boolean,
+            default: false
+        },
     },
     data: function() {
         return {
