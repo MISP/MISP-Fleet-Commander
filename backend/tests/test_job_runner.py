@@ -411,10 +411,9 @@ def test_server_management_outcomes(db, fleet, monkeypatch):
     assert jobUnits.serverManagementUnit(servers[0], {"operation": "drop"}).summary == "Unknown operation `drop`"
 
 
-def test_unknown_or_unavailable_kinds():
+def test_unknown_kinds():
     from application.models.jobUnits import execute
     assert execute("format_disk", None, {}).summary == "Unknown job kind `format_disk`"
-    assert execute("baseline_remediation", None, {}).ok is False
 
 
 # Single-server writes from the UI are recorded as jobs

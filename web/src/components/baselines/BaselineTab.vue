@@ -44,6 +44,14 @@
                 </div>
                 <div class="baseline-actions">
                     <b-button
+                        v-if="fixableDrift > 0"
+                        size="sm"
+                        variant="outline-primary"
+                        @click="openFix({})"
+                    >
+                        <i class="fas fa-wrench mr-1" aria-hidden="true"></i>Fix all drift
+                    </b-button>
+                    <b-button
                         v-if="hasContentRules"
                         size="sm"
                         variant="outline-secondary"
@@ -104,6 +112,7 @@
                 :refreshing="refreshing"
                 @edit="openEdit"
                 @delete="deleteRule"
+                @fix="openFix"
             ></DriftMatrix>
             <div v-else class="baseline-none">
                 <template v-if="filter === 'drift' && search.trim() === ''">
@@ -128,6 +137,7 @@
             :rules="rules"
             @saved="onSaved"
         ></ReferenceImportModal>
+        <RemediationModal :fleet-id="fleetId" :scope="fixScope"></RemediationModal>
 
         <b-modal
             id="modal-baseline-copy"
@@ -154,6 +164,7 @@ import { mapGetters } from "vuex"
 import api from "@/api/baselines"
 import DriftMatrix from "./DriftMatrix.vue"
 import ReferenceImportModal from "./ReferenceImportModal.vue"
+import RemediationModal from "./RemediationModal.vue"
 import RuleModal from "./RuleModal.vue"
 import { expectedText, ruleTitle } from "./baselineFormat"
 
@@ -163,7 +174,7 @@ let typesPromise = null
 
 export default {
     name: "BaselineTab",
-    components: { DriftMatrix, ReferenceImportModal, RuleModal },
+    components: { DriftMatrix, ReferenceImportModal, RemediationModal, RuleModal },
     props: {
         fleetId: { type: Number, required: true },
     },
@@ -177,6 +188,7 @@ export default {
             filter: "all",
             search: "",
             editingRule: null,
+            fixScope: {},
             highlightRuleId: null,
             checking: false,
             reloadTimer: null,
@@ -208,6 +220,10 @@ export default {
             return this.fleetList
                 .filter(fleet => fleet.id !== this.fleetId)
                 .map(fleet => ({ value: fleet.id, text: fleet.name }))
+        },
+        // Drifting values of rules that can be fixed from here (a version is upgraded by hand)
+        fixableDrift() {
+            return this.driftingRules.filter(rule => rule.remediable).length
         },
         hasContentRules() {
             return this.rules.some(rule => ["taxonomy_enabled", "galaxy_enabled", "object_template_active"].includes(rule.type))
@@ -362,6 +378,10 @@ export default {
         openEdit(rule) {
             this.editingRule = rule
             this.$nextTick(() => this.$bvModal.show("modal-baseline-rule"))
+        },
+        openFix(scope) {
+            this.fixScope = scope
+            this.$nextTick(() => this.$bvModal.show("modal-baseline-fix"))
         },
         openReference() {
             this.$bvModal.show("modal-baseline-reference")

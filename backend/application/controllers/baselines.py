@@ -4,6 +4,8 @@ from application.controllers.instance import token_required
 import application.models.baselines as baselineModel
 import application.models.baselineDrift as baselineDrift
 import application.models.baselineReference as baselineReference
+import application.models.baselineRemediation as baselineRemediation
+import application.models.jobs as jobModel
 
 BPbaselines = Blueprint('baselines', __name__)
 
@@ -107,6 +109,32 @@ def check(user, fleet_id):
     of the fleet (settings and versions come with the usual refresh). Answers 202 with the servers checked"""
     try:
         return jsonify(baselineDrift.checkFleet(user, fleet_id)), 202
+    except baselineModel.BaselineError as e:
+        return errorResponse(e)
+
+
+@BPbaselines.route('/baselines/fleet/<int:fleet_id>/remediation/preview', methods=['POST'])
+@token_required
+def remediationPreview(user, fleet_id):
+    """What fixing the drift would change: `{server_ids?, rule_ids?}` narrows the scope (the whole fleet otherwise),
+    `{items: [{server_id, rule_id}]}` names exact cells. Per server, each drifting rule with its `current` and
+    `expected` values and an `action`: `apply`, or `manual` with the `reason`. Unreachable servers are `excluded`"""
+    try:
+        body = jsonBody()
+        return jsonify(baselineRemediation.previewForUser(user, fleet_id, body.get('server_ids'),
+                                                          body.get('rule_ids'), body.get('items')))
+    except baselineModel.BaselineError as e:
+        return errorResponse(e)
+
+
+@BPbaselines.route('/baselines/fleet/<int:fleet_id>/remediation', methods=['POST'])
+@token_required
+def remediate(user, fleet_id):
+    """`{items: [{server_id, rule_id}]}` (from a preview): starts a job fixing those that still drift and can be fixed
+    from here. Answers 202 with the job, 409 when nothing is left to fix"""
+    try:
+        job = baselineRemediation.startForUser(user, fleet_id, jsonBody().get('items'))
+        return jsonify({'job_id': job.id, 'job': jobModel.serializeJob(job, withResults=True)}), 202
     except baselineModel.BaselineError as e:
         return errorResponse(e)
 

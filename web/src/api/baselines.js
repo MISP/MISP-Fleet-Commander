@@ -69,6 +69,13 @@ export default {
     check(fleet_id) {
         return request("post", `/baselines/fleet/${fleet_id}/check`)
     },
+    // `scope`: {} (the whole fleet), {server_ids}, {rule_ids} or {items: [{server_id, rule_id}]}
+    remediationPreview(fleet_id, scope) {
+        return request("post", `/baselines/fleet/${fleet_id}/remediation/preview`, scope || {})
+    },
+    remediate(fleet_id, items) {
+        return request("post", `/baselines/fleet/${fleet_id}/remediation`, { items })
+    },
     // A server's settings and content, kept a short while: the rule editor and the import ask for the same one
     reference(server_id, { fresh = false } = {}) {
         const cached = references.get(server_id)

@@ -46,6 +46,16 @@
                                     <i :class="severityIcon(rule)" aria-hidden="true"></i>
                                 </span>
                                 <div class="rule-actions">
+                                    <button
+                                        v-if="rule.remediable && driftCount(rule) > 0"
+                                        type="button"
+                                        class="rule-action is-fix"
+                                        :title="fixRowText(rule)"
+                                        :aria-label="`${fixRowText(rule)}: ${title(rule)}`"
+                                        @click="$emit('fix', { rule_ids: [rule.id] })"
+                                    >
+                                        <i class="fas fa-wrench" aria-hidden="true"></i>
+                                    </button>
                                     <button type="button" class="rule-action" :title="`Edit rule ${title(rule)}`" :aria-label="`Edit rule ${title(rule)}`" @click="$emit('edit', rule)">
                                         <i class="fas fa-pen" aria-hidden="true"></i>
                                     </button>
@@ -68,6 +78,15 @@
                             <template v-else-if="cellState(rule, server) === 'drift'">
                                 <i class="fas fa-xmark" aria-hidden="true"></i>
                                 <span class="cell-value" aria-hidden="true">{{ actual(rule, server) }}</span>
+                                <button
+                                    v-if="rule.remediable"
+                                    type="button"
+                                    class="cell-fix"
+                                    :aria-label="`Fix ${title(rule)} on ${server.name}`"
+                                    @click="$emit('fix', { items: [{ server_id: server.id, rule_id: rule.id }] })"
+                                >
+                                    <i class="fas fa-wrench mr-1" aria-hidden="true"></i>Fix
+                                </button>
                             </template>
                             <template v-else>
                                 <i :class="cell(rule, server).stale ? 'fas fa-clock-rotate-left' : 'fas fa-question'" aria-hidden="true"></i>
@@ -127,6 +146,13 @@ export default {
         },
         cellState(rule, server) {
             return this.cell(rule, server).state
+        },
+        fixRowText(rule) {
+            const count = this.driftCount(rule)
+            return count === 1 ? "Fix on the drifting server" : `Fix on the ${count} drifting servers`
+        },
+        driftCount(rule) {
+            return this.servers.filter(server => this.cellState(rule, server) === "drift").length
         },
         actual(rule, server) {
             return actualText(rule, this.cell(rule, server))
@@ -481,6 +507,42 @@ export default {
     text-overflow: ellipsis;
     vertical-align: bottom;
     font-size: 0.78rem;
+}
+
+/* Fix covers the drifting cell when the cell is hovered or the button has the focus */
+.cell.is-drift {
+    position: relative;
+}
+
+.cell-fix {
+    position: absolute;
+    inset: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid currentColor;
+    border-radius: 4px;
+    background: #fff;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: inherit;
+    opacity: 0;
+    transition: opacity 0.1s;
+}
+
+.cell.is-drift:hover .cell-fix,
+.cell-fix:focus-visible {
+    opacity: 1;
+}
+
+.cell-fix:focus-visible {
+    outline: 2px solid var(--var-color-lapislazuli);
+    outline-offset: 0;
+}
+
+.rule-action.is-fix:hover {
+    background: var(--health-focus-bg);
+    color: var(--var-color-lapislazuli);
 }
 
 .cell.is-unknown {

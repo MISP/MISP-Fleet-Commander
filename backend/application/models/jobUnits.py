@@ -177,8 +177,9 @@ def editConnectionUnit(server: Server, params: dict) -> UnitResult:
     return requestUnit(editConnection(server, remoteServerID, params.get('payload') or {}))
 
 
-def notAvailableUnit(server: Server, params: dict) -> UnitResult:
-    return UnitResult(False, summary='This kind of job cannot run yet')
+def baselineRemediationUnit(server: Server, params: dict) -> UnitResult:
+    from application.models.baselineRemediation import remediationUnit
+    return remediationUnit(server, params)
 
 
 EXECUTORS: Dict[str, Callable[[Server, dict], UnitResult]] = {
@@ -187,7 +188,7 @@ EXECUTORS: Dict[str, Callable[[Server, dict], UnitResult]] = {
     'rest_query': restQueryUnit,
     'server_management': serverManagementUnit,
     'edit_connection': editConnectionUnit,
-    'baseline_remediation': notAvailableUnit,
+    'baseline_remediation': baselineRemediationUnit,
 }
 
 
