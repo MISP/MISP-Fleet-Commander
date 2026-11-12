@@ -87,6 +87,7 @@ def run(job_id: str, emitter=None, max_concurrency: Optional[int] = None) -> Opt
 
     onProgress = getattr(emitter, 'job_progress', None)
     onDone = getattr(emitter, 'job_done', None)
+    safeEmit(getattr(emitter, 'job_started', None), job)
     app = current_app._get_current_object()
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=concurrency) as pool:
@@ -111,7 +112,8 @@ def run(job_id: str, emitter=None, max_concurrency: Optional[int] = None) -> Opt
                 jobModel.recordUnit(row, unit, started=started, finished=finished)
             safeEmit(onProgress, job, progressPayload(job, row))
 
-    jobModel.finish(job, cancelled=cancelRequested(job.id))
+    # Cancelled only if a server was left out: a cancel arriving once every server had started changes nothing
+    jobModel.finish(job, cancelled=any(row.status == 'cancelled' for row in job.results))
     clearCancel(job.id)
     safeEmit(onDone, job)
     return job

@@ -174,6 +174,24 @@ def test_concurrency_is_capped(db, fleet, fakeExecute):
     assert state["max"] == 2
 
 
+def test_a_cancel_after_every_server_started_changes_nothing(db, fleet, fakeExecute):
+    import application.models.jobRunner as jobRunner
+    import application.models.jobs as jobModel
+    from application.models.jobs import UnitResult
+    behaviour, calls = fakeExecute
+    user, theFleet, servers = fleet
+    job = jobModel.create(user, "rest_query", servers[:2])
+
+    def cancellingLast(server):
+        jobRunner.requestCancel(job.id)
+        return UnitResult(False, summary="Server unreachable")
+    behaviour["misp-1"] = cancellingLast
+    jobRunner.run(job.id, max_concurrency=2)
+    assert [r.status for r in job.results] == ["ok", "error"]
+    assert job.status == "partial"
+    assert not jobRunner.cancelRequested(job.id)
+
+
 def test_units_not_started_are_cancelled(db, fleet, fakeExecute):
     import application.models.jobRunner as jobRunner
     import application.models.jobs as jobModel
@@ -249,7 +267,7 @@ def test_job_events_go_to_the_owner_only(db, fleet, fakeExecute, monkeypatch):
     monkeypatch.setattr(socketEmitter.socketio, "emit", lambda event, data=None, **kw: events.append((event, kw.get("to"))))
     job = jobModel.create(user, "rest_query", servers[:2])
     jobRunner.run(job.id, socketEmitter)
-    assert events == [("JOB_PROGRESS", f"user:{user.id}")] * 2 + [("JOB_DONE", f"user:{user.id}")]
+    assert events == [("JOB_STARTED", f"user:{user.id}")] + [("JOB_PROGRESS", f"user:{user.id}")] * 2 + [("JOB_DONE", f"user:{user.id}")]
 
 
 def test_the_worker_task_reads_the_concurrency_setting(db, fleet, monkeypatch):

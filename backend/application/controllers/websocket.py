@@ -229,16 +229,22 @@ class SocketioEmitter:
         }
         self._emitToServerOwner("SERVER_GRAPH_REFRESH_STATUS", serverID, payload)
 
+    def job_started(self, job):
+        """`{job_id, started}`: a worker took the job (until then it waits in the queue)"""
+        if job.user_id is not None:
+            self.socketio.emit('JOB_STARTED', {'job_id': job.id, 'started': job.started}, to=userRoom(job.user_id))
+
     def job_progress(self, job, payload):
         """`{job_id, done, total, succeeded, failed, result}`: one server's unit of the job is over"""
         if job.user_id is not None:
             self.socketio.emit('JOB_PROGRESS', payload, to=userRoom(job.user_id))
 
     def job_done(self, job):
-        """`{job_id, status, total, succeeded, failed}`: the job is over"""
+        """`{job_id, title, kind, status, total, succeeded, failed, finished}`: the job is over"""
         if job.user_id is not None:
-            payload = {'job_id': job.id, 'status': job.status, 'total': job.total, 'succeeded': job.succeeded,
-                       'failed': job.failed}
+            payload = {'job_id': job.id, 'title': job.title, 'kind': job.kind, 'status': job.status,
+                       'total': job.total, 'succeeded': job.succeeded, 'failed': job.failed,
+                       'finished': job.finished}
             self.socketio.emit('JOB_DONE', payload, to=userRoom(job.user_id))
 
     def fleet_update_timestamps(self, fleet, watched_timestamp = None, monitored_timestamp = None):

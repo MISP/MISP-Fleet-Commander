@@ -225,6 +225,7 @@ def serializeJob(job: Job, withResults: bool = False) -> dict:
     }
     if withResults:
         serialized['results'] = [serializeResult(result) for result in job.results]
+        serialized['done'] = sum(1 for result in job.results if result.status != 'pending')
     return serialized
 
 
