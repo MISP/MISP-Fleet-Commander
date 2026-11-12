@@ -52,7 +52,7 @@
                     v-model="table.currentPage"
                     size="sm"
                     :per-page="table.perPage"
-                    :total-rows="table.totalRows"
+                    :total-rows="matchingRows"
                     aria-controls="server-table"
                 ></b-pagination>
                 <b-form-select v-model="table.perPage" :options="table.optionsPerPage" size="sm" class="ml-2"></b-form-select>
@@ -372,7 +372,7 @@
                         v-model="table.currentPage"
                         size="sm"
                         :per-page="table.perPage"
-                        :total-rows="table.totalRows"
+                        :total-rows="matchingRows"
                         aria-controls="server-table"
                     ></b-pagination>
                 </div>
@@ -676,8 +676,13 @@ export default {
         getSelectedServerIDs() {
             return Array.from(this.selectedServerIDs)
         },
+        // Rows the table can show: every server of the fleet, or those the search and filters keep (the table tells
+        // that count when it filters). Derived, so it is right however the servers were loaded
+        matchingRows() {
+            return this.tableFilter === null ? this.serverCount : this.table.totalRows
+        },
         displayedTotalRows() {
-            return Math.min(this.table.totalRows, this.table.perPage)
+            return Math.min(this.matchingRows, this.table.perPage)
         },
         // Open drift issues of the fleet's servers, on the Baseline tab
         baselineDriftCount() {
