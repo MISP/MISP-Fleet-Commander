@@ -921,6 +921,9 @@ export default {
                 })
         },
         populatePluginFields() {
+            // Safe to run again when the plugin list or the enabled plugins arrive: previous plugin columns go first
+            this.table.fields = this.table.fields.filter(field => !this.pluginFields.includes(field))
+            this.pluginFields = []
             const lastRefreshPosition = this.table.fields.indexOf('last_refresh')
             this.indexPlugins.forEach(plugin => {
                 const field = {
@@ -1038,6 +1041,12 @@ export default {
         },
     },
     watch: {
+        indexPlugins(newPlugins, oldPlugins) {
+            const ids = plugins => plugins.map(plugin => plugin.id).join(",")
+            if (ids(newPlugins) !== ids(oldPlugins)) {
+                this.populatePluginFields()
+            }
+        },
         "table.filter": function() {
             this.table.currentPage = 1
         },
@@ -1056,7 +1065,13 @@ export default {
     },
     mounted() {
         this.fullRefreshIfNeeded()
-        this.populatePluginFields()
+        // The plugin columns, quick actions and batch plugin actions need the plugin list, which only the server
+        // page and the plugin index loaded: a fleet page opened first had none of them
+        this.$store.dispatch("plugins/getPlugins", {use_cache: true})
+            .catch(() => {})
+            .finally(() => {
+                this.populatePluginFields()
+            })
         this.getInstancePictures()
     },
     beforeRouteEnter(to, from, next) {
