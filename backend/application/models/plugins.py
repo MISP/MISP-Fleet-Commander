@@ -86,6 +86,16 @@ class ErrorPluginResponse(PluginResponse):
         super().__init__('error', data, errors, component, request)
 
 
+def toggleOutcome(done: str, noun: str, successes: List[str], errors: List[str]) -> PluginResponse:
+    """The response of a plugin that changed several items on one server, e.g. `enabled` 3 `taxonomies`. Any error
+    is listed, and a success with errors counts as failed for jobs: the server is not in the requested state"""
+    message = f'Successfully {done} {len(successes)} {noun}.' if successes else f'Could not change any {noun}.'
+    if errors:
+        message += f' {len(errors)} {noun} could not be updated'
+    data = {'message': message, 'data': {'successes': successes, 'errors': errors}}
+    return SuccessPluginResponse(data, errors) if successes else FailPluginResponse(data, errors)
+
+
 class PluginNotification:
 
     class Severity:

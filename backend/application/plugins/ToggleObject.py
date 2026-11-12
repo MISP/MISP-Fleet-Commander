@@ -1,8 +1,7 @@
 from typing import List, Optional, Union
-from requests import Response as requestsResponse
 from application.DBModels import Server
-from application.controllers.utils import mispGetRequest, mispPostRequest
-from application.models.plugins import BasePlugin, PluginResponse, SuccessPluginResponse, FailPluginResponse, ErrorPluginResponse
+from application.models import mispOps
+from application.models.plugins import BasePlugin, ErrorPluginResponse, FailPluginResponse, PluginResponse, toggleOutcome
 
 
 class ToggleObject(BasePlugin):
@@ -35,9 +34,6 @@ class ToggleObject(BasePlugin):
         ]
 
     def action(self, server: Server, data: Optional[dict] = {}) -> Union[PluginResponse, List[PluginResponse]]:
-        state = data.get('enabled', None)
-        if state is not None:
-            state = True if state == '1' else False
         template_uuids = data.get("template_uuids", [])
         result = ToggleObject.toggleTemplates(server, template_uuids)
         return result
@@ -55,90 +51,25 @@ class ToggleObject(BasePlugin):
 
     @classmethod
     def toggleTemplates(cls, server: Server, template_uuids: list) -> PluginResponse:
-        result = None
-        errorCount = 0
-        successCount = 0
-        errors = []
-        successes = []
         if template_uuids is None:
-            result = ErrorPluginResponse(
-                {},
-                [
-                    f"Invalid parameters (template: `{template_uuids}`)"
-                ],
-            )
-            return result
+            return ErrorPluginResponse({}, [f"Invalid parameters (template: `{template_uuids}`)"])
+        try:
+            onServer = mispOps.objectTemplates(server)
+        except mispOps.MispOpError as e:
+            return FailPluginResponse({}, [e.message])
 
-        templatesOnServer = ToggleObject.fetchObjectTemplates(server)
-        templateIDByUUID = {
-            template['ObjectTemplate']['uuid']: template['ObjectTemplate']['id'] for template in templatesOnServer
-        }
-
+        successes, errors = [], []
         for template_uuid in template_uuids:
-            templateID = templateIDByUUID.get(template_uuid, None)
-            if templateID is not None:
-                success = ToggleObject.toggleTemplate(server, templateID)
-            else:
-                success = f"Could not find template with name or UUID `{template_uuid}`"
-
-            if success is True:
-                successCount += 1
+            found = onServer.get(mispOps.uuidKey(template_uuid))
+            if found is None:
+                errors.append(f"{template_uuid} - Could not find template with name or UUID `{template_uuid}`")
+                continue
+            try:
+                mispOps.toggleObjectTemplate(server, found['id'])
                 successes.append(template_uuid)
-            else:
-                errorCount += 1
-                errors.append(f"{template_uuid} - {success}")
-
-        if successCount > 0:
-            successMessage = f"Successfully toggled {successCount} templates."
-            if errorCount > 0:
-                successMessage += f" {errorCount} templates could not be updated"
-            data = {
-                'message': successMessage,
-                'data': {
-                    'successes': successes,
-                    'errors': errors,
-                }
-            }
-            return SuccessPluginResponse(data, errors)
-        else:
-            failMessage = f"Count not toggle any templates. {errorCount} Failed to be updated"
-            data = {
-                'message': failMessage,
-                'data': {
-                    'successes': successes,
-                    'errors': errors,
-                }
-            }
-            return FailPluginResponse(data, errors)
-
-    @classmethod
-    def toggleTemplate(cls, server: Server, templateID: int) -> Union[bool, str]:
-        url = f'/ObjectTemplates/activate'
-        payload = {
-            'ObjectTemplate': {
-                'data': templateID
-            }
-        }
-        result = mispPostRequest(server, url, payload, rawResponse=True, nocache=True)
-        if isinstance(result, dict):
-            return result.get('error', 'Request failed')
-        data = result.json()
-        if isinstance(data, dict) and "error" in data:
-            actionResponse = data['error']
-        else:
-            actionResponse = True
-
-        return actionResponse
-
-    @classmethod
-    def fetchObjectTemplates(cls, server: Server):
-        url = f"objectTemplates/index/all.json"
-        result = mispGetRequest(server, url, rawResponse=True, nocache=True)
-        if isinstance(result, dict):
-            return []
-        if result.status_code != 404:
-            return result.json()
-        return []
+            except mispOps.MispOpError as e:
+                errors.append(f'{template_uuid} - {e.message}')
+        return toggleOutcome('toggled', 'templates', successes, errors)
 
 
 ALL_TEMPLATES = [

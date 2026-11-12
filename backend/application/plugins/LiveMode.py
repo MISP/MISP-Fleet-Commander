@@ -1,6 +1,7 @@
 from typing import List, Optional, Union
 from application.DBModels import Server
-from application.controllers.utils import mispGetRequest, mispPostRequest
+from application.controllers.utils import responseJson
+from application.models import mispOps
 from application.models.plugins import BasePlugin, PluginResponse, SuccessPluginResponse, FailPluginResponse
 
 
@@ -29,29 +30,15 @@ class LiveMode(BasePlugin):
 
     @classmethod
     def getLiveModeFromServer(cls, server: Server) -> Union[bool, None]:
-        if server.server_info is None:
-            return None
-        try:
-            finalSettings = server.server_info['query_result']['serverSettings']['finalSettings']
-        except TypeError:
-            return None
-        liveModeSetting = [setting for setting in finalSettings if setting['setting'] == 'MISP.live'][0]
-        liveMode = liveModeSetting['value']
-        return liveMode
+        setting = mispOps.snapshotSettings(server.server_info).get('MISP.live')
+        return None if setting is None else setting.get('value')
 
     @classmethod
     def toggleLiveMode(cls, server: Server, liveModeEnabled: bool = True) -> PluginResponse:
-        url = '/servers/serverSettingsEdit/MISP.live'
-        result = mispPostRequest(server, url, {'Server': {'value': liveModeEnabled}}, rawResponse=True, nocache=True)
-        if isinstance(result, dict):
-            return FailPluginResponse({}, [result.get('error', 'Request failed')])
         try:
-            data = result.json()
-        except ValueError:
-            data = {}
-        if not result.ok:
-            actionResponse = FailPluginResponse(data, [data.get('message', result.reason) if isinstance(data, dict) else result.reason], None, result)
-        else:
-            actionResponse = SuccessPluginResponse(data, None, None, result)
-
-        return actionResponse
+            response = mispOps.editSetting(server, 'MISP.live', liveModeEnabled)
+        except mispOps.MispOpError as e:
+            data = responseJson(e.response) if e.response is not None else None
+            return FailPluginResponse(data if isinstance(data, dict) else {}, [e.message], None, e.response)
+        data = responseJson(response)
+        return SuccessPluginResponse(data if isinstance(data, dict) else {}, None, None, response)

@@ -1,8 +1,7 @@
 from typing import List, Optional, Union
-from requests import Response as requestsResponse
 from application.DBModels import Server
-from application.controllers.utils import mispGetRequest, mispPostRequest, mispRequestError, responseJson
-from application.models.plugins import BasePlugin, PluginResponse, SuccessPluginResponse, FailPluginResponse, ErrorPluginResponse
+from application.models import mispOps
+from application.models.plugins import BasePlugin, ErrorPluginResponse, FailPluginResponse, PluginResponse, toggleOutcome
 
 
 class ToggleGalaxy(BasePlugin):
@@ -42,87 +41,25 @@ class ToggleGalaxy(BasePlugin):
 
     @classmethod
     def toggleGalaxies(cls, server: Server, state: bool, galaxies_uuid: list) -> PluginResponse:
-        result = None
-        errorCount = 0
-        successCount = 0
-        errors = []
-        successes = []
         if state is None or galaxies_uuid is None:
-            result = ErrorPluginResponse({}, [f'Invalid parameters (namespace: `{galaxies_uuid}`, state: `{state}`)'])
-            return result
+            return ErrorPluginResponse({}, [f'Invalid parameters (namespace: `{galaxies_uuid}`, state: `{state}`)'])
+        try:
+            onServer = mispOps.galaxies(server)
+        except mispOps.MispOpError as e:
+            return FailPluginResponse({}, [e.message])
 
-        galaxyIDByUUID = ToggleGalaxy.fetchAllIDs(server)
-        if isinstance(galaxyIDByUUID, PluginResponse):
-            return galaxyIDByUUID
-
+        successes, errors = [], []
         for galaxy_uuid in galaxies_uuid:
-            galaxyID = galaxyIDByUUID.get(galaxy_uuid, None)
-            if galaxyID is not None:
-                if state:
-                    success = ToggleGalaxy.enableGalaxy(server, galaxyID)
-                else:
-                    success = ToggleGalaxy.disableGalaxy(server, galaxyID)
-            else:
-                success = f'Could not find galaxy with name or UUID `{galaxy_uuid}`'
-
-            if success is True:
-                successCount += 1
+            found = onServer.get(mispOps.uuidKey(galaxy_uuid))
+            if found is None:
+                errors.append(f'{galaxy_uuid} - Could not find galaxy with name or UUID `{galaxy_uuid}`')
+                continue
+            try:
+                mispOps.setGalaxyEnabled(server, found['id'], state)
                 successes.append(galaxy_uuid)
-            else:
-                errorCount += 1
-                errors.append(f"{galaxy_uuid} - {success}")
-
-        if successCount > 0:
-            successMessage = f"Successfully {'enabled' if state else 'disabled'} {successCount} galaxies."
-            if errorCount > 0:
-                successMessage += f" {errorCount} galaxies could not be updated"
-            data = {
-                'message': successMessage,
-                'data': {
-                    'successes': successes,
-                    'errors': errors,
-                }
-            }
-            return SuccessPluginResponse(data, errors)
-        else:
-            failMessage = f"Count not {'enable' if state else 'disable'} any galaxies. {errorCount} Failed to be updated"
-            data = {
-                'message': failMessage,
-                'data': {
-                    'successes': successes,
-                    'errors': errors,
-                }
-            }
-            return FailPluginResponse(data, errors)
-
-    @classmethod
-    def fetchAllIDs(cls, server: Server) -> Union[dict, PluginResponse]:
-        url = f'/galaxies/index'
-        result = mispGetRequest(server, url, {}, rawResponse=True, nocache=True)
-        error = mispRequestError(result)
-        if error is not None:
-            return FailPluginResponse({}, [f'Could not list the galaxies: {error}'])
-        data = responseJson(result)
-        if not isinstance(data, list) or any('Galaxy' not in entry for entry in data):
-            return FailPluginResponse({}, ['Could not list the galaxies: unexpected answer'])
-        galaxyIDByUUID = {}
-        for galaxy in data:
-            galaxyIDByUUID[galaxy['Galaxy']['uuid']] = int(galaxy['Galaxy']['id'])
-        return galaxyIDByUUID
-
-    @classmethod
-    def enableGalaxy(cls, server: Server, galaxyID: int) -> Union[bool, str]:
-        url = f'/galaxies/enable/{galaxyID}'
-        result = mispPostRequest(server, url, {}, rawResponse=True, nocache=True)
-        error = mispRequestError(result)
-        return True if error is None else error
-
-    @classmethod
-    def disableGalaxy(cls, server: Server, galaxyID: int) -> Union[bool, str]:
-        url = f'/galaxies/disable/{galaxyID}'
-        result = mispPostRequest(server, url, {}, rawResponse=True, nocache=True)
-        error = mispRequestError(result)
-        return True if error is None else error
+            except mispOps.MispOpError as e:
+                errors.append(f'{galaxy_uuid} - {e.message}')
+        return toggleOutcome('enabled' if state else 'disabled', 'galaxies', successes, errors)
 
 
 ALL_GALAXIES = [

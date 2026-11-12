@@ -57,7 +57,8 @@ def stub(monkeypatch, module, get=None, post=None):
 
 def test_toggle_taxonomy_on_an_unreachable_server(monkeypatch):
     from application.plugins import ToggleTaxonomy as module
-    stub(monkeypatch, module, get=UNREACHABLE)
+    from application.models import mispOps as ops
+    stub(monkeypatch, ops, get=UNREACHABLE)
     response = module.ToggleTaxonomy().action(Server(), {"enabled": "1", "taxonomies_uuid": ["tlp"]}).response()
     assert response["status"] == "fail"
     assert response["error"] == ["Could not list the taxonomies: Server unreachable"]
@@ -65,8 +66,9 @@ def test_toggle_taxonomy_on_an_unreachable_server(monkeypatch):
 
 def test_a_refused_taxonomy_change_is_not_a_success(monkeypatch):
     from application.plugins import ToggleTaxonomy as module
+    from application.models import mispOps as ops
     index = Answer(200, [{"Taxonomy": {"id": 3, "namespace": "tlp"}}, {"Taxonomy": {"id": 4, "namespace": "pap"}}])
-    stub(monkeypatch, module, get=index,
+    stub(monkeypatch, ops, get=index,
          post=lambda server, url, *rest: Answer(403, {"message": "Not allowed"}) if url.endswith("/4") else Answer(200, {"saved": True}))
     response = module.ToggleTaxonomy().action(Server(), {"enabled": "0", "taxonomies_uuid": ["tlp", "pap", "nope"]}).response()
     assert response["data"]["data"]["successes"] == ["tlp"]
@@ -75,7 +77,8 @@ def test_a_refused_taxonomy_change_is_not_a_success(monkeypatch):
 
 def test_taxonomy_tags_that_cannot_be_created_are_reported(monkeypatch):
     from application.plugins import ToggleTaxonomy as module
-    stub(monkeypatch, module, get=Answer(200, [{"Taxonomy": {"id": 3, "namespace": "tlp"}}]),
+    from application.models import mispOps as ops
+    stub(monkeypatch, ops, get=Answer(200, [{"Taxonomy": {"id": 3, "namespace": "tlp"}}]),
          post=lambda server, url, *rest: UNREACHABLE if "addTag" in url else Answer(200, {"saved": True}))
     response = module.ToggleTaxonomy().action(Server(), {"enabled": "1", "taxonomies_uuid": ["tlp"]}).response()
     assert response["status"] == "fail"
@@ -84,11 +87,12 @@ def test_taxonomy_tags_that_cannot_be_created_are_reported(monkeypatch):
 
 def test_toggle_galaxy_failures(monkeypatch):
     from application.plugins import ToggleGalaxy as module
-    stub(monkeypatch, module, get=Answer(200, {"name": "Not an index"}))
+    from application.models import mispOps as ops
+    stub(monkeypatch, ops, get=Answer(200, {"name": "Not an index"}))
     response = module.ToggleGalaxy().action(Server(), {"enabled": "1", "galaxies_uuid": ["u1"]}).response()
     assert response["error"] == ["Could not list the galaxies: unexpected answer"]
 
-    stub(monkeypatch, module, get=Answer(200, [{"Galaxy": {"id": 7, "uuid": "u1"}}]),
+    stub(monkeypatch, ops, get=Answer(200, [{"Galaxy": {"id": 7, "uuid": "u1"}}]),
          post=Answer(200, {"saved": False, "errors": "Galaxy not found"}))
     response = module.ToggleGalaxy().action(Server(), {"enabled": "1", "galaxies_uuid": ["u1"]}).response()
     assert response["status"] == "fail" and response["error"] == ["u1 - Galaxy not found"]
