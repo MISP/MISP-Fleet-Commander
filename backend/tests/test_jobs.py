@@ -71,6 +71,17 @@ def test_empty_credentials_stay_empty_so_the_log_tells_they_were_cleared():
     assert redact({"password": "", "authkey": None}) == {"password": "", "authkey": None}
 
 
+@pytest.mark.parametrize("name, sensitive", [
+    ("MISP.redis_password", True), ("Security.salt", True), ("Plugin.Enrichment_ip2locationio_key", True),
+    ("Plugin.Enrichment_vmware_nsx_vt_key", True), ("Plugin.Enrichment_virustotal_apikey", True),
+    ("Security.password_policy_length", False), ("SMIME.key_sign", False), ("GnuPG.key_fetching_disabled", False),
+    ("Security.advanced_authkeys_validity", False), ("MISP.live", False),
+])
+def test_secret_settings_are_recognised_by_name(name, sensitive):
+    from application.models.jobs import isSensitiveSetting
+    assert isSensitiveSetting(name) is sensitive
+
+
 @pytest.mark.parametrize("naming_key", ["setting", "setting_name", "name", "key"])
 def test_the_value_of_a_named_secret_setting_is_redacted(naming_key):
     from application.models.jobs import redact

@@ -34,8 +34,17 @@ def isSensitiveKey(key: Any) -> bool:
     return isinstance(key, str) and SENSITIVE_KEY.search(normalisedName(key)) is not None
 
 
+# MISP modules name their API keys `<module>_key` (`Plugin.Enrichment_ip2locationio_key`); a bare `key` stays readable
+# elsewhere (`SMIME.key_sign`, `GnuPG.key_fetching_disabled`)
+MODULE_KEY_SETTING = re.compile(r'[_-]key$', re.IGNORECASE)
+
+
 def isSensitiveSetting(name: Any) -> bool:
-    return isinstance(name, str) and SENSITIVE_SETTING.search(normalisedName(name.rsplit('.', 1)[-1])) is not None
+    if not isinstance(name, str):
+        return False
+    lastSegment = name.rsplit('.', 1)[-1]
+    return SENSITIVE_SETTING.search(normalisedName(lastSegment)) is not None or \
+        MODULE_KEY_SETTING.search(lastSegment) is not None
 
 
 def redact(data: Any) -> Any:
