@@ -276,6 +276,7 @@ class Fleet(BaseModel):
                         index=True)
 
     servers = db.relationship('Server', back_populates='fleet', cascade='all, delete-orphan')
+    baseline = db.relationship('Baseline', back_populates='fleet', uselist=False, cascade='all, delete-orphan')
     # servers = db.relationship('Server',
     #     backref=db.backref('fleet', lazy=True, uselist=True, nullable=False),
     #     cascade='all, delete-orphan')
@@ -509,6 +510,79 @@ class JobResult(BaseModel):
                          nullable=True)
 
     job = db.relationship('Job', back_populates='results')
+
+
+BASELINE_RULE_TYPES = ('setting', 'taxonomy_enabled', 'galaxy_enabled', 'object_template_active', 'version_min')
+BASELINE_COMPARATORS = ('eq', 'gte', 'lte')
+BASELINE_SEVERITIES = ('info', 'warning', 'critical')
+
+
+class Baseline(BaseModel):
+    """The configuration a fleet's servers are expected to have: at most one per fleet, created with its first rule,
+    deleted with the fleet. It belongs to the fleet's owner"""
+    __tablename__ = 'baselines'
+
+    id = db.Column(db.Integer,
+                   primary_key=True)
+    fleet_id = db.Column(db.Integer,
+                         db.ForeignKey('fleets.id', ondelete='CASCADE'),
+                         nullable=False,
+                         unique=True)
+    created = db.Column(db.Integer,
+                        nullable=False)
+    updated = db.Column(db.Integer,
+                        nullable=False)
+
+    fleet = db.relationship('Fleet', back_populates='baseline')
+    rules = db.relationship('BaselineRule', back_populates='baseline', cascade='all, delete-orphan',
+                            order_by='BaselineRule.id')
+
+
+class BaselineRule(BaseModel):
+    """One expectation: `type` says what is checked (a setting, a taxonomy, …), `key` which one (setting name,
+    taxonomy namespace, galaxy or object template UUID; empty for `version_min`), `expected` the value it must
+    have, compared with `comparator`. A drifting server raises a health issue of the rule's `severity`. Rules are
+    applied in ID order when drift is fixed"""
+    __tablename__ = 'baseline_rules'
+    __table_args__ = (UniqueConstraint('baseline_id', 'type', 'key'),)
+
+    id = db.Column(db.Integer,
+                   primary_key=True)
+    baseline_id = db.Column(db.Integer,
+                            db.ForeignKey('baselines.id', ondelete='CASCADE'),
+                            nullable=False,
+                            index=True)
+    type = db.Column(db.String(32),
+                     nullable=False)
+    key = db.Column(db.String(255),
+                    nullable=False,
+                    default='')
+    # What people read for the key: a galaxy or object template name, as UUIDs are not telling
+    label = db.Column(db.String(255),
+                      nullable=False,
+                      default='')
+    expected = db.Column(db.JSON,
+                         nullable=True)
+    comparator = db.Column(db.String(8),
+                           nullable=False,
+                           default='eq')
+    severity = db.Column(db.String(16),
+                         nullable=False,
+                         default='warning')
+    note = db.Column(db.String(500),
+                     nullable=False,
+                     default='')
+    # A setting that is usually specific to each server (its URL, its organisation, …), kept on purpose
+    forced = db.Column(db.Boolean,
+                       nullable=False,
+                       default=False,
+                       server_default='0')
+    created = db.Column(db.Integer,
+                        nullable=False)
+    updated = db.Column(db.Integer,
+                        nullable=False)
+
+    baseline = db.relationship('Baseline', back_populates='rules')
 
 
 # SQLite does not enforce foreign keys here, so the ON DELETE clauses above are applied by these listeners

@@ -174,6 +174,7 @@ def create_app():
         from application.controllers.serverManagement import BPserverManagement
         from application.controllers.health import BPhealth
         from application.controllers.jobs import BPjobs
+        from application.controllers.baselines import BPbaselines
         from application.controllers.websocket import registerListeners as registerWSListeners
 
         flaskApp.register_blueprint(BPuser)
@@ -186,6 +187,7 @@ def create_app():
         flaskApp.register_blueprint(BPserverManagement)
         flaskApp.register_blueprint(BPhealth)
         flaskApp.register_blueprint(BPjobs)
+        flaskApp.register_blueprint(BPbaselines)
         registerWSListeners()
 
         # Add CLI commands

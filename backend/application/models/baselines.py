@@ -1,0 +1,495 @@
+#!/usr/bin/env python3
+"""Baselines: the configuration a fleet's servers are expected to have, as a list of rules. A rule names what is
+checked (`type` and `key`) and the value expected; this module validates and stores rules. Drift is evaluated from
+the servers' snapshots, and fixed through jobs.
+
+Settings that are specific to each server (its URL, its organisation, its GnuPG key, …) are refused unless the rule
+is explicitly forced. Secrets are refused outright: a baseline is stored in clear, and MISP hides their value anyway"""
+
+import json
+import math
+import re
+import time
+from typing import Any, Dict, List, Optional
+
+from application import redisModel
+from application.DBModels import (BASELINE_COMPARATORS, BASELINE_RULE_TYPES, BASELINE_SEVERITIES, Baseline,
+                                  BaselineRule, Fleet, Server, db)
+from application.health.versions import format_version, parse_version
+from application.models.jobs import isSensitiveSetting
+from application.models.mispOps import snapshotSettings
+
+MAX_RULES = 2000
+MAX_KEY_LENGTH = 255
+MAX_LABEL_LENGTH = 255
+MAX_NOTE_LENGTH = 500
+MAX_EXPECTED_BYTES = 8 * 1024
+CONFLICT_MODES = ('error', 'skip', 'replace')
+COPY_MODES = ('replace', 'merge')
+
+# Settings that identify a server or hold its own keys: copying them across a fleet would break the servers
+SERVER_SPECIFIC_SETTINGS = (
+    'MISP.baseurl', 'MISP.external_baseurl', 'MISP.uuid', 'MISP.org', 'MISP.host_org_id', 'MISP.email',
+    'MISP.main_logo', 'Security.salt', 'Security.encryption_key',
+)
+SERVER_SPECIFIC_PREFIXES = ('GnuPG.', 'SMIME.')
+
+SETTING_NAME = re.compile(r'^[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)+$')
+NAMESPACE = re.compile(r'^[^\s]+$')
+UUID = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+TRUE_WORDS = ('1', 'true', 'yes', 'on', 'enabled')
+FALSE_WORDS = ('0', 'false', 'no', 'off', 'disabled', '')
+
+# What each type checks. `key`: what names the item; `expected`: the kind of value; `comparators`: allowed ones,
+# the first being the default
+RULE_TYPES = {
+    'setting': {
+        'label': 'MISP setting',
+        'key': 'setting',
+        'expected': 'setting value',
+        'comparators': ('eq', 'gte', 'lte'),
+        'remediable': True,
+    },
+    'taxonomy_enabled': {
+        'label': 'Taxonomy enabled',
+        'key': 'namespace',
+        'expected': 'boolean',
+        'comparators': ('eq',),
+        'remediable': True,
+    },
+    'galaxy_enabled': {
+        'label': 'Galaxy enabled',
+        'key': 'uuid',
+        'expected': 'boolean',
+        'comparators': ('eq',),
+        'remediable': True,
+    },
+    'object_template_active': {
+        'label': 'Object template active',
+        'key': 'uuid',
+        'expected': 'boolean',
+        'comparators': ('eq',),
+        'remediable': True,
+    },
+    'version_min': {
+        'label': 'Minimum MISP version',
+        'key': None,
+        'expected': 'version',
+        'comparators': ('gte',),
+        'remediable': False,
+    },
+}
+assert tuple(RULE_TYPES) == BASELINE_RULE_TYPES
+
+
+class BaselineError(Exception):
+    def __init__(self, message: str, status: int = 400, field: Optional[str] = None, code: Optional[str] = None,
+                 errors: Optional[List[dict]] = None):
+        super().__init__(message)
+        self.message = message
+        self.status = status
+        self.field = field
+        # `server_specific` tells the client that `force` would accept the rule
+        self.code = code
+        # Per-rule errors of a list of rules: [{index, message, field, code}]
+        self.errors = errors
+
+    def toDict(self) -> dict:
+        data = {'message': self.message}
+        for name in ('field', 'code', 'errors'):
+            if getattr(self, name) is not None:
+                data[name] = getattr(self, name)
+        return data
+
+
+def isServerSpecificSetting(name: str) -> bool:
+    return name in SERVER_SPECIFIC_SETTINGS or name.startswith(SERVER_SPECIFIC_PREFIXES)
+
+
+def ruleTypes() -> dict:
+    """What the rule editor needs to know"""
+    return {
+        'types': [{'type': type, **{k: list(v) if isinstance(v, tuple) else v for k, v in meta.items()}}
+                  for type, meta in RULE_TYPES.items()],
+        'severities': list(BASELINE_SEVERITIES),
+        'server_specific_settings': list(SERVER_SPECIFIC_SETTINGS),
+        'server_specific_prefixes': list(SERVER_SPECIFIC_PREFIXES),
+        'max_rules': MAX_RULES,
+    }
+
+
+# Validation
+
+class FleetSettings:
+    """The settings the fleet's servers report in their snapshots, read once per request: their types and whether
+    MISP redacts them"""
+
+    def __init__(self, fleet: Fleet):
+        self.fleet = fleet
+        self._entries = None
+
+    def entries(self) -> Dict[str, List[dict]]:
+        if self._entries is None:
+            self._entries = {}
+            for server in Server.query.filter_by(fleet_id=self.fleet.id).all():
+                for name, entry in snapshotSettings(redisModel.getServerInfo(server.uuid)).items():
+                    self._entries.setdefault(name, []).append(entry)
+        return self._entries
+
+    def isRedacted(self, name: str) -> bool:
+        return any(entry.get('redacted') for entry in self.entries().get(name, []))
+
+    def type(self, name: str) -> Optional[str]:
+        for entry in self.entries().get(name, []):
+            if entry.get('type') in ('boolean', 'numeric', 'float', 'string'):
+                return entry['type']
+        return None
+
+
+def asBoolean(value: Any, field: str = 'expected') -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)) and value in (0, 1):
+        return bool(value)
+    if isinstance(value, str) and value.strip().lower() in TRUE_WORDS + FALSE_WORDS:
+        return value.strip().lower() in TRUE_WORDS
+    raise BaselineError('Expected `true` or `false`', field=field)
+
+
+def asNumber(value: Any, integer: bool, field: str = 'expected'):
+    if isinstance(value, bool):
+        raise BaselineError('Expected a number', field=field)
+    if isinstance(value, str):
+        try:
+            value = float(value.strip())
+        except ValueError:
+            raise BaselineError('Expected a number', field=field)
+    if not isinstance(value, (int, float)) or math.isnan(value) or math.isinf(value):
+        raise BaselineError('Expected a number', field=field)
+    if integer:
+        if value != int(value):
+            raise BaselineError('Expected a whole number', field=field)
+        return int(value)
+    return int(value) if isinstance(value, int) or value == int(value) else float(value)
+
+
+def checkSettingKey(name: str, force: bool, settings: FleetSettings) -> bool:
+    """Whether the rule is forced: True for an accepted server-specific setting"""
+    if not SETTING_NAME.match(name):
+        raise BaselineError('A setting name looks like `MISP.live` or `Security.password_policy_length`', field='key')
+    if isSensitiveSetting(name) or settings.isRedacted(name):
+        raise BaselineError(f'`{name}` holds a secret: baselines do not manage secrets', field='key', code='secret')
+    if isServerSpecificSetting(name):
+        if not force:
+            raise BaselineError(f'`{name}` is usually different on each server. Force the rule to keep it anyway',
+                                field='key', code='server_specific')
+        return True
+    return False
+
+
+def settingExpected(name: str, expected: Any, comparator: str, settings: FleetSettings) -> Any:
+    """The expected value in the setting's type, when a server of the fleet reports that type"""
+    settingType = settings.type(name)
+    if comparator in ('gte', 'lte'):
+        if settingType not in (None, 'numeric', 'float'):
+            raise BaselineError(f'`{name}` is not a number: it can only be compared with `eq`', field='comparator')
+        return asNumber(expected, integer=settingType == 'numeric')
+    if settingType == 'boolean':
+        return asBoolean(expected)
+    if settingType in ('numeric', 'float') and expected not in (None, ''):
+        return asNumber(expected, integer=settingType == 'numeric')
+    if settingType == 'string' and expected is not None and not isinstance(expected, str):
+        if isinstance(expected, bool) or not isinstance(expected, (int, float)):
+            raise BaselineError('Expected a text value', field='expected')
+        return str(expected)
+    if expected is not None and not isinstance(expected, (bool, int, float, str)):
+        raise BaselineError('Expected a single value (text, number or boolean)', field='expected')
+    return expected
+
+
+def knownLabel(type: str, key: str) -> str:
+    """The name of a galaxy or object template MISP ships, from the plugins' lists"""
+    if type == 'galaxy_enabled':
+        from application.plugins.ToggleGalaxy import ALL_GALAXIES
+        for galaxy in ALL_GALAXIES:
+            if str(galaxy.get('uuid', '')).lower() == key:
+                return f"{galaxy.get('namespace', '-')} :: {galaxy['name']}" if galaxy.get('namespace') else galaxy['name']
+    if type == 'object_template_active':
+        from application.plugins.ToggleObject import ALL_TEMPLATES
+        for template in ALL_TEMPLATES:
+            if str(template.get('uuid', '')).lower() == key:
+                return template['name']
+    return ''
+
+
+def text(payload: dict, field: str, maxLength: int) -> str:
+    value = payload.get(field)
+    if value is None:
+        return ''
+    if not isinstance(value, str):
+        raise BaselineError(f'`{field}` must be a text', field=field)
+    value = value.strip()
+    if len(value) > maxLength:
+        raise BaselineError(f'`{field}` is longer than {maxLength} characters', field=field)
+    return value
+
+
+def validateRule(payload: Any, settings: FleetSettings) -> dict:
+    """The rule's columns from a client's rule, normalised. Raises BaselineError naming the faulty field"""
+    if not isinstance(payload, dict):
+        raise BaselineError('A rule must be an object')
+    type = payload.get('type')
+    if type not in RULE_TYPES:
+        raise BaselineError(f"`type` must be one of {', '.join(RULE_TYPES)}", field='type')
+    meta = RULE_TYPES[type]
+
+    comparator = payload.get('comparator') or meta['comparators'][0]
+    if comparator not in meta['comparators']:
+        raise BaselineError(f"`comparator` must be {' or '.join(meta['comparators'])} for this type", field='comparator')
+    severity = payload.get('severity') or 'warning'
+    if severity not in BASELINE_SEVERITIES:
+        raise BaselineError(f"`severity` must be one of {', '.join(BASELINE_SEVERITIES)}", field='severity')
+    force = payload.get('force', payload.get('forced')) is True
+    forced = False
+
+    key = payload.get('key')
+    if meta['key'] is None:
+        key = ''
+    elif not isinstance(key, str) or key.strip() == '':
+        raise BaselineError('`key` is required', field='key')
+    else:
+        key = key.strip()
+        if len(key) > MAX_KEY_LENGTH:
+            raise BaselineError(f'`key` is longer than {MAX_KEY_LENGTH} characters', field='key')
+
+    expected = payload.get('expected')
+    if type == 'setting':
+        forced = checkSettingKey(key, force, settings)
+        expected = settingExpected(key, expected, comparator, settings)
+    elif type == 'version_min':
+        version = parse_version(expected if isinstance(expected, str) else None)
+        if version is None:
+            raise BaselineError('Expected a MISP version such as `2.5.20`', field='expected')
+        expected = format_version(version)
+    else:
+        if meta['key'] == 'uuid':
+            key = key.lower()
+            if not UUID.match(key):
+                raise BaselineError('`key` must be the UUID of the item', field='key')
+        elif not NAMESPACE.match(key):
+            raise BaselineError('`key` must be a taxonomy namespace, such as `tlp`', field='key')
+        expected = asBoolean(True if expected is None else expected)
+
+    if len(json.dumps(expected)) > MAX_EXPECTED_BYTES:
+        raise BaselineError(f'`expected` is larger than {MAX_EXPECTED_BYTES // 1024} KB', field='expected')
+
+    return {
+        'type': type,
+        'key': key,
+        'label': text(payload, 'label', MAX_LABEL_LENGTH) or knownLabel(type, key),
+        'expected': expected,
+        'comparator': comparator,
+        'severity': severity,
+        'note': text(payload, 'note', MAX_NOTE_LENGTH),
+        'forced': forced,
+    }
+
+
+# Serialization
+
+def serializeRule(rule: BaselineRule) -> dict:
+    return {
+        'id': rule.id,
+        'type': rule.type,
+        'key': rule.key,
+        'label': rule.label,
+        'expected': rule.expected,
+        'comparator': rule.comparator,
+        'severity': rule.severity,
+        'note': rule.note,
+        'forced': rule.forced,
+        'remediable': RULE_TYPES[rule.type]['remediable'] if rule.type in RULE_TYPES else False,
+        'created': rule.created,
+        'updated': rule.updated,
+    }
+
+
+def serializeBaseline(fleet: Fleet) -> dict:
+    baseline = fleet.baseline
+    return {
+        'id': baseline.id if baseline else None,
+        'fleet_id': fleet.id,
+        'created': baseline.created if baseline else None,
+        'updated': baseline.updated if baseline else None,
+        'rules': [serializeRule(rule) for rule in baseline.rules] if baseline else [],
+    }
+
+
+# Operations
+
+def ownedFleet(user, fleet_id: int) -> Fleet:
+    fleet = Fleet.query.filter_by(id=fleet_id, user_id=user.id).first()
+    if fleet is None:
+        raise BaselineError('Unknown fleet', 404)
+    return fleet
+
+
+def ownedRule(user, rule_id: int) -> BaselineRule:
+    rule = BaselineRule.query.join(Baseline).join(Fleet) \
+        .filter(BaselineRule.id == rule_id, Fleet.user_id == user.id).first()
+    if rule is None:
+        raise BaselineError('Unknown rule', 404)
+    return rule
+
+
+def ensureBaseline(fleet: Fleet, now: int) -> Baseline:
+    if fleet.baseline is None:
+        fleet.baseline = Baseline(created=now, updated=now)
+        db.session.add(fleet.baseline)
+    return fleet.baseline
+
+
+def getForUser(user, fleet_id: int) -> dict:
+    return serializeBaseline(ownedFleet(user, fleet_id))
+
+
+def validateRules(rules: Any, settings: FleetSettings) -> List[dict]:
+    """All of them or none: the errors of every invalid rule, with its index"""
+    if not isinstance(rules, list) or len(rules) == 0:
+        raise BaselineError('`rules` must be a non-empty list of rules', field='rules')
+    if len(rules) > MAX_RULES:
+        raise BaselineError(f'A baseline has at most {MAX_RULES} rules', field='rules')
+    valid, errors, seen = [], [], {}
+    for index, payload in enumerate(rules):
+        try:
+            rule = validateRule(payload, settings)
+        except BaselineError as e:
+            errors.append({'index': index, 'message': e.message, 'field': e.field, 'code': e.code})
+            continue
+        identity = (rule['type'], rule['key'])
+        if identity in seen:
+            errors.append({'index': index, 'message': f'Same rule as #{seen[identity] + 1}', 'field': 'key',
+                           'code': 'duplicate'})
+            continue
+        seen[identity] = index
+        valid.append(rule)
+    if errors:
+        raise BaselineError(f"{len(errors)} rule{'s are' if len(errors) > 1 else ' is'} invalid", errors=errors)
+    return valid
+
+
+def applyRules(fleet: Fleet, rules: List[dict], onConflict: str, now: int) -> None:
+    baseline = ensureBaseline(fleet, now)
+    existing = {(rule.type, rule.key): rule for rule in baseline.rules}
+    conflicts = [rule for rule in rules if (rule['type'], rule['key']) in existing]
+    if conflicts and onConflict == 'error':
+        raise BaselineError(
+            f"{len(conflicts)} rule{'s' if len(conflicts) > 1 else ''} already in the baseline", 409,
+            errors=[{'index': rules.index(rule), 'message': 'Already in the baseline', 'field': 'key',
+                     'code': 'exists', 'rule_id': existing[(rule['type'], rule['key'])].id} for rule in conflicts])
+    added = [rule for rule in rules if (rule['type'], rule['key']) not in existing]
+    if len(baseline.rules) + len(added) > MAX_RULES:
+        raise BaselineError(f'A baseline has at most {MAX_RULES} rules', field='rules')
+    for rule in rules:
+        current = existing.get((rule['type'], rule['key']))
+        if current is None:
+            baseline.rules.append(BaselineRule(**rule, created=now, updated=now))
+        elif onConflict == 'replace':
+            for column, value in rule.items():
+                setattr(current, column, value)
+            current.updated = now
+    baseline.updated = now
+
+
+def addRules(user, fleet_id: int, rules: Any, onConflict: str = 'error') -> dict:
+    """Adds rules to the fleet's baseline, creating it if needed. A rule already present (same type and key) is an
+    error (409), is left as it is (`skip`) or is overwritten (`replace`)"""
+    if onConflict not in CONFLICT_MODES:
+        raise BaselineError(f"`on_conflict` must be one of {', '.join(CONFLICT_MODES)}", field='on_conflict')
+    fleet = ownedFleet(user, fleet_id)
+    valid = validateRules(rules, FleetSettings(fleet))
+    applyRules(fleet, valid, onConflict, int(time.time()))
+    db.session.commit()
+    return serializeBaseline(fleet)
+
+
+def updateRule(user, rule_id: int, changes: Any) -> dict:
+    """Changes what a rule expects. Its type and key cannot change: that is another rule"""
+    if not isinstance(changes, dict):
+        raise BaselineError('The body must be a JSON object')
+    rule = ownedRule(user, rule_id)
+    for field in ('type', 'key'):
+        if field in changes and changes[field] != getattr(rule, field):
+            raise BaselineError(f'`{field}` cannot be changed: add another rule instead', field=field)
+    payload = {**serializeRule(rule), **changes, 'type': rule.type, 'key': rule.key,
+               'force': changes.get('force', rule.forced)}
+    valid = validateRule(payload, FleetSettings(rule.baseline.fleet))
+    now = int(time.time())
+    for column, value in valid.items():
+        setattr(rule, column, value)
+    rule.updated = now
+    rule.baseline.updated = now
+    db.session.commit()
+    return serializeRule(rule)
+
+
+def deleteRules(user, fleet_id: int, rule_ids: Any) -> dict:
+    """Removes rules of the fleet's baseline: the given ones, or all of them when `rule_ids` is None"""
+    fleet = ownedFleet(user, fleet_id)
+    if fleet.baseline is None:
+        if rule_ids is None:
+            return serializeBaseline(fleet)
+        raise BaselineError('Unknown rule', 404)
+    if rule_ids is None:
+        fleet.baseline = None
+        db.session.commit()
+        return serializeBaseline(fleet)
+    if not isinstance(rule_ids, list) or any(isinstance(id, bool) or not isinstance(id, int) for id in rule_ids):
+        raise BaselineError('`rule_ids` must be a list of rule IDs', field='rule_ids')
+    byId = {rule.id: rule for rule in fleet.baseline.rules}
+    missing = [id for id in rule_ids if id not in byId]
+    if missing:
+        raise BaselineError(f"Unknown rule{'s' if len(missing) > 1 else ''}: {', '.join(map(str, missing))}", 404)
+    for id in set(rule_ids):
+        fleet.baseline.rules.remove(byId[id])
+    fleet.baseline.updated = int(time.time())
+    db.session.commit()
+    return serializeBaseline(fleet)
+
+
+def deleteRule(user, rule_id: int) -> None:
+    rule = ownedRule(user, rule_id)
+    baseline = rule.baseline
+    baseline.rules.remove(rule)
+    baseline.updated = int(time.time())
+    db.session.commit()
+
+
+def copyFromFleet(user, fleet_id: int, fromFleetId: Any, mode: str = 'replace') -> dict:
+    """Copies another fleet's rules: `replace` makes the baseline identical to the other one, `merge` adds the other
+    fleet's rules and overwrites those with the same type and key. Rules are validated again against this fleet:
+    a server-specific setting stays allowed only because its rule was forced"""
+    if mode not in COPY_MODES:
+        raise BaselineError(f"`mode` must be one of {', '.join(COPY_MODES)}", field='mode')
+    if isinstance(fromFleetId, bool) or not isinstance(fromFleetId, int):
+        raise BaselineError('`from_fleet_id` must be a fleet ID', field='from_fleet_id')
+    if fromFleetId == fleet_id:
+        raise BaselineError('A fleet cannot copy its own baseline', field='from_fleet_id')
+    fleet = ownedFleet(user, fleet_id)
+    source = ownedFleet(user, fromFleetId)
+    if source.baseline is None or len(source.baseline.rules) == 0:
+        raise BaselineError(f'Fleet `{source.name}` has no baseline rules to copy', field='from_fleet_id')
+    payloads = []
+    for rule in source.baseline.rules:
+        payload = serializeRule(rule)
+        payload['force'] = rule.forced
+        payloads.append(payload)
+    valid = validateRules(payloads, FleetSettings(fleet))
+    now = int(time.time())
+    if mode == 'replace' and fleet.baseline is not None:
+        fleet.baseline.rules = []
+        db.session.flush()
+    applyRules(fleet, valid, 'replace', now)
+    db.session.commit()
+    return serializeBaseline(fleet)
+
