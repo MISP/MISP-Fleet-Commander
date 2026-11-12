@@ -1,6 +1,24 @@
 <template>
 <Layout name="LayoutDefault">
     <div>
+        <nav class="fleet-tabs" aria-label="Fleet views">
+            <router-link
+                v-for="tab in fleetTabs"
+                :key="tab.name"
+                :to="{ query: tabQuery(tab.name) }"
+                :class="['fleet-tab', { active: activeTab === tab.name }]"
+                :aria-current="activeTab === tab.name ? 'page' : null"
+                replace
+            >
+                <i :class="['fas', `fa-${tab.icon}`, 'mr-1']" aria-hidden="true"></i>{{ tab.label }}
+            </router-link>
+        </nav>
+
+        <div v-if="activeTab === 'jobs'" class="fleet-jobs">
+            <JobList v-if="selectedFleet" :fleet-id="selectedFleet.id"></JobList>
+        </div>
+
+        <div v-show="activeTab === 'servers'">
         <div class="table-header">
             <div class="d-flex" style="margin-top: -5px">
                 <b-button-group class="text-nowrap mr-2 pb-1">
@@ -353,6 +371,7 @@
                 </div>
             </template>
         </b-table>
+        </div>
 
         <DeleteModal
             :serverToDelete="serverToDelete"
@@ -423,7 +442,13 @@ import iconButton from "@/components/ui/elements/iconButton.vue"
 import MonitoringStatusBadge from "@/components/ui/elements/MonitoringStatusBadge.vue"
 import FleetWatchingStatusBadge from "@/components/ui/elements/FleetWatchingStatusBadge.vue"
 import ServerHealthBadge from "@/components/health/ServerHealthBadge.vue"
+import JobList from "@/components/jobs/JobList.vue"
 
+// The fleet page's views, opened with `?tab=` (Servers when absent)
+const FLEET_TABS = [
+    { name: "servers", label: "Servers", icon: "server" },
+    { name: "jobs", label: "Jobs", icon: "list-check" },
+]
 
 export default {
     name: "TheServers",
@@ -454,9 +479,11 @@ export default {
         MonitoringStatusBadge,
         FleetWatchingStatusBadge,
         ServerHealthBadge,
+        JobList,
     },
     data: function() {
         return {
+            fleetTabs: FLEET_TABS,
             postInProgress: {
                 modal: false,
             },
@@ -591,6 +618,10 @@ export default {
         }
     },
     computed: {
+        activeTab() {
+            const tab = this.$route.query.tab
+            return FLEET_TABS.some(entry => entry.name === tab) ? tab : "servers"
+        },
         ...mapState({
             fetching_servers_in_progress: state => state.servers.fetching_servers_in_progress,
             fetching_plugin_index_in_progress: state => state.plugins.fetching_index_in_progress,
@@ -668,6 +699,15 @@ export default {
         },
     },
     methods: {
+        tabQuery(name) {
+            const query = Object.assign({}, this.$route.query)
+            if (name === "servers") {
+                delete query.tab
+            } else {
+                query.tab = name
+            }
+            return query
+        },
         setCheckOnServers(checked) {
             if (checked) {
                 this.$refs.serverTable.selectAllRows()
@@ -1073,7 +1113,9 @@ export default {
     },
     beforeRouteEnter(to, from, next) {
         if (store.getters["fleets/selectedFleet"] === null) {
-            store.dispatch("fleets/selectFleet", {data: {id: to.params.fleet_id}}).then(() => {
+            // No redirect: this navigation already goes to the fleet page, and the redirect would drop its query
+            // (e.g. `?tab=jobs`)
+            store.dispatch("fleets/selectFleet", {data: {id: to.params.fleet_id}, redirect: false}).then(() => {
                 store.dispatch("servers/fetchServers", {force: true})
                 next()
             }).catch(() => {
@@ -1093,6 +1135,44 @@ export default {
 </style>
 
 <style scoped>
+.fleet-tabs {
+    display: flex;
+    gap: 0.25rem;
+    border-bottom: 1px solid var(--health-rule);
+    margin: -0.25rem 0 0.85rem;
+}
+
+.fleet-tab {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.4rem 0.85rem;
+    margin-bottom: -1px;
+    border-bottom: 2px solid transparent;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #5a6270;
+    text-decoration: none;
+}
+
+.fleet-tab:hover {
+    color: var(--var-color-yankeesblue);
+    text-decoration: none;
+}
+
+.fleet-tab.active {
+    color: var(--var-color-yankeesblue);
+    border-bottom-color: var(--var-color-lapislazuli);
+}
+
+.fleet-tab:focus-visible {
+    outline: 2px solid var(--var-color-lapislazuli);
+    outline-offset: -2px;
+}
+
+.fleet-jobs {
+    max-width: 1180px;
+}
+
 /* The tools wrap below the pagination when both do not fit */
 .table-header {
     display: flex;

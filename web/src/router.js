@@ -129,18 +129,46 @@ let router =  new Router({
             }
         },
         {
-            path: "/jobs/:job_id([0-9a-f-]{36})",
-            name: "jobs.view",
-            component: () => import("./views/jobs/JobView.vue"),
-            props: (route) => ({ job_id: route.params.job_id }),
+            path: "/jobs",
+            // Both pages have their own layout: the parent only gives the job page its "Jobs" breadcrumb. It passes
+            // on App's listeners, so that the pages' `update:layout` still reaches App
+            component: {
+                name: "JobsRoot",
+                render(h) {
+                    return h("router-view", { on: this.$listeners })
+                },
+            },
             meta: {
                 requiresFleet: false,
                 breadcrumbs: {
-                    text: "Job",
-                    to: { name: "jobs.view" },
+                    text: "Jobs",
+                    to: { name: "jobs" },
                     icon: "list-check"
                 }
-            }
+            },
+            children: [
+                {
+                    path: "",
+                    name: "jobs",
+                    component: () => import("./views/jobs/Jobs.vue"),
+                    meta: {
+                        requiresFleet: false,
+                    }
+                },
+                {
+                    path: ":job_id([0-9a-f-]{36})",
+                    name: "jobs.view",
+                    component: () => import("./views/jobs/JobView.vue"),
+                    props: (route) => ({ job_id: route.params.job_id }),
+                    meta: {
+                        requiresFleet: false,
+                        breadcrumbs: {
+                            text: "Job",
+                            to: { name: "jobs.view" },
+                        }
+                    }
+                },
+            ]
         },
         {
             path: "/connections",

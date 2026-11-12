@@ -66,6 +66,11 @@ export default {
                     scope: "strategicView",
                 },
                 {
+                    name: "Jobs",
+                    to: { name: "jobs" },
+                    scope: "jobs",
+                },
+                {
                     name: "Commanders",
                     to: { name: "users" },
                     scope: "users",

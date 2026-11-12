@@ -23,7 +23,7 @@
                         <template v-if="job.fleet_name">
                             <span class="dot" aria-hidden="true">·</span>
                             <router-link
-                                v-if="job.fleet_id"
+                                v-if="job.fleet_id && own"
                                 :to="{ name: 'fleet.view', params: { fleet_id: job.fleet_id } }"
                             >{{ job.fleet_name }}</router-link>
                             <span v-else>{{ job.fleet_name }}</span>
@@ -34,8 +34,12 @@
                         <span :title="absolute(job.created)">Created {{ relative(job.created) }}</span>
                         <template v-if="job.user_email">
                             <span class="dot" aria-hidden="true">·</span>
-                            <span>by {{ job.user_email }}</span>
+                            <span :class="{ 'is-gone': !job.user_id }">by {{ job.user_email }}<template v-if="!job.user_id"> (deleted user)</template></span>
                         </template>
+                    </p>
+                    <p v-if="!own" class="job-foreign">
+                        <i class="fas fa-user-shield mr-1" aria-hidden="true"></i>
+                        You see this job as an admin. You can cancel it, but only the user who started it can run it again.
                     </p>
                 </div>
                 <div class="job-actions">
@@ -48,7 +52,7 @@
                     >
                         <i class="fas fa-ban mr-1" aria-hidden="true"></i>{{ cancelRequested ? 'Cancelling…' : 'Cancel' }}
                     </b-button>
-                    <template v-if="final">
+                    <template v-if="final && own">
                         <b-button
                             v-if="job.failed > 0"
                             size="sm"
@@ -110,6 +114,8 @@ import JobResultsTable from "@/components/jobs/JobResultsTable.vue"
 import jsonViewer from "@/components/ui/elements/jsonViewer.vue"
 import { JOB_KIND_LABELS, isFinalJob } from "@/helpers/jobs"
 
+const POLL_INTERVAL = 3000
+
 export default {
     name: "JobView",
     components: {
@@ -141,6 +147,14 @@ export default {
         final() {
             return isFinalJob(this.job)
         },
+        // Jobs of other users (an admin's view) get no live events: they go to their owner only
+        own() {
+            const user = this.$store.getters["auth/user"]
+            return !this.job || (user !== null && this.job.user_id === user.id)
+        },
+        needsPolling() {
+            return Boolean(this.job) && !this.final && !this.own
+        },
         kindLabel() {
             return JOB_KIND_LABELS[this.job.kind] || this.job.kind
         },
@@ -168,9 +182,23 @@ export default {
                 this.cancelRequested = false
             }
         },
+        needsPolling: {
+            handler(needed) {
+                clearInterval(this.pollTimer)
+                if (needed) {
+                    this.pollTimer = setInterval(() => {
+                        this.$store.dispatch("jobs/fetch", this.job_id).catch(() => {})
+                    }, POLL_INTERVAL)
+                }
+            },
+            immediate: true,
+        },
     },
     mounted() {
         this.load()
+    },
+    beforeDestroy() {
+        clearInterval(this.pollTimer)
     },
     methods: {
         load() {
@@ -264,6 +292,20 @@ export default {
 
 .dot {
     margin: 0 0.35rem;
+}
+
+.is-gone {
+    font-style: italic;
+}
+
+.job-foreign {
+    display: inline-block;
+    margin: 0.5rem 0 0;
+    padding: 0.3rem 0.7rem;
+    border-radius: 4px;
+    font-size: 0.82rem;
+    color: var(--health-info-ink);
+    background: var(--health-info-tint);
 }
 
 .job-actions {

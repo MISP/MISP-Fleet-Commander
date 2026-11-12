@@ -29,6 +29,32 @@ export const JOB_KIND_LABELS = {
     baseline_remediation: "Baseline remediation",
 }
 
+// The jobs list's status filter: groups of statuses, as the API takes them (comma-separated)
+export const JOB_STATUS_FILTERS = [
+    { value: "", label: "All", statuses: [] },
+    { value: "active", label: "In progress", statuses: ["queued", "running"] },
+    { value: "failed", label: "With failures", statuses: ["failed", "partial"] },
+    { value: "done", label: "Done", statuses: ["done"] },
+    { value: "cancelled", label: "Cancelled", statuses: ["cancelled"] },
+]
+
+export const JOB_PERIODS = [
+    { value: "", text: "Any time", seconds: null },
+    { value: "24h", text: "Last 24 hours", seconds: 86400 },
+    { value: "7d", text: "Last 7 days", seconds: 7 * 86400 },
+    { value: "30d", text: "Last 30 days", seconds: 30 * 86400 },
+]
+
+// Results of a job as the list knows them (counters only, no per-server rows): what is neither OK nor failed but
+// over was skipped or cancelled
+export function jobTally(job) {
+    const total = job.total || 0
+    const ok = job.succeeded || 0
+    const failed = job.failed || 0
+    const done = Math.max(job.done || 0, ok + failed)
+    return { total, ok, failed, other: Math.max(done - ok - failed, 0), pending: Math.max(total - done, 0), done }
+}
+
 export function isFinalJob(job) {
     return job !== null && job !== undefined && FINAL_JOB_STATUSES.includes(job.status)
 }

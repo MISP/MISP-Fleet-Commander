@@ -19,6 +19,10 @@
         v-else-if="scope === 'strategicView'"
         :class="['fas', 'fa-satellite-dish']"
     ></i>
+    <i
+        v-else-if="scope === 'jobs'"
+        :class="['fas', 'fa-list-check']"
+    ></i>
     <img
         v-else-if="scope === 'users'"
         :src="require('@/assets/commander.svg')"
@@ -39,7 +43,7 @@ export default {
             type: String,
             required: true,
             validator: function (value) {
-                return ["", "home", "attention", "servers", "connections", "strategicView", "users"].indexOf(value) !== -1
+                return ["", "home", "attention", "servers", "connections", "strategicView", "jobs", "users"].indexOf(value) !== -1
             }
         },
         forceBlack: {

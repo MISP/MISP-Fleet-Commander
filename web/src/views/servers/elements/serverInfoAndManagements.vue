@@ -135,6 +135,14 @@
                 <ServerSync :server_id="server_id"></ServerSync>
             </div>
         </b-tab>
+        <b-tab no-body lazy>
+            <template #title>
+                <i class="fas fa-list-check mr-1"></i><strong>Jobs</strong>
+            </template>
+            <div :style="getMaxHeight" class="p-3">
+                <JobList :server-id="server_id"></JobList>
+            </div>
+        </b-tab>
         <b-tab title="Content" class="p-1" no-body disabled lazy>
             <template #title>
                 <i class="fas fa-database mr-1"></i><strong>Content</strong>
@@ -179,6 +187,7 @@ import MISPConnectedServers from "@/views/servers/elements/MISPConnectedServers.
 import instanceUsage from "@/views/servers/elements/instanceUsage.vue"
 import pluginActions from "@/views/servers/elements/pluginActions.vue"
 import ServerSync from "@/views/servers/elements/ServerSync.vue"
+import JobList from "@/components/jobs/JobList.vue"
 
 // Position of the tabs that can be opened by name
 const TAB_INDEX = {
@@ -186,6 +195,7 @@ const TAB_INDEX = {
     profile: 4,
     connections: 5,
     sync: 6,
+    jobs: 7,
 }
 
 export default {
@@ -200,6 +210,7 @@ export default {
         instanceUsage,
         pluginActions,
         ServerSync,
+        JobList,
     },
     props: {
         server_id: {
