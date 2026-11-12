@@ -536,7 +536,31 @@ export default {
         },
         openIssue(issue) {
             const action = issue.action || {}
+            if (action.kind === "open_baseline") {
+                this.openBaseline(issue.fleet_id, action.rule_id)
+                return
+            }
             this.openServer(issue.server_id, action.kind === "open_tab" ? action.target : undefined)
+        },
+        // The fleet page's Baseline tab, on the drifting rule
+        openBaseline(fleet_id, rule_id) {
+            const open = () => {
+                this.$router.push({
+                    name: "fleet.view",
+                    params: { fleet_id },
+                    query: { tab: "baseline", rule: String(rule_id) },
+                }).catch(() => {})
+            }
+            const selected = this.$store.getters["fleets/selectedFleet"]
+            if (selected && selected.id === fleet_id) {
+                open()
+                return
+            }
+            this.$store.dispatch("fleets/selectFleet", { data: { id: fleet_id }, redirect: false })
+                .then(open)
+                .catch(() => {
+                    this.$bvToast.toast("This fleet could not be opened.", { title: "Could not open the baseline", variant: "danger" })
+                })
         },
         // `?server_id=` (from a health badge) opens the page on that server, once
         jumpFromQuery() {

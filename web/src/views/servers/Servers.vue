@@ -11,12 +11,19 @@
                 replace
             >
                 <i :class="['fas', `fa-${tab.icon}`, 'mr-1']" aria-hidden="true"></i>{{ tab.label }}
+                <span
+                    v-if="tab.name === 'baseline' && baselineDriftCount > 0"
+                    class="fleet-tab-count"
+                    :title="`${baselineDriftCount} drift issue${baselineDriftCount === 1 ? '' : 's'}`"
+                >{{ baselineDriftCount }}</span>
             </router-link>
         </nav>
 
         <div v-if="activeTab === 'jobs'" class="fleet-jobs">
             <JobList v-if="selectedFleet" :fleet-id="selectedFleet.id"></JobList>
         </div>
+
+        <BaselineTab v-if="activeTab === 'baseline' && selectedFleet" :fleet-id="selectedFleet.id"></BaselineTab>
 
         <div v-show="activeTab === 'servers'">
         <div class="table-header">
@@ -443,10 +450,12 @@ import MonitoringStatusBadge from "@/components/ui/elements/MonitoringStatusBadg
 import FleetWatchingStatusBadge from "@/components/ui/elements/FleetWatchingStatusBadge.vue"
 import ServerHealthBadge from "@/components/health/ServerHealthBadge.vue"
 import JobList from "@/components/jobs/JobList.vue"
+import BaselineTab from "@/components/baselines/BaselineTab.vue"
 
 // The fleet page's views, opened with `?tab=` (Servers when absent)
 const FLEET_TABS = [
     { name: "servers", label: "Servers", icon: "server" },
+    { name: "baseline", label: "Baseline", icon: "ruler-combined" },
     { name: "jobs", label: "Jobs", icon: "list-check" },
 ]
 
@@ -480,6 +489,7 @@ export default {
         FleetWatchingStatusBadge,
         ServerHealthBadge,
         JobList,
+        BaselineTab,
     },
     data: function() {
         return {
@@ -668,6 +678,11 @@ export default {
         },
         displayedTotalRows() {
             return Math.min(this.table.totalRows, this.table.perPage)
+        },
+        // Open drift issues of the fleet's servers, on the Baseline tab
+        baselineDriftCount() {
+            return this.getIndex.reduce((count, server) => count + (this.serverActiveIssues[server.id] || [])
+                .filter(issue => issue.rule === "baseline_drift" && !issue.id.endsWith(":unchecked")).length, 0)
         },
         serversWithIssuesCount() {
             return this.getIndex.filter(server => (this.serverActiveIssues[server.id] || []).length > 0).length
@@ -1171,6 +1186,19 @@ export default {
 
 .fleet-jobs {
     max-width: 1180px;
+}
+
+.fleet-tab-count {
+    margin-left: 0.4rem;
+    min-width: 1.4em;
+    padding: 0 0.35rem;
+    border-radius: 0.7rem;
+    background: var(--health-critical-tint);
+    color: var(--health-critical-ink);
+    font-size: 0.72rem;
+    line-height: 1.5;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
 }
 
 /* The tools wrap below the pagination when both do not fit */

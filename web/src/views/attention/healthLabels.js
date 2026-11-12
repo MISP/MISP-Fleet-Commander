@@ -59,6 +59,8 @@ export function actionMeta(action) {
             return TAB_ACTIONS[action.target] || { label: "Open server", icon: "fas fa-server" }
         case "open_misp":
             return { label: "Open in MISP", icon: "fas fa-arrow-up-right-from-square" }
+        case "open_baseline":
+            return { label: "Open baseline", icon: "fas fa-ruler-combined" }
         default:
             return null
     }

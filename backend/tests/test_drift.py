@@ -337,3 +337,49 @@ def test_full_refresh_lists_the_content_rules_need(fleet, client, auth_headers, 
     assert "/taxonomies/index" in requested and "/galaxies/index" not in requested
     state = redisModel.getServerInfo(beta.uuid)["query_result"]["baselineState"]
     assert state["taxonomies"]["items"] == {"tlp": {"enabled": True}, "pap": {"enabled": False}}
+
+
+# Reference server
+
+def test_reference_server_lists_settings_and_content(fleet, client, auth_headers, make_user, monkeypatch):
+    from application import redisModel
+    import application.models.utils as utils
+    user, theFleet, (beta, alpha) = fleet
+    headers = auth_headers(user)
+    requested = []
+
+    async def fakeFetcher(server, urls, timeout=300):
+        requested.append((server.id, urls, timeout))
+        answers = copy.deepcopy(CONTENT_ANSWERS)
+        answers["/taxonomies/index"][0]["Taxonomy"]["description"] = "Traffic Light Protocol"
+        answers["/galaxies/index"] = {"_status_code": 500, "message": "Boom"}
+        return [answers[url] for url in urls]
+    monkeypatch.setattr(utils, "asyncFetcher", fakeFetcher)
+
+    body = client.get(f"/baselines/reference/{beta.id}", headers=headers).get_json()
+    assert body["server"]["id"] == beta.id and body["version"] == "3.0.0" and body["unavailable"] is None
+    assert requested == [(beta.id, ["/taxonomies/index", "/galaxies/index", "/objectTemplates/index/all"], 30)]
+    settings = {entry["name"]: entry for entry in body["settings"]}
+    assert settings["MISP.live"]["type"] == "boolean" and settings["MISP.live"]["server_specific"] is False
+    assert settings["MISP.baseurl"]["server_specific"] is True
+    assert "Security.password_policy_length" in settings
+    assert not {"MISP.redis_password", "Plugin.ZeroMQ_password", "Plugin.Enrichment_ip2locationio_key"} & set(settings)
+    content = body["content"]
+    assert content["taxonomy_enabled"]["items"] == [
+        {"key": "pap", "label": "pap", "enabled": False, "description": "", "group": ""},
+        {"key": "tlp", "label": "tlp", "enabled": True, "description": "Traffic Light Protocol", "group": ""}]
+    assert content["galaxy_enabled"] == {"error": "Could not list the galaxies: HTTP 500: Boom"}
+    assert content["object_template_active"]["items"][0]["key"] == TEMPLATE
+    assert content["object_template_active"]["items"][0]["enabled"] is True
+
+    # Unreachable: what it listed last, without asking MISP
+    redisModel.saveServerInfo(alpha.uuid, snapshotWith(content=contentState()))
+    setStatus(alpha, {"error": "Server unreachable", "timestamp": okStatus()["timestamp"]})
+    body = client.get(f"/baselines/reference/{alpha.id}", headers=headers).get_json()
+    assert len(requested) == 1 and body["unavailable"] == "Unreachable"
+    assert body["content"]["galaxy_enabled"]["source"] == "snapshot"
+    assert body["content"]["galaxy_enabled"]["items"][0]["label"] == "firehol-ipsets :: FireHOL IPsets"
+    assert body["settings"] != []
+
+    other = auth_headers(make_user(f"other-{uuid.uuid4().hex[:8]}@test.test"))
+    assert client.get(f"/baselines/reference/{beta.id}", headers=other).status_code == 404

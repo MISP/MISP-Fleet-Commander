@@ -3,6 +3,7 @@ from flask import Blueprint, jsonify, request
 from application.controllers.instance import token_required
 import application.models.baselines as baselineModel
 import application.models.baselineDrift as baselineDrift
+import application.models.baselineReference as baselineReference
 
 BPbaselines = Blueprint('baselines', __name__)
 
@@ -106,6 +107,18 @@ def check(user, fleet_id):
     of the fleet (settings and versions come with the usual refresh). Answers 202 with the servers checked"""
     try:
         return jsonify(baselineDrift.checkFleet(user, fleet_id)), 202
+    except baselineModel.BaselineError as e:
+        return errorResponse(e)
+
+
+@BPbaselines.route('/baselines/reference/<int:server_id>', methods=['GET'])
+@token_required
+def reference(user, server_id):
+    """What one of the user's servers could give a baseline: `settings` from its last refresh (secrets left out),
+    and `content` (taxonomies, galaxies, object templates by rule type) listed from MISP now. A server that cannot be
+    reached gives what it listed last (`source: snapshot`) or the reason"""
+    try:
+        return jsonify(baselineReference.referenceForUser(user, server_id))
     except baselineModel.BaselineError as e:
         return errorResponse(e)
 
