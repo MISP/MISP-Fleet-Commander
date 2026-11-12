@@ -46,6 +46,22 @@ export default {
         mustChangePassword() {
             return this.$store.getters["auth/mustChangePassword"]
         },
+        // The user whose settings apply: set once logged in with a usable account
+        settingsUserID() {
+            const user = this.$store.getters["auth/user"]
+            return this.isUserAuthed && !this.mustChangePassword && user ? user.id : null
+        },
+    },
+    watch: {
+        // At start, after logging in (page or popup) and after a required password change
+        settingsUserID: {
+            handler(userID) {
+                if (userID !== null) {
+                    this.$store.dispatch('userSettings/getUserSettings').catch(() => {})
+                }
+            },
+            immediate: true,
+        },
     },
     sockets: {
         connect: function () {
@@ -65,10 +81,5 @@ export default {
         reconnect() {
         },
     },
-    mounted() {
-        if (this.isUserAuthed && !this.mustChangePassword) {
-            this.$store.dispatch('userSettings/getUserSettings')
-        }
-    }
 }
 </script>
