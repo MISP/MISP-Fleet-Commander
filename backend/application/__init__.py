@@ -116,6 +116,22 @@ def socketOriginChecker(allowedOrigins):
     return isAllowed
 
 
+def trustProxies(app):
+    """Trust the X-Forwarded-* headers set by the configured number of reverse proxies"""
+    value = str(app.config.get('TRUSTED_PROXIES') or '0').strip()
+    try:
+        count = int(value)
+    except ValueError:
+        count = -1
+    if count < 0:
+        raise RuntimeError(f'TRUSTED_PROXIES must be the number of reverse proxies in front of the application '
+                           f'(0 when there is none), not "{value}"')
+    if count > 0:
+        from werkzeug.middleware.proxy_fix import ProxyFix
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=count, x_proto=count, x_host=count, x_port=count)
+    return count
+
+
 def create_app():
     """Construct the core application."""
 
@@ -161,6 +177,8 @@ def create_app():
                 f"redis://localhost:{str(os.environ.get('REDIS_PORT', 6380))}/3",
             ),
         )
+        # Wraps socket.io too, so that its handshakes also see the client behind the proxies
+        trustProxies(flaskApp)
 
         # Imports
         from . import routes

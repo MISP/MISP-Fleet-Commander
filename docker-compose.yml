@@ -15,6 +15,8 @@ x-mfc-common: &mfc-common
         MFC_ENCRYPTION_KEY: ${MFC_ENCRYPTION_KEY:-}
         # Other origins than the UI's allowed to call the API, comma separated
         CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
+        # Number of reverse proxies in front of the application whose X-Forwarded-* headers are trusted (0: none)
+        TRUSTED_PROXIES: ${TRUSTED_PROXIES:-0}
         TOKEN_EXPIRATION_MIN: "30"
         REDIS_URL: redis
         REDIS_PORT: "6379"

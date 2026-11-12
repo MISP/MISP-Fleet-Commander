@@ -23,6 +23,10 @@ class Config:
     # (e.g. a browser extension). Comma separated, empty by default.
     CORS_ALLOWED_ORIGINS = [origin.strip() for origin in (environ.get('CORS_ALLOWED_ORIGINS') or '').split(',') if origin.strip()]
 
+    # Number of reverse proxies in front of the application. Their X-Forwarded-For/-Proto/-Host/-Port headers are
+    # trusted, so that the client address (e.g. for login throttling) is the real one. 0 (default): no proxy.
+    TRUSTED_PROXIES = environ.get('TRUSTED_PROXIES') or '0'
+
     # Key encrypting the MISP authkeys in the database. When MFC_ENCRYPTION_KEY is not set, the key is read
     # from (or, on new installs, generated into) the key file
     ENCRYPTION_KEY = environ.get('MFC_ENCRYPTION_KEY') or None

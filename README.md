@@ -82,6 +82,12 @@ You are asked to choose a new password on the first login: until then, the accou
 
 The secret signing the session tokens is generated on the first start (`backend/database/secret_key`, or `./run/secret_key` with Docker). Set `SECRET_KEY` to provide your own.
 
+### 🔀 Behind a reverse proxy
+
+Set `TRUSTED_PROXIES` to the number of reverse proxies in front of the application (usually `1`). The client address, protocol and host are then read from the `X-Forwarded-For`, `X-Forwarded-Proto`, `X-Forwarded-Host` and `X-Forwarded-Port` headers those proxies set. Without it, every request seems to come from the proxy: failed logins are counted per address and account, so anyone could lock any account out for 15 minutes.
+
+Leave it at `0` (the default) when clients connect directly: the application would otherwise believe the address a client claims in `X-Forwarded-For`.
+
 ### 🔄 Updating
 
 To update the application:
