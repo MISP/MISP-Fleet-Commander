@@ -9,6 +9,9 @@
         <TheSettingsModal
             v-if="isUserAuthed && !mustChangePassword"
         ></TheSettingsModal>
+        <JobNotifier
+            v-if="isUserAuthed && !mustChangePassword"
+        ></JobNotifier>
     </div>
 </template>
 
@@ -18,6 +21,7 @@ import LayoutStretch from "@/components/layout/LayoutStretch.vue"
 import LayoutLogin from "@/components/layout/LayoutLogin.vue"
 import TheLoginModal from '@/views/login/TheLoginModal.vue';
 import TheSettingsModal from '@/views/settings/TheSettingsModal.vue';
+import JobNotifier from '@/components/jobs/JobNotifier.vue';
 
 export default {
     name: "App",
@@ -27,6 +31,7 @@ export default {
         LayoutLogin,
         TheLoginModal,
         TheSettingsModal,
+        JobNotifier,
     },
     data () {
         return {

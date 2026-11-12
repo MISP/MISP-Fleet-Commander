@@ -12,6 +12,7 @@ import plugins from "./modules/plugins"
 import pinlists from "./modules/pinlists"
 import websocket from "./modules/websocket"
 import health from "./modules/health"
+import jobs from "./modules/jobs"
 
 Vue.use(Vuex)
 
@@ -32,6 +33,7 @@ export default new Vuex.Store({
         plugins,
         websocket,
         health,
+        jobs,
     },
     strict: debug,
 })

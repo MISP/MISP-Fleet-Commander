@@ -129,6 +129,20 @@ let router =  new Router({
             }
         },
         {
+            path: "/jobs/:job_id([0-9a-f-]{36})",
+            name: "jobs.view",
+            component: () => import("./views/jobs/JobView.vue"),
+            props: (route) => ({ job_id: route.params.job_id }),
+            meta: {
+                requiresFleet: false,
+                breadcrumbs: {
+                    text: "Job",
+                    to: { name: "jobs.view" },
+                    icon: "list-check"
+                }
+            }
+        },
+        {
             path: "/connections",
             name: "connections",
             component: () => import("./views/connections/Connections.vue"),

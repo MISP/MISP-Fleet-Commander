@@ -1,60 +1,18 @@
 <template>
     <b-modal
-        id="modal-batch-plugin-action-selected"
+        :id="modalId"
         title="Batch Plugin Action"
         size="xl"
         ok-only
+        ok-title="Close"
+        ok-variant="secondary"
     >
-
-        <b-card
-            :header="`${serverAmount} selected servers`"
-            class="text-center mb-3"
-            body-class="p-0 server-list-container"
-        >
-            <b-table-lite
-                small striped borderless
-                :fields="serverTableFields"
-                :items="getServers"
-            >
-                <template #cell(response)="row">
-                    <loaderPlaceholder class="d-flex justify-content-center" :loading="!requestInProgress[row.item.id]" maxWidth="100%" placeholderWidth="50%">
-                        <div
-                            v-if="serverResponse[row.item.id] !== undefined && serverResponse[row.item.id].status_code"
-                            class="mb-0 d-flex"
-                        >
-                            <RequestResponseResult
-                                :serverResponse="serverResponse[row.item.id]"
-                            ></RequestResponseResult>
-                            <b-button v-b-modal="`modal-response-${row.index}`" variant="primary" size="xs" class="ml-1">View</b-button>
-                            <b-modal
-                                :id="`modal-response-${row.index}`"
-                                scrollable size="lg"
-                                ok-only
-                            >
-                                <template #modal-header="">
-                                    <RequestResponseResult
-                                        :serverResponse="serverResponse[row.item.id]"
-                                    ></RequestResponseResult>
-                                    <b-button variant="link" size="sm" class="ml-auto p-0 m-0"
-                                        @click="toggleRulesTreeMode"
-                                    >
-                                        <i :class="['fas', rulesTreeMode ? 'fa-code' : 'fa-stream']"></i>
-                                    </b-button>
-                                </template>
-
-                                <jsonViewer 
-                                    :tree="rulesTreeMode"
-                                    :item="serverResponse[row.item.id].data"
-                                    rootKeyName="Reponse data"
-                                    :open="true"
-                                ></jsonViewer>
-                            </b-modal>
-                        </div>
-                    </loaderPlaceholder>
-                </template>
-
-            </b-table-lite>
-        </b-card>
+        <JobRunPanel
+            :job="job"
+            :servers="getServers"
+            @navigate="$bvModal.hide(modalId)"
+            @retried="followJob"
+        ></JobRunPanel>
 
         <b-card no-body>
             <b-tabs pills card vertical>
@@ -83,32 +41,22 @@
             </b-tabs>
         </b-card>
     </b-modal>
-
-    
 </template>
 
-<style scoped>
-
-</style>
-
 <script>
-import Vue from "vue"
-import moment from "moment"
 import { mapState, mapGetters } from "vuex"
-import pluginAPI from "@/api/plugins"
-import loaderPlaceholder from "@/components/ui/elements/loaderPlaceholder.vue"
-import jsonViewer from "@/components/ui/elements/jsonViewer.vue"
-import RequestResponseResult from "@/components/ui/elements/RequestResponseResult.vue"
+import JobRunPanel from "@/components/jobs/JobRunPanel.vue"
 import pluginActionForm from "@/components/ui/pluginElements/pluginActionForm.vue"
+import jobRunner from "@/helpers/jobRunnerMixin"
 
+// The action runs as a job: the modal can be closed while it runs, its results stay here and on the job page
 export default {
     name: "BatchPluginAction",
-     components: {
-        loaderPlaceholder,
-        jsonViewer,
-        RequestResponseResult,
+    components: {
+        JobRunPanel,
         pluginActionForm,
     },
+    mixins: [jobRunner],
     props: {
         server_ids: {
             type: Array,
@@ -117,10 +65,7 @@ export default {
     },
     data: function() {
         return {
-            serverTableFields: ['id', 'name', 'url', {key: 'response', class: ['align-middle']}],
-            requestInProgress: {},
-            serverResponse: {},
-            rulesTreeMode: true,
+            modalId: "modal-batch-plugin-action-selected",
         }
     },
     computed: {
@@ -131,133 +76,17 @@ export default {
             actionPlugins: "plugins/actionPlugins",
         }),
         getServers: function() {
-            let serverList = []
-            const allServer = this.servers
-            this.server_ids.forEach((server_id) => {
-                serverList.push(allServer[server_id])
-            })
-            return serverList
-        },
-        getServersForTable() {
-            return this.getServers
-        },
-        serverAmount() {
-            return this.getServers.length
+            return this.server_ids.map(server_id => this.servers[server_id]).filter(server => server)
         },
     },
     methods: {
-        toggleRulesTreeMode() {
-            this.rulesTreeMode = !this.rulesTreeMode
-        },
-         handlePluginActionSubmit: function ({plugin_id, form_data}) {
-               return this.batchPluginAction(plugin_id, form_data)
-        },
-        batchPluginAction: function(plugin_id, form_data) {
-            const that = this
-            let actionPromises = []
-            this.server_ids.forEach((server_id) => {
-                that.requestInProgress[server_id] = true
-                const actionPromise = pluginAPI.submitAction(server_id, plugin_id, form_data)
-                    .then((response) => {
-                        this.handlePluginResponse(server_id, response)
-                        return response
-                    })
-                    .catch(error => {
-                        const errorResponse = error?.response
-                        if (errorResponse !== undefined) {
-                            this.handlePluginResponse(server_id, errorResponse)
-                        } else {
-                            Vue.set(this.serverResponse, server_id, {
-                                status_code: 'Error',
-                                reason: error?.message ?? 'Request failed',
-                                url: '',
-                                data: {},
-                                elapsed_time: '',
-                            })
-                        }
-                        return { failed: true, response: errorResponse, error: error }
-                    })
-                    .finally(() => {
-                        that.requestInProgress[server_id] = false
-                    })
-                actionPromises.push(actionPromise)
-            })
-            return Promise.all(actionPromises)
-                .then((responses) => {
-                    // A plugin reports its own outcome: an HTTP 200 can still carry a failed action
-                    const successes = responses.filter(response => {
-                        return response && !response.failed && response.status >= 200 && response.status < 300 && response.data?.status === 'success'
-                    })
-                    const failures = responses.filter(response => !successes.includes(response))
-                    const failureMessage = (failure) => {
-                        return failure?.data?.error?.[0] ?? failure?.data?.data?.message ?? failure?.response?.data?.data?.message ?? failure?.error?.message ?? 'Unknown error'
-                    }
-                    if (successes.length > 0 && failures.length === 0) {
-                        this.$bvToast.toast(successes[0].data?.data?.message ?? 'Done', {
-                            title: `Successfully performed ${successes.length} action(s)`,
-                            variant: "success",
-                        })
-                    } else if (successes.length > 0) {
-                        this.$bvToast.toast(`${failures.length} action(s) failed: ${failureMessage(failures[0])}`, {
-                            title: `Performed ${successes.length} action(s) successfully`,
-                            variant: "warning",
-                        })
-                    } else {
-                        const failure = failures[0]
-                        const errorMessage = failureMessage(failure)
-                        this.$bvToast.toast(errorMessage, {
-                            title: "Could not perform any action",
-                            variant: "danger",
-                        })
-                    }
-                })
-                .catch(error => {
-                    const errorMessage = error?.toJSON ? error.toJSON().message : String(error)
-                    this.$bvToast.toast(errorMessage, {
-                        title: "Could not perform action",
-                        variant: "danger",
-                    })
-                })
-        },
-        handlePluginResponse(server_id, response) {
-            // Without a MISP response, fall back on the plugin outcome rather than our own HTTP status
-            const pluginFailed = response.data?.status !== undefined && response.data.status !== 'success'
-            const fallbackStatus = pluginFailed ? 'Error' : response.status
-            Vue.set(this.serverResponse, server_id, {
-                status_code: response.data?.request_response?.status_code ?? fallbackStatus,
-                reason: response.data?.request_response?.reason ?? (response.data?.error?.[0] ?? response.data?.data?.message ?? ''),
-                url: response.data?.data?.url ?? '',
-                data: response.data?.data,
-                elapsed_time: response.data?.request_response?.elapsed_time ?? '',
+        handlePluginActionSubmit: function ({plugin_id, form_data}) {
+            return this.startJob({
+                kind: "plugin_action",
+                server_ids: this.server_ids,
+                params: { plugin_id, data: form_data },
             })
         },
-        resetRequestInProgress() {
-            Object.keys(this.requestInProgress).forEach(server_id => {
-                Vue.delete(this.requestInProgress, server_id)
-            })
-        },
-        updateRequestInProgress(newIDs) {
-            this.resetRequestInProgress()
-            newIDs.forEach((server_id) => {
-                Vue.set(this.requestInProgress, server_id, false)
-                Vue.set(this.serverResponse, server_id, {})
-            })
-        }
     },
-    watch: {
-        server_ids(newIDs, oldIDs) {
-            this.updateRequestInProgress(newIDs)
-        }
-    },
-    beforeMount() {
-        this.updateRequestInProgress(this.server_ids)
-    }
 }
 </script>
-
-<style scoped>
-.server-list-container {
-    max-height: 300px;
-    overflow: auto;
-}
-</style>

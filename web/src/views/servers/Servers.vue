@@ -415,6 +415,8 @@ import BatchAPI from "@/views/servers/BatchAPI.vue"
 import DeleteSelectedModal from "@/views/servers/DeleteSelectedModal.vue"
 import AddModal from "@/views/servers/AddModal.vue"
 import BatchPluginAction from "@/views/servers/BatchPluginAction.vue"
+import { startedToastId } from "@/components/jobs/JobNotifier.vue"
+import { isFinalJob } from "@/helpers/jobs"
 import CSVAddModal from "@/views/servers/CSVAddModal.vue"
 import DiscoverServers from "@/views/servers/DiscoverServers.vue"
 import iconButton from "@/components/ui/elements/iconButton.vue"
@@ -975,40 +977,35 @@ export default {
                     })
                 })
         },
+        // A job: the toast follows it, and the job page has each server's result
         execQuickActionOnSelected({plugin}) {
-            const promises = []
-            this.getSelectedServer.forEach((server) => {
-                const form_data = {}
-                const prom = pluginAPI.submitQuickAction(server.id, plugin.id, form_data)
-                promises.push(prom)
+            const server_ids = this.getSelectedServer.map(server => server.id)
+            const name = plugin.quickActionMeta.quickActionName
+            return this.$store.dispatch("jobs/create", {
+                kind: "plugin_quick_action",
+                server_ids,
+                params: { plugin_id: plugin.id },
             })
-            return Promise.all(promises)
-                .then((responses) => {
-                    const successes = responses.filter(response => {
-                        return !response.data.error
-                    });
-                    const failures = responses.filter(response => {
-                        return response.data.error
-                    });
-                    if (successes.length > 0) {
-                        const successMessage = successes[0].data.data.message
-                        this.$bvToast.toast(successMessage, {
-                            title: `Successfully performed ${successes.length} quick action${successes.length > 1 ? 's' : ''}`,
-                            variant: "success",
-                        })
+                .then((job) => {
+                    if (isFinalJob(this.$store.getters["jobs/job"](job.id))) {
+                        return  // Already over: the notifier announces the outcome
                     }
-                    if (failures.length > 0) {
-                        const errorMessage = Array.isArray(failures[0].data.error) ? failures[0].data.error.join(', ') : failures[0].data.error
-                        this.$bvToast.toast(errorMessage, {
-                            title: `Could not perform ${failures.length} quick action${failures.length > 1 ? 's' : ''}`,
-                            variant: "danger",
-                        })
-                    }
+                    const h = this.$createElement
+                    this.$bvToast.toast(h("div", [
+                        h("b-spinner", { props: { small: true }, class: "mr-2" }),
+                        `Running on ${server_ids.length} server${server_ids.length === 1 ? "" : "s"}. You will be told when it ends.`,
+                    ]), {
+                        id: startedToastId(job.id),
+                        title: name,
+                        variant: "info",
+                        to: { name: "jobs.view", params: { job_id: job.id } },
+                        noAutoHide: true,
+                        solid: true,
+                    })
                 })
                 .catch(error => {
-                    const errorMessage = error.toJSON().message
-                    this.$bvToast.toast(errorMessage, {
-                        title: "Could not perform quick action",
+                    this.$bvToast.toast(error, {
+                        title: `Could not start quick action ${name}`,
                         variant: "danger",
                     })
                 })

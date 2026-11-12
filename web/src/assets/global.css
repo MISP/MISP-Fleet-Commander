@@ -291,3 +291,40 @@ table.table-no-select tbody, table.table-no-select thead > tr {
     font-weight: 600;
 }
 
+
+/* Job and job result statuses (helpers/jobs.js): the health colours, so that a failure reads the same everywhere */
+.job-tone-ok {
+    --job-ink: var(--health-ok-ink);
+    --job-fill: var(--health-ok);
+    --job-tint: #ebf6ef;
+}
+
+.job-tone-critical {
+    --job-ink: var(--health-critical-ink);
+    --job-fill: var(--health-critical);
+    --job-tint: var(--health-critical-tint);
+}
+
+.job-tone-warning {
+    --job-ink: var(--health-warning-ink);
+    --job-fill: var(--health-warning);
+    --job-tint: var(--health-warning-tint);
+}
+
+.job-tone-info {
+    --job-ink: var(--health-info-ink);
+    --job-fill: var(--health-info);
+    --job-tint: var(--health-info-tint);
+}
+
+.job-tone-running {
+    --job-ink: var(--var-color-lapislazuli);
+    --job-fill: var(--var-color-lapislazuli);
+    --job-tint: #eaf3f8;
+}
+
+.job-tone-muted {
+    --job-ink: #5f6873;
+    --job-fill: #9aa1a7;
+    --job-tint: #f1f3f5;
+}

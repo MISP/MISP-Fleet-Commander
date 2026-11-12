@@ -1,124 +1,83 @@
 <template>
     <b-modal
-        id="modal-batch-api-selected"
+        :id="modalId"
         title="Batch API call"
         size="xl"
         ok-only
+        ok-title="Close"
+        ok-variant="secondary"
     >
-
-        <b-card
-            :header="`${serverAmount} selected servers`"
-            class="text-center mb-3"
-            body-class="p-0 server-list-container"
-        >
-            <b-table-lite
-                small striped borderless
-                :fields="serverTableFields"
-                :items="getServers"
-            >
-                <template #cell(response)="row">
-                    <loaderPlaceholder class="d-flex justify-content-center" :loading="!requestInProgress[row.item.id]" maxWidth="100%" placeholderWidth="50%">
-                        <div
-                            v-if="serverResponse[row.item.id] !== undefined && serverResponse[row.item.id].status_code"
-                            class="mb-0 d-flex"
-                        >
-                            <RequestResponseResult
-                                :serverResponse="serverResponse[row.item.id]"
-                            ></RequestResponseResult>
-                            <b-button v-b-modal="`modal-response-${row.index}`" variant="primary" size="xs" class="ml-1">View</b-button>
-                            <b-modal
-                                :id="`modal-response-${row.index}`"
-                                scrollable size="lg"
-                                ok-only
-                            >
-                                <template #modal-header="">
-                                    <RequestResponseResult
-                                        :serverResponse="serverResponse[row.item.id]"
-                                    ></RequestResponseResult>
-                                    <b-button variant="link" size="sm" class="ml-auto p-0 m-0"
-                                        @click="toggleRulesTreeMode"
-                                    >
-                                        <i :class="['fas', rulesTreeMode ? 'fa-code' : 'fa-stream']"></i>
-                                    </b-button>
-                                </template>
-
-                                <jsonViewer 
-                                    :tree="rulesTreeMode"
-                                    :item="serverResponse[row.item.id].data"
-                                    rootKeyName="Reponse data"
-                                    :open="true"
-                                ></jsonViewer>
-                            </b-modal>
-                        </div>
-                    </loaderPlaceholder>
-                </template>
-
-            </b-table-lite>
-        </b-card>
+        <JobRunPanel
+            :job="job"
+            :servers="getServers"
+            @navigate="$bvModal.hide(modalId)"
+            @retried="followJob"
+        ></JobRunPanel>
 
         <b-form @submit="onSubmit">
             <b-form-row>
-                <b-col cols="2">
+                <b-col cols="12" sm="3" md="2">
                     <b-form-group
                         label="HTTP Method:"
-                        label-for="input-method"
+                        label-for="batch-api-method"
                     >
-                        <b-form-select v-model="form.method" :options="options"></b-form-select>
+                        <b-form-select id="batch-api-method" v-model="form.method" :options="options"></b-form-select>
                     </b-form-group>
                 </b-col>
                 <b-col>
                     <b-form-group
                         label="URL:"
-                        label-for="input-url"
-                        description="Relative URL (e.g. `/events/index`)"
+                        label-for="batch-api-url"
+                        description="A path on the MISP servers (e.g. `/events/index`)"
+                        :state="urlState"
+                        invalid-feedback="Only paths on the MISP servers can be queried, not other hosts"
                     >
                         <b-form-input
-                            id="input-url"
+                            id="batch-api-url"
                             v-model="form.url"
                             type="text"
-                            placeholder="Enter URL"
+                            placeholder="/servers/getVersion"
+                            :state="urlState"
                             required
                         ></b-form-input>
                     </b-form-group>
                 </b-col>
-                <b-col cols="1" class="d-flex align-items-center">
-                    <b-button type="submit" variant="primary" class="mb-2">Submit</b-button>
+                <b-col cols="12" sm="auto" class="d-flex align-items-center">
+                    <b-button type="submit" variant="primary" class="mb-2" :disabled="submitting || urlState === false">
+                        <b-spinner v-if="submitting" small class="mr-1"></b-spinner>Submit
+                    </b-button>
                 </b-col>
             </b-form-row>
-
-            <b-form-group label="Body:" label-for="input-body">
-            <b-form-textarea
-                id="input-body"
-                v-model="form.body"
-                placeholder="Enter POST data"
-                rows="4"
+            <b-form-group
+                v-if="form.method === 'POST'"
+                label="Body:"
+                label-for="batch-api-body"
+                description="JSON sent to every server. Credentials in it are kept encrypted and shown as *** in the job."
+            >
+                <b-form-textarea
+                    id="batch-api-body"
+                    v-model="form.body"
+                    placeholder="{}"
+                    rows="4"
+                    class="text-monospace"
                 ></b-form-textarea>
             </b-form-group>
         </b-form>
     </b-modal>
-
-    
 </template>
 
-<style scoped>
-
-</style>
-
 <script>
-import store from "@/store/index"
-import api from "@/api/servers"
-import { mapState, mapGetters } from "vuex"
-import loaderPlaceholder from "@/components/ui/elements/loaderPlaceholder.vue"
-import jsonViewer from "@/components/ui/elements/jsonViewer.vue"
-import RequestResponseResult from "@/components/ui/elements/RequestResponseResult.vue"
+import { mapState } from "vuex"
+import JobRunPanel from "@/components/jobs/JobRunPanel.vue"
+import jobRunner from "@/helpers/jobRunnerMixin"
 
+// The query runs as a job: the modal can be closed while it runs, its results stay here and on the job page
 export default {
     name: "BatchAPI",
-     components: {
-        loaderPlaceholder,
-        jsonViewer,
-        RequestResponseResult,
+    components: {
+        JobRunPanel,
     },
+    mixins: [jobRunner],
     props: {
         server_ids: {
             type: Array,
@@ -127,19 +86,16 @@ export default {
     },
     data: function() {
         return {
-            serverTableFields: ['id', 'name', 'url', {key: 'response', class: ['align-middle']}],
-            requestInProgress: {},
-            serverResponse: {},
-            rulesTreeMode: true,
+            modalId: "modal-batch-api-selected",
+            submitting: false,
             form: {
                 url: "/servers/getVersion",
-                method: "POST",
+                method: "GET",
                 body: "",
-                parsedBody: {}
             },
             options: [
-                { value: "POST", text: "POST" },
                 { value: "GET", text: "GET" },
+                { value: "POST", text: "POST" },
             ],
         }
     },
@@ -148,99 +104,44 @@ export default {
             servers: state => state.servers.servers,
         }),
         getServers: function() {
-            let serverList = []
-            const allServer = this.servers
-            this.server_ids.forEach((server_id) => {
-                serverList.push(allServer[server_id])
-            })
-            return serverList
+            return this.server_ids.map(server_id => this.servers[server_id]).filter(server => server)
         },
-        getServersForTable() {
-            let serversForTable = []
-            const that = this
-            this.getServers.forEach(server => {
-                let serverCopy = Object.assign({}, server)
-                serverCopy.response = that.serverResponse[server.id] ?? {}
-                serverCopy.request_in_progress = that.requestInProgress[server.id] ?? false
-                serversForTable.push(serverCopy)
-            });
-            return serversForTable
-        },
-        serverAmount() {
-            return this.getServers.length
+        // Same rule as the backend: a path, never another host
+        urlState() {
+            const url = this.form.url.trim()
+            if (url === "") {
+                return null
+            }
+            return /^[a-z][a-z0-9+.-]*:/i.test(url) || url.startsWith("//") ? false : null
         },
     },
     methods: {
-        batchAPICall(payload) {
-            let that = this
-            this.server_ids.forEach((server_id) => {
-                that.requestInProgress[server_id] = true
-            })
-            api.batchRestQuery(this.server_ids, payload)
-                .then((responses) => {
-                    this.handleQueryResponse(responses)
-                })
-        },
         onSubmit(event) {
             event.preventDefault()
-            if (this.form.body.length == 0) {
-                this.form.body = "{}"
+            let data = null
+            if (this.form.method === "POST") {
+                const body = this.form.body.trim() === "" ? "{}" : this.form.body
+                try {
+                    JSON.parse(body)
+                } catch (error) {
+                    this.$bvToast.toast(error.message, {
+                        title: "Body is not a valid JSON",
+                        variant: "danger",
+                        solid: true
+                    })
+                    return
+                }
+                data = body
             }
-            const jsonValidation = this.checkBody()
-            if (jsonValidation !== true) {
-                this.$bvToast.toast(jsonValidation, {
-                    title: "Body is not a valid JSON",
-                    variant: "danger",
-                    solid: true
-                })
-                return
-            }
-            const payload = {
-                url: this.form.url,
-                data: this.form.body,
-                method: this.form.method
-            }
-            this.batchAPICall(payload)
-        },
-        checkBody() {
-            try {
-                this.form.parsedBody = JSON.parse(this.form.body)
-            } catch (error) {
-                return error.message
-            }
-            return true
-        },
-        handleQueryResponse(responses) {
-            const that = this
-            responses.forEach((response) => {
-                const server_id = response.data.server_id
-                that.requestInProgress[server_id] = false
-                this.$set(that.serverResponse, server_id, {
-                    status_code: response.data.status_code,
-                    reason: response.data.reason,
-                    url: response.data.url,
-                    data: response.data.data,
-                    headers: response.data.headers,
-                    elapsed_time: response.data.elapsed_time,
-                })
+            this.submitting = true
+            this.startJob({
+                kind: "rest_query",
+                server_ids: this.server_ids,
+                params: { method: this.form.method, url: this.form.url.trim(), data },
+            }).finally(() => {
+                this.submitting = false
             })
         },
-        toggleRulesTreeMode() {
-            this.rulesTreeMode = !this.rulesTreeMode
-        },
-    },
-    beforeUpdate: function () {
-        this.server_ids.forEach((server_id) => {
-            this.$set(this.requestInProgress, server_id, false)
-            this.$set(this.serverResponse, server_id, {})
-        })
     },
 }
 </script>
-
-<style scoped>
-.server-list-container {
-    max-height: 400px;
-    overflow: auto;
-}
-</style>
