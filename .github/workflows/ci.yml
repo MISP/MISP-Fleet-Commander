@@ -54,5 +54,7 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - name: Lint
         run: npx vue-cli-service lint --no-fix
+      - name: Unit tests
+        run: npm run test:unit
       - name: Build
         run: npm run build

@@ -126,7 +126,15 @@ pip install -r requirements.txt -r requirements_monitoring.txt -r requirements-d
 python -m pytest
 ```
 
-The web UI is checked with `npx vue-cli-service lint --no-fix` (in `web/`). CI runs both, plus the migrations on an empty database.
+The web UI's helpers and store modules have unit tests (Vitest, in `web/tests/unit/`), and the UI is linted:
+
+```bash
+cd web
+npm run test:unit
+npx vue-cli-service lint --no-fix
+```
+
+CI runs all of them, plus the migrations on an empty database.
 
 ### 📌 Dependencies
 The backend's direct dependencies are listed in `backend/requirements*.in`; the `requirements*.txt` files pin the whole set. After changing a `.in` file, regenerate the pins (from `backend/`, with `requirements-dev.txt` installed):
