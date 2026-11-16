@@ -306,9 +306,11 @@ export default {
     name: "RuleModal",
     components: { KeyPicker },
     props: {
-        fleetId: { type: Number, required: true },
+        // Where a new rule goes: a fleet's baseline, or a saved baseline (`savedId`)
+        fleetId: { type: Number, default: null },
+        savedId: { type: Number, default: null },
         types: { type: Object, default: null },
-        // Servers of the fleet: [{ id, name, unavailable }]
+        // Servers to take values from: the fleet's, or all the user's for a saved baseline. [{ id, name, unavailable }]
         servers: { type: Array, default: () => [] },
         rules: { type: Array, default: () => [] },
         // The rule to edit, or null to add one
@@ -796,7 +798,9 @@ export default {
             this.generalError = null
             const request = this.editing
                 ? api.updateRule(this.rule.id, this.payload())
-                : api.addRules(this.fleetId, [this.payload()], onConflict)
+                : this.savedId !== null
+                    ? api.addSavedRules(this.savedId, [this.payload()], onConflict)
+                    : api.addRules(this.fleetId, [this.payload()], onConflict)
             request
                 .then((result) => {
                     this.conflict = false

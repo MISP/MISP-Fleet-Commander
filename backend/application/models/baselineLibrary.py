@@ -8,8 +8,9 @@ from functools import lru_cache
 from typing import Any, Dict, List, Optional, Tuple
 
 from application.DBModels import Baseline, BaselineRule, Fleet, Server, db
-from application.models.baselines import (RULE_TYPES, BaselineError, FleetSettings, copyRules, ownedFleet,
-                                          previewCopy, rulePayload, serializeRule, validateRules)
+from application.models.baselines import (RULE_TYPES, BaselineError, FleetSettings, addToBaseline, copyRules,
+                                          ownedFleet, previewCopy, rulePayload, serializeRule, settingsOf,
+                                          validateRules)
 
 MAX_NAME_LENGTH = 120
 MAX_DESCRIPTION_LENGTH = 500
@@ -229,7 +230,8 @@ def copiedRules(rules: List[BaselineRule], now: int) -> List[BaselineRule]:
 
 def createSaved(user, body: dict) -> dict:
     """`{name, description?, from_fleet_id}` keeps a copy of a fleet's rules; `{name, description?, rules,
-    server_id?}` keeps rules picked on a reference server (validated with its setting types)"""
+    server_id?}` keeps rules picked on a reference server (validated with its setting types); `{name,
+    description?}` alone starts an empty one, to fill rule by rule"""
     if savedQuery(user).count() >= MAX_SAVED:
         raise BaselineError(f'You can keep at most {MAX_SAVED} saved baselines')
     name = checkedName(user, body.get('name'))
@@ -241,7 +243,7 @@ def createSaved(user, body: dict) -> dict:
     elif 'rules' in body:
         rules = storedRules(validateRules(body.get('rules'), referenceSettings(user, body.get('server_id'))), now)
     else:
-        raise BaselineError('Give the fleet to save (`from_fleet_id`) or the `rules`', field='from_fleet_id')
+        rules = []
     baseline = Baseline(user_id=user.id, name=name, description=description, created=now, updated=now)
     baseline.rules = rules
     db.session.add(baseline)
@@ -268,6 +270,15 @@ def updateSaved(user, savedId: int, body: dict) -> dict:
     return serializeSaved(baseline, withRules=True)
 
 
+def addSavedRules(user, savedId: int, rules: Any, onConflict: str = 'error') -> dict:
+    """Adds rules to a saved baseline, as to a fleet's: all or none, `on_conflict` for rules already in it"""
+    baseline = ownedSaved(user, savedId)
+    valid = validateRules(rules, settingsOf(baseline))
+    addToBaseline(baseline, valid, onConflict, int(time.time()))
+    db.session.commit()
+    return serializeSaved(baseline, withRules=True)
+
+
 def deleteSaved(user, savedId: int) -> None:
     db.session.delete(ownedSaved(user, savedId))
     db.session.commit()
@@ -289,6 +300,8 @@ def copySource(user, fleetId: int, body: dict) -> Tuple[dict, List[dict]]:
         return {'kind': 'fleet', 'id': fleet.id, 'name': fleet.name}, payloads
     if field == 'from_saved_id':
         baseline = ownedSaved(user, body[field])
+        if len(baseline.rules) == 0:
+            raise BaselineError(f'`{baseline.name}` has no rules yet', field=field, code='empty_source')
         return {'kind': 'saved', 'id': baseline.id, 'name': baseline.name}, \
             [rulePayload(rule) for rule in baseline.rules]
     data = preset(body[field])

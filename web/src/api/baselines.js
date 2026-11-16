@@ -88,6 +88,9 @@ export default {
     updateSaved(saved_id, body) {
         return request("put", `/baselines/saved/${saved_id}`, body)
     },
+    addSavedRules(saved_id, rules, on_conflict = "error") {
+        return request("post", `/baselines/saved/${saved_id}/rules`, { rules, on_conflict })
+    },
     deleteSaved(saved_id) {
         return request("delete", `/baselines/saved/${saved_id}`)
     },

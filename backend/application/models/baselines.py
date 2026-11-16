@@ -507,11 +507,28 @@ def ownedFleet(user, fleet_id: int) -> Fleet:
 
 
 def ownedRule(user, rule_id: int) -> BaselineRule:
-    rule = BaselineRule.query.join(Baseline).join(Fleet) \
-        .filter(BaselineRule.id == rule_id, Fleet.user_id == user.id).first()
+    """A rule of one of the user's fleets, or of one of the user's saved baselines"""
+    rule = BaselineRule.query.join(Baseline).outerjoin(Fleet, Baseline.fleet_id == Fleet.id) \
+        .filter(BaselineRule.id == rule_id,
+                db.or_(Fleet.user_id == user.id, db.and_(Baseline.fleet_id.is_(None), Baseline.user_id == user.id))) \
+        .first()
     if rule is None:
         raise BaselineError('Unknown rule', 404)
     return rule
+
+
+def settingsOf(baseline: Baseline) -> FleetSettings:
+    """What a baseline's rules are validated with: its fleet's servers, or for a saved baseline all its owner's
+    servers (the fleets it will be copied into are not known)"""
+    if baseline.fleet is not None:
+        return FleetSettings(baseline.fleet)
+    return FleetSettings(owner_id=baseline.user_id, servers=Server.query.filter_by(user_id=baseline.user_id).all())
+
+
+def baselineChanged(baseline: Baseline) -> None:
+    """Drift follows a fleet's rules; a saved baseline is never evaluated"""
+    if baseline.fleet is not None:
+        rulesChanged(baseline.fleet)
 
 
 def ensureBaseline(fleet: Fleet, now: int) -> Baseline:
@@ -551,7 +568,14 @@ def validateRules(rules: Any, settings: FleetSettings) -> List[dict]:
 
 
 def applyRules(fleet: Fleet, rules: List[dict], onConflict: str, now: int) -> None:
-    baseline = ensureBaseline(fleet, now)
+    addToBaseline(ensureBaseline(fleet, now), rules, onConflict, now)
+
+
+def addToBaseline(baseline: Baseline, rules: List[dict], onConflict: str, now: int) -> None:
+    """Adds validated rules. One already present (same type and key) is a 409 (`error`), kept (`skip`) or
+    overwritten (`replace`)"""
+    if onConflict not in CONFLICT_MODES:
+        raise BaselineError(f"`on_conflict` must be one of {', '.join(CONFLICT_MODES)}", field='on_conflict')
     existing = {(rule.type, rule.key): rule for rule in baseline.rules}
     conflicts = [rule for rule in rules if (rule['type'], rule['key']) in existing]
     if conflicts and onConflict == 'error':
@@ -596,14 +620,14 @@ def updateRule(user, rule_id: int, changes: Any) -> dict:
             raise BaselineError(f'`{field}` cannot be changed: add another rule instead', field=field)
     payload = {**serializeRule(rule), **changes, 'type': rule.type, 'key': rule.key,
                'force': changes.get('force', rule.forced)}
-    valid = validateRule(payload, FleetSettings(rule.baseline.fleet))
+    valid = validateRule(payload, settingsOf(rule.baseline))
     now = int(time.time())
     for column, value in valid.items():
         setattr(rule, column, value)
     rule.updated = now
     rule.baseline.updated = now
     db.session.commit()
-    rulesChanged(rule.baseline.fleet)
+    baselineChanged(rule.baseline)
     return serializeRule(rule)
 
 
@@ -639,7 +663,7 @@ def deleteRule(user, rule_id: int) -> None:
     baseline.rules.remove(rule)
     baseline.updated = int(time.time())
     db.session.commit()
-    rulesChanged(baseline.fleet)
+    baselineChanged(baseline)
 
 
 # Copying rules into a fleet (from another fleet, a saved baseline or a preset)

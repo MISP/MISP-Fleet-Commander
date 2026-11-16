@@ -165,7 +165,8 @@ def reference(user, server_id):
 @BPbaselines.route('/baselines/rules/<int:rule_id>', methods=['PUT'])
 @token_required
 def updateRule(user, rule_id):
-    """Changes `expected`, `comparator`, `severity`, `note`, `label` or `force`; the type and key are fixed"""
+    """Changes `expected`, `comparator`, `severity`, `note`, `label` or `force`; the type and key are fixed. The rule
+    is a fleet's or a saved baseline's"""
     try:
         return jsonify(baselineModel.updateRule(user, rule_id, jsonBody()))
     except baselineModel.BaselineError as e:
@@ -204,7 +205,8 @@ def viewPreset(user, preset_id):
 @token_required
 def createSaved(user):
     """`{name, description?, from_fleet_id}` keeps a copy of a fleet's rules; `{name, description?, rules,
-    server_id?}` keeps rules picked on a reference server. A name already used is a 409 (`name_taken`)"""
+    server_id?}` keeps rules picked on a reference server; `{name, description?}` alone starts an empty one. A name
+    already used is a 409 (`name_taken`)"""
     try:
         return jsonify(baselineLibrary.createSaved(user, jsonBody())), 201
     except baselineModel.BaselineError as e:
@@ -216,6 +218,18 @@ def createSaved(user):
 def viewSaved(user, saved_id):
     try:
         return jsonify(baselineLibrary.savedForUser(user, saved_id))
+    except baselineModel.BaselineError as e:
+        return errorResponse(e)
+
+
+@BPbaselines.route('/baselines/saved/<int:saved_id>/rules', methods=['POST'])
+@token_required
+def addSavedRules(user, saved_id):
+    """`{rules, on_conflict?}`, as for a fleet's baseline. Setting values take the types the user's servers report"""
+    try:
+        body = jsonBody()
+        return jsonify(baselineLibrary.addSavedRules(user, saved_id, body.get('rules'),
+                                                     body.get('on_conflict') or 'error')), 201
     except baselineModel.BaselineError as e:
         return errorResponse(e)
 

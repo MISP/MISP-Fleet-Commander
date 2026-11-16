@@ -195,9 +195,10 @@ export default {
     name: "ReferenceImportModal",
     props: {
         modalId: { type: String, default: "modal-baseline-reference" },
-        // The fleet the rules are added to; null with `saveAs`
+        // Where the rules go: a fleet's baseline, an existing saved baseline (`savedId`), or a new saved baseline
+        // (`saveAs`)
         fleetId: { type: Number, default: null },
-        // The selection becomes a new saved baseline instead
+        savedId: { type: Number, default: null },
         saveAs: { type: Boolean, default: false },
         servers: { type: Array, default: () => [] },
         rules: { type: Array, default: () => [] },
@@ -425,7 +426,7 @@ export default {
         },
         summary() {
             if (this.totalSelected === 0) {
-                return this.saveAs ? "Select what the saved baseline should hold." : "Select what every server of the fleet should have."
+                return this.saveAs || this.savedId !== null ? "Select what the saved baseline should hold." : "Select what every server of the fleet should have."
             }
             const parts = this.sections
                 .map(section => [section.label.toLowerCase(), this.selectedCount(section.type)])
@@ -538,7 +539,9 @@ export default {
             this.submitErrors = []
             const request = this.saveAs
                 ? api.createSaved({ name: this.savedName, rules, server_id: this.serverId })
-                : api.addRules(this.fleetId, rules, this.onConflict)
+                : this.savedId !== null
+                    ? api.addSavedRules(this.savedId, rules, this.onConflict)
+                    : api.addRules(this.fleetId, rules, this.onConflict)
             request
                 .then((result) => {
                     this.$emit("saved", result)

@@ -20,6 +20,14 @@
                 <span v-if="showSeverity" :class="['rule-list-severity', `is-${item.rule.severity}`]">{{ item.rule.severity }}</span>
                 <span v-if="item.rule.forced" class="rule-list-forced" title="A server-specific setting, kept on purpose">forced</span>
             </span>
+            <span v-if="editable" class="rule-list-actions">
+                <button type="button" class="rule-list-action" :aria-label="`Edit ${title(item.rule)}`" title="Edit" @click="$emit('edit', item.rule)">
+                    <i class="fas fa-pen" aria-hidden="true"></i>
+                </button>
+                <button type="button" class="rule-list-action is-danger" :aria-label="`Remove ${title(item.rule)}`" title="Remove" @click="$emit('delete', item.rule)">
+                    <i class="fas fa-trash-can" aria-hidden="true"></i>
+                </button>
+            </span>
         </li>
     </ul>
 </template>
@@ -35,6 +43,8 @@ export default {
         items: { type: Array, required: true },
         tone: { type: String, default: "plain" },
         showSeverity: { type: Boolean, default: true },
+        // Edit and remove buttons on each row (`edit` / `delete` events with the rule)
+        editable: { type: Boolean, default: false },
     },
     computed: {
         marker() {
@@ -228,6 +238,38 @@ export default {
     color: #4a5260;
 }
 
+.rule-list-actions {
+    flex: 0 0 auto;
+    display: inline-flex;
+    gap: 0.15rem;
+    margin-left: 0.25rem;
+}
+
+.rule-list-action {
+    width: 1.75rem;
+    height: 1.75rem;
+    border: none;
+    border-radius: 4px;
+    background: none;
+    color: #6c737d;
+    font-size: 0.8rem;
+}
+
+.rule-list-action:hover {
+    background: #eef0f3;
+    color: var(--var-color-yankeesblue);
+}
+
+.rule-list-action.is-danger:hover {
+    background: var(--health-critical-tint);
+    color: var(--health-critical-ink);
+}
+
+.rule-list-action:focus-visible {
+    outline: 2px solid var(--var-color-lapislazuli);
+    outline-offset: 1px;
+}
+
 @media (max-width: 575.98px) {
     .rule-list-item {
         flex-wrap: wrap;
@@ -237,7 +279,13 @@ export default {
         flex: 1 1 0;
     }
 
+    /* The buttons stay on the name's line, the expected value goes under it */
+    .rule-list-actions {
+        order: 1;
+    }
+
     .rule-list-side {
+        order: 2;
         max-width: 100%;
         flex-basis: 100%;
         justify-content: flex-start;

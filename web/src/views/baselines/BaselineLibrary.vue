@@ -9,9 +9,17 @@
                     rules into a fleet's baseline: later changes here do not reach the fleet.
                 </p>
             </div>
-            <b-button variant="primary" :disabled="!library || library.servers.length === 0" @click="openReference">
-                <i class="fas fa-server mr-1" aria-hidden="true"></i>New from a reference server
-            </b-button>
+            <b-dropdown split right variant="primary" :disabled="!library" @click="openCreate">
+                <template #button-content>
+                    <i class="fas fa-plus mr-1" aria-hidden="true"></i>New saved baseline
+                </template>
+                <b-dropdown-item-button @click="openCreate">
+                    <i class="fas fa-file fa-fw mr-1" aria-hidden="true"></i>Empty, to fill rule by rule
+                </b-dropdown-item-button>
+                <b-dropdown-item-button :disabled="!library || library.servers.length === 0" @click="openReference">
+                    <i class="fas fa-server fa-fw mr-1" aria-hidden="true"></i>From a reference server…
+                </b-dropdown-item-button>
+            </b-dropdown>
         </header>
 
         <b-alert :show="!!error" variant="danger">
@@ -70,21 +78,24 @@
                             <p class="lib-detail-meta">
                                 {{ ruleCount(selected.rule_count) }}
                                 <template v-if="selected.kind === 'saved'"> · saved {{ dateText(selected.created) }}<template v-if="selected.updated !== selected.created">, updated {{ dateText(selected.updated) }}</template></template>
-                                <template v-else> · ships with Fleet Commander, read-only</template>
+                                <template v-else> · ships with Fleet Commander, read-only: save a copy to change it</template>
                             </p>
                         </div>
                         <div class="lib-detail-actions">
-                            <b-button variant="primary" :disabled="library.fleets.length === 0" @click="openApply">
+                            <b-button variant="primary" :disabled="library.fleets.length === 0 || selected.rule_count === 0" @click="openApply">
                                 <i class="fas fa-file-import mr-1" aria-hidden="true"></i>Import into a fleet…
                             </b-button>
                             <template v-if="selected.kind === 'saved'">
                                 <b-button variant="outline-secondary" @click="openEdit">
-                                    <i class="fas fa-pen mr-1" aria-hidden="true"></i>Edit
+                                    <i class="fas fa-pen mr-1" aria-hidden="true"></i>Rename
                                 </b-button>
                                 <b-button variant="outline-danger" :disabled="deleting" @click="remove">
                                     <i class="fas fa-trash-can mr-1" aria-hidden="true"></i>Delete
                                 </b-button>
                             </template>
+                            <b-button v-else variant="outline-secondary" :disabled="!detail" @click="openCopy">
+                                <i class="fas fa-copy mr-1" aria-hidden="true"></i>Save a copy…
+                            </b-button>
                         </div>
                     </header>
 
@@ -97,12 +108,37 @@
                     </div>
 
                     <template v-if="detail">
+                        <div v-if="editable" class="lib-rules-head">
+                            <h3 class="lib-rules-title">Rules</h3>
+                            <b-dropdown split right size="sm" variant="outline-primary" @click="openAddRule">
+                                <template #button-content>
+                                    <i class="fas fa-plus mr-1" aria-hidden="true"></i>Add rule
+                                </template>
+                                <b-dropdown-item-button :disabled="library.servers.length === 0" @click="openReferenceAdd">
+                                    <i class="fas fa-server fa-fw mr-1" aria-hidden="true"></i>From a reference server…
+                                </b-dropdown-item-button>
+                            </b-dropdown>
+                        </div>
+
+                        <div v-if="detail.rules.length === 0" class="lib-empty">
+                            <i class="fas fa-ruler-combined lib-none-icon" aria-hidden="true"></i>
+                            <p class="lib-empty-text">No rules yet. Add them one by one, or pick them on one of your servers.</p>
+                            <div class="lib-empty-actions">
+                                <b-button variant="primary" @click="openAddRule">
+                                    <i class="fas fa-plus mr-1" aria-hidden="true"></i>Add a rule
+                                </b-button>
+                                <b-button variant="outline-primary" :disabled="library.servers.length === 0" @click="openReferenceAdd">
+                                    <i class="fas fa-server mr-1" aria-hidden="true"></i>From a reference server
+                                </b-button>
+                            </div>
+                        </div>
+
                         <div v-for="section in sections" :key="section.type" class="lib-section">
                             <h3 class="lib-section-title">
                                 <i :class="[section.icon, 'fa-fw mr-1']" aria-hidden="true"></i>{{ section.label }}
                                 <span class="lib-section-count">{{ section.items.length }}</span>
                             </h3>
-                            <RuleList :items="section.items"></RuleList>
+                            <RuleList :items="section.items" :editable="editable" @edit="openEditRule" @delete="deleteRule"></RuleList>
                         </div>
                     </template>
                 </template>
@@ -121,10 +157,27 @@
             :servers="referenceServers"
             @saved="onCreated"
         ></ReferenceImportModal>
+        <template v-if="editable && detail">
+            <ReferenceImportModal
+                modal-id="modal-library-reference-add"
+                :saved-id="selected.id"
+                :servers="referenceServers"
+                :rules="detail.rules"
+                @saved="onRulesChanged"
+            ></ReferenceImportModal>
+            <RuleModal
+                :saved-id="selected.id"
+                :types="types"
+                :servers="referenceServers"
+                :rules="detail.rules"
+                :rule="editingRule"
+                @saved="onRulesChanged"
+            ></RuleModal>
+        </template>
 
         <b-modal
             id="modal-library-edit"
-            title="Edit the saved baseline"
+            :title="editTitle"
             cancel-variant="outline-secondary"
             @shown="$refs.editName && $refs.editName.select()"
         >
@@ -146,7 +199,7 @@
             <template #modal-footer="{ cancel }">
                 <b-button variant="outline-secondary" @click="cancel()">Cancel</b-button>
                 <b-button variant="primary" :disabled="edit.saving || edit.name.trim() === ''" @click="saveEdit">
-                    <b-spinner v-if="edit.saving" small class="mr-1"></b-spinner>Save
+                    <b-spinner v-if="edit.saving" small class="mr-1"></b-spinner>{{ edit.mode === 'rename' ? 'Save' : 'Create' }}
                 </b-button>
             </template>
         </b-modal>
@@ -161,7 +214,8 @@ import api from "@/api/baselines"
 import ImportBaselineModal from "@/components/baselines/ImportBaselineModal.vue"
 import ReferenceImportModal from "@/components/baselines/ReferenceImportModal.vue"
 import RuleList from "@/components/baselines/RuleList.vue"
-import { SOURCE_KINDS, TYPE_META, ruleCountText, sourceKey, typeSummary } from "@/components/baselines/baselineFormat"
+import RuleModal from "@/components/baselines/RuleModal.vue"
+import { SOURCE_KINDS, TYPE_META, expectedText, ruleCountText, ruleTitle, sourceKey, typeSummary } from "@/components/baselines/baselineFormat"
 
 const SECTION_LABELS = {
     version_min: "MISP version",
@@ -176,7 +230,7 @@ const SECTION_LABELS = {
 
 export default {
     name: "BaselineLibrary",
-    components: { ImportBaselineModal, Layout, ReferenceImportModal, RuleList },
+    components: { ImportBaselineModal, Layout, ReferenceImportModal, RuleList, RuleModal },
     data() {
         return {
             library: null,
@@ -187,7 +241,10 @@ export default {
             detailError: null,
             detailToken: 0,
             deleting: false,
-            edit: { name: "", description: "", nameError: null, error: null, saving: false },
+            types: null,
+            editingRule: null,
+            // `mode`: create (empty), copy (of a preset) or rename
+            edit: { mode: "rename", name: "", description: "", nameError: null, error: null, saving: false },
         }
     },
     computed: {
@@ -210,7 +267,7 @@ export default {
                     total: all.length,
                     items: all.filter(matches),
                     empty: kind === "saved" && all.length === 0
-                        ? "None yet. Save one from a fleet's Baseline tab, or start one from a reference server."
+                        ? "None yet. Create one here, save one from a fleet's Baseline tab, or copy a preset."
                         : "Nothing matches.",
                 }
             })
@@ -224,6 +281,12 @@ export default {
         },
         selected() {
             return this.items.find(item => item.key === this.selectedKey) || null
+        },
+        editable() {
+            return !!this.selected && this.selected.kind === "saved"
+        },
+        editTitle() {
+            return { create: "New saved baseline", copy: "Save a copy of the preset", rename: "Rename the saved baseline" }[this.edit.mode]
         },
         kindMeta() {
             return this.selected ? SOURCE_KINDS[this.selected.kind] : null
@@ -268,6 +331,7 @@ export default {
     },
     created() {
         this.load()
+        api.types().then((types) => { this.types = types }).catch(() => {})
     },
     methods: {
         load() {
@@ -334,19 +398,42 @@ export default {
         openReference() {
             this.$bvModal.show("modal-library-reference")
         },
-        openEdit() {
-            this.edit = { name: this.selected.name, description: this.selected.description || "", nameError: null, error: null, saving: false }
+        openEditModal(mode, name, description) {
+            this.edit = { mode, name, description, nameError: null, error: null, saving: false }
             this.$bvModal.show("modal-library-edit")
+        },
+        openEdit() {
+            this.openEditModal("rename", this.selected.name, this.selected.description || "")
+        },
+        openCreate() {
+            this.openEditModal("create", "", "")
+        },
+        openCopy() {
+            this.openEditModal("copy", `${this.selected.name} (copy)`, this.selected.description || "")
         },
         saveEdit() {
             if (this.edit.saving || this.edit.name.trim() === "") {
                 return
             }
             this.edit.saving = true
-            api.updateSaved(this.selected.id, { name: this.edit.name, description: this.edit.description })
-                .then(() => {
+            const body = { name: this.edit.name, description: this.edit.description }
+            let request
+            if (this.edit.mode === "rename") {
+                request = api.updateSaved(this.selected.id, body)
+            } else if (this.edit.mode === "copy") {
+                // The preset's rules as it ships them, now the user's to change
+                const rules = this.detail.rules.map(rule => ({
+                    type: rule.type, key: rule.key, label: rule.label, expected: rule.expected,
+                    comparator: rule.comparator, severity: rule.severity, note: rule.note,
+                }))
+                request = api.createSaved({ ...body, rules })
+            } else {
+                request = api.createSaved(body)
+            }
+            request
+                .then((saved) => {
                     this.$bvModal.hide("modal-library-edit")
-                    return this.load()
+                    return this.load().then(() => this.select(sourceKey({ kind: "saved", id: saved.id })))
                 })
                 .catch((error) => {
                     if (error.field === "name") {
@@ -392,6 +479,39 @@ export default {
                 to: { name: "fleet.view", params: { fleet_id: fleet.id }, query: { tab: "baseline" } },
             })
             this.load()
+        },
+        openAddRule() {
+            this.editingRule = null
+            this.$nextTick(() => this.$bvModal.show("modal-baseline-rule"))
+        },
+        openEditRule(rule) {
+            this.editingRule = rule
+            this.$nextTick(() => this.$bvModal.show("modal-baseline-rule"))
+        },
+        openReferenceAdd() {
+            this.$bvModal.show("modal-library-reference-add")
+        },
+        // Counts and dates change in the list too
+        onRulesChanged() {
+            this.load()
+        },
+        deleteRule(rule) {
+            this.$bvModal.msgBoxConfirm(`${ruleTitle(rule)} (${expectedText(rule)}) will be removed from “${this.selected.name}”. Fleets it was imported into keep their rules.`, {
+                title: "Remove this rule?",
+                okTitle: "Remove",
+                okVariant: "danger",
+                cancelVariant: "outline-secondary",
+                centered: true,
+            }).then((confirmed) => {
+                if (!confirmed) {
+                    return
+                }
+                api.deleteRule(rule.id)
+                    .then(() => this.load())
+                    .catch((error) => {
+                        this.$bvToast.toast(error.message, { title: "Could not remove the rule", variant: "danger" })
+                    })
+            })
         },
         onCreated(saved) {
             this.load().then(() => this.select(sourceKey({ kind: "saved", id: saved.id })))
@@ -612,6 +732,43 @@ export default {
 .lib-detail-actions {
     display: flex;
     flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.lib-rules-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.lib-rules-title {
+    margin: 0;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #5a6270;
+}
+
+.lib-empty {
+    padding: 2rem 1rem;
+    text-align: center;
+    border: 1px dashed var(--health-rule);
+    border-radius: 6px;
+}
+
+.lib-empty-text {
+    margin: 0 auto 1rem;
+    max-width: 28rem;
+    color: #4a5260;
+}
+
+.lib-empty-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: 0.5rem;
 }
 
