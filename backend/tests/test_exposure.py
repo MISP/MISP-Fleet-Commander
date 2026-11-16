@@ -124,7 +124,7 @@ def test_cross_origin_access(owned, client, auth_headers):
     # Configured origins are allowed
     headers["Origin"] = "https://extension.test"
     assert allowedOrigin(client.get(f"/servers/index/{owned['server'].fleet_id}", headers=headers)) == "https://extension.test"
-    # The enrollment routes of the bookmarklet and the browser extension work from any page
+    # The enrollment routes of the browser extension work from any page
     headers["Origin"] = "https://misp.example"
     assert allowedOrigin(client.get("/fleets/index", headers=headers)) == "https://misp.example"
     assert allowedOrigin(client.get("/users/view/me", headers=headers)) == "https://misp.example"

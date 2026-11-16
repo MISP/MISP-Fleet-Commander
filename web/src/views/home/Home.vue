@@ -9,39 +9,14 @@
             <div class="row">
                 <div class="col">
                     <b-alert show variant="primary" dismissible>
-                        <h5 class="alert-heading text-center">Simplify server enrolment</h5>
-                        <div class="row">
-                            <div class="col">
-                                <h6><i class="fa fa-bookmark"></i> Browser Bookmark</h6>
-                                <p class="m-0">
-                                    <i class="fa fa-info-circle"></i>
-                                    Drag and Drop this import link as a browser bookmark, Go to a MISP instance and click on your bookmarked link.
-                                </p>
-                                <small class="text-danger">
-                                    <i class="fa fa-warning"></i>
-                                    Temporarily disabling Content Security Policy headers may be necessary for the bookmark to execute.
-                                </small>
-                                <div class="d-flex justify-content-center bg-">
-                                    <b-button :href="bookmarkJS" variant="outline-primary" style="cursor: grab;">
-                                        <i class="fas fa-link"></i>
-                                        Import to MFC
-                                    </b-button>
-                                </div>
-                            </div>
-                            <div class="col border-left border-primary">
-                                <h6><i class="fa fa-puzzle-piece"></i> Browser Extension (recommanded)</h6>
-                                <p class="m-0">
-                                    <i class="fa fa-info-circle"></i>
-                                    Install the MISP Fleet Commander Chrome Extension, Go to a MISP instance and click on the extension.
-                                </p>
-                                <p class="text-center mt-2">
-                                    <a class="" href="https://github.com/mokaddem/MISP-Fleet-Commander-Browser-Extension">
-                                        <i class="fas fa-link"></i>
-                                        https://github.com/mokaddem/MISP-Fleet-Commander-Browser-Extension
-                                    </a>
-                                </p>
-                            </div>
-                        </div>
+                        <h5 class="alert-heading"><i class="fa fa-puzzle-piece"></i> Simplify server enrolment</h5>
+                        <p class="mb-1">
+                            With the MISP Fleet Commander browser extension (Chrome), open a page of a MISP instance and click the extension to add it to one of your fleets.
+                        </p>
+                        <a href="https://github.com/mokaddem/MISP-Fleet-Commander-Browser-Extension" target="_blank" rel="noopener">
+                            <i class="fas fa-external-link-alt"></i>
+                            MISP Fleet Commander Browser Extension
+                        </a>
                     </b-alert>
                 </div>
             </div>
@@ -68,7 +43,6 @@ import Layout from "@/components/layout/Layout.vue"
 import Fleet from "@/views/fleets/index.vue"
 import PluginIndex from "@/views/plugins/PluginIndex.vue"
 import HealthOverview from "@/components/health/HealthOverview.vue"
-import { absoluteBaseurl } from "@/api/apiConfig"
 
 export default {
     name: "TheHome",
@@ -78,14 +52,6 @@ export default {
         PluginIndex,
         HealthOverview,
     },
-    data: function () {
-        const token_type = this.$store.getters["auth/access_token_type"];
-        const token = this.$store.getters["auth/access_token"];
-        const location = window.location.origin
-        return {
-            bookmarkJS: `javascript: (function () {if (window.bookmarkletMFC !== undefined) {bookmarkletMFC();} else {localStorage.setItem("MFM_token", "${token}");localStorage.setItem("MFM_token_type", "${token_type}");localStorage.setItem("MFM_baseurl", "${location}");document.body.appendChild(document.createElement("script")).src = "${absoluteBaseurl}/static/bookmarklet.js?r=" + Math.floor(Math.random() * 999999999)}})()`,
-        }
-    }
 }
 </script>
 

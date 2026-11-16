@@ -148,8 +148,8 @@ def create_app():
 
     allowedOrigins = flaskApp.config['CORS_ALLOWED_ORIGINS']
     CORS(flaskApp, resources={
-        # The bookmarklet (on the pages of MISP instances) and the browser extension enroll servers from any
-        # origin. They authenticate with the Authorization header, which other pages do not have.
+        # The browser extension enrolls servers from any origin (MISP pages, its own pages).
+        # It authenticates with the Authorization header, which other pages do not have.
         r'/fleets/index': {'origins': '*'},
         r'/servers/add/*': {'origins': '*'},
         r'/users/view/me': {'origins': '*'},

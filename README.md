@@ -17,7 +17,7 @@ With MISP Fleet Commander, you can diagnose, configure, update, and monitor MISP
 - **Perform batch API operations** across servers.
 - **Drag-and-drop plugin support**, integrated directly into the UI.
 - **Visualize sync links and topologies** with the *Strategic View*.
-- **Quickly enroll new servers** via a browser bookmarklet or extension.
+- **Quickly enroll new servers** via a browser extension.
 - **Built-in integration with Grafana and InfluxDB** for metrics storage and visualization
 - Designed for **flexibility** and ease of use.
 
@@ -146,15 +146,10 @@ bash build_web.sh
 This will build the web application and make the file available for the backend.
 
 
-## 🌍 Browser Extension / Bookmarklet
-Enrolling new MISP servers can be a pain: You have to generate an API key, and manually enter all the information in MFC. However, there are quicker ways to do it.
-- **[recommended]** [The MISP Fleet Commander Browser Extension](https://github.com/mokaddem/MISP-Fleet-Commander-Browser-Extension) (chrome only) allows you to enroll the MISP server you're currently browsing in one click.
-- A browser bookmarklet (drag it to your bookmarks bar from the Fleet Commander UI).
-  - You'll have to temporarily disable Content Security Policy headers for the bookmark to execute.
+## 🌍 Browser Extension
+Enrolling new MISP servers can be a pain: You have to generate an API key, and manually enter all the information in MFC. [The MISP Fleet Commander Browser Extension](https://github.com/mokaddem/MISP-Fleet-Commander-Browser-Extension) (chrome only) allows you to enroll the MISP server you're currently browsing in one click.
 
-Instructions for both are available on the Home page of the app.
-
-Both work from other origins than the one serving the UI, so the API endpoints they use (`/fleets/index`, `/servers/add`, `/users/view/me`) accept cross-origin requests. The rest of the API only accepts requests from the UI's origin: list any other origin that must call it in `CORS_ALLOWED_ORIGINS` (comma separated).
+It works from other origins than the one serving the UI, so the API endpoints it uses (`/fleets/index`, `/servers/add`, `/users/view/me`) accept cross-origin requests. The rest of the API only accepts requests from the UI's origin: list any other origin that must call it in `CORS_ALLOWED_ORIGINS` (comma separated).
 
 ## 📷 Screenshots
 
