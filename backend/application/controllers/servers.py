@@ -17,6 +17,7 @@ from application.controllers.utils import mispGetHTMLRequest, mispGetRequest, mi
 from application.marshmallowSchemas import ServerSchema, serverQuerySchema, serverSchema, taskSchema, serversSchema
 import application.models.servers as serverModel
 import application.models.syncActivity as syncActivityModel
+import application.models.instancePicture as instancePictureModel
 from application.models.servers import MONITORING_PANELS, MONITORING_PANEL_BY_ID
 from application.controllers.instance import token_required
 from application.health.links import classify_link, latest_release_for
@@ -343,31 +344,13 @@ def getUsageDashboardConfig(user):
 @BPserver.route("/servers/getInstancePicture/<int:server_id>", methods=["GET"])
 @token_required
 def getInstancePicture(user, server_id):
+    """The logo of the server's login page as a data URI, '' when there is none"""
     server = serverModel.getForUser(user, server_id)
-    if server is not None:
-        # Fetch the login page anonymously: without an authkey, MISP serves the login page
-        anonymousServer = DictToObject(id=server.id, name=server.name, url=server.url, skip_ssl=server.skip_ssl, authkey=None)
-        searchStringB64 = '<img src="data:image/png;base64,'
-        searchStringURI = '<img src="'
-        try:
-            loginPageHtml = mispGetHTMLRequest(anonymousServer, "/users/login")
-            start = loginPageHtml.find(searchStringB64)
-            if start != -1:
-                start += len(searchStringB64)
-                end = loginPageHtml.find('"', start)
-                if end != -1:
-                    b64Img = loginPageHtml[start:end]
-                    return jsonify(b64Img)
-            start = loginPageHtml.find(searchStringURI)
-            if start != -1:
-                start += len(searchStringURI)
-                end = loginPageHtml.find('"', start)
-                if end != -1:
-                    imgURI = loginPageHtml[start:end]
-                    return jsonify(imgURI)
-        except:
-            return jsonify('')
-    return jsonify('')
+    if server is None:
+        return jsonify('')
+    # Read anonymously: without an authkey, MISP serves the login page
+    anonymousServer = DictToObject(id=server.id, name=server.name, url=server.url, skip_ssl=server.skip_ssl, authkey=None)
+    return jsonify(instancePictureModel.getPicture(server, anonymousServer))
 
 
 @BPserver.route('/servers/monitoringImage/<int:server_id>/<panel_id>', methods=['GET'])

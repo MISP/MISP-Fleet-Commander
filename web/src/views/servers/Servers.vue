@@ -220,7 +220,7 @@
 
             <template v-slot:cell(name)="row">
                 <div class="d-flex flex-nowrap align-items-center justify-content-left">
-                    <b-img v-if="instancePicturesB64[row.item.id]" fuild :src="instancePicturesB64[row.item.id]" class="mr-1" height="32"></b-img>
+                    <b-img v-if="instancePicturesB64[row.item.id]" :src="instancePicturesB64[row.item.id]" class="instance-picture mr-1"></b-img>
                     <span>{{ row.value }}</span>
                 </div>
             </template>
@@ -1087,11 +1087,10 @@ export default {
         getInstancePictures() {
             this.getIndex.forEach((server) => {
                 api.getInstancePicture(server.id, (picture) => {
-                    if (!picture) {
-                        return
+                    // A data URI, or '' when the server has no picture or it could not be read
+                    if (typeof picture === "string" && picture.startsWith("data:image/")) {
+                        this.$set(this.instancePicturesB64, server.id, picture)
                     }
-                    const src = picture.startsWith('http') ? picture : `data:image/png;base64,${picture}`
-                    this.$set(this.instancePicturesB64, server.id, src)
                 })
             })
         },
@@ -1140,6 +1139,14 @@ export default {
 </style>
 
 <style scoped>
+/* Logos come in any shape (MISP 3's is wide, older ones square): same height, width capped */
+.instance-picture {
+    height: 32px;
+    max-width: 96px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
 .fleet-tabs {
     display: flex;
     gap: 0.25rem;

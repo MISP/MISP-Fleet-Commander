@@ -6,7 +6,7 @@
                 {{ getServer.url }}
                 <sup class="fa fa-external-link-alt"></sup>
             </b-link>
-            <b-img fuild :src="instancePictureB64" :alt="getServer.name" class="mb-2" height="150" width="200"></b-img>
+            <b-img v-if="instancePicture" :src="instancePicture" :alt="getServer.name" class="instance-picture mb-2"></b-img>
             <span class="text-muted">{{ getServer.comment }}</span>
         </b-card-body>
         <hr class="my-0" />
@@ -158,7 +158,7 @@ export default {
             defaultInfoData: {
                 "MISP UUID": "",
             },
-            instancePictureB64: ''
+            instancePicture: ''
         }
     },
     computed: {
@@ -224,12 +224,6 @@ export default {
         },
         serverStatusText: function() {
             return this.isOnline ? "Online" : "Offline"
-        },
-        welcomePicture: function() {
-            return this.MISPMainLogo ? `${this.getServer.url}/img/custom/${this.MISPMainLogo}` : `${this.getServer.url}/img/misp-logo.png`
-        },
-        MISPMainLogo: function() {
-            return this.getFinalSettings ? this.getFinalSettings['MISP.main_logo'] : false
         },
         statusData: function() {
             let status = {
@@ -313,14 +307,8 @@ export default {
         },
         getInstancePicture() {
             api.getInstancePicture(this.server_id, (picture) => {
-                // this.instancePictureB64 = b64Picture
-                if (picture) {
-                    if (picture.startsWith('http')) {
-                        this.instancePictureB64 = picture
-                    } else {
-                        this.instancePictureB64 = `data:image/png;base64,${picture}`
-                    }
-                }
+                // A data URI, or '' when the server has no picture or it could not be read
+                this.instancePicture = typeof picture === "string" && picture.startsWith("data:image/") ? picture : ""
             })
         },
     },
@@ -331,6 +319,12 @@ export default {
 </script>
 
 <style scoped>
+    /* Logos come in any shape (MISP 3's is wide, older ones square): fit them in a box, keep the ratio */
+    .instance-picture {
+        max-width: 100%;
+        max-height: 150px;
+        object-fit: contain;
+    }
     .table-server-info {
         max-height: 20rem;
         overflow: auto;
