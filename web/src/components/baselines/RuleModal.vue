@@ -38,6 +38,20 @@
                         @change="loadReference"
                     ></b-form-select>
                 </b-form-group>
+                <b-form-group
+                    v-else-if="editing && isItem && servers.length > 0"
+                    label="Take it again from"
+                    label-for="rule-reference"
+                    class="rule-reference-group"
+                    :description="takeAgainMessage"
+                >
+                    <div class="rule-take-again">
+                        <b-form-select id="rule-reference" v-model="referenceId" :options="serverOptions"></b-form-select>
+                        <b-button variant="outline-primary" :disabled="referenceLoading || referenceId === null" @click="takeAgain">
+                            <b-spinner v-if="referenceLoading" small class="mr-1"></b-spinner>Take again
+                        </b-button>
+                    </div>
+                </b-form-group>
             </div>
 
             <b-form-group
@@ -79,7 +93,74 @@
                 <strong>{{ form.key }}</strong> holds a secret. Baselines do not manage secrets.
             </b-alert>
 
-            <div class="rule-form-row">
+            <b-form-group
+                v-if="form.type === 'organisation'"
+                label="Must have"
+                class="rule-item-group"
+                :invalid-feedback="errors.expected"
+                :state="errors.expected ? false : null"
+                description="Empty fields are not checked. An organisation is usually local on its own server only."
+            >
+                <div class="rule-form-row">
+                    <b-form-group label="Name" label-for="rule-org-name" label-size="sm" class="rule-org-field">
+                        <b-form-input id="rule-org-name" v-model="form.expected.name" size="sm"></b-form-input>
+                    </b-form-group>
+                    <b-form-group label="Local or external" label-for="rule-org-local" label-size="sm" class="rule-org-field">
+                        <b-form-select id="rule-org-local" v-model="form.expected.local" :options="localOptions" size="sm"></b-form-select>
+                    </b-form-group>
+                </div>
+                <div class="rule-form-row">
+                    <b-form-group
+                        v-for="field in orgFields"
+                        :key="field.name"
+                        :label="field.label"
+                        :label-for="`rule-org-${field.name}`"
+                        label-size="sm"
+                        class="rule-org-field mb-0"
+                    >
+                        <b-form-input
+                            :id="`rule-org-${field.name}`"
+                            v-model="form.expected[field.name]"
+                            size="sm"
+                            placeholder="Not checked"
+                        ></b-form-input>
+                    </b-form-group>
+                </div>
+            </b-form-group>
+
+            <b-form-group
+                v-else-if="isItem"
+                label="Must have"
+                class="rule-item-group"
+                :invalid-feedback="errors.expected"
+                :state="errors.expected ? false : null"
+            >
+                <div v-if="form.expected" class="rule-item">
+                    <div class="rule-item-head">
+                        <strong>{{ form.expected.name }}</strong>
+                        <span class="rule-item-summary">{{ itemSummary }}</span>
+                    </div>
+                    <template v-if="form.type === 'sharing_group'">
+                        <p v-if="form.expected.releasability" class="rule-item-line">Releasability: {{ form.expected.releasability }}</p>
+                        <p v-if="form.expected.description" class="rule-item-line">Description: {{ form.expected.description }}</p>
+                        <ul class="rule-item-members" aria-label="Members">
+                            <li v-for="member in shownMembers" :key="member.uuid">{{ member.name }}</li>
+                            <li v-if="hiddenMembers > 0" class="text-muted">and {{ hiddenMembers }} more</li>
+                        </ul>
+                        <p class="rule-item-hint">
+                            Servers must have at least these members: others stay. A missing group is created; missing
+                            members are added (and created as external organisations).
+                        </p>
+                    </template>
+                    <p v-else class="rule-item-hint">
+                        Servers must have it enabled, with these clusters at their version or newer. Missing clusters
+                        are copied from {{ sourceName }}.
+                    </p>
+                </div>
+                <p v-else class="rule-item-empty">{{ itemEmptyText }}</p>
+            </b-form-group>
+
+            <div v-if="!isItem" class="rule-form-row">
                 <b-form-group
                     v-if="comparatorOptions.length > 1"
                     label="Must be"
@@ -187,14 +268,38 @@ import api from "@/api/baselines"
 import KeyPicker from "./KeyPicker.vue"
 import { SEVERITY_META } from "@/views/attention/healthLabels"
 import {
-    COMPARATOR_META, SEVERITY_OPTIONS, TYPE_META, expectedFromSetting, formatValue, isContentType,
-    isServerSpecific, settingOptions,
+    COMPARATOR_META, SEVERITY_OPTIONS, TYPE_META, expectedFromSetting, formatValue, isContentType, isItemType,
+    isServerSpecific, itemExpectedText, settingOptions,
 } from "./baselineFormat"
 
 const SECRET_WORDS = /(password|passwd|authkey|apikey|token|secret|accesskey|salt|encryptionkey|privatekey)$/
 
+const SHOWN_MEMBERS = 12
+
+// An organisation rule's fields, all present for the form: empty ones are not checked
+function organisationForm(expected) {
+    const value = expected || {}
+    return {
+        name: value.name || "",
+        type: value.type || "",
+        nationality: value.nationality || "",
+        sector: value.sector || "",
+        local: value.local === true || value.local === false ? value.local : null,
+    }
+}
+
+function emptyExpected(type) {
+    if (type === "setting") {
+        return ""
+    }
+    if (type === "organisation") {
+        return organisationForm()
+    }
+    return isItemType(type) ? null : true
+}
+
 function emptyForm(type = "setting") {
-    return { type, key: "", label: "", expected: type === "setting" ? "" : true, comparator: "eq", severity: "warning", note: "", force: false }
+    return { type, key: "", label: "", expected: emptyExpected(type), comparator: "eq", severity: "warning", note: "", force: false }
 }
 
 export default {
@@ -222,6 +327,19 @@ export default {
             saving: false,
             // Once the value was typed or chosen, picking another key no longer overwrites it
             expectedTouched: false,
+            // Why the item picked cannot make a rule (a custom galaxy whose clusters were not listed)
+            unavailableItem: null,
+            takeAgainMessage: null,
+            orgFields: [
+                { name: "type", label: "Type" },
+                { name: "nationality", label: "Nationality" },
+                { name: "sector", label: "Sector" },
+            ],
+            localOptions: [
+                { value: null, text: "Not checked" },
+                { value: true, text: "Local" },
+                { value: false, text: "External" },
+            ],
         }
     },
     computed: {
@@ -241,6 +359,30 @@ export default {
         keyLabel() {
             return (TYPE_META[this.form.type] || {}).keyLabel
         },
+        isItem() {
+            return isItemType(this.form.type)
+        },
+        itemSummary() {
+            return this.form.expected ? itemExpectedText(this.form.type, this.form.expected) : ""
+        },
+        itemEmptyText() {
+            if (this.unavailableItem) {
+                return this.unavailableItem
+            }
+            const what = this.form.type === "sharing_group" ? "its members are" : "its clusters are"
+            return `Pick it on a server above: ${what} taken from there.`
+        },
+        shownMembers() {
+            return ((this.form.expected && this.form.expected.members) || []).slice(0, SHOWN_MEMBERS)
+        },
+        hiddenMembers() {
+            return Math.max(((this.form.expected && this.form.expected.members) || []).length - SHOWN_MEMBERS, 0)
+        },
+        sourceName() {
+            const id = this.form.expected ? this.form.expected.source_server_id : null
+            const server = this.servers.find(entry => entry.id === id)
+            return server ? server.name : `server #${id}`
+        },
         keyPlaceholder() {
             if (this.form.type === "setting") {
                 return "e.g. MISP.live or Security.password_policy_length"
@@ -259,6 +401,9 @@ export default {
             }
             const section = this.contentSection
             if (section && section.error) {
+                if (this.isItem) {
+                    return `${section.error}.`
+                }
                 return `${section.error}. You can still type the ${this.form.type === "taxonomy_enabled" ? "namespace" : "UUID"}.`
             }
             return null
@@ -293,7 +438,7 @@ export default {
             return byName
         },
         contentSection() {
-            return this.reference && isContentType(this.form.type) ? this.reference.content[this.form.type] : null
+            return this.reference && (isContentType(this.form.type) || this.isItem) ? this.reference.content[this.form.type] : null
         },
         keyItems() {
             if (!this.reference) {
@@ -317,7 +462,7 @@ export default {
             return section.items.map(item => ({
                 value: item.key,
                 label: item.label,
-                hint: item.enabled ? on : off,
+                hint: this.isItem ? this.itemHint(item) : (item.enabled ? on : off),
                 search: `${item.key} ${item.label} ${item.description}`.toLowerCase(),
                 taken: this.takenKeys.has(item.key),
                 item,
@@ -340,6 +485,9 @@ export default {
             return null
         },
         valueKind() {
+            if (this.isItem) {
+                return "item"
+            }
             if (isContentType(this.form.type)) {
                 return "content"
             }
@@ -441,6 +589,9 @@ export default {
             if (this.isSecret || (this.serverSpecific && !this.form.force)) {
                 return false
             }
+            if (this.isItem && !(this.form.expected && String(this.form.expected.name || "").trim() !== "")) {
+                return false
+            }
             if (this.keyLabel && this.form.key.trim() === "") {
                 return false
             }
@@ -454,26 +605,76 @@ export default {
             this.conflict = false
             this.saving = false
             this.expectedTouched = false
+            this.unavailableItem = null
+            this.takeAgainMessage = null
             if (this.editing) {
                 this.form = {
                     type: this.rule.type,
                     key: this.rule.key,
                     label: this.rule.label,
-                    expected: this.rule.expected,
+                    expected: this.rule.type === "organisation" ? organisationForm(this.rule.expected) : this.rule.expected,
                     comparator: this.rule.comparator,
                     severity: this.rule.severity,
                     note: this.rule.note,
                     force: this.rule.forced,
                 }
                 this.reference = null
+                this.pickDefaultReference()
                 return
             }
             this.form = emptyForm(this.form.type || "setting")
+            this.pickDefaultReference()
+            this.loadReference()
+        },
+        pickDefaultReference() {
             if (this.referenceId === null || !this.servers.some(server => server.id === this.referenceId)) {
                 const reachable = this.servers.find(server => !server.unavailable)
                 this.referenceId = (reachable || this.servers[0] || {}).id || null
             }
-            this.loadReference()
+        },
+        itemHint(item) {
+            if (this.form.type === "organisation") {
+                return item.group
+            }
+            if (this.form.type === "sharing_group") {
+                return `${item.members || 0} member${item.members === 1 ? "" : "s"}`
+            }
+            return item.unavailable ? "clusters not listed" : `${item.clusters || 0} cluster${item.clusters === 1 ? "" : "s"}`
+        },
+        // An item rule's expected value from what a reference server lists, or null
+        itemExpected(item) {
+            if (!item.expected) {
+                return null
+            }
+            const expected = JSON.parse(JSON.stringify(item.expected))
+            return this.form.type === "organisation" ? organisationForm(expected) : expected
+        },
+        takeAgain() {
+            const server_id = this.referenceId
+            const name = this.referenceName
+            this.referenceLoading = true
+            this.takeAgainMessage = null
+            api.reference(server_id, { fresh: true })
+                .then((reference) => {
+                    const section = reference.content[this.form.type] || {}
+                    const item = (section.items || []).find(entry => entry.key === this.form.key)
+                    if (section.error) {
+                        this.takeAgainMessage = `Could not list it on ${name}: ${section.error}`
+                    } else if (!item) {
+                        this.takeAgainMessage = `${name} does not have it.`
+                    } else if (!this.itemExpected(item)) {
+                        this.takeAgainMessage = item.unavailable || `It cannot be taken from ${name}.`
+                    } else {
+                        this.form.expected = this.itemExpected(item)
+                        this.takeAgainMessage = `Taken from ${name}: save to keep it.`
+                    }
+                })
+                .catch((error) => {
+                    this.takeAgainMessage = `Could not list from ${name}: ${error.message}`
+                })
+                .finally(() => {
+                    this.referenceLoading = false
+                })
         },
         focusFirst() {
             const target = this.editing ? null : this.$refs.key
@@ -539,6 +740,10 @@ export default {
                 this.form.comparator = "eq"
                 this.form.expected = expectedFromSetting(setting)
                 this.form.force = false
+            } else if (item.item && this.isItem) {
+                this.form.label = item.item.label
+                this.form.expected = this.itemExpected(item.item) || emptyExpected(this.form.type)
+                this.unavailableItem = this.itemExpected(item.item) ? null : item.item.unavailable || "It cannot be taken from this server."
             } else if (item.item) {
                 this.form.label = item.item.label !== item.item.key ? item.item.label : ""
                 this.form.expected = item.item.enabled
@@ -560,6 +765,16 @@ export default {
             }
             if (this.valueKind === "number" && payload.expected !== "" && !Number.isNaN(Number(payload.expected))) {
                 payload.expected = Number(payload.expected)
+            }
+            if (this.form.type === "organisation") {
+                // Empty fields are left out: not checked
+                const expected = {}
+                Object.entries(this.form.expected).forEach(([field, value]) => {
+                    if (value !== null && String(value).trim() !== "") {
+                        expected[field] = typeof value === "string" ? value.trim() : value
+                    }
+                })
+                payload.expected = expected
             }
             if (!this.editing) {
                 payload.type = this.form.type
@@ -698,6 +913,68 @@ export default {
 .rule-severity-option:focus-visible {
     outline: 2px solid var(--var-color-lapislazuli);
     outline-offset: 1px;
+}
+
+.rule-take-again {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.rule-org-field {
+    flex: 1 1 10rem;
+}
+
+.rule-item {
+    padding: 0.6rem 0.75rem;
+    border: 1px solid var(--health-rule);
+    border-radius: 6px;
+    background: #f6f7f9;
+    font-size: 0.875rem;
+    color: var(--var-color-yankeesblue);
+}
+
+.rule-item-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.75rem;
+}
+
+.rule-item-summary,
+.rule-item-hint,
+.rule-item-empty {
+    color: #5a6270;
+}
+
+.rule-item-line {
+    margin: 0.35rem 0 0;
+}
+
+.rule-item-members {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin: 0.5rem 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.rule-item-members li {
+    padding: 0 0.45rem;
+    border-radius: 3px;
+    background: #fff;
+    border: 1px solid var(--health-rule);
+    font-size: 0.78rem;
+}
+
+.rule-item-hint {
+    margin: 0.5rem 0 0;
+    font-size: 0.8rem;
+}
+
+.rule-item-empty {
+    margin: 0;
+    font-size: 0.875rem;
 }
 
 .rule-conflict {

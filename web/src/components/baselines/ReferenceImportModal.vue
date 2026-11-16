@@ -18,7 +18,7 @@
                 ></b-form-select>
             </b-form-group>
             <p class="ref-source" aria-live="polite">
-                <template v-if="loading"><b-spinner small class="mr-1"></b-spinner>Listing settings, taxonomies, galaxies and object templates…</template>
+                <template v-if="loading"><b-spinner small class="mr-1"></b-spinner>Listing its settings and content…</template>
                 <template v-else-if="reference">{{ sourceText }}</template>
             </p>
         </div>
@@ -66,7 +66,7 @@
                         <b-form-select v-model="settingTab" :options="settingTabs" size="sm" class="ref-select" aria-label="Section"></b-form-select>
                         <b-form-checkbox v-model="showServerSpecific" switch class="ref-switch">Server-specific settings</b-form-checkbox>
                     </template>
-                    <b-form-checkbox v-else v-model="onlyEnabled" switch class="ref-switch">Only {{ enabledWord }}</b-form-checkbox>
+                    <b-form-checkbox v-else-if="isContent" v-model="onlyEnabled" switch class="ref-switch">Only {{ enabledWord }}</b-form-checkbox>
                 </div>
 
                 <p v-if="activeError" class="ref-empty">
@@ -90,6 +90,7 @@
                         <li v-for="row in shown" :key="row.key" :class="['ref-row', { selected: isSelected(row.key) }]">
                             <b-form-checkbox
                                 :checked="isSelected(row.key)"
+                                :disabled="!!row.unavailable"
                                 class="ref-check"
                                 @change="toggle(row.key, $event)"
                             >
@@ -142,7 +143,10 @@
 <script>
 import moment from "moment"
 import api from "@/api/baselines"
-import { CONTENT_TYPES, SEVERITY_OPTIONS, TYPE_META, expectedFromSetting, formatValue } from "./baselineFormat"
+import {
+    CONTENT_TYPES, ITEM_TYPES, LISTED_TYPES, SEVERITY_OPTIONS, TYPE_META, expectedFromSetting, formatValue, itemExpectedText,
+    sameItemExpected,
+} from "./baselineFormat"
 
 const SHOWN = 200
 const SECTION_LABELS = {
@@ -150,10 +154,33 @@ const SECTION_LABELS = {
     taxonomy_enabled: "Taxonomies",
     galaxy_enabled: "Galaxies",
     object_template_active: "Object templates",
+    organisation: "Organisations",
+    sharing_group: "Sharing groups",
+    custom_galaxy: "Custom galaxies",
 }
 
 function emptySelection() {
-    return { setting: {}, taxonomy_enabled: {}, galaxy_enabled: {}, object_template_active: {} }
+    const selection = { setting: {} }
+    LISTED_TYPES.forEach((type) => { selection[type] = {} })
+    return selection
+}
+
+function plural(count, noun) {
+    return `${count} ${noun}${count === 1 ? "" : "s"}`
+}
+
+// How a reference item reads in the list: organisation details, members, clusters
+function itemRow(type, item) {
+    if (type === "organisation") {
+        return { value: [item.group, item.description].filter(Boolean).join(" · "), off: false }
+    }
+    if (type === "sharing_group") {
+        return { value: `${plural(item.members || 0, "member")}${item.enabled ? "" : " · inactive"}`, off: !item.enabled }
+    }
+    if (item.unavailable) {
+        return { value: item.unavailable, off: true }
+    }
+    return { value: `${plural(item.clusters || 0, "cluster")}${item.enabled ? "" : " · disabled"}`, off: !item.enabled }
 }
 
 function sameValue(a, b) {
@@ -202,7 +229,10 @@ export default {
             }))
         },
         sections() {
-            return ["setting"].concat(CONTENT_TYPES).map(type => ({ type, label: SECTION_LABELS[type], icon: TYPE_META[type].icon }))
+            return ["setting"].concat(LISTED_TYPES).map(type => ({ type, label: SECTION_LABELS[type], icon: TYPE_META[type].icon }))
+        },
+        isContent() {
+            return CONTENT_TYPES.includes(this.activeType)
         },
         activeSection() {
             return this.sections.find(section => section.type === this.activeType)
@@ -212,7 +242,7 @@ export default {
             if (this.reference.refreshed_at) {
                 parts.push(`Settings from its refresh ${moment.unix(this.reference.refreshed_at).fromNow()}`)
             }
-            const listedAt = CONTENT_TYPES.map(type => this.reference.content[type]).find(section => section && section.source)
+            const listedAt = LISTED_TYPES.map(type => this.reference.content[type]).find(section => section && section.source)
             if (listedAt && listedAt.source === "live") {
                 parts.push("content listed just now")
             } else if (listedAt && listedAt.listed_at) {
@@ -235,7 +265,8 @@ export default {
         },
         // Every row of every type, in the list's words
         rowsByType() {
-            const rows = { setting: [], taxonomy_enabled: [], galaxy_enabled: [], object_template_active: [] }
+            const rows = { setting: [] }
+            LISTED_TYPES.forEach((type) => { rows[type] = [] })
             if (!this.reference) {
                 return rows
             }
@@ -280,6 +311,29 @@ export default {
                     }
                 })
             })
+            ITEM_TYPES.forEach((type) => {
+                const section = this.reference.content[type]
+                if (!section || !section.items) {
+                    return
+                }
+                rows[type] = section.items.map((item) => {
+                    const rule = this.rulesByKey[`${type}|${item.key}`]
+                    const { value, off } = itemRow(type, item)
+                    return {
+                        key: item.key,
+                        label: item.label,
+                        value,
+                        valueTitle: item.unavailable || item.key,
+                        off,
+                        expected: item.expected,
+                        unavailable: item.unavailable || (item.expected ? null : "Cannot be taken from this server"),
+                        rule,
+                        ruleDiffers: rule ? !sameItemExpected(type, rule.expected, item.expected) : false,
+                        ruleTitle: rule ? `The baseline expects: ${itemExpectedText(type, rule.expected)}` : "",
+                        search: `${item.label} ${item.key} ${item.description} ${item.group}`.toLowerCase(),
+                    }
+                })
+            })
             return rows
         },
         activeError() {
@@ -299,7 +353,7 @@ export default {
                     if (this.settingTab && row.tab !== this.settingTab) {
                         return false
                     }
-                } else if (this.onlyEnabled && !row.expected) {
+                } else if (this.isContent && this.onlyEnabled && !row.expected) {
                     return false
                 }
                 return search === "" || row.search.includes(search)
@@ -322,7 +376,8 @@ export default {
             return `Select all ${this.filtered.length} ${this.filtered.length === 1 ? noun.replace(/s$/, "").replace(/ie$/, "y") : noun}`
         },
         allShownSelected() {
-            return this.shown.length > 0 && this.shown.every(row => this.isSelected(row.key))
+            const selectable = this.shown.filter(row => !row.unavailable)
+            return selectable.length > 0 && selectable.every(row => this.isSelected(row.key))
         },
         someShownSelected() {
             return this.shown.some(row => this.isSelected(row.key))
@@ -331,7 +386,7 @@ export default {
             if (this.search.trim() !== "") {
                 return "Nothing matches this search."
             }
-            if (this.activeType !== "setting" && this.onlyEnabled) {
+            if (this.isContent && this.onlyEnabled) {
                 return `Nothing is ${this.enabledWord} on this server.`
             }
             return "Nothing to list."
@@ -434,6 +489,9 @@ export default {
         selectShown(checked) {
             const selection = { ...this.selected[this.activeType] }
             this.shown.forEach((row) => {
+                if (checked && row.unavailable) {
+                    return
+                }
                 if (checked) {
                     selection[row.key] = true
                 } else {
@@ -451,6 +509,8 @@ export default {
                 const rule = { type, key: row.key, expected: row.expected, severity: this.severity }
                 if (type === "setting") {
                     rule.force = row.serverSpecific === true
+                } else if (ITEM_TYPES.includes(type)) {
+                    // Named after the item by the server
                 } else if (row.label !== row.key) {
                     rule.label = row.label
                 }

@@ -34,42 +34,110 @@ def templateItems(records: list) -> dict:
             for uuid, template in mispOps.parseObjectTemplates(records).items()}
 
 
-# Rule type → (the MISP index to list, how to keep it). Sections are named by `drift.CONTENT_SECTIONS`
+def withoutId(items: Dict[str, dict]) -> dict:
+    """MISP's local IDs mean nothing to drift"""
+    return {key: {field: value for field, value in item.items() if field != 'id'} for key, item in items.items()}
+
+
+def organisationItems(records: list) -> dict:
+    return withoutId(mispOps.parseOrganisations(records))
+
+
+def sharingGroupItems(groups: Dict[str, dict]) -> dict:
+    return withoutId(groups)
+
+
+def customGalaxyItems(records: list) -> dict:
+    """The custom galaxies only: clusters are added for those the rules name"""
+    custom = [record for record in records if mispOps.isCustomGalaxy(record)]
+    return {uuid: {'name': galaxy['name'], 'namespace': galaxy['namespace'], 'enabled': galaxy['enabled']}
+            for uuid, galaxy in mispOps.parseGalaxies(custom).items()}
+
+
+def recordsOf(index):
+    url, model, what = index
+    return lambda data: mispOps.decodedRecords(data, model, what)
+
+
+# Rule type → (the MISP index to list, how to read its decoded answer, how to keep it). Sections are named by
+# `drift.CONTENT_SECTIONS`
 CONTENT_INDEXES = {
-    'taxonomy_enabled': (mispOps.TAXONOMY_INDEX, taxonomyItems),
-    'galaxy_enabled': (mispOps.GALAXY_INDEX, galaxyItems),
-    'object_template_active': (mispOps.OBJECT_TEMPLATE_INDEX, templateItems),
+    'taxonomy_enabled': (mispOps.TAXONOMY_INDEX[0], recordsOf(mispOps.TAXONOMY_INDEX), taxonomyItems),
+    'galaxy_enabled': (mispOps.GALAXY_INDEX[0], recordsOf(mispOps.GALAXY_INDEX), galaxyItems),
+    'object_template_active': (mispOps.OBJECT_TEMPLATE_INDEX[0], recordsOf(mispOps.OBJECT_TEMPLATE_INDEX),
+                               templateItems),
+    'organisation': (mispOps.ORGANISATION_INDEX[0], recordsOf(mispOps.ORGANISATION_INDEX), organisationItems),
+    'sharing_group': (mispOps.SHARING_GROUP_INDEX[0], mispOps.decodedSharingGroups, sharingGroupItems),
+    'custom_galaxy': (mispOps.GALAXY_INDEX[0], recordsOf(mispOps.GALAXY_INDEX), customGalaxyItems),
 }
 assert set(CONTENT_INDEXES) == set(drift.CONTENT_SECTIONS)
 
 
+class ContentPlan:
+    """What a server lists for its fleet's rules: the index of each content type the rules use, and the clusters of
+    each custom galaxy a rule names. `urls` are asked once each; `state` reads their decoded answers"""
+
+    def __init__(self, types: Iterable[str], galaxies: Iterable[str] = ()):
+        self.types = [type for type in CONTENT_INDEXES if type in set(types)]
+        self.galaxies = sorted(set(galaxies)) if 'custom_galaxy' in self.types else []
+
+    def __bool__(self) -> bool:
+        return bool(self.types)
+
+    @property
+    def urls(self) -> List[str]:
+        urls = [CONTENT_INDEXES[type][0] for type in self.types]
+        urls += [mispOps.galaxyClustersUrl(uuid) for uuid in self.galaxies]
+        return list(dict.fromkeys(urls))
+
+    def state(self, answers: list, now: Optional[int] = None) -> dict:
+        """`baselineState` from the decoded answers of `urls`, in the same order. A section that could not be listed
+        carries the reason instead of items"""
+        byUrl = dict(zip(self.urls, answers))
+        state = {'timestamp': int(time.time()) if now is None else now}
+        for type in self.types:
+            url, decode, build = CONTENT_INDEXES[type]
+            section = drift.CONTENT_SECTIONS[type]
+            try:
+                state[section] = {'items': build(decode(byUrl.get(url)))}
+            except mispOps.MispOpError as e:
+                state[section] = {'error': e.message}
+            except Exception as e:  # A malformed record must not lose the rest of the refresh
+                state[section] = {'error': f'Could not list the {drift.CONTENT_NOUNS[section]}: {e}'}
+        galaxies = state.get('customGalaxies', {}).get('items')
+        for uuid in self.galaxies if isinstance(galaxies, dict) else []:
+            if uuid not in galaxies:
+                continue
+            try:
+                clusters = mispOps.decodedGalaxyClusters(byUrl.get(mispOps.galaxyClustersUrl(uuid)))
+                galaxies[uuid]['clusters'] = clusters or {}
+            except mispOps.MispOpError as e:
+                galaxies[uuid]['clusters_error'] = e.message
+            except Exception as e:
+                galaxies[uuid]['clusters_error'] = f'Could not list the galaxy clusters: {e}'
+        return state
+
+
+def contentPlanOfFleet(fleet_id: Optional[int]) -> ContentPlan:
+    if fleet_id is None:
+        return ContentPlan([])
+    rows = db.session.query(BaselineRule.type, BaselineRule.key).join(Baseline) \
+        .filter(Baseline.fleet_id == fleet_id, BaselineRule.type.in_(list(CONTENT_INDEXES))).all()
+    return ContentPlan({type for type, key in rows}, [key for type, key in rows if type == 'custom_galaxy'])
+
+
 def contentTypesOfFleet(fleet_id: Optional[int]) -> List[str]:
     """Rule types of the fleet's baseline that need content listed from the servers, in a fixed order"""
-    if fleet_id is None:
-        return []
-    present = {type for (type,) in db.session.query(BaselineRule.type).join(Baseline)
-               .filter(Baseline.fleet_id == fleet_id, BaselineRule.type.in_(list(CONTENT_INDEXES))).distinct()}
-    return [type for type in CONTENT_INDEXES if type in present]
+    return contentPlanOfFleet(fleet_id).types
 
 
 def contentUrls(types: Iterable[str]) -> List[str]:
-    return [CONTENT_INDEXES[type][0][0] for type in types]
+    return ContentPlan(types).urls
 
 
 def contentState(types: List[str], answers: list, now: Optional[int] = None) -> dict:
-    """`baselineState` from the decoded answers of `contentUrls(types)`, in the same order. A section that could not
-    be listed carries the reason instead of items"""
-    state = {'timestamp': int(time.time()) if now is None else now}
-    for type, data in zip(types, answers):
-        (url, model, what), build = CONTENT_INDEXES[type]
-        section = drift.CONTENT_SECTIONS[type]
-        try:
-            state[section] = {'items': build(mispOps.decodedRecords(data, model, what))}
-        except mispOps.MispOpError as e:
-            state[section] = {'error': e.message}
-        except Exception as e:  # A malformed record must not lose the rest of the refresh
-            state[section] = {'error': f'Could not list the {what}: {e}'}
-    return state
+    """`baselineState` for content types that need no cluster listing (see `ContentPlan.state`)"""
+    return ContentPlan(types).state(answers, now)
 
 
 def fillLabels(fleet_id: int, state: Optional[dict]) -> None:
@@ -102,42 +170,42 @@ def afterContentFetched(server, state: Optional[dict]) -> None:
 
 # The light check: content listings only, without the rest of a full refresh
 
-async def fetchContentStateAsync(server, types: List[str]) -> dict:
+async def fetchContentStateAsync(server, plan: ContentPlan) -> dict:
     from application.models.utils import asyncFetcher
-    answers = await asyncFetcher(server, contentUrls(types), timeout=CONTENT_TIMEOUT)
-    return contentState(types, answers)
+    answers = await asyncFetcher(server, plan.urls, timeout=CONTENT_TIMEOUT)
+    return plan.state(answers)
 
 
 def checkServers(servers: List[Server], max_concurrency: int = 10) -> Dict[int, str]:
     """Lists again the content the baseline rules of each server's fleet need, saves it in the snapshot and
     re-evaluates health. `{server_id: outcome}`: `checked`, or why the server was skipped"""
     outcomes, todo = {}, []
-    typesByFleet = {}
+    plansByFleet = {}
     for server in servers:
-        types = typesByFleet.setdefault(server.fleet_id, contentTypesOfFleet(server.fleet_id))
-        if not types:
+        plan = plansByFleet.setdefault(server.fleet_id, contentPlanOfFleet(server.fleet_id))
+        if not plan:
             outcomes[server.id] = 'no content rules'
         elif not server.authkey:
             outcomes[server.id] = 'no API key'
         elif redisModel.getServerInfo(server.uuid) is None:
             outcomes[server.id] = 'never refreshed: a full refresh is needed'
         else:
-            todo.append((server, types))
+            todo.append((server, plan))
 
     async def fetchAll():
         semaphore = asyncio.Semaphore(max(int(max_concurrency), 1))
 
-        async def fetch(server, types):
+        async def fetch(server, plan):
             async with semaphore:
                 try:
-                    return await fetchContentStateAsync(server, types)
+                    return await fetchContentStateAsync(server, plan)
                 except Exception as e:
                     print(f'Baseline check of server {server.id} failed: {e}')
                     return None
-        return await asyncio.gather(*[fetch(server, types) for server, types in todo])
+        return await asyncio.gather(*[fetch(server, plan) for server, plan in todo])
 
     from application.models.servers import publishHealth, savePartialInfo
-    for (server, types), state in zip(todo, asyncio.run(fetchAll()) if todo else []):
+    for (server, plan), state in zip(todo, asyncio.run(fetchAll()) if todo else []):
         if state is None:
             outcomes[server.id] = 'failed'
             continue
@@ -165,19 +233,27 @@ def checkFleet(user, fleet_id: int) -> dict:
     fleet = ownedFleet(user, fleet_id)
     server_ids = [server.id for server in fleet.servers]
     if not contentTypesOfFleet(fleet.id):
-        return {'server_ids': [], 'message': 'The baseline has no taxonomy, galaxy or object template rule to check'}
+        return {'server_ids': [], 'message': 'The baseline has no taxonomy, galaxy, object template, organisation or '
+                                             'sharing group rule to check'}
     if not enqueueCheck(server_ids):
         raise BaselineError('The check could not be started: the workers could not be reached', 503)
     return {'server_ids': server_ids}
 
 
-def missingContent(server, types: List[str]) -> bool:
+def missingContent(server, plan: ContentPlan) -> bool:
+    """Whether the server never listed a section the rules need, or the clusters of a custom galaxy it has"""
     snapshot = redisModel.getServerInfo(server.uuid)
     if snapshot is None:
         return False  # Its first full refresh will list the content
     state = (snapshot.get('query_result') or {}).get('baselineState')
     state = state if isinstance(state, dict) else {}
-    return any(drift.CONTENT_SECTIONS[type] not in state for type in types)
+    if any(drift.CONTENT_SECTIONS[type] not in state for type in plan.types):
+        return True
+    galaxies = (state.get('customGalaxies') or {}).get('items') if isinstance(state.get('customGalaxies'), dict) \
+        else None
+    galaxies = galaxies if isinstance(galaxies, dict) else {}
+    return any(isinstance(galaxies.get(uuid), dict) and 'clusters' not in galaxies[uuid]
+               and 'clusters_error' not in galaxies[uuid] for uuid in plan.galaxies)
 
 
 def rulesChanged(fleet: Fleet) -> None:
@@ -185,9 +261,9 @@ def rulesChanged(fleet: Fleet) -> None:
     a new rule needs are checked in the background. Never raises: the rules are saved already"""
     try:
         from application.models.health import publishServerHealth
-        types = contentTypesOfFleet(fleet.id)
+        plan = contentPlanOfFleet(fleet.id)
         servers = list(fleet.servers)
-        missing = [server.id for server in servers if types and server.authkey and missingContent(server, types)]
+        missing = [server.id for server in servers if plan and server.authkey and missingContent(server, plan)]
         enqueueCheck(missing)
         for server in servers:
             publishServerHealth(server)

@@ -24,10 +24,26 @@ TEMPLATES = [{"ObjectTemplate": {"id": "26", "uuid": TEMPLATE.upper(), "name": "
                                  "active": False}},
              {"ObjectTemplate": {"id": "402", "uuid": TEMPLATE.upper(), "name": "btc-transaction", "version": "5",
                                  "active": True}}]
+ORG_ALB = "5d1b0c8e-0d0a-4a8b-9f43-0000000000a1"
+ORG_BGR = "5d1b0c8e-0d0a-4a8b-9f43-0000000000b2"
+SG_NATO = "7e2c1d9f-1e1b-4b9c-8a54-0000000000c3"
+ORGANISATIONS = [
+    {"Organisation": {"id": "1", "uuid": ORG_ALB, "name": "team-ALB", "type": "MIL", "nationality": "Albania",
+                      "sector": "", "local": True}},
+    {"Organisation": {"id": "2", "uuid": ORG_BGR, "name": "team-BGR", "type": "", "nationality": "", "sector": "",
+                      "local": False}},
+]
+SHARING_GROUPS = {"response": [{
+    "SharingGroup": {"id": "3", "uuid": SG_NATO, "name": "NATO Nations", "releasability": "NATO",
+                     "description": "", "active": True, "roaming": False},
+    "SharingGroupOrg": [{"org_id": "1", "extend": True, "Organisation": {"id": "1", "uuid": ORG_ALB, "name": "team-ALB"}}],
+}]}
 CONTENT_ANSWERS = {
     "/taxonomies/index": TAXONOMIES,
     "/galaxies/index": GALAXIES,
     "/objectTemplates/index/all": TEMPLATES,
+    "/organisations/index/scope:all": ORGANISATIONS,
+    "/sharing_groups/index": SHARING_GROUPS,
 }
 
 
@@ -358,7 +374,8 @@ def test_reference_server_lists_settings_and_content(fleet, client, auth_headers
 
     body = client.get(f"/baselines/reference/{beta.id}", headers=headers).get_json()
     assert body["server"]["id"] == beta.id and body["version"] == "3.0.0" and body["unavailable"] is None
-    assert requested == [(beta.id, ["/taxonomies/index", "/galaxies/index", "/objectTemplates/index/all"], 30)]
+    assert requested == [(beta.id, ["/taxonomies/index", "/galaxies/index", "/objectTemplates/index/all",
+                                    "/organisations/index/scope:all", "/sharing_groups/index"], 30)]
     settings = {entry["name"]: entry for entry in body["settings"]}
     assert settings["MISP.live"]["type"] == "boolean" and settings["MISP.live"]["server_specific"] is False
     assert settings["MISP.baseurl"]["server_specific"] is True
@@ -371,6 +388,16 @@ def test_reference_server_lists_settings_and_content(fleet, client, auth_headers
     assert content["galaxy_enabled"] == {"error": "Could not list the galaxies: HTTP 500: Boom"}
     assert content["object_template_active"]["items"][0]["key"] == TEMPLATE
     assert content["object_template_active"]["items"][0]["enabled"] is True
+    # Organisations and sharing groups come with the value a rule taken from them expects
+    alb, bgr = content["organisation"]["items"]
+    assert alb["key"] == ORG_ALB and alb["group"] == "Local" and alb["description"] == "MIL · Albania"
+    assert alb["expected"] == {"name": "team-ALB", "type": "MIL", "nationality": "Albania"}
+    assert bgr["expected"] == {"name": "team-BGR"} and bgr["local"] is False
+    sg, = content["sharing_group"]["items"]
+    assert sg["key"] == SG_NATO and sg["members"] == 1 and sg["expected"] == {
+        "name": "NATO Nations", "releasability": "NATO", "description": "", "active": True, "roaming": False,
+        "members": [{"uuid": ORG_ALB, "name": "team-ALB", "extend": True}]}
+    assert content["custom_galaxy"] == {"error": "Could not list the galaxies: HTTP 500: Boom"}
 
     # Unreachable: what it listed last, without asking MISP
     redisModel.saveServerInfo(alpha.uuid, snapshotWith(content=contentState()))

@@ -207,3 +207,182 @@ def snapshotSettings(serverInfo: Optional[dict]) -> Dict[str, dict]:
     if not isinstance(finalSettings, list):
         return {}
     return {entry['setting']: entry for entry in finalSettings if isinstance(entry, dict) and 'setting' in entry}
+
+
+# Organisations, by UUID, lowercased
+
+ORGANISATION_INDEX = ('/organisations/index/scope:all', 'Organisation', 'organisations')
+ORGANISATION_FIELDS = ('name', 'type', 'nationality', 'sector')
+
+
+def text(value) -> str:
+    return value.strip() if isinstance(value, str) else ''
+
+
+def organisations(server) -> Dict[str, dict]:
+    return parseOrganisations(listing(server, *ORGANISATION_INDEX))
+
+
+def parseOrganisations(orgRecords: list) -> Dict[str, dict]:
+    """uuid → {id, name, type, nationality, sector, local}"""
+    return {
+        uuidKey(org['uuid']): {
+            'id': int(org['id']),
+            **{field: text(org.get(field)) for field in ORGANISATION_FIELDS},
+            'local': flag(org.get('local')),
+        }
+        for org in orgRecords if org.get('uuid')
+    }
+
+
+def addOrganisation(server, uuid: str, fields: dict, local: bool) -> None:
+    """MISP makes an organisation added through its API local unless told otherwise"""
+    try:
+        post(server, '/admin/organisations/add', {'Organisation': {'uuid': uuid, **fields, 'local': local}})
+    except MispOpError as e:
+        raise MispOpError(f"Could not create organisation `{fields.get('name', uuid)}`: {e.message}", e.response)
+
+
+def editOrganisation(server, orgId: int, changes: dict) -> None:
+    try:
+        post(server, f'/admin/organisations/edit/{orgId}', {'Organisation': changes})
+    except MispOpError as e:
+        raise MispOpError(f'Could not change the organisation: {e.message}', e.response)
+
+
+# Sharing groups, by UUID, lowercased
+
+SHARING_GROUP_INDEX = ('/sharing_groups/index', 'SharingGroup', 'sharing groups')
+
+
+def sharingGroupRecords(data, response=None) -> list:
+    """MISP wraps this index in `{"response": [...]}`"""
+    if isinstance(data, dict) and isinstance(data.get('response'), list):
+        data = data['response']
+    if not isinstance(data, list) or any(not isinstance(entry, dict) or 'SharingGroup' not in entry for entry in data):
+        raise MispOpError('Could not list the sharing groups: unexpected answer', response)
+    return data
+
+
+def sharingGroups(server) -> Dict[str, dict]:
+    url, model, what = SHARING_GROUP_INDEX
+    response = checked(mispGetRequest(server, url, {}, rawResponse=True, nocache=True), f'Could not list the {what}')
+    return parseSharingGroups(sharingGroupRecords(responseJson(response), response))
+
+
+def decodedSharingGroups(data) -> Dict[str, dict]:
+    """From another client's decoded answer (see `decodedRecords`)"""
+    if isinstance(data, dict) and not isinstance(data.get('response'), list):
+        decodedRecords(data, 'SharingGroup', 'sharing groups')  # Raises with the error the answer carries
+    return parseSharingGroups(sharingGroupRecords(data))
+
+
+def parseSharingGroups(entries: list) -> Dict[str, dict]:
+    """uuid → {id, name, releasability, description, active, roaming, members: {org uuid: {name, extend}}}"""
+    groups = {}
+    for entry in entries:
+        sg = entry['SharingGroup']
+        if not sg.get('uuid'):
+            continue
+        members = {}
+        for member in entry.get('SharingGroupOrg') or []:
+            org = member.get('Organisation') if isinstance(member, dict) else None
+            if isinstance(org, dict) and org.get('uuid'):
+                members[uuidKey(org['uuid'])] = {'name': text(org.get('name')), 'extend': flag(member.get('extend'))}
+        groups[uuidKey(sg['uuid'])] = {
+            'id': int(sg['id']),
+            'name': text(sg.get('name')),
+            'releasability': text(sg.get('releasability')),
+            'description': text(sg.get('description')),
+            'active': flag(sg.get('active')),
+            'roaming': flag(sg.get('roaming')),
+            'members': members,
+        }
+    return groups
+
+
+def captureSharingGroup(server, sharingGroup: dict) -> None:
+    """Creates the sharing group, or updates the one with its UUID, the way MISP takes one from a sync: the
+    attributes given replace the current ones, the members listed are added (missing organisations are created as
+    external ones), members not listed are kept"""
+    try:
+        post(server, '/sharing_groups/add', sharingGroup)
+    except MispOpError as e:
+        raise MispOpError(f"Could not save sharing group `{sharingGroup.get('name')}`: {e.message}", e.response)
+
+
+# Custom galaxies (created on an instance, not shipped with MISP) and their clusters
+
+def isCustomGalaxy(record: dict) -> bool:
+    return not flag(record.get('default', True))
+
+
+def galaxyClustersUrl(uuid: str) -> str:
+    return f'/galaxy_clusters/index/{uuidKey(uuid)}'
+
+
+def parseGalaxyClusters(clusterRecords: list) -> Dict[str, int]:
+    """cluster uuid → version, deleted clusters left out"""
+    return {
+        uuidKey(cluster['uuid']): number(cluster.get('version'))
+        for cluster in clusterRecords if cluster.get('uuid') and not flag(cluster.get('deleted'))
+    }
+
+
+def galaxyClusters(server, uuid: str) -> Optional[Dict[str, int]]:
+    """The clusters of the galaxy, or None when the server has no such galaxy"""
+    response = mispGetRequest(server, galaxyClustersUrl(uuid), {}, rawResponse=True, nocache=True)
+    if getattr(response, 'status_code', None) == 404:
+        return None
+    checked(response, 'Could not list the galaxy clusters')
+    return parseGalaxyClusters(records(responseJson(response), 'GalaxyCluster', 'galaxy clusters', response))
+
+
+def decodedGalaxyClusters(data) -> Optional[Dict[str, int]]:
+    """From another client's decoded answer: None when the server has no such galaxy"""
+    if isinstance(data, dict) and data.get('_status_code') == 404:
+        return None
+    return parseGalaxyClusters(decodedRecords(data, 'GalaxyCluster', 'galaxy clusters'))
+
+
+GALAXY_FIELDS = ('uuid', 'name', 'namespace', 'type', 'description', 'icon', 'kill_chain_order', 'distribution',
+                 'category', 'sub_category', 'kind', 'local_only')
+
+
+def galaxyDefinition(server, galaxyId: int) -> dict:
+    """The fields a galaxy is created from"""
+    response = checked(mispGetRequest(server, f'/galaxies/view/{galaxyId}', {}, rawResponse=True, nocache=True),
+                       'Could not read the galaxy')
+    data = responseJson(response)
+    galaxy = data.get('Galaxy') if isinstance(data, dict) else None
+    if not isinstance(galaxy, dict):
+        raise MispOpError('Could not read the galaxy: unexpected answer', response)
+    return {field: galaxy[field] for field in GALAXY_FIELDS if galaxy.get(field) is not None}
+
+
+def exportGalaxyClusters(server, galaxyId: int) -> list:
+    """The galaxy's custom clusters in MISP's own format, each carrying its galaxy, whatever their distribution"""
+    payload = {'Galaxy': {'default': 0, 'custom': 1, 'distribution': [0, 1, 2, 3, 4], 'format': 'misp',
+                          'download': 'raw'}}
+    try:
+        response = post(server, f'/galaxies/export/{galaxyId}', payload)
+    except MispOpError as e:
+        raise MispOpError(f'Could not export the galaxy clusters: {e.message}', e.response)
+    data = responseJson(response)
+    if not isinstance(data, list):
+        raise MispOpError('Could not export the galaxy clusters: unexpected answer', response)
+    return data
+
+
+def importGalaxyClusters(server, clusters: list) -> None:
+    try:
+        post(server, '/galaxies/import', clusters)
+    except MispOpError as e:
+        raise MispOpError(f'Could not import the galaxy clusters: {e.message}', e.response)
+
+
+def addGalaxy(server, definition: dict) -> None:
+    try:
+        post(server, '/galaxies/add', {'Galaxy': definition})
+    except MispOpError as e:
+        raise MispOpError(f"Could not create galaxy `{definition.get('name')}`: {e.message}", e.response)

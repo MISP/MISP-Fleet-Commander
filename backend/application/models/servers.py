@@ -239,7 +239,7 @@ def fetchServerInfo(server, use_cache=True):
     connectedServers = stripRemoteAuthkeys(mispGetRequest(server, '/servers/index', nocache=not use_cache))
     connectedServers = attachConnectedServerStatus(server, connectedServers)
     userRegistrations = summarizeRegistrations(mispGetRequest(server, '/users/registrations', nocache=not use_cache))
-    contentTypes = baselineDrift.contentTypesOfFleet(server.fleet_id)
+    contentPlan = baselineDrift.contentPlanOfFleet(server.fleet_id)
     serverContent = None
     server_query = {
         'serverSettings': serverSettings,
@@ -249,9 +249,9 @@ def fetchServerInfo(server, use_cache=True):
         'userRegistrations': userRegistrations,
         'serverContent': serverContent
     }
-    if contentTypes:
-        server_query['baselineState'] = baselineDrift.contentState(contentTypes, [
-            mispGetRequest(server, url, nocache=not use_cache) for url in baselineDrift.contentUrls(contentTypes)])
+    if contentPlan:
+        server_query['baselineState'] = contentPlan.state([
+            mispGetRequest(server, url, nocache=not use_cache) for url in contentPlan.urls])
     fullQuery = {
         'timestamp': int(time.time()),
         'query_result': server_query,
@@ -326,9 +326,10 @@ async def fetchServerInfoAsync(server, clientSocketEmitterUpdateFuns):
         '/servers/index',
         '/users/registrations',
     ]
-    # Taxonomies, galaxies or object templates, when the fleet's baseline has rules about them
-    contentTypes = baselineDrift.contentTypesOfFleet(server.fleet_id)
-    results = await asyncFetcher(server, urls + baselineDrift.contentUrls(contentTypes))
+    # Taxonomies, galaxies, object templates, organisations or sharing groups, when the fleet's baseline has rules
+    # about them
+    contentPlan = baselineDrift.contentPlanOfFleet(server.fleet_id)
+    results = await asyncFetcher(server, urls + contentPlan.urls)
     serverSettings = results[0]
     serverUser = results[1]
     connectedServers = stripRemoteAuthkeys(results[2])
@@ -343,8 +344,8 @@ async def fetchServerInfoAsync(server, clientSocketEmitterUpdateFuns):
         'userRegistrations': userRegistrations,
         'serverContent': serverContent
     }
-    if contentTypes:
-        server_query['baselineState'] = baselineDrift.contentState(contentTypes, results[len(urls):])
+    if contentPlan:
+        server_query['baselineState'] = contentPlan.state(results[len(urls):])
     fullQuery = {
         'timestamp': int(time.time()),
         'query_result': server_query,

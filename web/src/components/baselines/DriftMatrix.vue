@@ -103,7 +103,7 @@
 <script>
 import moment from "moment"
 import { SEVERITY_META } from "@/views/attention/healthLabels"
-import { TYPE_META, actualText, expectedText, ruleSubtitle, ruleTitle } from "./baselineFormat"
+import { TYPE_META, actualText, expectedText, isItemType, ruleSubtitle, ruleTitle } from "./baselineFormat"
 
 const UNKNOWN_CELL = { state: "unknown", actual: null, reason: "Not evaluated yet" }
 
@@ -155,7 +155,12 @@ export default {
             return this.servers.filter(server => this.cellState(rule, server) === "drift").length
         },
         actual(rule, server) {
-            return actualText(rule, this.cell(rule, server))
+            const cell = this.cell(rule, server)
+            // What differs on an organisation, sharing group or galaxy is too long for a cell: it is in the title
+            if (isItemType(rule.type)) {
+                return cell.actual === null || cell.actual === undefined ? "absent" : "differs"
+            }
+            return actualText(rule, cell)
         },
         cellTitle(rule, server) {
             const cell = this.cell(rule, server)
@@ -163,6 +168,9 @@ export default {
                 return `In line: ${actualText(rule, cell)}`
             }
             if (cell.state === "drift") {
+                if (isItemType(rule.type)) {
+                    return `Drift: ${cell.actual === null || cell.actual === undefined ? "not on this server" : actualText(rule, cell)}`
+                }
                 return `Drift: expected ${expectedText(rule)}, found ${actualText(rule, cell)}`
             }
             return cell.reason || "Unknown"

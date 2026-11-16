@@ -295,5 +295,6 @@ def test_rule_types_for_the_editor(owner, api):
     user, fleets = owner
     body = api(user).get("/baselines/types").get_json()
     assert [t["type"] for t in body["types"]] == ["setting", "taxonomy_enabled", "galaxy_enabled",
-                                                   "object_template_active", "version_min"]
+                                                   "object_template_active", "version_min", "organisation",
+                                                   "sharing_group", "custom_galaxy"]
     assert "MISP.baseurl" in body["server_specific_settings"] and body["server_specific_prefixes"] == ["GnuPG.", "SMIME."]

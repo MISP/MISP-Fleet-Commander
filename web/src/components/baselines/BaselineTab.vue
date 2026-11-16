@@ -14,7 +14,7 @@
             <div class="baseline-empty-icon" aria-hidden="true"><i class="fas fa-ruler-combined"></i></div>
             <h2 id="baseline-empty-title" class="baseline-empty-title">No baseline for this fleet yet</h2>
             <p class="baseline-empty-text">
-                A baseline lists the settings, taxonomies, galaxies and object templates every server of the fleet should have.
+                A baseline lists the settings, taxonomies, galaxies, object templates, organisations, sharing groups and custom galaxies every server of the fleet should have.
                 Servers that drift from it show here, in Needs attention and in the fleet table.
             </p>
             <div class="baseline-empty-actions">
@@ -56,7 +56,7 @@
                         size="sm"
                         variant="outline-secondary"
                         :disabled="checking"
-                        title="List the taxonomies, galaxies and object templates of every server again"
+                        title="List the taxonomies, galaxies, object templates, organisations and sharing groups of every server again"
                         @click="checkContent"
                     >
                         <i :class="['fas fa-rotate mr-1', { 'fa-spin': checking }]" aria-hidden="true"></i>Check content
@@ -166,7 +166,7 @@ import DriftMatrix from "./DriftMatrix.vue"
 import ReferenceImportModal from "./ReferenceImportModal.vue"
 import RemediationModal from "./RemediationModal.vue"
 import RuleModal from "./RuleModal.vue"
-import { expectedText, ruleTitle } from "./baselineFormat"
+import { LISTED_TYPES, expectedText, ruleTitle } from "./baselineFormat"
 
 // Health updates of a fleet's servers come in bursts (refresh of every server): one reload for the burst
 const RELOAD_DELAY_MS = 800
@@ -226,7 +226,7 @@ export default {
             return this.driftingRules.filter(rule => rule.remediable).length
         },
         hasContentRules() {
-            return this.rules.some(rule => ["taxonomy_enabled", "galaxy_enabled", "object_template_active"].includes(rule.type))
+            return this.rules.some(rule => LISTED_TYPES.includes(rule.type))
         },
         statesByRule() {
             const states = {}

@@ -3,6 +3,9 @@
 checked (`type` and `key`) and the value expected; this module validates and stores rules. Drift is evaluated from
 the servers' snapshots, and fixed through jobs.
 
+Organisations, sharing groups and custom galaxies are expected as objects describing the item (its name, members,
+clusters, …), as a reference server lists them, so that a fix can create the item where it is missing.
+
 Settings that are specific to each server (its URL, its organisation, its GnuPG key, …) are refused unless the rule
 is explicitly forced. Secrets are refused outright: a baseline is stored in clear, and MISP hides their value anyway"""
 
@@ -78,8 +81,39 @@ RULE_TYPES = {
         'comparators': ('gte',),
         'remediable': False,
     },
+    # Present, with the given name and, when the rule sets them, type, nationality, sector and local/external
+    'organisation': {
+        'label': 'Organisation',
+        'key': 'uuid',
+        'expected': 'organisation',
+        'comparators': ('eq',),
+        'remediable': True,
+    },
+    # Present, with the given name (releasability and description when set) and at least the given members
+    'sharing_group': {
+        'label': 'Sharing group',
+        'key': 'uuid',
+        'expected': 'sharing group',
+        'comparators': ('eq',),
+        'remediable': True,
+    },
+    # Present, enabled, with the given clusters at the given version or newer. Fixed from `source_server_id`
+    'custom_galaxy': {
+        'label': 'Custom galaxy',
+        'key': 'uuid',
+        'expected': 'custom galaxy',
+        'comparators': ('eq',),
+        'remediable': True,
+    },
 }
 assert tuple(RULE_TYPES) == BASELINE_RULE_TYPES
+
+# Rule types whose expected value is an object describing the item, taken from a reference server
+STRUCTURED_TYPES = ('organisation', 'sharing_group', 'custom_galaxy')
+MAX_MEMBERS = 2000
+MAX_CLUSTERS = 20000
+# A sharing group's members and a galaxy's clusters take more room than a setting value
+MAX_EXPECTED_BYTES_BY_TYPE = {'sharing_group': 256 * 1024, 'custom_galaxy': 1024 * 1024}
 
 
 class BaselineError(Exception):
@@ -144,6 +178,13 @@ class FleetSettings:
             if entry.get('type') in ('boolean', 'numeric', 'float', 'string'):
                 return entry['type']
         return None
+
+    def checkSourceServer(self, server_id: int) -> None:
+        """A server content is copied from must be the fleet owner's. One deleted since is accepted: the rule's fix
+        then has to be done by hand"""
+        server = db.session.get(Server, server_id)
+        if server is not None and server.user_id != self.fleet.user_id:
+            raise BaselineError('Unknown source server', field='expected')
 
 
 def asBoolean(value: Any, field: str = 'expected') -> bool:
@@ -226,16 +267,116 @@ def knownLabel(type: str, key: str) -> str:
     return ''
 
 
-def text(payload: dict, field: str, maxLength: int) -> str:
+def text(payload: dict, field: str, maxLength: int, name: Optional[str] = None) -> str:
+    """`name`: the field to blame, when it is not `field` itself (a part of `expected`)"""
     value = payload.get(field)
     if value is None:
         return ''
     if not isinstance(value, str):
-        raise BaselineError(f'`{field}` must be a text', field=field)
+        raise BaselineError(f'`{field}` must be a text', field=name or field)
     value = value.strip()
     if len(value) > maxLength:
-        raise BaselineError(f'`{field}` is longer than {maxLength} characters', field=field)
+        raise BaselineError(f'`{field}` is longer than {maxLength} characters', field=name or field)
     return value
+
+
+def uuidOf(value: Any, what: str, field: str = 'expected') -> str:
+    key = value.strip().lower() if isinstance(value, str) else ''
+    if not UUID.match(key):
+        raise BaselineError(f'{what} must be a UUID', field=field)
+    return key
+
+
+def expectedObject(expected: Any) -> dict:
+    if not isinstance(expected, dict):
+        raise BaselineError('Expected an object describing the item, as a reference server lists it', field='expected')
+    return expected
+
+
+def requiredName(expected: dict) -> str:
+    name = text(expected, 'name', MAX_LABEL_LENGTH, 'expected')
+    if name == '':
+        raise BaselineError('`expected.name` is required', field='expected')
+    return name
+
+
+def optionalBoolean(expected: dict, field: str) -> Optional[bool]:
+    value = expected.get(field)
+    return None if value is None else asBoolean(value)
+
+
+def organisationExpected(expected: Any) -> dict:
+    """Name always; type, nationality and sector when not empty; `local` when true or false. What is left out is not
+    checked"""
+    expected = expectedObject(expected)
+    normalised = {'name': requiredName(expected)}
+    for field in ('type', 'nationality', 'sector'):
+        value = text(expected, field, MAX_LABEL_LENGTH, 'expected')
+        if value:
+            normalised[field] = value
+    local = optionalBoolean(expected, 'local')
+    if local is not None:
+        normalised['local'] = local
+    return normalised
+
+
+def sharingGroupExpected(expected: Any) -> dict:
+    """Name, releasability, description, whether it is active (when set), roaming (used when it is created) and the
+    members it must have at least, by organisation UUID (their names create the missing ones)"""
+    expected = expectedObject(expected)
+    members = expected.get('members', [])
+    if not isinstance(members, list):
+        raise BaselineError('`expected.members` must be a list of organisations', field='expected')
+    if len(members) > MAX_MEMBERS:
+        raise BaselineError(f'A sharing group rule has at most {MAX_MEMBERS} members', field='expected')
+    byUuid = {}
+    for member in members:
+        if not isinstance(member, dict):
+            raise BaselineError('Each member is an organisation: `{uuid, name}`', field='expected')
+        uuid = uuidOf(member.get('uuid'), 'A member’s `uuid`')
+        byUuid[uuid] = {'uuid': uuid, 'name': requiredName(member),
+                        'extend': optionalBoolean(member, 'extend') is True}
+    normalised = {
+        'name': requiredName(expected),
+        'releasability': text(expected, 'releasability', 4096, 'expected'),
+        'description': text(expected, 'description', 4096, 'expected'),
+        'roaming': optionalBoolean(expected, 'roaming') is True,
+        'members': sorted(byUuid.values(), key=lambda member: (member['name'].lower(), member['uuid'])),
+    }
+    active = optionalBoolean(expected, 'active')
+    if active is not None:
+        normalised['active'] = active
+    return normalised
+
+
+def customGalaxyExpected(expected: Any, settings: 'FleetSettings') -> dict:
+    """Its name, its clusters (UUID → the version a server must have at least) and the server it is copied from"""
+    expected = expectedObject(expected)
+    clusters = expected.get('clusters', {})
+    if not isinstance(clusters, dict):
+        raise BaselineError('`expected.clusters` must map cluster UUIDs to versions', field='expected')
+    if len(clusters) > MAX_CLUSTERS:
+        raise BaselineError(f'A custom galaxy rule has at most {MAX_CLUSTERS} clusters', field='expected')
+    normalisedClusters = {}
+    for uuid, version in clusters.items():
+        normalisedClusters[uuidOf(uuid, 'A cluster’s UUID')] = asNumber(version, integer=True)
+    source = expected.get('source_server_id')
+    if isinstance(source, bool) or not isinstance(source, int):
+        raise BaselineError('`expected.source_server_id` must be the ID of the server the galaxy is copied from',
+                            field='expected')
+    settings.checkSourceServer(source)
+    return {
+        'name': requiredName(expected),
+        'namespace': text(expected, 'namespace', MAX_LABEL_LENGTH, 'expected'),
+        'source_server_id': source,
+        'clusters': dict(sorted(normalisedClusters.items())),
+    }
+
+
+def structuredLabel(type: str, expected: dict) -> str:
+    if type == 'custom_galaxy':
+        return galaxyLabel(expected.get('namespace'), expected['name'])
+    return expected['name']
 
 
 def validateRule(payload: Any, settings: FleetSettings) -> dict:
@@ -267,6 +408,7 @@ def validateRule(payload: Any, settings: FleetSettings) -> dict:
             raise BaselineError(f'`key` is longer than {MAX_KEY_LENGTH} characters', field='key')
 
     expected = payload.get('expected')
+    label = text(payload, 'label', MAX_LABEL_LENGTH)
     if type == 'setting':
         forced = checkSettingKey(key, force, settings)
         expected = settingExpected(key, expected, comparator, settings)
@@ -275,6 +417,16 @@ def validateRule(payload: Any, settings: FleetSettings) -> dict:
         if version is None:
             raise BaselineError('Expected a MISP version such as `2.5.20`', field='expected')
         expected = format_version(version)
+    elif type in STRUCTURED_TYPES:
+        key = uuidOf(key, '`key`', field='key')
+        if type == 'organisation':
+            expected = organisationExpected(expected)
+        elif type == 'sharing_group':
+            expected = sharingGroupExpected(expected)
+        else:
+            expected = customGalaxyExpected(expected, settings)
+        # Named after the item, whatever the client sent: the name is part of what is checked
+        label = structuredLabel(type, expected)[:MAX_LABEL_LENGTH]
     else:
         if meta['key'] == 'uuid':
             key = key.lower()
@@ -284,13 +436,14 @@ def validateRule(payload: Any, settings: FleetSettings) -> dict:
             raise BaselineError('`key` must be a taxonomy namespace, such as `tlp`', field='key')
         expected = asBoolean(True if expected is None else expected)
 
-    if len(json.dumps(expected)) > MAX_EXPECTED_BYTES:
-        raise BaselineError(f'`expected` is larger than {MAX_EXPECTED_BYTES // 1024} KB', field='expected')
+    maxBytes = MAX_EXPECTED_BYTES_BY_TYPE.get(type, MAX_EXPECTED_BYTES)
+    if len(json.dumps(expected)) > maxBytes:
+        raise BaselineError(f'`expected` is larger than {maxBytes // 1024} KB', field='expected')
 
     return {
         'type': type,
         'key': key,
-        'label': text(payload, 'label', MAX_LABEL_LENGTH) or knownLabel(type, key),
+        'label': label or knownLabel(type, key),
         'expected': expected,
         'comparator': comparator,
         'severity': severity,

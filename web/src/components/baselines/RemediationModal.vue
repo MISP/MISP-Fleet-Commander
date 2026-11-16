@@ -87,7 +87,7 @@
 <script>
 import api from "@/api/baselines"
 import JobRunPanel from "@/components/jobs/JobRunPanel.vue"
-import { TYPE_META, actualText, expectedText, formatValue, isContentType } from "./baselineFormat"
+import { TYPE_META, actualText, expectedText, formatValue, isContentType, isItemType } from "./baselineFormat"
 
 // Fixing drift: a preview of `server · rule · current → expected`, then the job that applies it
 export default {
@@ -210,9 +210,15 @@ export default {
             return item.label || item.key
         },
         current(item) {
+            if (isItemType(item.type)) {
+                return item.current === null || item.current === undefined ? "absent" : item.difference
+            }
             return actualText(item, { actual: item.current })
         },
         target(item) {
+            if (isItemType(item.type)) {
+                return item.current === null || item.current === undefined ? "created" : "as in the baseline"
+            }
             if (isContentType(item.type)) {
                 return expectedText(item)
             }

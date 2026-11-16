@@ -512,7 +512,8 @@ class JobResult(BaseModel):
     job = db.relationship('Job', back_populates='results')
 
 
-BASELINE_RULE_TYPES = ('setting', 'taxonomy_enabled', 'galaxy_enabled', 'object_template_active', 'version_min')
+BASELINE_RULE_TYPES = ('setting', 'taxonomy_enabled', 'galaxy_enabled', 'object_template_active', 'version_min',
+                       'organisation', 'sharing_group', 'custom_galaxy')
 BASELINE_COMPARATORS = ('eq', 'gte', 'lte')
 BASELINE_SEVERITIES = ('info', 'warning', 'critical')
 
@@ -540,7 +541,8 @@ class Baseline(BaseModel):
 
 class BaselineRule(BaseModel):
     """One expectation: `type` says what is checked (a setting, a taxonomy, …), `key` which one (setting name,
-    taxonomy namespace, galaxy or object template UUID; empty for `version_min`), `expected` the value it must
+    taxonomy namespace, UUID of a galaxy, object template, organisation or sharing group; empty for `version_min`),
+    `expected` the value it must
     have, compared with `comparator`. A drifting server raises a health issue of the rule's `severity`. Rules are
     applied in ID order when drift is fixed"""
     __tablename__ = 'baseline_rules'
