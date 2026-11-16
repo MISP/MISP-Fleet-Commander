@@ -31,7 +31,7 @@
             <p v-if="servers.length === 0" class="baseline-empty-hint">Add servers to the fleet to pick rules from one of them.</p>
         </section>
 
-        <template v-else-if="loaded">
+        <div v-else-if="loaded" class="baseline-frame">
             <div class="baseline-head">
                 <div class="baseline-status" aria-live="polite">
                     <span :class="['baseline-verdict', verdict.tone]">
@@ -117,6 +117,7 @@
                 :servers="servers"
                 :highlight-rule-id="highlightRuleId"
                 :refreshing="refreshing"
+                :available-width="availableWidth"
                 @edit="openEdit"
                 @delete="deleteRule"
                 @fix="openFix"
@@ -128,7 +129,7 @@
                 <template v-else>No rule matches.</template>
                 <b-button variant="link" size="sm" @click="filter = 'all'; search = ''">Show all rules</b-button>
             </div>
-        </template>
+        </div>
 
         <RuleModal
             :fleet-id="fleetId"
@@ -186,6 +187,7 @@ export default {
             checking: false,
             reloadTimer: null,
             unsubscribe: null,
+            availableWidth: 0,
         }
     },
     computed: {
@@ -300,13 +302,31 @@ export default {
             }
         })
     },
+    mounted() {
+        // The matrix picks its layout from the width of the tab, not from its own (which follows the layout)
+        this.measure()
+        if (typeof ResizeObserver !== "undefined") {
+            this.resizeObserver = new ResizeObserver(() => this.measure())
+            this.resizeObserver.observe(this.$el)
+        } else {
+            window.addEventListener("resize", this.measure)
+        }
+    },
     beforeDestroy() {
+        if (this.resizeObserver) {
+            this.resizeObserver.disconnect()
+        } else {
+            window.removeEventListener("resize", this.measure)
+        }
         clearTimeout(this.reloadTimer)
         if (this.unsubscribe) {
             this.unsubscribe()
         }
     },
     methods: {
+        measure() {
+            this.availableWidth = Math.floor(this.$el.clientWidth)
+        },
         fetch() {
             const fleet_id = this.fleetId
             this.refreshing = this.loaded
@@ -454,8 +474,11 @@ export default {
 </script>
 
 <style scoped>
-.baseline {
-    max-width: 1400px;
+/* As wide as the matrix, so the toolbar ends where the matrix does, up to the whole tab */
+.baseline-frame {
+    width: fit-content;
+    min-width: min(100%, 64rem);
+    max-width: 100%;
 }
 
 .baseline-loading {

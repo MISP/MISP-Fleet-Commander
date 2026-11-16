@@ -269,3 +269,90 @@ export function ruleChange(current, next) {
     // An item described differently, with the same short text
     return { expected: before === after ? [before, "described differently"] : [before, after], others }
 }
+
+const IP_HOST = /^(\d{1,3}(\.\d{1,3}){3}|\[.*\])$/
+
+// The host (and port) of a server named after its URL, else null
+function urlHost(name) {
+    if (!/^https?:\/\//i.test(name || "")) {
+        return null
+    }
+    try {
+        const url = new URL(name)
+        return { hostname: url.hostname, port: url.port }
+    } catch (error) {
+        return null
+    }
+}
+
+// Short column labels for the servers of a fleet. A server named after its URL is shown by its host, without the
+// domain all such servers share (misp-a.example.org, misp-b.example.org → misp-a, misp-b); other names are kept.
+// Answers the labels by server ID and the shared domain (empty when nothing was left out)
+export function serverLabels(servers) {
+    const hosts = new Map()
+    servers.forEach((server) => {
+        const host = urlHost(server.name)
+        if (host !== null) {
+            hosts.set(server.id, host)
+        }
+    })
+    // Only host names lose their domain: the common end of IP addresses means nothing
+    const named = [...hosts.values()].filter(host => !IP_HOST.test(host.hostname)).map(host => host.hostname.split("."))
+    let shared = 0
+    if (named.length >= 2) {
+        shared = Math.min(...named.map(labels => labels.length - 1))
+        while (shared > 0 && !named.every(labels => labels.slice(-shared).join(".") === named[0].slice(-shared).join("."))) {
+            shared -= 1
+        }
+    }
+    const domain = shared > 0 ? named[0].slice(-shared).join(".") : ""
+    const labels = new Map()
+    servers.forEach((server) => {
+        const host = hosts.get(server.id)
+        if (!host) {
+            labels.set(server.id, server.name || server.url || `Server ${server.id}`)
+            return
+        }
+        const hostname = domain !== "" && !IP_HOST.test(host.hostname) ? host.hostname.slice(0, -(domain.length + 1)) : host.hostname
+        labels.set(server.id, host.port ? `${hostname}:${host.port}` : hostname)
+    })
+    return { labels, domain }
+}
+
+// How a rule stands across the fleet: servers per state, and the values found where it drifts, most frequent first
+export function ruleTally(rule, servers) {
+    const tally = { match: 0, drift: 0, unknown: 0, found: [] }
+    const found = new Map()
+    servers.forEach((server) => {
+        const cell = server.results[String(rule.id)]
+        const state = cell && ["match", "drift", "unknown"].includes(cell.state) ? cell.state : "unknown"
+        tally[state] += 1
+        if (state === "drift") {
+            const text = actualText(rule, cell)
+            found.set(text, (found.get(text) || 0) + 1)
+        }
+    })
+    tally.found = [...found.entries()]
+        .map(([text, count]) => ({ text, count }))
+        .sort((a, b) => b.count - a.count || a.text.localeCompare(b.text))
+    return tally
+}
+
+// The tally in words, for a tooltip: "Drifts on 3 of 51 servers, found false on 2 and (empty) on 1"
+export function tallyText(tally, total) {
+    const parts = []
+    if (tally.drift > 0) {
+        const shown = tally.found.slice(0, 4).map(value => `${value.text} on ${value.count}`)
+        const others = tally.found.length - shown.length
+        if (others > 0) {
+            shown.push(plural(others, "other value"))
+        }
+        parts.push(`Drifts on ${tally.drift} of ${plural(total, "server")}, found ${shown.join(", ")}`)
+    } else if (tally.match > 0) {
+        parts.push(`In line on ${tally.match} of ${plural(total, "server")}`)
+    }
+    if (tally.unknown > 0) {
+        parts.push(`unknown on ${tally.unknown}`)
+    }
+    return parts.join("; ") || "No server to check"
+}

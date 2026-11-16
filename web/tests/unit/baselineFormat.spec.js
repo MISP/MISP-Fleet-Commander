@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import {
-    actualText, expectedFromSetting, expectedText, isServerSpecific, ruleChange, sameItemExpected, settingOptions,
-    sourceParam, typeSummary,
+    actualText, expectedFromSetting, expectedText, isServerSpecific, ruleChange, ruleTally, sameItemExpected,
+    serverLabels, settingOptions, sourceParam, tallyText, typeSummary,
 } from "@/components/baselines/baselineFormat"
 
 describe("expected and actual values", () => {
@@ -76,5 +76,54 @@ describe("items, sources and summaries", () => {
         expect(sourceParam({ kind: "fleet", id: 2 })).toEqual({ from_fleet_id: 2 })
         expect(typeSummary({ galaxy_enabled: 1, setting: 3, taxonomy_enabled: 0 }).map(t => t.text))
             .toEqual(["3 settings", "1 galaxy"])
+    })
+})
+
+describe("drift matrix labels and tallies", () => {
+    const labelsOf = servers => Object.fromEntries(serverLabels(servers).labels)
+
+    it("shows servers named after their URL by host, without the domain they share", () => {
+        const result = serverLabels([
+            { id: 1, name: "https://misp-50.cc.example.org" },
+            { id: 2, name: "https://misp-alb.cc.example.org:8443/" },
+            { id: 3, name: "CIRCL main" },
+        ])
+        expect(result.domain).toBe("cc.example.org")
+        expect(Object.fromEntries(result.labels)).toEqual({ 1: "misp-50", 2: "misp-alb:8443", 3: "CIRCL main" })
+    })
+
+    it("keeps at least one label of each host, and the domain of a lone host", () => {
+        expect(labelsOf([{ id: 1, name: "https://a.example.org" }, { id: 2, name: "https://example.org" }]))
+            .toEqual({ 1: "a.example", 2: "example" })
+        expect(labelsOf([{ id: 1, name: "https://misp.example.org" }, { id: 2, name: "Lab" }]))
+            .toEqual({ 1: "misp.example.org", 2: "Lab" })
+        expect(serverLabels([{ id: 1, name: "https://a.one.org" }, { id: 2, name: "https://b.two.net" }]).domain).toBe("")
+    })
+
+    it("leaves IP addresses whole", () => {
+        const result = serverLabels([
+            { id: 1, name: "https://10.0.1.1" },
+            { id: 2, name: "https://10.0.2.1" },
+            { id: 3, name: "https://misp-a.lab.local" },
+            { id: 4, name: "https://misp-b.lab.local" },
+        ])
+        expect(result.domain).toBe("lab.local")
+        expect(Object.fromEntries(result.labels)).toEqual({ 1: "10.0.1.1", 2: "10.0.2.1", 3: "misp-a", 4: "misp-b" })
+    })
+
+    it("counts a rule's servers per state and groups the values found", () => {
+        const rule = { id: 7, type: "setting", expected: true }
+        const servers = [
+            { results: { 7: { state: "drift", actual: false } } },
+            { results: { 7: { state: "drift", actual: "" } } },
+            { results: { 7: { state: "drift", actual: false } } },
+            { results: { 7: { state: "match", actual: true } } },
+            { results: {} },
+        ]
+        const tally = ruleTally(rule, servers)
+        expect(tally).toMatchObject({ match: 1, drift: 3, unknown: 1 })
+        expect(tally.found).toEqual([{ text: "false", count: 2 }, { text: "(empty)", count: 1 }])
+        expect(tallyText(tally, servers.length)).toBe("Drifts on 3 of 5 servers, found false on 2, (empty) on 1; unknown on 1")
+        expect(tallyText(ruleTally(rule, servers.slice(3, 4)), 1)).toBe("In line on 1 of 1 server")
     })
 })
