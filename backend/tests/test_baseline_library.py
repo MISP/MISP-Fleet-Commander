@@ -103,7 +103,9 @@ def test_save_a_fleets_baseline(owner, api):
     assert save(client, name=" ", from_fleet_id=alpha.id).get_json()["field"] == "name"
     assert save(client, name="x" * 121, from_fleet_id=alpha.id).status_code == 400
     assert save(client, name="Empty", from_fleet_id=beta.id).get_json()["code"] == "empty_source"
-    assert save(client, name="Nothing").status_code == 400
+    # Without rules: an empty one, filled rule by rule
+    empty = save(client, name="Nothing yet")
+    assert empty.status_code == 201 and empty.get_json()["rules"] == []
 
 
 def test_save_rules_picked_on_a_reference_server(db, owner, api, make_user):
@@ -177,9 +179,53 @@ def test_saved_baselines_of_other_users_are_unknown(db, owner, api, make_user):
     # The same name is free for another user
     add(other, own, TLP)
     assert save(other, name="Mine", from_fleet_id=own.id).status_code == 201
-    # A saved rule is not a fleet's rule: the rule routes do not reach it, even for its owner
-    assert api(user).put(f"/baselines/rules/{rule_id}", {"expected": False}).status_code == 404
-    assert api(user).delete(f"/baselines/rules/{rule_id}").status_code == 404
+    # The rule routes reach a saved baseline's rules for its owner only
+    assert other.put(f"/baselines/rules/{rule_id}", {"expected": False}).status_code == 404
+    assert other.delete(f"/baselines/rules/{rule_id}").status_code == 404
+    assert other.post(f"/baselines/saved/{saved['id']}/rules", {"rules": [PAP]}).status_code == 404
+    assert api(user).get(f"/baselines/saved/{saved['id']}").get_json()["rules"][0]["expected"] is True
+
+
+# Editing a saved baseline directly
+
+def test_edit_a_saved_baseline_rule_by_rule(owner, api, checks):
+    from application.models.baselines import serializedRulesOfFleet
+    user, (alpha, _) = owner
+    client = api(user)
+    saved = save(client, name="Edited here").get_json()
+    path = f"/baselines/saved/{saved['id']}/rules"
+
+    # Setting values take the types the user's servers report (MISP.live is a boolean on the fleet's server)
+    response = client.post(path, {"rules": [TLP, {"type": "setting", "key": "MISP.live", "expected": "1"}]})
+    assert response.status_code == 201, response.get_json()
+    rules = response.get_json()["rules"]
+    assert [(r["key"], r["expected"]) for r in rules] == [("tlp", True), ("MISP.live", True)]
+    assert response.get_json()["rule_count"] == 2
+
+    conflict = client.post(path, {"rules": [{**TLP, "expected": False}]})
+    assert conflict.status_code == 409 and conflict.get_json()["errors"][0]["rule_id"] == rules[0]["id"]
+    replaced = client.post(path, {"rules": [{**TLP, "expected": False}], "on_conflict": "replace"})
+    assert replaced.get_json()["rules"][0]["expected"] is False
+    assert client.post(path, {"rules": [TLP], "on_conflict": "x"}).status_code == 400
+    secret = {"type": "setting", "key": "Plugin.Custom_api_credential", "expected": "x"}
+    invalid = client.post(path, {"rules": [secret]})
+    assert invalid.status_code == 400 and invalid.get_json()["errors"][0]["code"] == "secret"
+
+    response = client.put(f"/baselines/rules/{rules[1]['id']}", {"expected": "0", "severity": "critical"})
+    assert response.status_code == 200, response.get_json()
+    assert (response.get_json()["expected"], response.get_json()["severity"]) == (False, "critical")
+    assert client.put(f"/baselines/rules/{rules[1]['id']}", {"key": "MISP.other"}).status_code == 400
+
+    assert client.delete(f"/baselines/rules/{rules[0]['id']}").status_code == 200
+    detail = client.get(f"/baselines/saved/{saved['id']}").get_json()
+    assert [(r["key"], r["expected"], r["severity"]) for r in detail["rules"]] == [("MISP.live", False, "critical")]
+    # Never evaluated: no fleet gets its rules, no server is checked for them
+    assert serializedRulesOfFleet(alpha.id) == [] and checks == []
+
+    # An empty saved baseline has nothing to import
+    client.delete(f"/baselines/rules/{rules[1]['id']}")
+    response = client.post(f"/baselines/fleet/{alpha.id}/copy/preview", {"from_saved_id": saved["id"]})
+    assert response.status_code == 400 and response.get_json()["code"] == "empty_source"
 
 
 def test_saved_baselines_go_with_their_user(db, make_user, api):
