@@ -21,11 +21,11 @@
                 <b-button variant="primary" :disabled="servers.length === 0" @click="openReference">
                     <i class="fas fa-server mr-1" aria-hidden="true"></i>Start from a reference server
                 </b-button>
-                <b-button variant="outline-primary" @click="openAdd">
-                    <i class="fas fa-plus mr-1" aria-hidden="true"></i>Add a rule
+                <b-button variant="outline-primary" @click="openImport">
+                    <i class="fas fa-file-import mr-1" aria-hidden="true"></i>Start from a preset or saved baseline
                 </b-button>
-                <b-button v-if="otherFleets.length > 0" variant="outline-secondary" @click="openCopy">
-                    <i class="fas fa-copy mr-1" aria-hidden="true"></i>Copy from another fleet
+                <b-button variant="outline-secondary" @click="openAdd">
+                    <i class="fas fa-plus mr-1" aria-hidden="true"></i>Add a rule
                 </b-button>
             </div>
             <p v-if="servers.length === 0" class="baseline-empty-hint">Add servers to the fleet to pick rules from one of them.</p>
@@ -68,9 +68,16 @@
                         <b-dropdown-item-button :disabled="servers.length === 0" @click="openReference">
                             <i class="fas fa-server fa-fw mr-1" aria-hidden="true"></i>From a reference server…
                         </b-dropdown-item-button>
-                        <b-dropdown-item-button :disabled="otherFleets.length === 0" @click="openCopy">
-                            <i class="fas fa-copy fa-fw mr-1" aria-hidden="true"></i>Copy from another fleet…
+                        <b-dropdown-item-button @click="openImport">
+                            <i class="fas fa-file-import fa-fw mr-1" aria-hidden="true"></i>Import a baseline…
                         </b-dropdown-item-button>
+                        <b-dropdown-divider></b-dropdown-divider>
+                        <b-dropdown-item-button @click="openSave">
+                            <i class="fas fa-bookmark fa-fw mr-1" aria-hidden="true"></i>Save as a saved baseline…
+                        </b-dropdown-item-button>
+                        <b-dropdown-item :to="{ name: 'baselines' }">
+                            <i class="fas fa-book fa-fw mr-1" aria-hidden="true"></i>Baseline library
+                        </b-dropdown-item>
                         <b-dropdown-divider></b-dropdown-divider>
                         <b-dropdown-item-button variant="danger" @click="clearAll">
                             <i class="fas fa-trash-can fa-fw mr-1" aria-hidden="true"></i>Remove all rules
@@ -138,24 +145,8 @@
             @saved="onSaved"
         ></ReferenceImportModal>
         <RemediationModal :fleet-id="fleetId" :scope="fixScope"></RemediationModal>
-
-        <b-modal
-            id="modal-baseline-copy"
-            title="Copy a baseline from another fleet"
-            ok-title="Copy"
-            cancel-variant="outline-secondary"
-            :ok-disabled="copy.fleetId === null || copy.saving"
-            @show="copy.error = null"
-            @ok="submitCopy"
-        >
-            <b-form-group label="Fleet" label-for="copy-fleet">
-                <b-form-select id="copy-fleet" v-model="copy.fleetId" :options="otherFleets"></b-form-select>
-            </b-form-group>
-            <b-form-group v-if="rules.length > 0" label="This fleet's rules" class="mb-0">
-                <b-form-radio-group v-model="copy.mode" stacked name="copy-mode" :options="copyModes"></b-form-radio-group>
-            </b-form-group>
-            <b-alert :show="!!copy.error" variant="danger" class="mt-3 mb-0">{{ copy.error }}</b-alert>
-        </b-modal>
+        <ImportBaselineModal :fleet-id="fleetId" @applied="onImported"></ImportBaselineModal>
+        <SaveBaselineModal :fleet-id="fleetId" :fleet-name="fleetName" :rules="rules" @saved="onSavedBaseline"></SaveBaselineModal>
     </div>
 </template>
 
@@ -163,10 +154,12 @@
 import { mapGetters } from "vuex"
 import api from "@/api/baselines"
 import DriftMatrix from "./DriftMatrix.vue"
+import ImportBaselineModal from "./ImportBaselineModal.vue"
 import ReferenceImportModal from "./ReferenceImportModal.vue"
 import RemediationModal from "./RemediationModal.vue"
 import RuleModal from "./RuleModal.vue"
-import { LISTED_TYPES, expectedText, ruleTitle } from "./baselineFormat"
+import SaveBaselineModal from "./SaveBaselineModal.vue"
+import { LISTED_TYPES, expectedText, ruleCountText, ruleTitle } from "./baselineFormat"
 
 // Health updates of a fleet's servers come in bursts (refresh of every server): one reload for the burst
 const RELOAD_DELAY_MS = 800
@@ -174,7 +167,7 @@ let typesPromise = null
 
 export default {
     name: "BaselineTab",
-    components: { DriftMatrix, ReferenceImportModal, RemediationModal, RuleModal },
+    components: { DriftMatrix, ImportBaselineModal, ReferenceImportModal, RemediationModal, RuleModal, SaveBaselineModal },
     props: {
         fleetId: { type: Number, required: true },
     },
@@ -193,11 +186,6 @@ export default {
             checking: false,
             reloadTimer: null,
             unsubscribe: null,
-            copy: { fleetId: null, mode: "merge", saving: false, error: null },
-            copyModes: [
-                { value: "merge", text: "Keep them, and add the other fleet's rules (same rules are overwritten)" },
-                { value: "replace", text: "Replace them with the other fleet's rules" },
-            ],
         }
     },
     computed: {
@@ -216,10 +204,9 @@ export default {
         serverIds() {
             return new Set(this.servers.map(server => server.id))
         },
-        otherFleets() {
-            return this.fleetList
-                .filter(fleet => fleet.id !== this.fleetId)
-                .map(fleet => ({ value: fleet.id, text: fleet.name }))
+        fleetName() {
+            const fleet = this.fleetList.find(item => item.id === this.fleetId)
+            return fleet ? fleet.name : "this fleet"
         },
         // Drifting values of rules that can be fixed from here (a version is upgraded by hand)
         fixableDrift() {
@@ -386,11 +373,25 @@ export default {
         openReference() {
             this.$bvModal.show("modal-baseline-reference")
         },
-        openCopy() {
-            if (this.copy.fleetId === null && this.otherFleets.length > 0) {
-                this.copy.fleetId = this.otherFleets[0].value
-            }
-            this.$bvModal.show("modal-baseline-copy")
+        openImport() {
+            this.$bvModal.show("modal-baseline-import")
+        },
+        openSave() {
+            this.$bvModal.show("modal-baseline-save")
+        },
+        onImported({ source, baseline }) {
+            this.$bvToast.toast(`${ruleCountText(baseline.rules.length)} now, from “${source.name}”. Servers are being checked against them.`, {
+                title: "Baseline imported",
+                variant: "success",
+            })
+            this.fetch()
+        },
+        onSavedBaseline(saved) {
+            this.$bvToast.toast(`“${saved.name}” keeps ${ruleCountText(saved.rule_count)}. Open the baseline library to see it.`, {
+                title: "Baseline saved",
+                variant: "success",
+                to: { name: "baselines", query: { item: `saved:${saved.id}` } },
+            })
         },
         onSaved() {
             this.fetch()
@@ -430,25 +431,6 @@ export default {
                         this.$bvToast.toast(error.message, { title: "Could not remove the baseline", variant: "danger" })
                     })
             })
-        },
-        submitCopy(event) {
-            event.preventDefault()
-            this.copy.saving = true
-            this.copy.error = null
-            const mode = this.rules.length === 0 ? "replace" : this.copy.mode
-            api.copy(this.fleetId, this.copy.fleetId, mode)
-                .then(() => {
-                    this.$bvModal.hide("modal-baseline-copy")
-                    this.fetch()
-                })
-                .catch((error) => {
-                    this.copy.error = error.errors.length > 0
-                        ? `${error.message}: ${error.errors.slice(0, 3).map(item => item.message).join("; ")}`
-                        : error.message
-                })
-                .finally(() => {
-                    this.copy.saving = false
-                })
         },
         checkContent() {
             this.checking = true

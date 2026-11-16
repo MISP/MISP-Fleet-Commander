@@ -1,6 +1,6 @@
 <template>
     <b-modal
-        id="modal-baseline-reference"
+        :id="modalId"
         :title="title"
         size="xl"
         scrollable
@@ -126,12 +126,16 @@
                     <span>Severity</span>
                     <b-form-select v-model="severity" :options="severityOptions" size="sm"></b-form-select>
                 </label>
-                <label v-if="existingSelected > 0" class="ref-option">
+                <label v-if="saveAs" class="ref-option ref-saved-name">
+                    <span>Name</span>
+                    <b-form-input v-model="savedName" size="sm" maxlength="120" placeholder="Name of the saved baseline" :state="nameError ? false : null" @input="nameError = null"></b-form-input>
+                </label>
+                <label v-if="!saveAs && existingSelected > 0" class="ref-option">
                     <span>{{ existingSelected }} already in the baseline</span>
                     <b-form-select v-model="onConflict" :options="conflictOptions" size="sm"></b-form-select>
                 </label>
                 <b-button variant="outline-secondary" @click="cancel()">Cancel</b-button>
-                <b-button variant="primary" :disabled="totalSelected === 0 || saving" @click="submit">
+                <b-button variant="primary" :disabled="totalSelected === 0 || saving || (saveAs && savedName.trim() === '')" @click="submit">
                     <b-spinner v-if="saving" small class="mr-1"></b-spinner>
                     {{ submitLabel }}
                 </b-button>
@@ -190,7 +194,11 @@ function sameValue(a, b) {
 export default {
     name: "ReferenceImportModal",
     props: {
-        fleetId: { type: Number, required: true },
+        modalId: { type: String, default: "modal-baseline-reference" },
+        // The fleet the rules are added to; null with `saveAs`
+        fleetId: { type: Number, default: null },
+        // The selection becomes a new saved baseline instead
+        saveAs: { type: Boolean, default: false },
         servers: { type: Array, default: () => [] },
         rules: { type: Array, default: () => [] },
     },
@@ -211,6 +219,8 @@ export default {
             saving: false,
             submitErrors: [],
             submitMessage: "",
+            savedName: "",
+            nameError: null,
             severityOptions: SEVERITY_OPTIONS,
             conflictOptions: [
                 { value: "skip", text: "Keep their rules" },
@@ -220,6 +230,9 @@ export default {
     },
     computed: {
         title() {
+            if (this.saveAs) {
+                return "New saved baseline from a server"
+            }
             return this.rules.length === 0 ? "Start from a reference server" : "Add rules from a server"
         },
         serverOptions() {
@@ -412,7 +425,7 @@ export default {
         },
         summary() {
             if (this.totalSelected === 0) {
-                return "Select what every server of the fleet should have."
+                return this.saveAs ? "Select what the saved baseline should hold." : "Select what every server of the fleet should have."
             }
             const parts = this.sections
                 .map(section => [section.label.toLowerCase(), this.selectedCount(section.type)])
@@ -421,6 +434,9 @@ export default {
             return `${parts.join(", ")} selected`
         },
         submitLabel() {
+            if (this.saveAs) {
+                return this.totalSelected > 0 ? `Save ${this.totalSelected} rule${this.totalSelected === 1 ? "" : "s"}` : "Save"
+            }
             const adding = this.onConflict === "skip" ? this.totalSelected - this.existingSelected : this.totalSelected
             if (this.totalSelected > 0 && adding === 0) {
                 return "Nothing new to add"
@@ -437,6 +453,8 @@ export default {
         onShow() {
             this.submitErrors = []
             this.saving = false
+            this.savedName = ""
+            this.nameError = null
             if (this.serverId === null || !this.servers.some(server => server.id === this.serverId)) {
                 const reachable = this.servers.find(server => !server.unavailable)
                 this.serverId = (reachable || this.servers[0] || {}).id || null
@@ -518,13 +536,19 @@ export default {
             })
             this.saving = true
             this.submitErrors = []
-            api.addRules(this.fleetId, rules, this.onConflict)
-                .then((baseline) => {
-                    this.$emit("saved", baseline)
-                    this.$bvModal.hide("modal-baseline-reference")
+            const request = this.saveAs
+                ? api.createSaved({ name: this.savedName, rules, server_id: this.serverId })
+                : api.addRules(this.fleetId, rules, this.onConflict)
+            request
+                .then((result) => {
+                    this.$emit("saved", result)
+                    this.$bvModal.hide(this.modalId)
                 })
                 .catch((error) => {
                     this.submitMessage = error.message
+                    if (error.field === "name") {
+                        this.nameError = error.message
+                    }
                     const errors = error.errors.length > 0 ? error.errors : [{ index: -1, message: error.message }]
                     this.submitErrors = errors.map(item => ({
                         index: item.index,
@@ -774,6 +798,11 @@ export default {
     font-size: 0.85rem;
     color: #4a5260;
     white-space: nowrap;
+}
+
+.ref-saved-name .form-control {
+    width: 16rem;
+    max-width: 50vw;
 }
 
 .ref-option .custom-select {

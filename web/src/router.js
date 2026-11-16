@@ -185,6 +185,19 @@ let router =  new Router({
             ]
         },
         {
+            path: "/baselines",
+            name: "baselines",
+            component: () => import("./views/baselines/BaselineLibrary.vue"),
+            meta: {
+                requiresFleet: false,
+                breadcrumbs: {
+                    text: "Baselines",
+                    to: { name: "baselines" },
+                    icon: "ruler-combined"
+                }
+            }
+        },
+        {
             path: "/connections",
             name: "connections",
             component: () => import("./views/connections/Connections.vue"),

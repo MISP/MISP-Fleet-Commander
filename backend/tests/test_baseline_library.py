@@ -68,6 +68,8 @@ def test_library_lists_presets_and_own_saved_baselines(owner, api):
     assert hardening["kind"] == "preset" and hardening["rule_count"] > 10
     assert hardening["types"]["setting"] > 10 and hardening["types"]["version_min"] == 1
     assert "rules" not in hardening
+    assert [(item["name"], item["rule_count"]) for item in library["fleets"]] == [("Alpha", 0), ("Beta", 0)]
+    assert [(item["name"], item["fleet_name"]) for item in library["servers"]] == [("baseline-misp", "Alpha")]
 
     detail = client.get("/baselines/presets/security-hardening").get_json()
     assert len(detail["rules"]) == hardening["rule_count"]
@@ -92,7 +94,9 @@ def test_save_a_fleets_baseline(owner, api):
     # Copies: the fleet keeps its own rules, and the saved ones are never evaluated as a fleet's
     assert keys(serializedRulesOfFleet(alpha.id)) == ["tlp", "MISP.baseurl"]
     assert {r["id"] for r in saved["rules"]}.isdisjoint({r["id"] for r in serializedRulesOfFleet(alpha.id)})
-    assert [item["name"] for item in client.get("/baselines/library").get_json()["saved"]] == ["Lab defaults"]
+    library = client.get("/baselines/library").get_json()
+    assert [item["name"] for item in library["saved"]] == ["Lab defaults"]
+    assert [(item["id"], item["rule_count"]) for item in library["fleets"]] == [(alpha.id, 2), (beta.id, 0)]
 
     taken = save(client, name="lab DEFAULTS", from_fleet_id=alpha.id)
     assert taken.status_code == 409 and taken.get_json()["code"] == "name_taken"

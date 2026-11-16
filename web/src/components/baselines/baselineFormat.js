@@ -194,3 +194,78 @@ export function settingOptions(setting) {
         : Object.entries(setting.options)
     return entries.map(([value, text]) => ({ value, text: `${text} (${value})` }))
 }
+
+// Where a baseline can be copied from
+export const SOURCE_KINDS = {
+    preset: { label: "Preset", plural: "Presets", icon: "fas fa-box-archive" },
+    saved: { label: "Saved baseline", plural: "Saved baselines", icon: "fas fa-bookmark" },
+    fleet: { label: "Fleet", plural: "Other fleets", icon: "fas fa-layer-group" },
+}
+
+export function sourceKey(source) {
+    return source ? `${source.kind}:${source.id}` : ""
+}
+
+// The copy request's field for a source
+export function sourceParam(source) {
+    if (source.kind === "preset") {
+        return { from_preset: source.id }
+    }
+    if (source.kind === "saved") {
+        return { from_saved_id: source.id }
+    }
+    return { from_fleet_id: source.id }
+}
+
+export function ruleCountText(count) {
+    return plural(count, "rule")
+}
+
+const TYPE_COUNT_NOUNS = {
+    setting: ["setting", "settings"],
+    taxonomy_enabled: ["taxonomy", "taxonomies"],
+    galaxy_enabled: ["galaxy", "galaxies"],
+    object_template_active: ["object template", "object templates"],
+    version_min: ["minimum version", "minimum versions"],
+    organisation: ["organisation", "organisations"],
+    sharing_group: ["sharing group", "sharing groups"],
+    custom_galaxy: ["custom galaxy", "custom galaxies"],
+}
+
+// `{type: count}` as a list in the usual type order, for chips: `text` is "6 taxonomies"
+export function typeSummary(types) {
+    return Object.keys(TYPE_META)
+        .filter(type => types && types[type] > 0)
+        .map(type => ({
+            type,
+            count: types[type],
+            label: TYPE_META[type].label,
+            icon: TYPE_META[type].icon,
+            text: `${types[type]} ${TYPE_COUNT_NOUNS[type][types[type] === 1 ? 0 : 1]}`,
+        }))
+}
+
+// What changes when a rule is replaced by another with the same type and key: the expected value (a pair of texts,
+// null when it stays), and the rest in words
+export function ruleChange(current, next) {
+    const others = []
+    if (current.severity !== next.severity) {
+        others.push(`severity ${current.severity} → ${next.severity}`)
+    }
+    if ((current.note || "") !== (next.note || "")) {
+        others.push(next.note ? "new note" : "note removed")
+    }
+    if (Boolean(current.forced) !== Boolean(next.forced)) {
+        others.push(next.forced ? "forced" : "no longer forced")
+    }
+    const before = expectedText(current)
+    const after = expectedText(next)
+    const sameExpected = isItemType(current.type)
+        ? sameItemExpected(current.type, current.expected, next.expected)
+        : before === after
+    if (sameExpected) {
+        return { expected: null, others }
+    }
+    // An item described differently, with the same short text
+    return { expected: before === after ? [before, "described differently"] : [before, after], others }
+}

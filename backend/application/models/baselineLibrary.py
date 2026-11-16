@@ -7,7 +7,7 @@ import time
 from functools import lru_cache
 from typing import Any, Dict, List, Optional, Tuple
 
-from application.DBModels import Baseline, BaselineRule, Server, db
+from application.DBModels import Baseline, BaselineRule, Fleet, Server, db
 from application.models.baselines import (RULE_TYPES, BaselineError, FleetSettings, copyRules, ownedFleet,
                                           previewCopy, rulePayload, serializeRule, validateRules)
 
@@ -130,11 +130,32 @@ def ownedSaved(user, savedId: Any) -> Baseline:
     return baseline
 
 
+def serializeFleetSource(fleet: Fleet) -> dict:
+    rules = fleet.baseline.rules if fleet.baseline else []
+    return {
+        'kind': 'fleet',
+        'id': fleet.id,
+        'name': fleet.name,
+        'rule_count': len(rules),
+        'types': typeCounts([rule.type for rule in rules]),
+    }
+
+
 def libraryForUser(user) -> dict:
+    """The user's saved baselines, the presets, and the user's fleets with the size of their baselines (a fleet is
+    a source too, and a target)"""
     saved = savedQuery(user).all()
+    fleets = Fleet.query.filter_by(user_id=user.id).all()
+    fleetNames = {fleet.id: fleet.name for fleet in fleets}
+    servers = Server.query.filter_by(user_id=user.id).all()
     return {
         'saved': sorted([serializeSaved(baseline) for baseline in saved], key=lambda item: item['name'].lower()),
         'presets': [serializePreset(data) for data in presets().values()],
+        'fleets': sorted([serializeFleetSource(fleet) for fleet in fleets], key=lambda item: item['name'].lower()),
+        # Servers a new saved baseline can be picked from
+        'servers': sorted([{'id': server.id, 'name': server.name, 'fleet_id': server.fleet_id,
+                            'fleet_name': fleetNames.get(server.fleet_id, '')} for server in servers],
+                          key=lambda item: (item['name'].lower(), item['id'])),
     }
 
 
@@ -155,8 +176,9 @@ def checkedName(user, name: Any, exceptId: Optional[int] = None) -> str:
     taken = savedQuery(user).filter(db.func.lower(Baseline.name) == name.lower())
     if exceptId is not None:
         taken = taken.filter(Baseline.id != exceptId)
-    if taken.first() is not None:
-        raise BaselineError(f'You already have a saved baseline named `{name}`', 409, field='name',
+    other = taken.first()
+    if other is not None:
+        raise BaselineError(f'You already have a saved baseline named “{other.name}”', 409, field='name',
                             code='name_taken')
     return name
 

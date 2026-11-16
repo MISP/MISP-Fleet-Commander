@@ -63,8 +63,33 @@ export default {
     clear(fleet_id) {
         return request("delete", `/baselines/fleet/${fleet_id}`)
     },
-    copy(fleet_id, from_fleet_id, mode) {
-        return request("post", `/baselines/fleet/${fleet_id}/copy`, { from_fleet_id, mode })
+    // `source`: {from_fleet_id}, {from_saved_id} or {from_preset}
+    copy(fleet_id, source, mode) {
+        return request("post", `/baselines/fleet/${fleet_id}/copy`, { ...source, mode })
+    },
+    copyPreview(fleet_id, source, mode) {
+        return request("post", `/baselines/fleet/${fleet_id}/copy/preview`, { ...source, mode })
+    },
+    // Saved baselines, presets and the user's fleets, without their rules
+    library() {
+        return request("get", "/baselines/library")
+    },
+    preset(preset_id) {
+        return request("get", `/baselines/presets/${encodeURIComponent(preset_id)}`)
+    },
+    saved(saved_id) {
+        return request("get", `/baselines/saved/${saved_id}`)
+    },
+    // {name, description, from_fleet_id} or {name, description, rules, server_id}
+    createSaved(body) {
+        return request("post", "/baselines/saved", body)
+    },
+    // {name?, description?, from_fleet_id?}
+    updateSaved(saved_id, body) {
+        return request("put", `/baselines/saved/${saved_id}`, body)
+    },
+    deleteSaved(saved_id) {
+        return request("delete", `/baselines/saved/${saved_id}`)
     },
     check(fleet_id) {
         return request("post", `/baselines/fleet/${fleet_id}/check`)

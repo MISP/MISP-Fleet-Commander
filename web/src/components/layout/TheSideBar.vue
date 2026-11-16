@@ -71,6 +71,11 @@ export default {
                     scope: "jobs",
                 },
                 {
+                    name: "Baselines",
+                    to: { name: "baselines" },
+                    scope: "baselines",
+                },
+                {
                     name: "Commanders",
                     to: { name: "users" },
                     scope: "users",

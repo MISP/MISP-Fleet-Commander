@@ -23,6 +23,10 @@
         v-else-if="scope === 'jobs'"
         :class="['fas', 'fa-list-check']"
     ></i>
+    <i
+        v-else-if="scope === 'baselines'"
+        :class="['fas', 'fa-ruler-combined']"
+    ></i>
     <img
         v-else-if="scope === 'users'"
         :src="require('@/assets/commander.svg')"
@@ -43,7 +47,7 @@ export default {
             type: String,
             required: true,
             validator: function (value) {
-                return ["", "home", "attention", "servers", "connections", "strategicView", "jobs", "users"].indexOf(value) !== -1
+                return ["", "home", "attention", "servers", "connections", "strategicView", "jobs", "baselines", "users"].indexOf(value) !== -1
             }
         },
         forceBlack: {
