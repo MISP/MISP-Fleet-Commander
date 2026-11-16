@@ -65,6 +65,8 @@ class User(BaseModel):
 
     user_settings = db.relationship("UserSettings", uselist=True, back_populates="user", cascade="all, delete-orphan")
     health_acks = db.relationship("HealthAck", uselist=True, cascade="all, delete-orphan")
+    # Not delete-orphan: a fleet's baseline has no user, and would count as an orphan of this relationship
+    saved_baselines = db.relationship("Baseline", uselist=True, back_populates="user", cascade="all")
 
     @classmethod
     def byAPIKey(cls, apikey):
@@ -520,21 +522,35 @@ BASELINE_SEVERITIES = ('info', 'warning', 'critical')
 
 class Baseline(BaseModel):
     """The configuration a fleet's servers are expected to have: at most one per fleet, created with its first rule,
-    deleted with the fleet. It belongs to the fleet's owner"""
+    deleted with the fleet. It belongs to the fleet's owner.
+    A saved baseline has no fleet: it is a named set of rules of its owner (`user_id`), copied into fleets"""
     __tablename__ = 'baselines'
+    __table_args__ = (UniqueConstraint('user_id', 'name', name='uq_baselines_user_id_name'),)
 
     id = db.Column(db.Integer,
                    primary_key=True)
     fleet_id = db.Column(db.Integer,
                          db.ForeignKey('fleets.id', ondelete='CASCADE'),
-                         nullable=False,
+                         nullable=True,
                          unique=True)
+    # Saved baselines only: a fleet's baseline belongs to the fleet's owner
+    user_id = db.Column(db.Integer,
+                        db.ForeignKey('users.id', ondelete='CASCADE'),
+                        nullable=True,
+                        index=True)
+    name = db.Column(db.String(120),
+                     nullable=True)
+    description = db.Column(db.String(500),
+                            nullable=False,
+                            default='',
+                            server_default='')
     created = db.Column(db.Integer,
                         nullable=False)
     updated = db.Column(db.Integer,
                         nullable=False)
 
     fleet = db.relationship('Fleet', back_populates='baseline')
+    user = db.relationship('User', back_populates='saved_baselines')
     rules = db.relationship('BaselineRule', back_populates='baseline', cascade='all, delete-orphan',
                             order_by='BaselineRule.id')
 

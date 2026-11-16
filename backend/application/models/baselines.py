@@ -158,14 +158,24 @@ class FleetSettings:
     """The settings the fleet's servers report in their snapshots, read once per request: their types and whether
     MISP redacts them"""
 
-    def __init__(self, fleet: Fleet):
+    def __init__(self, fleet: Optional[Fleet] = None, owner_id: Optional[int] = None,
+                 servers: Optional[List[Server]] = None):
+        """For a saved baseline, there is no fleet: the rules' owner, and the servers whose settings give the types
+        (none: values are kept as given until the rules are copied into a fleet)"""
         self.fleet = fleet
+        self.owner_id = fleet.user_id if fleet is not None else owner_id
+        self._servers = servers
         self._entries = None
+
+    def servers(self) -> List[Server]:
+        if self._servers is None:
+            self._servers = Server.query.filter_by(fleet_id=self.fleet.id).all() if self.fleet is not None else []
+        return self._servers
 
     def entries(self) -> Dict[str, List[dict]]:
         if self._entries is None:
             self._entries = {}
-            for server in Server.query.filter_by(fleet_id=self.fleet.id).all():
+            for server in self.servers():
                 for name, entry in snapshotSettings(redisModel.getServerInfo(server.uuid)).items():
                     self._entries.setdefault(name, []).append(entry)
         return self._entries
@@ -180,10 +190,10 @@ class FleetSettings:
         return None
 
     def checkSourceServer(self, server_id: int) -> None:
-        """A server content is copied from must be the fleet owner's. One deleted since is accepted: the rule's fix
+        """A server content is copied from must be the rules' owner's. One deleted since is accepted: the rule's fix
         then has to be done by hand"""
         server = db.session.get(Server, server_id)
-        if server is not None and server.user_id != self.fleet.user_id:
+        if server is not None and server.user_id != self.owner_id:
             raise BaselineError('Unknown source server', field='expected')
 
 
@@ -632,33 +642,78 @@ def deleteRule(user, rule_id: int) -> None:
     rulesChanged(baseline.fleet)
 
 
-def copyFromFleet(user, fleet_id: int, fromFleetId: Any, mode: str = 'replace') -> dict:
-    """Copies another fleet's rules: `replace` makes the baseline identical to the other one, `merge` adds the other
-    fleet's rules and overwrites those with the same type and key. Rules are validated again against this fleet:
-    a server-specific setting stays allowed only because its rule was forced"""
-    if mode not in COPY_MODES:
-        raise BaselineError(f"`mode` must be one of {', '.join(COPY_MODES)}", field='mode')
-    if isinstance(fromFleetId, bool) or not isinstance(fromFleetId, int):
-        raise BaselineError('`from_fleet_id` must be a fleet ID', field='from_fleet_id')
-    if fromFleetId == fleet_id:
-        raise BaselineError('A fleet cannot copy its own baseline', field='from_fleet_id')
+# Copying rules into a fleet (from another fleet, a saved baseline or a preset)
+
+# What makes two rules with the same type and key differ (the label only names the key)
+COMPARED_COLUMNS = ('expected', 'comparator', 'severity', 'note', 'forced')
+
+
+def rulePayload(rule: BaselineRule) -> dict:
+    """A stored rule as `validateRule` takes it: a forced rule stays forced"""
+    payload = serializeRule(rule)
+    payload['force'] = rule.forced
+    return payload
+
+
+def plannedRule(rule: dict) -> dict:
+    """A validated rule that is not stored yet, shaped as a serialized one"""
+    return {**rule, 'id': None, 'remediable': RULE_TYPES[rule['type']]['remediable']}
+
+
+class CopyPlan:
+    """What copying `payloads` into the fleet's baseline changes. The rules are validated against this fleet: a
+    server-specific setting stays allowed only because its rule was forced. `replace` makes the baseline identical
+    to the source (rules kept as they are keep their ID, so their drift history), `merge` adds the source's rules and
+    overwrites those with the same type and key"""
+
+    def __init__(self, fleet: Fleet, payloads: List[dict], mode: str):
+        if mode not in COPY_MODES:
+            raise BaselineError(f"`mode` must be one of {', '.join(COPY_MODES)}", field='mode')
+        self.fleet = fleet
+        self.mode = mode
+        self.rules = validateRules(payloads, FleetSettings(fleet))
+        current = {(rule.type, rule.key): rule for rule in fleet.baseline.rules} if fleet.baseline else {}
+        self.added, self.replaced, self.unchanged = [], [], 0
+        for rule in self.rules:
+            existing = current.get((rule['type'], rule['key']))
+            if existing is None:
+                self.added.append(rule)
+            elif any(getattr(existing, column) != rule[column] for column in COMPARED_COLUMNS):
+                self.replaced.append((existing, rule))
+            else:
+                self.unchanged += 1
+        incoming = {(rule['type'], rule['key']) for rule in self.rules}
+        self.removed = [rule for identity, rule in current.items() if identity not in incoming] \
+            if mode == 'replace' else []
+
+    def toDict(self) -> dict:
+        return {
+            'mode': self.mode,
+            'added': [plannedRule(rule) for rule in self.added],
+            'replaced': [{'rule': plannedRule(rule), 'current': serializeRule(existing)}
+                         for existing, rule in self.replaced],
+            'removed': [serializeRule(rule) for rule in self.removed],
+            'unchanged': self.unchanged,
+        }
+
+    def apply(self) -> None:
+        now = int(time.time())
+        if self.removed:
+            for rule in self.removed:
+                self.fleet.baseline.rules.remove(rule)
+            db.session.flush()
+        applyRules(self.fleet, self.rules, 'replace', now)
+        db.session.commit()
+        rulesChanged(self.fleet)
+
+
+def previewCopy(user, fleet_id: int, payloads: List[dict], mode: str) -> dict:
+    return CopyPlan(ownedFleet(user, fleet_id), payloads, mode).toDict()
+
+
+def copyRules(user, fleet_id: int, payloads: List[dict], mode: str) -> dict:
     fleet = ownedFleet(user, fleet_id)
-    source = ownedFleet(user, fromFleetId)
-    if source.baseline is None or len(source.baseline.rules) == 0:
-        raise BaselineError(f'Fleet `{source.name}` has no baseline rules to copy', field='from_fleet_id')
-    payloads = []
-    for rule in source.baseline.rules:
-        payload = serializeRule(rule)
-        payload['force'] = rule.forced
-        payloads.append(payload)
-    valid = validateRules(payloads, FleetSettings(fleet))
-    now = int(time.time())
-    if mode == 'replace' and fleet.baseline is not None:
-        fleet.baseline.rules = []
-        db.session.flush()
-    applyRules(fleet, valid, 'replace', now)
-    db.session.commit()
-    rulesChanged(fleet)
+    CopyPlan(fleet, payloads, mode).apply()
     return serializeBaseline(fleet)
 
 

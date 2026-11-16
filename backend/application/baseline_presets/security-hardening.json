@@ -1,0 +1,27 @@
+{
+    "name": "Security hardening",
+    "description": "Password and session policy, API key hygiene, browser protections and authentication logging. Self-registration and the self-update button are off, and MISP is 2.5 or newer.",
+    "rules": [
+        {"type": "version_min", "key": "", "expected": "2.5.0", "comparator": "gte", "severity": "critical", "note": "MISP 2.4 no longer receives security fixes"},
+        {"type": "setting", "key": "Security.password_policy_length", "expected": 12, "comparator": "gte", "severity": "warning", "note": ""},
+        {"type": "setting", "key": "Security.require_password_confirmation", "expected": true, "comparator": "eq", "severity": "warning", "note": "Changing a password asks for the current one"},
+        {"type": "setting", "key": "Security.allow_self_registration", "expected": false, "comparator": "eq", "severity": "warning", "note": "Accounts are created by an administrator"},
+        {"type": "setting", "key": "Security.alert_on_suspicious_logins", "expected": true, "comparator": "eq", "severity": "info", "note": ""},
+        {"type": "setting", "key": "Security.log_each_individual_auth_fail", "expected": true, "comparator": "eq", "severity": "info", "note": ""},
+        {"type": "setting", "key": "Security.advanced_authkeys", "expected": true, "comparator": "eq", "severity": "warning", "note": "API keys are hashed, can expire and be limited to IP addresses"},
+        {"type": "setting", "key": "Security.do_not_log_authkeys", "expected": true, "comparator": "eq", "severity": "warning", "note": ""},
+        {"type": "setting", "key": "Security.allow_unsafe_cleartext_apikey_logging", "expected": false, "comparator": "eq", "severity": "critical", "note": "API keys would be written to the logs"},
+        {"type": "setting", "key": "Security.allow_unsafe_apikey_named_param", "expected": false, "comparator": "eq", "severity": "warning", "note": "API keys in URLs end up in proxy and web server logs"},
+        {"type": "setting", "key": "Security.csp_enforce", "expected": true, "comparator": "eq", "severity": "warning", "note": ""},
+        {"type": "setting", "key": "Security.check_sec_fetch_site_header", "expected": true, "comparator": "eq", "severity": "info", "note": ""},
+        {"type": "setting", "key": "Security.disable_browser_cache", "expected": true, "comparator": "eq", "severity": "info", "note": ""},
+        {"type": "setting", "key": "Security.rest_client_enable_arbitrary_urls", "expected": false, "comparator": "eq", "severity": "warning", "note": "The REST client only queries this MISP"},
+        {"type": "setting", "key": "Security.disable_local_feed_access", "expected": true, "comparator": "eq", "severity": "warning", "note": "Feeds cannot read files of the MISP server"},
+        {"type": "setting", "key": "Session.timeout", "expected": 60, "comparator": "lte", "severity": "info", "note": "Minutes of inactivity before a session ends"},
+        {"type": "setting", "key": "MISP.log_auth", "expected": true, "comparator": "eq", "severity": "info", "note": ""},
+        {"type": "setting", "key": "MISP.log_client_ip", "expected": true, "comparator": "eq", "severity": "info", "note": ""},
+        {"type": "setting", "key": "MISP.log_user_ips", "expected": true, "comparator": "eq", "severity": "info", "note": ""},
+        {"type": "setting", "key": "MISP.log_new_audit", "expected": true, "comparator": "eq", "severity": "info", "note": ""},
+        {"type": "setting", "key": "MISP.self_update", "expected": false, "comparator": "eq", "severity": "warning", "note": "Updates go through the deployment, not the web interface"}
+    ]
+}

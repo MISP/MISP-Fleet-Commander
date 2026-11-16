@@ -1,0 +1,19 @@
+{
+    "name": "Sharing essentials",
+    "description": "The taxonomies and galaxies most sharing communities tag with (TLP, PAP, admiralty scale, MITRE ATT&CK, threat actors…), with background jobs and blocklists on.",
+    "rules": [
+        {"type": "taxonomy_enabled", "key": "tlp", "label": "Traffic Light Protocol", "expected": true, "severity": "warning", "note": ""},
+        {"type": "taxonomy_enabled", "key": "PAP", "label": "Permissible Actions Protocol", "expected": true, "severity": "warning", "note": ""},
+        {"type": "taxonomy_enabled", "key": "admiralty-scale", "label": "Admiralty scale", "expected": true, "severity": "info", "note": ""},
+        {"type": "taxonomy_enabled", "key": "estimative-language", "label": "Estimative language", "expected": true, "severity": "info", "note": ""},
+        {"type": "taxonomy_enabled", "key": "workflow", "label": "Workflow", "expected": true, "severity": "info", "note": ""},
+        {"type": "taxonomy_enabled", "key": "misp", "label": "MISP", "expected": true, "severity": "info", "note": ""},
+        {"type": "galaxy_enabled", "key": "c4e851fa-775f-11e7-8163-b774922098cd", "label": "mitre :: MITRE ATT&CK Techniques", "expected": true, "severity": "info", "note": ""},
+        {"type": "galaxy_enabled", "key": "1023f364-7831-11e7-8318-43b5531983ab", "label": "mitre :: MITRE ATT&CK Groups", "expected": true, "severity": "info", "note": ""},
+        {"type": "galaxy_enabled", "key": "698774c7-8022-42c4-917f-8d6e4f06ada3", "label": "misp :: Threat Actor", "expected": true, "severity": "info", "note": ""},
+        {"type": "galaxy_enabled", "key": "3f44af2e-1480-4b6b-9aa8-f9bb21341078", "label": "misp :: Ransomware", "expected": true, "severity": "info", "note": ""},
+        {"type": "setting", "key": "MISP.background_jobs", "expected": true, "comparator": "eq", "severity": "warning", "note": "Pulls, pushes and caching run in the background"},
+        {"type": "setting", "key": "MISP.enableEventBlocklisting", "expected": true, "comparator": "eq", "severity": "info", "note": ""},
+        {"type": "setting", "key": "MISP.enableOrgBlocklisting", "expected": true, "comparator": "eq", "severity": "info", "note": ""}
+    ]
+}

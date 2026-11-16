@@ -3,6 +3,7 @@ from flask import Blueprint, jsonify, request
 from application.controllers.instance import token_required
 import application.models.baselines as baselineModel
 import application.models.baselineDrift as baselineDrift
+import application.models.baselineLibrary as baselineLibrary
 import application.models.baselineReference as baselineReference
 import application.models.baselineRemediation as baselineRemediation
 import application.models.jobs as jobModel
@@ -80,12 +81,22 @@ def deleteRules(user, fleet_id):
 @BPbaselines.route('/baselines/fleet/<int:fleet_id>/copy', methods=['POST'])
 @token_required
 def copy(user, fleet_id):
-    """`{from_fleet_id, mode?}`: `replace` (default) makes the rules identical to the other fleet's, `merge` adds
-    them, overwriting rules with the same type and key"""
+    """`{from_fleet_id | from_saved_id | from_preset, mode?}`: `replace` (default) makes the rules identical to the
+    source's, `merge` adds them, overwriting rules with the same type and key. The rules are validated against this
+    fleet, all or none"""
     try:
-        body = jsonBody()
-        return jsonify(baselineModel.copyFromFleet(user, fleet_id, body.get('from_fleet_id'),
-                                                   body.get('mode') or 'replace'))
+        return jsonify(baselineLibrary.copyForUser(user, fleet_id, jsonBody()))
+    except baselineModel.BaselineError as e:
+        return errorResponse(e)
+
+
+@BPbaselines.route('/baselines/fleet/<int:fleet_id>/copy/preview', methods=['POST'])
+@token_required
+def copyPreview(user, fleet_id):
+    """Same body as the copy: the rules it would add, replace (with the current ones) and remove, and how many stay
+    as they are. Nothing is changed"""
+    try:
+        return jsonify(baselineLibrary.previewCopyForUser(user, fleet_id, jsonBody()))
     except baselineModel.BaselineError as e:
         return errorResponse(e)
 
@@ -169,3 +180,61 @@ def deleteRule(user, rule_id):
     except baselineModel.BaselineError as e:
         return errorResponse(e)
     return jsonify({'id': rule_id})
+
+
+# Saved baselines and presets
+
+@BPbaselines.route('/baselines/library', methods=['GET'])
+@token_required
+def library(user):
+    """The user's saved baselines and the presets, without their rules: `rule_count` and `types` ({type: count})"""
+    return jsonify(baselineLibrary.libraryForUser(user))
+
+
+@BPbaselines.route('/baselines/presets/<preset_id>', methods=['GET'])
+@token_required
+def viewPreset(user, preset_id):
+    try:
+        return jsonify(baselineLibrary.presetForUser(user, preset_id))
+    except baselineModel.BaselineError as e:
+        return errorResponse(e)
+
+
+@BPbaselines.route('/baselines/saved', methods=['POST'])
+@token_required
+def createSaved(user):
+    """`{name, description?, from_fleet_id}` keeps a copy of a fleet's rules; `{name, description?, rules,
+    server_id?}` keeps rules picked on a reference server. A name already used is a 409 (`name_taken`)"""
+    try:
+        return jsonify(baselineLibrary.createSaved(user, jsonBody())), 201
+    except baselineModel.BaselineError as e:
+        return errorResponse(e)
+
+
+@BPbaselines.route('/baselines/saved/<int:saved_id>', methods=['GET'])
+@token_required
+def viewSaved(user, saved_id):
+    try:
+        return jsonify(baselineLibrary.savedForUser(user, saved_id))
+    except baselineModel.BaselineError as e:
+        return errorResponse(e)
+
+
+@BPbaselines.route('/baselines/saved/<int:saved_id>', methods=['PUT'])
+@token_required
+def updateSaved(user, saved_id):
+    """`{name?, description?, from_fleet_id?}`: renames, describes, or replaces its rules with a fleet's"""
+    try:
+        return jsonify(baselineLibrary.updateSaved(user, saved_id, jsonBody()))
+    except baselineModel.BaselineError as e:
+        return errorResponse(e)
+
+
+@BPbaselines.route('/baselines/saved/<int:saved_id>', methods=['DELETE'])
+@token_required
+def deleteSaved(user, saved_id):
+    try:
+        baselineLibrary.deleteSaved(user, saved_id)
+    except baselineModel.BaselineError as e:
+        return errorResponse(e)
+    return jsonify({'id': saved_id})
