@@ -1,6 +1,6 @@
 {
     "name": "Focused instance",
-    "description": "No email sent, the common taxonomies for tagging, sharing and triage enabled, and content outside cyber threat intelligence disabled: off-topic taxonomies (climate, drugs, advertising…), galaxies (vendor duplicates, compliance and workforce frameworks, disinformation, space, off-topic MISP galaxies) and object templates (climate, FollowTheMoney, COVID-19, vessels and aircraft, physical identification, radio recordings, emergency alerts).",
+    "description": "No email sent, the common taxonomies for tagging, sharing and triage enabled, and content outside cyber threat intelligence disabled: off-topic taxonomies (climate, drugs, advertising…), galaxies (vendor duplicates, compliance and workforce frameworks, disinformation, space, off-topic MISP galaxies) and object templates (climate, FollowTheMoney, COVID-19, vessels, aircraft, drones and vehicles, GPS tracks, physical evidence and identification, radio recordings, emergency alerts, disinformation).",
     "rules": [
         {"type": "setting", "key": "MISP.disable_emailing", "expected": true, "comparator": "eq", "severity": "warning", "note": "This instance sends no email"},
         {"type": "taxonomy_enabled", "key": "action-taken", "expected": true, "severity": "info", "note": ""},
@@ -188,6 +188,23 @@
         {"type": "object_template_active", "key": "826c25e6-fdd5-4e4a-b081-be5ba3ac2c3d", "label": "cap-info", "expected": false, "severity": "info", "note": ""},
         {"type": "object_template_active", "key": "6fddc76b-59fc-49f6-a673-52f8d15149c4", "label": "cap-resource", "expected": false, "severity": "info", "note": ""},
         {"type": "object_template_active", "key": "dd3e00b2-977e-4cf4-9d12-0b009a00a721", "label": "stock", "expected": false, "severity": "info", "note": ""},
-        {"type": "object_template_active", "key": "ab31f87b-f8ac-4dfc-b610-359302b4e86b", "label": "game-cheat", "expected": false, "severity": "info", "note": ""}
+        {"type": "object_template_active", "key": "ab31f87b-f8ac-4dfc-b610-359302b4e86b", "label": "game-cheat", "expected": false, "severity": "info", "note": ""},
+        {"type": "object_template_active", "key": "8f3b2a7d-6b14-4e2a-9c5d-8c7e3f1b2d4a", "label": "remote-controller", "expected": false, "severity": "info", "note": ""},
+        {"type": "object_template_active", "key": "683c076c-f695-4ff2-8efa-e98a418049f4", "label": "vehicle", "expected": false, "severity": "info", "note": ""},
+        {"type": "object_template_active", "key": "4e177821-a927-4f11-a8ff-1232e8faf968", "label": "nmea", "expected": false, "severity": "info", "note": ""},
+        {"type": "object_template_active", "key": "64ee6f19-f154-45c0-bd9c-e659ff0e30f7", "label": "gpx", "expected": false, "severity": "info", "note": ""},
+        {"type": "object_template_active", "key": "60141eac-71d2-4173-930d-91dba8106c40", "label": "timecode", "expected": false, "severity": "info", "note": ""},
+        {"type": "object_template_active", "key": "9d239b58-0be6-410f-836d-6634802f08ca", "label": "physical-item", "expected": false, "severity": "info", "note": ""},
+        {"type": "object_template_active", "key": "dc786f86-4a8f-4da9-82d1-130fcefc1453", "label": "physical-object", "expected": false, "severity": "info", "note": ""},
+        {"type": "object_template_active", "key": "102a8696-420b-486d-806d-70a34d2f4e54", "label": "personification", "expected": false, "severity": "info", "note": ""},
+        {"type": "object_template_active", "key": "40ba0098-cfd8-4b54-b5a8-9adcdf47533d", "label": "scheduled-event", "expected": false, "severity": "info", "note": ""},
+        {"type": "object_template_active", "key": "9d0ac25c-f1cd-425c-87a4-b28bbb15ee2d", "label": "administrative-decision", "expected": false, "severity": "info", "note": ""},
+        {"type": "object_template_active", "key": "83bea299-514a-4719-a84b-f6fd0997fac1", "label": "narrative", "expected": false, "severity": "info", "note": ""},
+        {"type": "object_template_active", "key": "6f6c3b61-f085-475e-93df-2e2d9c2fb0f6", "label": "meme-image", "expected": false, "severity": "info", "note": ""},
+        {"type": "object_template_active", "key": "dc6cdc5f-17d7-4d7b-95fe-86478990c910", "label": "generalizing-persuasion-framework", "expected": false, "severity": "info", "note": ""},
+        {"type": "object_template_active", "key": "92b3f7fd-c4bc-42af-a73b-033ace439622", "label": "news-agency", "expected": false, "severity": "info", "note": ""},
+        {"type": "object_template_active", "key": "691463c5-5302-4847-9bec-4c56ccfec677", "label": "news-media", "expected": false, "severity": "info", "note": ""},
+        {"type": "object_template_active", "key": "a80828dc-07bf-4d5c-ab82-8160ee5bdd6d", "label": "persnona", "expected": false, "severity": "info", "note": ""},
+        {"type": "object_template_active", "key": "05755e29-8f5f-464d-bcff-2b4686472769", "label": "dark-pattern-item", "expected": false, "severity": "info", "note": ""}
     ]
 }
