@@ -24,9 +24,10 @@ export const JOB_KIND_LABELS = {
     plugin_action: "Plugin action",
     plugin_quick_action: "Quick action",
     rest_query: "REST query",
-    server_management: "User administration",
+    server_management: "Remote administration",
     edit_connection: "Sync connection edit",
     baseline_remediation: "Baseline remediation",
+    organisation_copy: "Organisation copy",
 }
 
 // The jobs list's status filter: groups of statuses, as the API takes them (comma-separated)

@@ -9,6 +9,13 @@
             <i class="fas fa-plus"></i> Add user
         </b-button>
     </div>
+    <div v-if="orgFilter" class="org-filter" role="status">
+        <i class="fas fa-building" aria-hidden="true"></i>
+        <span>Users of <strong>{{ orgFilter.name }}</strong> · {{ shownUsers.length }}</span>
+        <button type="button" class="btn btn-link org-filter-clear" title="Show every user" aria-label="Show every user" @click="$emit('clear-org-filter')">
+            <i class="fas fa-times" aria-hidden="true"></i>
+        </button>
+    </div>
     <div class="d-flex justify-content-between">
         <div class="d-flex" style="margin-top: -5px">
             <b-pagination
@@ -59,7 +66,7 @@
         :per-page="table.perPage"
         :current-page="table.currentPage"
         :busy.sync="table.isBusy"
-        :items="users" 
+        :items="shownUsers"
         :fields="table.fields"
         :filterIncludedFields="table.filterFields"
         :filter="table.filter"
@@ -152,7 +159,12 @@ export default {
         server: {
             type: Object,
             required: true
-        }
+        },
+        // {id, name}: only the users of that organisation
+        orgFilter: {
+            type: Object,
+            default: null
+        },
     },
     data: function() {
         return {
@@ -221,6 +233,18 @@ export default {
         getServerUsers: function() {
             return this.server_users[this.getServerId]
         },
+        shownUsers: function() {
+            if (!this.orgFilter) {
+                return this.users
+            }
+            return this.users.filter(user => user.Organisation && Number(user.Organisation.id) === Number(this.orgFilter.id))
+        },
+    },
+    watch: {
+        shownUsers: function(users) {
+            this.table.totalRows = users.length
+            this.table.currentPage = 1
+        },
     },
     methods: {
         onFiltered(filteredItems) {
@@ -265,4 +289,22 @@ export default {
 </script>
 
 <style scoped>
+.org-filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45em;
+    margin-bottom: 0.6rem;
+    padding: 0.2rem 0.3rem 0.2rem 0.7rem;
+    border: 1px solid #b8d4e6;
+    border-radius: 1rem;
+    background: #eaf3f8;
+    color: #1f4a66;
+    font-size: 0.85rem;
+}
+
+.org-filter-clear {
+    padding: 0 0.4rem;
+    color: inherit;
+    line-height: 1;
+}
 </style>

@@ -1,13 +1,28 @@
 <template>
     <b-card no-body>
-        <b-tabs pills card vertical>
-            <b-tab lazy
-                v-for="(value, scope) in administrationAction"
-                v-bind:key="scope"
-                :title="scope"
-            >
+        <b-tabs v-model="activeTab" pills card vertical>
+            <b-tab lazy title="Users">
                 <b-card-text>
-                    <component v-bind:is="value.component" :server="getServer" lazy></component>
+                    <userAdministration
+                        :server="getServer"
+                        :org-filter="userOrgFilter"
+                        @clear-org-filter="userOrgFilter = null"
+                    ></userAdministration>
+                </b-card-text>
+            </b-tab>
+            <b-tab lazy title="Organisations">
+                <b-card-text>
+                    <orgAdministration :server="getServer" @show-users="showUsersOf"></orgAdministration>
+                </b-card-text>
+            </b-tab>
+            <b-tab lazy title="Server Settings">
+                <b-card-text>
+                    <settingsAdministration :server="getServer"></settingsAdministration>
+                </b-card-text>
+            </b-tab>
+            <b-tab lazy title="REST API">
+                <b-card-text>
+                    <restAPIAdministration :server="getServer"></restAPIAdministration>
                 </b-card-text>
             </b-tab>
         </b-tabs>
@@ -15,11 +30,13 @@
 </template>
 
 <script>
-import { mapState, mapGetters } from "vuex"
+import { mapState } from "vuex"
 import userAdministration from "@/views/servers/elements/mispRemoteAdministration/userAdministration.vue"
 import orgAdministration from "@/views/servers/elements/mispRemoteAdministration/orgAdministration.vue"
 import settingsAdministration from "@/views/servers/elements/mispRemoteAdministration/settingsAdministration.vue"
 import restAPIAdministration from "@/views/servers/elements/mispRemoteAdministration/restAPIAdministration.vue"
+
+const USERS_TAB = 0
 
 export default {
     name: "MISPRemoteAdministration",
@@ -37,12 +54,9 @@ export default {
     },
     data: function() {
         return {
-            administrationAction: {
-                Users: { component: "userAdministration" },
-                Organisation: { component: "orgAdministration" },
-                "Server Settings": { component: "settingsAdministration" },
-                "REST API": {component: "restAPIAdministration"}
-            }
+            activeTab: USERS_TAB,
+            // The organisation the Users tab is narrowed to ("Show users" of the Organisations tab)
+            userOrgFilter: null,
         }
     },
     computed: {
@@ -54,6 +68,10 @@ export default {
         },
     },
     methods: {
+        showUsersOf(org) {
+            this.userOrgFilter = org
+            this.activeTab = USERS_TAB
+        },
     }
 }
 </script>
