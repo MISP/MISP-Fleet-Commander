@@ -62,7 +62,11 @@ def test_settings_are_read_and_changed(monkeypatch, ops):
     assert ops.editSetting(Server(), "Plugin.Enrichment_services_url", "http://modules").status_code == 200
     assert calls == ["/servers/getSetting/MISP.live",
                      ("/servers/serverSettingsEdit/Plugin.Enrichment_services_url",
-                      {"Server": {"value": "http://modules"}})]
+                      {"Server": {"value": "http://modules", "force": 1}})]
+    # Saved like MISP's settings page does: a diagnostic that fails on purpose does not block the change
+    calls.clear()
+    ops.editSetting(Server(), "MISP.disable_emailing", True)
+    assert calls == [("/servers/serverSettingsEdit/MISP.disable_emailing", {"Server": {"value": True, "force": 1}})]
 
     stub(monkeypatch, ops, get={"error": "Authentication error", "_status_code": 403},
          post=Answer(405, {"message": "This setting can only be edited via the CLI."}, "Method Not Allowed"))

@@ -191,9 +191,12 @@ def getSetting(server, name: str) -> Any:
 
 
 def editSetting(server, name: str, value: Any):
-    """The `requests.Response` of the change"""
+    """The `requests.Response` of the change. Saved the way MISP's own settings page saves (`force`): MISP's tests of
+    a setting are diagnostics, and some fail on purpose for a valid value (`MISP.disable_emailing` set to true says
+    "E-mailing is blocked."), which the API refuses without `force`. Settings MISP only lets change from its command
+    line or its environment stay refused"""
     try:
-        return post(server, f'/servers/serverSettingsEdit/{settingPath(name)}', {'Server': {'value': value}})
+        return post(server, f'/servers/serverSettingsEdit/{settingPath(name)}', {'Server': {'value': value, 'force': 1}})
     except MispOpError as e:
         raise MispOpError(f'Could not change `{name}`: {e.message}', e.response)
 
