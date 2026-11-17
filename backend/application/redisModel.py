@@ -12,9 +12,10 @@ KEY_SERVER_WATCHED = 'server-watched'
 KEY_FLEET_MONITORED = 'fleet-monitored'
 KEY_FLEET_WATCHED = 'fleet-watched'
 KEY_SERVER_PICTURES_CACHED = "server-pic-cached"
-# Expire on their own (models/syncActivity.py, models/organisations.py)
+# Expire on their own (models/syncActivity.py, models/organisations.py, models/sharingGroups.py)
 KEY_SYNC_ACTIVITY = 'sync-activity'
 KEY_SERVER_ORGANISATIONS = 'server-orgs'
+KEY_SERVER_SHARING_GROUPS = 'server-sgs'
 
 
 def saveServerInfo(server_uuid: int, info: dict) -> bool:
@@ -55,7 +56,7 @@ def deleteServerData(server_uuid: str, server_id: Union[int, None] = None) -> No
     """Forget everything cached about a server: needed now that snapshots no longer expire"""
     keys = [f"{key}:{server_uuid}" for key in (
         KEY_SERVER_INFO, KEY_SERVER_STATUS, KEY_SERVER_MONITORED, KEY_SERVER_WATCHED, KEY_SERVER_PICTURES_CACHED,
-        KEY_SERVER_ORGANISATIONS,
+        KEY_SERVER_ORGANISATIONS, KEY_SERVER_SHARING_GROUPS,
     )]
     if server_id is not None:
         keys.append(f"{KEY_HEALTH_FIRST_SEEN}:{server_id}")

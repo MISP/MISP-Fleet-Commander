@@ -256,6 +256,10 @@ def editOrganisation(server, orgId: int, changes: dict) -> None:
 # Sharing groups, by UUID, lowercased
 
 SHARING_GROUP_INDEX = ('/sharing_groups/index', 'SharingGroup', 'sharing groups')
+# Older MISPs leave inactive groups out of the index above and list them here; MISP 3 lists every group in both
+SHARING_GROUP_PASSIVE_INDEX = '/sharing_groups/index/true'
+# The MISP instance itself in a group's servers
+LOCAL_INSTANCE = 0
 
 
 def sharingGroupRecords(data, response=None) -> list:
@@ -267,17 +271,26 @@ def sharingGroupRecords(data, response=None) -> list:
     return data
 
 
+def sharingGroupEntries(server, url: str = SHARING_GROUP_INDEX[0]) -> list:
+    """The entries of a sharing group index (`{SharingGroup, Organisation, SharingGroupOrg, SharingGroupServer, …}`)"""
+    response = checked(mispGetRequest(server, url, {}, rawResponse=True, nocache=True),
+                       f'Could not list the {SHARING_GROUP_INDEX[2]}')
+    return sharingGroupRecords(responseJson(response), response)
+
+
 def sharingGroups(server) -> Dict[str, dict]:
-    url, model, what = SHARING_GROUP_INDEX
-    response = checked(mispGetRequest(server, url, {}, rawResponse=True, nocache=True), f'Could not list the {what}')
-    return parseSharingGroups(sharingGroupRecords(responseJson(response), response))
+    return parseSharingGroups(sharingGroupEntries(server))
 
 
-def decodedSharingGroups(data) -> Dict[str, dict]:
+def decodedSharingGroupEntries(data) -> list:
     """From another client's decoded answer (see `decodedRecords`)"""
     if isinstance(data, dict) and not isinstance(data.get('response'), list):
         decodedRecords(data, 'SharingGroup', 'sharing groups')  # Raises with the error the answer carries
-    return parseSharingGroups(sharingGroupRecords(data))
+    return sharingGroupRecords(data)
+
+
+def decodedSharingGroups(data) -> Dict[str, dict]:
+    return parseSharingGroups(decodedSharingGroupEntries(data))
 
 
 def parseSharingGroups(entries: list) -> Dict[str, dict]:
@@ -307,11 +320,64 @@ def parseSharingGroups(entries: list) -> Dict[str, dict]:
 def captureSharingGroup(server, sharingGroup: dict) -> None:
     """Creates the sharing group, or updates the one with its UUID, the way MISP takes one from a sync: the
     attributes given replace the current ones, the members listed are added (missing organisations are created as
-    external ones), members not listed are kept"""
+    external ones), members not listed are kept. The body must not be wrapped in `{"SharingGroup": …}` (MISP then
+    drops the members). Without `roaming` and servers, MISP also adds a "Local instance" server row, even to an
+    existing group: complete existing groups with `addSharingGroupOrg` and `editSharingGroup` instead"""
     try:
         post(server, '/sharing_groups/add', sharingGroup)
     except MispOpError as e:
         raise MispOpError(f"Could not save sharing group `{sharingGroup.get('name')}`: {e.message}", e.response)
+
+
+def sharingGroupPath(action: str, *parts) -> str:
+    return '/'.join([f'/sharing_groups/{action}'] + [quote(str(part), safe='') for part in parts])
+
+
+def editSharingGroup(server, uuid: str, attributes: dict, servers: Optional[list] = None) -> None:
+    """Changes only the attributes given (name, releasability, description, active, roaming). `servers` are upserted
+    by URL (`[{"Server": {"url", "all_orgs"}}]`, `all_orgs` inside `Server`, where MISP reads it): MISP's own base
+    URL is the "Local instance" row, the only way to change it through the API"""
+    body = dict(attributes)
+    if servers:
+        body['SharingGroupServer'] = servers
+    try:
+        post(server, sharingGroupPath('edit', uuid), body)
+    except MispOpError as e:
+        raise MispOpError(f'Could not change the sharing group: {e.message}', e.response)
+
+
+def addSharingGroupOrg(server, uuid: str, orgUuid: str, extend: bool) -> None:
+    """The organisation must exist on the server. MISP refuses (403) one that is already a member"""
+    post(server, sharingGroupPath('addOrg', uuid, orgUuid, 1 if extend else 0))
+
+
+def removeSharingGroupOrg(server, uuid: str, orgUuid: str) -> None:
+    post(server, sharingGroupPath('removeOrg', uuid, orgUuid))
+
+
+def addSharingGroupServer(server, uuid: str, serverId: int, allOrgs: bool) -> None:
+    """`serverId`: the sync server's ID on that MISP. The "Local instance" (0) cannot be addressed this way"""
+    post(server, sharingGroupPath('addServer', uuid, int(serverId), 1 if allOrgs else 0))
+
+
+def removeSharingGroupServer(server, uuid: str, serverId: int) -> None:
+    post(server, sharingGroupPath('removeServer', uuid, int(serverId)))
+
+
+def deleteSharingGroup(server, uuid: str) -> None:
+    """MISP refuses (403) while an event, attribute, object or report uses the group"""
+    post(server, sharingGroupPath('delete', uuid))
+
+
+def eventCount(server, filters: dict) -> Optional[int]:
+    """How many events match `filters` (events index filters), from MISP's `X-Result-Count`; None when MISP does not
+    say"""
+    response = checked(mispPostRequest(server, '/events/index', {**filters, 'limit': 1}, rawResponse=True,
+                                       nocache=True), 'Could not count the events')
+    try:
+        return int(response.headers.get('X-Result-Count'))
+    except (TypeError, ValueError):
+        return None
 
 
 # Custom galaxies (created on an instance, not shipped with MISP) and their clusters

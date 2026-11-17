@@ -2,21 +2,15 @@
 """The organisations of a MISP server, as its Remote administration tab shows them: listed live from MISP and kept a
 few minutes, compared with the other servers of its fleet, created, edited and copied to other servers"""
 
-import asyncio
 import json
 import re
-import time
 from typing import Dict, Iterable, List, Optional
 
 import application.models.mispOps as mispOps
 from application.DBModels import Job, Server
 from application.models.jobs import UnitResult
-from application.redisModel import KEY_SERVER_ORGANISATIONS, redisClient
-
-CACHE_SECONDS = 10 * 60
-# Comparing with the rest of the fleet: servers listed at the same time, and how long each may take
-FLEET_CONCURRENCY = 25
-FLEET_TIMEOUT = 30
+from application.models.remoteLists import FLEET_TIMEOUT, ListCache, RemoteListError, gatherFleet
+from application.redisModel import KEY_SERVER_ORGANISATIONS
 
 MAX_NAME_LENGTH = 255
 MAX_TEXT_LENGTH = 255
@@ -29,12 +23,8 @@ COPIED_FIELDS = ('name',) + TEXT_FIELDS + LONG_TEXT_FIELDS
 UUID_RE = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
 
 
-class OrganisationError(Exception):
-    def __init__(self, message: str, status: int = 400, field: Optional[str] = None):
-        super().__init__(message)
-        self.message = message
-        self.status = status
-        self.field = field
+class OrganisationError(RemoteListError):
+    pass
 
 
 # Records
@@ -81,31 +71,10 @@ def normalisedName(name: str) -> str:
 
 # Cache
 
-def cacheKey(server: Server) -> str:
-    return f'{KEY_SERVER_ORGANISATIONS}:{server.uuid}'
-
-
-def readCached(server: Server) -> Optional[dict]:
-    raw = redisClient.get(cacheKey(server))
-    if raw is None:
-        return None
-    try:
-        cached = json.loads(raw)
-    except ValueError:
-        return None
-    return cached if isinstance(cached, dict) and isinstance(cached.get('organisations'), list) else None
-
-
-def store(server: Server, organisations: List[dict], now: Optional[int] = None) -> dict:
-    listed = {'fetched_at': int(now if now is not None else time.time()), 'organisations': organisations}
-    redisClient.set(cacheKey(server), json.dumps(listed), ex=CACHE_SECONDS)
-    return listed
-
-
-def forget(servers: Iterable[Server]) -> None:
-    keys = [cacheKey(server) for server in servers]
-    if keys:
-        redisClient.delete(*keys)
+CACHE = ListCache(KEY_SERVER_ORGANISATIONS, 'organisations')
+readCached = CACHE.read
+store = CACHE.store
+forget = CACHE.forget
 
 
 def listFromMisp(server: Server) -> List[dict]:
@@ -151,64 +120,23 @@ def compare(own: List[dict], others: Dict[int, List[dict]]) -> Dict[str, dict]:
     return result
 
 
-async def fetchLists(servers: List[Server], concurrency: int = FLEET_CONCURRENCY,
-                     timeout: int = FLEET_TIMEOUT) -> Dict[int, object]:
-    """server ID → its organisations, or the reason they could not be listed. Each list read is cached"""
-    from application.models.utils import asyncFetcher
-    semaphore = asyncio.Semaphore(max(int(concurrency), 1))
-    url = mispOps.ORGANISATION_INDEX[0]
-
-    async def fetch(server):
-        async with semaphore:
-            try:
-                answers = await asyncFetcher(server, [url], timeout=timeout)
-                records = mispOps.decodedRecords(answers[0], *mispOps.ORGANISATION_INDEX[1:])
-                return server.id, store(server, parse(records))
-            except mispOps.MispOpError as e:
-                # Shown as "could not be listed: <reason>"
-                return server.id, e.message.replace(f'Could not list the {mispOps.ORGANISATION_INDEX[2]}: ', '', 1)
-            except Exception as e:
-                return server.id, f'Unexpected error: {e}'
-    return dict(await asyncio.gather(*[fetch(server) for server in servers]))
-
-
-def fleetServers(server: Server) -> List[Server]:
-    """The other servers of the server's fleet, by name"""
-    servers = Server.query.filter(Server.fleet_id == server.fleet_id, Server.user_id == server.user_id,
-                                  Server.id != server.id).all()
-    return sorted(servers, key=lambda other: (other.name.lower(), other.id))
+def decodeList(answers: list) -> List[dict]:
+    """The organisations of another client's decoded index answer"""
+    return parse(mispOps.decodedRecords(answers[0], *mispOps.ORGANISATION_INDEX[1:]))
 
 
 def fleetComparison(server: Server, refresh: bool = False) -> dict:
     """How the server's organisations compare with the rest of its fleet. Lists come from the cache when fresh,
     else are read now. Servers whose list could not be read are `unavailable`, never counted as missing it"""
     own = organisationsOf(server, refresh=refresh)['organisations']
-    lists, unavailable, todo = {}, [], []
-    others = fleetServers(server)
-    for other in others:
-        cached = None if refresh else readCached(other)
-        if cached is not None:
-            lists[other.id] = cached
-        elif not other.authkey:
-            unavailable.append({'id': other.id, 'name': other.name, 'error': 'No API key'})
-        else:
-            todo.append(other)
-    if todo:
-        for server_id, outcome in asyncio.run(fetchLists(todo)).items():
-            if isinstance(outcome, dict):
-                lists[server_id] = outcome
-            else:
-                other = next(candidate for candidate in todo if candidate.id == server_id)
-                unavailable.append({'id': other.id, 'name': other.name, 'error': outcome})
-    compared = [{'id': other.id, 'name': other.name, 'fetched_at': lists[other.id]['fetched_at']}
-                for other in others if other.id in lists]
-    unavailable.sort(key=lambda entry: (entry['name'].lower(), entry['id']))
+    url, _, what = mispOps.ORGANISATION_INDEX
+    fleet = gatherFleet(server, CACHE, [url], decodeList, what, refresh=refresh, timeout=FLEET_TIMEOUT)
     return {
         'server_id': server.id,
         'fleet_id': server.fleet_id,
-        'compared': compared,
-        'unavailable': unavailable,
-        'organisations': compare(own, {server_id: listed['organisations'] for server_id, listed in lists.items()}),
+        'compared': fleet['compared'],
+        'unavailable': fleet['unavailable'],
+        'organisations': compare(own, fleet['lists']),
     }
 
 

@@ -93,7 +93,8 @@ def enable(user, server_id, user_id):
 
 # Organisations
 
-def organisationError(e):
+def requestError(e):
+    """A RemoteListError (organisations, sharing groups) as a JSON answer"""
     body = {'message': e.message}
     if getattr(e, 'field', None):
         body['field'] = e.field
@@ -123,7 +124,7 @@ def organisationIndex(user, server_id):
         server = ownedServerOr404(user, server_id)
         return jsonify({'server_id': server.id, **organisationModel.organisationsOf(server, refresh=wantsRefresh())})
     except organisationModel.OrganisationError as e:
-        return organisationError(e)
+        return requestError(e)
     except mispOps.MispOpError as e:
         return jsonify({'message': e.message}), 502
 
@@ -139,7 +140,7 @@ def organisationFleet(user, server_id):
         server = ownedServerOr404(user, server_id)
         return jsonify(organisationModel.fleetComparison(server, refresh=wantsRefresh()))
     except organisationModel.OrganisationError as e:
-        return organisationError(e)
+        return requestError(e)
     except mispOps.MispOpError as e:
         return jsonify({'message': e.message}), 502
 
@@ -165,7 +166,7 @@ def organisationAdd(user, server_id):
         server = ownedServerOr404(user, server_id)
         fields = organisationModel.cleanFields(request.get_json(silent=True))
     except organisationModel.OrganisationError as e:
-        return organisationError(e)
+        return requestError(e)
     return runOrganisationOperation(user, server, 'add_organisation', f"Add organisation {fields['name']}",
                                     {'payload': fields})
 
@@ -179,7 +180,7 @@ def organisationEdit(user, server_id, org_id):
         server = ownedServerOr404(user, server_id)
         changes = organisationModel.cleanFields(request.get_json(silent=True), partial=True)
     except organisationModel.OrganisationError as e:
-        return organisationError(e)
+        return requestError(e)
     return runOrganisationOperation(user, server, 'edit_organisation', f'Edit organisation #{org_id}',
                                     {'org_id': org_id, 'payload': changes})
 
@@ -197,7 +198,154 @@ def organisationCopy(user, server_id):
         server = ownedServerOr404(user, server_id)
         job = organisationModel.startCopy(user, server, request.get_json(silent=True))
     except organisationModel.OrganisationError as e:
-        return organisationError(e)
+        return requestError(e)
+    except userJobs.JobError as e:
+        return jsonify({'message': e.message}), e.status
+    except mispOps.MispOpError as e:
+        return jsonify({'message': e.message}), 502
+    return jsonify({'job_id': job.id, 'job': jobModel.serializeJob(job, withResults=True)}), 202
+
+
+# Sharing groups
+
+def runSharingGroupOperation(user, server, operation, title, params):
+    """A one-server job: `{SharingGroup, done, failed}` (the group as MISP now has it), 502 with what was done and
+    what MISP refused otherwise"""
+    from application.controllers.websocket import socketEmitter
+    import application.models.jobRunner as jobRunner
+    unit = jobRunner.runInline(user, 'server_management', server, {'operation': operation, **params},
+                               title=f'{title} on {server.name}', emitter=socketEmitter)
+    if not unit.ok:
+        return jsonify({'message': unit.summary or 'MISP refused the change'}), 502
+    return jsonify(unit.response)
+
+
+@BPserverManagement.route('/server-management/sharing-groups/<int:server_id>', methods=['GET'])
+@token_required
+def sharingGroupIndex(user, server_id):
+    """The sharing groups of the MISP instance, kept 10 minutes (`?refresh=1` lists them again):
+    `{server_id, fetched_at, cached, sharing_groups}`"""
+    import application.models.mispOps as mispOps
+    import application.models.remoteLists as remoteLists
+    import application.models.sharingGroups as sharingGroupModel
+    try:
+        server = ownedServerOr404(user, server_id)
+        return jsonify({'server_id': server.id, **sharingGroupModel.sharingGroupsOf(server, refresh=wantsRefresh())})
+    except remoteLists.RemoteListError as e:
+        return requestError(e)
+    except mispOps.MispOpError as e:
+        return jsonify({'message': e.message}), 502
+
+
+@BPserverManagement.route('/server-management/sharing-groups/<int:server_id>/fleet', methods=['GET'])
+@token_required
+def sharingGroupFleet(user, server_id):
+    """How the server's sharing groups compare with the other servers of its fleet, by UUID: `{compared,
+    unavailable, sharing_groups: {uuid: {same, differs, other_uuid}}}`"""
+    import application.models.mispOps as mispOps
+    import application.models.remoteLists as remoteLists
+    import application.models.sharingGroups as sharingGroupModel
+    try:
+        server = ownedServerOr404(user, server_id)
+        return jsonify(sharingGroupModel.fleetComparison(server, refresh=wantsRefresh()))
+    except remoteLists.RemoteListError as e:
+        return requestError(e)
+    except mispOps.MispOpError as e:
+        return jsonify({'message': e.message}), 502
+
+
+@BPserverManagement.route('/server-management/sharing-groups/<int:server_id>/usage/<int:group_id>', methods=['GET'])
+@token_required
+def sharingGroupUsage(user, server_id, group_id):
+    """How many events of the MISP instance are shared with the group: `{group_id, events}` (`events` is null when
+    MISP does not say)"""
+    import application.models.mispOps as mispOps
+    import application.models.remoteLists as remoteLists
+    import application.models.sharingGroups as sharingGroupModel
+    try:
+        server = ownedServerOr404(user, server_id)
+        return jsonify({'group_id': group_id, 'events': sharingGroupModel.eventCount(server, group_id)})
+    except remoteLists.RemoteListError as e:
+        return requestError(e)
+    except mispOps.MispOpError as e:
+        return jsonify({'message': e.message}), 502
+
+
+@BPserverManagement.route('/server-management/sharing-groups/<int:server_id>/add', methods=['POST'])
+@token_required
+def sharingGroupAdd(user, server_id):
+    """Create a sharing group on the MISP instance: `{name, uuid?, description?, releasability?, active?, roaming?,
+    members?: [{uuid, name, extend}], servers?: [{server_id, all_orgs}]}`"""
+    import application.models.mispOps as mispOps
+    import application.models.remoteLists as remoteLists
+    import application.models.sharingGroups as sharingGroupModel
+    try:
+        server = ownedServerOr404(user, server_id)
+        fields = sharingGroupModel.cleanRequest(request.get_json(silent=True))
+        sharingGroupModel.checkNameFree(server, fields['name'])
+    except remoteLists.RemoteListError as e:
+        return requestError(e)
+    except mispOps.MispOpError as e:
+        return jsonify({'message': e.message}), 502
+    return runSharingGroupOperation(user, server, 'add_sharing_group', f"Add sharing group {fields['name']}",
+                                    {'payload': fields})
+
+
+@BPserverManagement.route('/server-management/sharing-groups/<int:server_id>/edit/<uuid>', methods=['POST'])
+@token_required
+def sharingGroupEdit(user, server_id, uuid):
+    """Change a sharing group of the MISP instance: the attributes given, and `members` / `servers` when given (the
+    whole new lists)"""
+    import application.models.mispOps as mispOps
+    import application.models.remoteLists as remoteLists
+    import application.models.sharingGroups as sharingGroupModel
+    try:
+        server = ownedServerOr404(user, server_id)
+        uuid = sharingGroupModel.cleanUuid(uuid, 'The sharing group', 'uuid')
+        changes = sharingGroupModel.cleanRequest(request.get_json(silent=True), partial=True)
+        if 'name' in changes:
+            sharingGroupModel.checkNameFree(server, changes['name'], uuid)
+    except remoteLists.RemoteListError as e:
+        return requestError(e)
+    except mispOps.MispOpError as e:
+        return jsonify({'message': e.message}), 502
+    name = sharingGroupModel.cachedName(server, uuid) or uuid
+    return runSharingGroupOperation(user, server, 'edit_sharing_group', f'Edit sharing group {name}',
+                                    {'uuid': uuid, 'payload': changes})
+
+
+@BPserverManagement.route('/server-management/sharing-groups/<int:server_id>/delete/<uuid>', methods=['POST'])
+@token_required
+def sharingGroupDelete(user, server_id, uuid):
+    """Delete a sharing group of the MISP instance. MISP refuses while anything uses it"""
+    import application.models.remoteLists as remoteLists
+    import application.models.sharingGroups as sharingGroupModel
+    try:
+        server = ownedServerOr404(user, server_id)
+        uuid = sharingGroupModel.cleanUuid(uuid, 'The sharing group', 'uuid')
+    except remoteLists.RemoteListError as e:
+        return requestError(e)
+    body = request.get_json(silent=True)
+    name = body.get('name') if isinstance(body, dict) and isinstance(body.get('name'), str) else ''
+    return runSharingGroupOperation(user, server, 'delete_sharing_group',
+                                    f'Delete sharing group {name.strip()[:255] or uuid}', {'uuid': uuid})
+
+
+@BPserverManagement.route('/server-management/sharing-groups/<int:server_id>/copy', methods=['POST'])
+@token_required
+def sharingGroupCopy(user, server_id):
+    """Create one of the server's sharing groups, with its UUID, on other servers of its fleet, or add the members it
+    lacks there: `{uuid, server_ids}`. Answers 202 with the job"""
+    import application.models.jobs as jobModel
+    import application.models.mispOps as mispOps
+    import application.models.remoteLists as remoteLists
+    import application.models.sharingGroups as sharingGroupModel
+    import application.models.userJobs as userJobs
+    try:
+        server = ownedServerOr404(user, server_id)
+        job = sharingGroupModel.startCopy(user, server, request.get_json(silent=True))
+    except remoteLists.RemoteListError as e:
+        return requestError(e)
     except userJobs.JobError as e:
         return jsonify({'message': e.message}), e.status
     except mispOps.MispOpError as e:

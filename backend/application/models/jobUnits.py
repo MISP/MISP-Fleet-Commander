@@ -11,7 +11,7 @@ import application
 import application.models.plugins as pluginsModel
 from application.DBModels import Server
 from application.controllers.utils import errorText, misplabelledFailure, mispGetRequest, mispPostRequest
-from application.models import organisations, serverManagement
+from application.models import organisations, serverManagement, sharingGroups
 from application.models.jobs import UnitResult
 
 
@@ -129,7 +129,7 @@ def restQueryUnit(server: Server, params: dict) -> UnitResult:
     return requestUnit(restQuery(server, params.get('method'), params.get('url'), params.get('data')))
 
 
-# Remote Admin (users and organisations of a MISP server)
+# Remote Admin (users, organisations and sharing groups of a MISP server)
 
 SERVER_MANAGEMENT_OPERATIONS: Dict[str, Callable] = {
     'add_user': lambda server, params: serverManagement.addUser(server, params.get('payload') or {}),
@@ -141,6 +141,9 @@ SERVER_MANAGEMENT_OPERATIONS: Dict[str, Callable] = {
     'enable': lambda server, params: serverManagement.enable(server, params.get('user_id')),
     'add_organisation': organisations.addOperation,
     'edit_organisation': organisations.editOperation,
+    'add_sharing_group': sharingGroups.addOperation,
+    'edit_sharing_group': sharingGroups.editOperation,
+    'delete_sharing_group': sharingGroups.deleteOperation,
 }
 # Operations on one user of the MISP server
 USER_OPERATIONS = ('set_password', 'reset_password', 'gen_authkey', 'disable', 'enable')
@@ -185,6 +188,10 @@ def organisationCopyUnit(server: Server, params: dict) -> UnitResult:
     return organisations.copyUnit(server, params)
 
 
+def sharingGroupCopyUnit(server: Server, params: dict) -> UnitResult:
+    return sharingGroups.copyUnit(server, params)
+
+
 def baselineRemediationUnit(server: Server, params: dict) -> UnitResult:
     from application.models.baselineRemediation import remediationUnit
     return remediationUnit(server, params)
@@ -198,6 +205,7 @@ EXECUTORS: Dict[str, Callable[[Server, dict], UnitResult]] = {
     'edit_connection': editConnectionUnit,
     'baseline_remediation': baselineRemediationUnit,
     'organisation_copy': organisationCopyUnit,
+    'sharing_group_copy': sharingGroupCopyUnit,
 }
 
 
