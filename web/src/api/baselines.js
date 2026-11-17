@@ -101,8 +101,9 @@ export default {
     remediationPreview(fleet_id, scope) {
         return request("post", `/baselines/fleet/${fleet_id}/remediation/preview`, scope || {})
     },
-    remediate(fleet_id, items) {
-        return request("post", `/baselines/fleet/${fleet_id}/remediation`, { items })
+    // `{items: [{server_id, rule_id}]}`, or `{server_ids, rule_ids}` for what a preview listed
+    remediate(fleet_id, body) {
+        return request("post", `/baselines/fleet/${fleet_id}/remediation`, body)
     },
     // A server's settings and content, kept a short while: the rule editor and the import ask for the same one
     reference(server_id, { fresh = false } = {}) {
