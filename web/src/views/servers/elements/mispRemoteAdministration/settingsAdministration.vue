@@ -22,8 +22,15 @@
             :fields="fields"
             :items="getRawFinalSettings"
             :filter="filter"
+            :busy="!settingsLoaded"
             @row-clicked="rowClickHandler"
-        ></b-table>
+        >
+            <template #table-busy>
+                <div class="text-center text-muted my-2" role="status">
+                    <b-spinner small class="mr-2"></b-spinner>Loading the settings…
+                </div>
+            </template>
+        </b-table>
         <SettingsAdministrationModal
             v-if="selectedItem !== null"
             ref="modal-settings-administration"
@@ -66,8 +73,12 @@ export default {
         ...mapState({
             raw_final_settings: state => state.servers.raw_final_settings,
         }),
+        // Loaded with the server's full snapshot (lists only carry a light one)
+        settingsLoaded() {
+            return this.raw_final_settings[this.server.id] !== undefined
+        },
         getRawFinalSettings: function() {
-            return Object.values(this.raw_final_settings[this.server.id])
+            return Object.values(this.raw_final_settings[this.server.id] || {})
         },
     },
     methods: {

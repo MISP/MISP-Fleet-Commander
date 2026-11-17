@@ -43,8 +43,8 @@ def test_left_alone_when_not_accepted_small_or_not_json(app):
         assert "Content-Encoding" not in text.headers
 
 
-def test_fleet_server_list_is_compressed(db, client, make_user, auth_headers):
-    """The answer that weighs most: every server with its last snapshot"""
+def test_server_snapshot_is_compressed(db, client, make_user, auth_headers):
+    """The answer that weighs most: a server's full snapshot, mostly MISP's settings"""
     from application import redisModel
     from application.DBModels import Fleet, Server
 
@@ -58,10 +58,10 @@ def test_fleet_server_list_is_compressed(db, client, make_user, auth_headers):
     finalSettings = [{"setting": f"MISP.setting_{n}", "value": n, "description": "A setting"} for n in range(2000)]
     redisModel.saveServerInfo(server.uuid, {"timestamp": 1, "query_result": {"serverSettings": {"finalSettings": finalSettings}}})
 
-    url = f"/servers/index/{fleet.id}"
+    url = f"/servers/queryInfo/{server.id}"
     compressed = client.get(url, headers=dict(auth_headers(user), **{"Accept-Encoding": "gzip"}))
     assert compressed.status_code == 200 and compressed.headers["Content-Encoding"] == "gzip"
-    servers = json.loads(gzip.decompress(compressed.get_data()))
-    assert servers[0]["server_info"]["query_result"]["serverSettings"]["finalSettings"] == finalSettings
+    info = json.loads(gzip.decompress(compressed.get_data()))
+    assert info["query_result"]["serverSettings"]["finalSettings"] == finalSettings
     plain = client.get(url, headers=auth_headers(user))
-    assert "Content-Encoding" not in plain.headers and json.loads(plain.get_data()) == servers
+    assert "Content-Encoding" not in plain.headers and json.loads(plain.get_data()) == info

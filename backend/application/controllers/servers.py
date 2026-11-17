@@ -14,7 +14,7 @@ from marshmallow import ValidationError
 from application import flaskApp
 from application.DBModels import db, User, Server
 from application.controllers.utils import mispGetHTMLRequest, mispGetRequest, mispPostRequest, batchRequest
-from application.marshmallowSchemas import ServerSchema, serverQuerySchema, serverSchema, taskSchema, serversSchema
+from application.marshmallowSchemas import ServerSchema, serverQuerySchema, serverSchema, taskSchema, serversSchema, serversListSchema
 import application.models.servers as serverModel
 import application.models.syncActivity as syncActivityModel
 import application.models.instancePicture as instancePictureModel
@@ -49,7 +49,7 @@ class DictToObject:
 def index(user, fleet_id=None):
     servers = serverModel.indexForUser(user, fleet_id)
     if servers:
-        serversDict = serversSchema.dump(servers)
+        serversDict = serversListSchema.dump(servers)
         return jsonify(serversDict)
     else:
         return jsonify([])

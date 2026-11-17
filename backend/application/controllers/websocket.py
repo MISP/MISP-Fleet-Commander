@@ -3,7 +3,7 @@ from flask import request, session
 from flask_socketio import SocketIO, ConnectionRefusedError, emit, join_room
 from application import socketioApp
 from application.DBModels import Server, ServerMinimal, Fleet, User
-from application.marshmallowSchemas import serverSchemaWithoutInfo
+from application.marshmallowSchemas import lightServerInfo, serverSchemaWithoutInfo
 import application.models.servers as serverModel
 import application.models.fleets as fleetModel
 
@@ -163,7 +163,8 @@ class SocketioEmitter:
         self.socketio.emit('PONG', {'ok': ok}, to=sid)
 
     def udpate_server(self, server, data):
-        self._emitToServerOwner('UPDATE_SERVER', server, data)
+        """A server's new snapshot, reduced to what lists show: a server page asks for the rest"""
+        self._emitToServerOwner('UPDATE_SERVER', server, lightServerInfo(data))
 
     def udpate_server_connection_list(self, server, data):
         payload = {

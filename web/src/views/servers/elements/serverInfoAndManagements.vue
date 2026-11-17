@@ -42,7 +42,16 @@
             </template>
             <keep-alive>
             <b-card no-body>
-                <b-tabs pills card vertical>
+                <div v-if="!fullInfoLoaded" class="full-info-state" role="status">
+                    <template v-if="fullInfoError">
+                        <i class="fas fa-triangle-exclamation text-danger mr-1" aria-hidden="true"></i>Could not load the diagnostics: {{ fullInfoError }}
+                        <b-button size="sm" variant="link" @click="loadFullInfo">Try again</b-button>
+                    </template>
+                    <template v-else>
+                        <b-spinner small class="mr-2"></b-spinner>Loading the diagnostics…
+                    </template>
+                </div>
+                <b-tabs v-else pills card vertical>
                     <b-tab
                         v-for="(value, setting) in getDiagnostic"
                         v-bind:key="setting"
@@ -233,6 +242,7 @@ export default {
             diagnosticTabularView: [],
             diagnosticListView: ["dbDiagnostics", "dbSchemaDiagnostic", "moduleStatus", "readableFiles", "redisInfo", "version", "writeableDirs", "writeableFiles"],
             initDone: false,
+            fullInfoError: null,
         }
     },
     computed: {
@@ -247,7 +257,12 @@ export default {
             final_settings: state => state.servers.final_settings,
             last_refresh: state => state.servers.last_refresh,
             diagnostic_full: state => state.servers.diagnostic_full,
+            full_info: state => state.servers.full_info,
         }),
+        // The server's lists entry only carries a light snapshot: settings and diagnostics come with the full one
+        fullInfoLoaded() {
+            return this.full_info[this.server_id] !== undefined
+        },
         getServer: function() {
             return this.servers[this.server_id]
         },
@@ -286,6 +301,13 @@ export default {
         }
     },
     watch: {
+        server_id() {
+            this.loadFullInfo()
+        },
+        // A new snapshot (refresh): lists got its light part, this view asks for the rest
+        getLastRefresh() {
+            this.loadFullInfo()
+        },
         tab(name) {
             if (TAB_INDEX[name] !== undefined) {
                 this.tabIndex = TAB_INDEX[name]
@@ -294,11 +316,19 @@ export default {
         },
     },
     mounted() {
+        this.loadFullInfo()
         if (TAB_INDEX[this.tab] !== undefined) {
             this.scrollToTabs()
         }
     },
     methods: {
+        loadFullInfo() {
+            this.fullInfoError = null
+            this.$store.dispatch("servers/fetchFullInfo", { server_id: this.server_id })
+                .catch((error) => {
+                    this.fullInfoError = typeof error === "string" ? error : "the request failed"
+                })
+        },
         refreshDiagnostic() {
             this.$emit("actionRefresh", "no_cache")
         },
@@ -344,6 +374,11 @@ export default {
 </script>
 
 <style scoped>
+.full-info-state {
+    padding: 1.25rem;
+    color: #5a6270;
+}
+
 ul.nav-tabs > li.nav-item.rightmost-action > a {
     padding-bottom: 0;
     margin-top: -10px;

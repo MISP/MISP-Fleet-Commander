@@ -95,6 +95,43 @@ class ServerSchema(BaseSchema):
         unknown = INCLUDE
 
 
+# What lists of servers show (fleet table, Strategic View, Connections page). A full snapshot is several hundred KB
+# per server, mostly MISP's settings and diagnostics, which only the server page shows: it asks for them on its own
+# (`/servers/queryInfo/<id>`). Lists keep the API user, usage, sync connections, the status parts of the diagnostics
+# and the two settings they read.
+LIGHT_SNAPSHOT_SECTIONS = ('serverUser', 'serverUsage', 'connectedServers')
+LIGHT_SERVER_SETTINGS = ('version', 'proxyStatus', 'zmqStatus', 'moduleStatus', 'workers', 'backgroundJobsStatus',
+                         '_latency', '_status_code', 'error', 'message', 'name')
+LIGHT_FINAL_SETTINGS = ('MISP.uuid', 'MISP.background_jobs')
+
+
+def lightServerInfo(info):
+    """A snapshot (`{timestamp, query_result}`, other keys kept) reduced to what lists show, flagged `light`"""
+    if not isinstance(info, dict) or not isinstance(info.get('query_result'), dict):
+        return info
+    result = info['query_result']
+    light = {key: result[key] for key in LIGHT_SNAPSHOT_SECTIONS if key in result}
+    settings = result.get('serverSettings')
+    if isinstance(settings, dict):
+        light['serverSettings'] = {key: settings[key] for key in LIGHT_SERVER_SETTINGS if key in settings}
+        if isinstance(settings.get('finalSettings'), list):
+            light['serverSettings']['finalSettings'] = [
+                entry for entry in settings['finalSettings']
+                if isinstance(entry, dict) and entry.get('setting') in LIGHT_FINAL_SETTINGS]
+    elif 'serverSettings' in result:
+        light['serverSettings'] = settings
+    return dict(info, query_result=light, light=True)
+
+
+class ServerListSchema(ServerSchema):
+    """A server with its snapshot reduced to what lists show (see `lightServerInfo`)"""
+
+    @post_dump
+    def lighten_server_info(self, server, **kwargs):
+        server['server_info'] = lightServerInfo(server.get('server_info'))
+        return server
+
+
 class PinlistSchema(BaseSchema):
 
     class Meta(BaseSchema.Meta):
@@ -137,6 +174,7 @@ class TaskSchema(Schema):
 serverSchema = ServerSchema()
 serversSchema = ServerSchema(many=True)
 
+serversListSchema = ServerListSchema(many=True)
 # A server named by an event or a search result: its snapshot travels on its own, if at all
 serverSchemaWithoutInfo = ServerSchema(exclude=('server_info', ))
 serversSchemaWithoutInfo = ServerSchema(exclude=('server_info', ), many=True)

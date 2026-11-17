@@ -26,8 +26,13 @@ const init_state = () => {
         final_settings: {},
         raw_final_settings: {},
         diagnostic_full: {},
+        // server_id -> timestamp of the full snapshot loaded (lists only carry a light one, see `fetchFullInfo`)
+        full_info: {},
     }
 }
+
+// Full snapshot requests in flight, by server
+const fullInfoRequests = {}
 
 const state = init_state()
 
@@ -101,6 +106,44 @@ const actions = {
                 }
             )
         })
+    },
+    // The server page needs what lists leave out (MISP's settings, diagnostics): asked for once per snapshot
+    fetchFullInfo({ commit, dispatch, state }, { server_id, retried = false }) {
+        const loaded = state.full_info[server_id]
+        if (loaded !== undefined && loaded === (state.last_refresh[server_id] || null)) {
+            return Promise.resolve()
+        }
+        if (fullInfoRequests[server_id] === undefined) {
+            fullInfoRequests[server_id] = new Promise((resolve, reject) => {
+                api.queryInfo(
+                    { server_id },
+                    (info) => {
+                        const hasSnapshot = info !== null && typeof info === "object" && info.query_result !== undefined
+                        const known = state.last_refresh[server_id] || null
+                        if (hasSnapshot && known !== null && info.timestamp < known) {
+                            // A refresh landed while this was asked for: ask again rather than show older data
+                            resolve(false)
+                            return
+                        }
+                        if (hasSnapshot) {
+                            commitAllQueryInfo(commit, server_id, info)
+                        }
+                        commit("setFullInfo", { server_id, timestamp: hasSnapshot && info.timestamp ? info.timestamp : null })
+                        resolve(true)
+                    },
+                    reject,
+                )
+            })
+                .finally(() => {
+                    delete fullInfoRequests[server_id]
+                })
+                .then((applied) => {
+                    if (applied === false && !retried) {
+                        return dispatch("fetchFullInfo", { server_id, retried: true })
+                    }
+                })
+        }
+        return fullInfoRequests[server_id]
     },
     commitAllQueryInfo({ commit, dispatch }, payload) {
         return new Promise((resolve, reject) => {
@@ -312,14 +355,17 @@ const mutations = {
         newServer.monitoring_picture_cached = payload.monitoring_graph_last_refresh
         Vue.set(state.servers, payload.server_id, newServer)
     },
+    setFullInfo(state, { server_id, timestamp }) {
+        Vue.set(state.full_info, server_id, timestamp)
+    },
+    // A light snapshot (lists) carries only the settings lists read: they update the map, the full list stays as is
     setFinalSettings(state, payload) {
         if (payload.final_settings === undefined) {
             payload.final_settings = []
         }
-        if (state.raw_final_settings[payload.server_id] === undefined) {
-            Vue.set(state.raw_final_settings, payload.server_id, {})
+        if (!payload.light) {
+            Vue.set(state.raw_final_settings, payload.server_id, Object.assign({}, payload.final_settings))
         }
-        state.raw_final_settings[payload.server_id] = Object.assign({}, state.raw_final_settings[payload.server_id], payload.final_settings)
         // create a mapping with setting-name->value
         if (state.final_settings[payload.server_id] === undefined) {
             Vue.set(state.final_settings, payload.server_id, {})
@@ -338,11 +384,9 @@ const mutations = {
         }
         state.server_usage[payload.server_id] = Object.assign({}, state.server_usage[payload.server_id], payload.server_usage)
     },
+    // Only full snapshots carry the diagnostics: each one replaces the previous
     setDiagnosticFull(state, payload) {
-        if (state.diagnostic_full[payload.server_id] === undefined) {
-            Vue.set(state.diagnostic_full, payload.server_id, {})
-        }
-        state.diagnostic_full[payload.server_id] = Object.assign({}, state.diagnostic_full[payload.server_id], payload.diagnostic_full)
+        Vue.set(state.diagnostic_full, payload.server_id, Object.assign({}, payload.diagnostic_full))
     },
     updateUsers(state, { server_id, users }) {
         // The whole list: users deleted on the instance must disappear
@@ -361,8 +405,10 @@ function setAllQueryInfo(state, server_id, server_info) {
         mutations.setProxy(state, { server_id: server_id, proxy: query_info["serverSettings"]["proxyStatus"] })
         mutations.setZMQ(state, { server_id: server_id, zmq: query_info["serverSettings"]["zmqStatus"] })
         mutations.setWorkers(state, { server_id: server_id, workers: query_info["serverSettings"]["workers"] })
-        mutations.setFinalSettings(state, { server_id: server_id, final_settings: query_info["serverSettings"]["finalSettings"] })
-        mutations.setDiagnosticFull(state, { server_id: server_id, diagnostic_full: query_info["serverSettings"] })
+        mutations.setFinalSettings(state, { server_id: server_id, final_settings: query_info["serverSettings"]["finalSettings"], light: server_info.light === true })
+        if (server_info.light !== true) {
+            mutations.setDiagnosticFull(state, { server_id: server_id, diagnostic_full: query_info["serverSettings"] })
+        }
     }
     if (server_info["timestamp"])
         mutations.setLastRefresh(state, { server_id: server_id, last_refresh: server_info["timestamp"] })
@@ -381,8 +427,10 @@ function commitAllQueryInfo(commit, server_id, info) {
         commit("setProxy", { server_id: server_id, proxy: queryResult["serverSettings"]["proxyStatus"] })
         commit("setZMQ", { server_id: server_id, zmq: queryResult["serverSettings"]["zmqStatus"] })
         commit("setWorkers", { server_id: server_id, workers: queryResult["serverSettings"]["workers"] })
-        commit("setFinalSettings", { server_id: server_id, final_settings: queryResult["serverSettings"]["finalSettings"]})
-        commit("setDiagnosticFull", { server_id: server_id, diagnostic_full: queryResult["serverSettings"] })
+        commit("setFinalSettings", { server_id: server_id, final_settings: queryResult["serverSettings"]["finalSettings"], light: info.light === true })
+        if (info.light !== true) {
+            commit("setDiagnosticFull", { server_id: server_id, diagnostic_full: queryResult["serverSettings"] })
+        }
     }
     if (info["timestamp"])
         commit("setLastRefresh", { server_id: server_id, last_refresh: info["timestamp"] })
