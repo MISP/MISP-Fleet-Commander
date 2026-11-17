@@ -95,24 +95,6 @@ class ServerSchema(BaseSchema):
         unknown = INCLUDE
 
 
-class ServerSchemaLighter(ServerSchema):
-
-    @post_dump
-    def cull_settings_from_server_info(self, server, **kwargs):
-        if server["server_info"] is None:
-            return server
-        if "query_result" not in server["server_info"]:
-            return server
-
-        try:
-            server["server_info"].pop("query_result")
-            # server['server_info']['query_result']['serverSettings'].pop('dbDiagnostics')
-            # server['server_info']['query_result']['serverSettings'].pop('dbSchemaDiagnostics')
-            # server['server_info']['query_result']['serverSettings'].pop('finalSettings')
-        except KeyError:
-            pass
-        return server
-
 class PinlistSchema(BaseSchema):
 
     class Meta(BaseSchema.Meta):
@@ -155,8 +137,9 @@ class TaskSchema(Schema):
 serverSchema = ServerSchema()
 serversSchema = ServerSchema(many=True)
 
-serverSchemaLighter = ServerSchemaLighter()
-serversSchemaLighter = ServerSchemaLighter(many=True)
+# A server named by an event or a search result: its snapshot travels on its own, if at all
+serverSchemaWithoutInfo = ServerSchema(exclude=('server_info', ))
+serversSchemaWithoutInfo = ServerSchema(exclude=('server_info', ), many=True)
 
 userSchema = UserSchema()
 usersSchema = UserSchema(many=True)

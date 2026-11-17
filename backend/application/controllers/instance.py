@@ -6,7 +6,7 @@ import jwt
 import application.models.servers as serverModel
 import application.models.users as userModel
 import application.models.setting as settingModel
-from application.marshmallowSchemas import serversSchema
+from application.marshmallowSchemas import serversSchemaWithoutInfo
 from application.DBModels import User, db, Server
 import os.path
 from huey.exceptions import ResultTimeout
@@ -127,7 +127,7 @@ def static_proxy(path):
 @token_required
 def index(user, searchtext):
     servers = serverModel.searchAll(searchtext, user)
-    return serversSchema.dump(servers)
+    return serversSchemaWithoutInfo.dump(servers)
 
 
 LOGIN_MAX_FAILURES = 5

@@ -50,13 +50,13 @@ def fleet_with_server(db, make_user):
 
 def test_server_schemas_never_dump_authkey(fleet_with_server):
     from application.marshmallowSchemas import (ServerSchema, FleetSchema, serverSchema, serversSchema,
-                                                serverSchemaLighter, serversSchemaLighter, fleetSchema, fleetsSchema)
+                                                serverSchemaWithoutInfo, serversSchemaWithoutInfo, fleetSchema, fleetsSchema)
     _, fleet, server = fleet_with_server
     dumps = {
         "serverSchema": serverSchema.dump(server),
         "serversSchema": serversSchema.dump([server]),
-        "serverSchemaLighter": serverSchemaLighter.dump(server),
-        "serversSchemaLighter": serversSchemaLighter.dump([server]),
+        "serverSchemaWithoutInfo": serverSchemaWithoutInfo.dump(server),
+        "serversSchemaWithoutInfo": serversSchemaWithoutInfo.dump([server]),
         "ServerSchema(exclude)": ServerSchema(exclude=("server_info",)).dump(server),
         "fleetSchema": fleetSchema.dump(fleet),
         "fleetsSchema": fleetsSchema.dump([fleet]),

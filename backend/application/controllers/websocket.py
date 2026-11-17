@@ -3,7 +3,7 @@ from flask import request, session
 from flask_socketio import SocketIO, ConnectionRefusedError, emit, join_room
 from application import socketioApp
 from application.DBModels import Server, ServerMinimal, Fleet, User
-from application.marshmallowSchemas import serverSchema
+from application.marshmallowSchemas import serverSchemaWithoutInfo
 import application.models.servers as serverModel
 import application.models.fleets as fleetModel
 
@@ -168,7 +168,7 @@ class SocketioEmitter:
     def udpate_server_connection_list(self, server, data):
         payload = {
             "server_id": server.id,
-            "server": serverSchema.dump(server),
+            "server": serverSchemaWithoutInfo.dump(server),
             "partial_data_key": "connectedServers",
             "data": data,
         }
@@ -177,7 +177,7 @@ class SocketioEmitter:
     def udpate_server_usage(self, server, data):
         payload = {
             "server_id": server.id,
-            "server": serverSchema.dump(server),
+            "server": serverSchemaWithoutInfo.dump(server),
             "partial_data_key": "serverUsage",
             "data": data,
         }
@@ -218,7 +218,7 @@ class SocketioEmitter:
             "data": {
                 "monitoring_graph_last_refresh": timestamp,
             },
-            "server": serverSchema.dump(server),
+            "server": serverSchemaWithoutInfo.dump(server),
         }
         self._emitToServerOwner("UPDATE_SERVER_PARTIAL_DATA", server, payload)
 

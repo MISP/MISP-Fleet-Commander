@@ -12,7 +12,7 @@ flaskApp = create_app()
 huey_app = flaskApp.extensions["huey"]
 
 from application.controllers.websocket import SocketioEmitter
-from application.marshmallowSchemas import serverSchemaLighter
+from application.marshmallowSchemas import serverSchemaWithoutInfo
 import application.models.servers as serverModel
 import application.models.fleets as fleetModel
 import application.models.setting as settingModel
@@ -50,7 +50,7 @@ def fetchServerInfoTask(server_id):
     socketioEmitter.server_updating(server)
 
     def clientSocketEmitterUpdateFun(server_id, testResult):
-        testResult['server'] = serverSchemaLighter.dump(server)
+        testResult['server'] = serverSchemaWithoutInfo.dump(server)
         socketioEmitter.udpate_server(server, testResult)
 
     clientSocketEmitterUpdateFuns = {
@@ -71,7 +71,7 @@ def doFleetInfoTask(server_ids):
         socketioEmitter.server_updating(server)
 
     def clientSocketEmitterUpdateFun(server_id, testResult):
-        testResult['server'] = serverSchemaLighter.dump(serverByID[server_id])
+        testResult['server'] = serverSchemaWithoutInfo.dump(serverByID[server_id])
         socketioEmitter.udpate_server(serverByID[server_id], testResult)
 
     clientSocketEmitterUpdateFuns = {
@@ -95,7 +95,7 @@ def doServerConnectionTestTask(server_id):
     socketioEmitter.server_status_updating(server)
     connectionInfo = serverModel.testConnectionAsync(server.id)
     if connectionInfo is not None:
-        connectionInfo['server'] = serverSchemaLighter.dump(server)
+        connectionInfo['server'] = serverSchemaWithoutInfo.dump(server)
     socketioEmitter.udpate_server_connection(server, connectionInfo)
 
 
@@ -109,7 +109,7 @@ def doFleetConnectionTestTask(server_ids):
         socketioEmitter.server_status_updating(server)
 
     def clientSocketEmitterUpdateFun(server_id, testResult):
-        testResult['server'] = serverSchemaLighter.dump(serverByID[server_id])
+        testResult['server'] = serverSchemaWithoutInfo.dump(serverByID[server_id])
         socketioEmitter.udpate_server_connection(serverByID[server_id], testResult)
     serverModel.testAllConnectionAsync(serversDict, clientSocketEmitterUpdateFun)
 
@@ -142,7 +142,7 @@ def doLinkTestTask(server_ids, remote_server_id=None):
 
     def clientSocketEmitterUpdateFun(server_id, testResult):  # Only for a server refreshed in full (no data yet)
         server = next(s for s in servers if s.id == server_id)
-        testResult["server"] = serverSchemaLighter.dump(server)
+        testResult["server"] = serverSchemaWithoutInfo.dump(server)
         socketioEmitter.udpate_server(server, testResult)
 
     callbacks = {
@@ -204,7 +204,7 @@ def watchMonitoredFleets():
             for server in fleet.servers:
                 serversDict.append(server)
                 serverByID[server.id] = server
-                serverDumpByID[server.id] = serverSchemaLighter.dump(server)
+                serverDumpByID[server.id] = serverSchemaWithoutInfo.dump(server)
                 socketioEmitter.server_updating(server)
 
             def clientSocketEmitterUpdateFun(server_id, testResult):
@@ -280,7 +280,7 @@ def backgroundConnectionTest():
     serverByID = {server.id: server for server in servers}
 
     def clientSocketEmitterUpdateFun(server_id, testResult):
-        testResult["server"] = serverSchemaLighter.dump(serverByID[server_id])
+        testResult["server"] = serverSchemaWithoutInfo.dump(serverByID[server_id])
         socketioEmitter.udpate_server_connection(serverByID[server_id], testResult)
     serverModel.testAllConnectionAsync(
         servers, clientSocketEmitterUpdateFun,
@@ -303,7 +303,7 @@ def backgroundFullRefresh():
     serverByID = {server.id: server for server in servers}
 
     def clientSocketEmitterUpdateFun(server_id, testResult):
-        testResult["server"] = serverSchemaLighter.dump(serverByID[server_id])
+        testResult["server"] = serverSchemaWithoutInfo.dump(serverByID[server_id])
         socketioEmitter.udpate_server(serverByID[server_id], testResult)
 
     clientSocketEmitterUpdateFuns = {
