@@ -305,6 +305,8 @@ def applyOrganisation(server, item: dict, cache: ContentCache) -> dict:
     if found is None:
         fields = {field: expected[field] for field in mispOps.ORGANISATION_FIELDS if field in expected}
         mispOps.addOrganisation(server, key, fields, expected.get('local') is True)
+        # Sharing groups fixed next may count it among their members
+        cache.forget('organisation')
         return {'status': FIXED, 'before': None}
     before = judged(item, cache)
     if before.state == drift.MATCH:
@@ -314,36 +316,45 @@ def applyOrganisation(server, item: dict, cache: ContentCache) -> dict:
     if 'local' in expected and found.get('local') != expected['local']:
         changes['local'] = expected['local']
     mispOps.editOrganisation(server, found['id'], changes)
+    cache.forget('organisation')
     return {'status': FIXED, 'before': before.actual}
 
 
 def applySharingGroup(server, item: dict, cache: ContentCache) -> dict:
-    """A missing group is created whole. An existing one gets its missing members and the attributes the rule
-    checks: members the rule does not list stay"""
+    """A missing group is created whole, by capture. An existing one gets the attributes the rule checks (edit) and
+    its missing members (`addOrg`, organisations the server does not know created first, external): a capture
+    would also add a "Local instance" server row to it, which stops a non-roaming group without server rows from
+    being pushed. Members the rule does not list stay"""
     key, expected = item['key'], item['expected']
     found = cache.get('sharing_group').get(key)
     members = expected.get('members') or []
-    payload = {'uuid': key, 'name': expected['name']}
     if found is None:
-        payload.update(releasability=expected.get('releasability') or '', description=expected.get('description') or '',
-                       active=expected.get('active', True), roaming=expected.get('roaming') is True)
-        before = None
-    else:
-        before = judged(item, cache)
-        if before.state == drift.MATCH:
-            return {'status': ALREADY, 'before': before.actual}
-        before = before.actual
-        for field in ('releasability', 'description'):
-            if expected.get(field):
-                payload[field] = expected[field]
-        if 'active' in expected:
-            payload['active'] = expected['active']
-        members = [member for member in members if member['uuid'] not in found['members']]
-    payload['SharingGroupOrg'] = [{'extend': member.get('extend') is True,
-                                   'Organisation': {'uuid': member['uuid'], 'name': member['name']}}
-                                  for member in members]
-    mispOps.captureSharingGroup(server, payload)
-    return {'status': FIXED, 'before': before}
+        payload = {'uuid': key, 'name': expected['name'], 'releasability': expected.get('releasability') or '',
+                   'description': expected.get('description') or '', 'active': expected.get('active', True),
+                   'roaming': expected.get('roaming') is True,
+                   'SharingGroupOrg': [{'extend': member.get('extend') is True,
+                                        'Organisation': {'uuid': member['uuid'], 'name': member['name']}}
+                                       for member in members]}
+        mispOps.captureSharingGroup(server, payload)
+        return {'status': FIXED, 'before': None}
+    before = judged(item, cache)
+    if before.state == drift.MATCH:
+        return {'status': ALREADY, 'before': before.actual}
+    attributes = {field: expected[field] for field in ('name', 'releasability', 'description')
+                  if expected.get(field) and found.get(field) != expected[field]}
+    if 'active' in expected and found.get('active') != expected['active']:
+        attributes['active'] = expected['active']
+    if attributes:
+        mispOps.editSharingGroup(server, key, attributes)
+    missing = [member for member in members if member['uuid'] not in found['members']]
+    known = cache.get('organisation') if missing else {}
+    for member in missing:
+        if member['uuid'] not in known:
+            mispOps.addOrganisation(server, member['uuid'], {'name': member['name']}, False)
+            cache.forget('organisation')
+            known = cache.get('organisation')
+        mispOps.addSharingGroupOrg(server, key, member['uuid'], member.get('extend') is True)
+    return {'status': FIXED, 'before': before.actual}
 
 
 def applyCustomGalaxy(server, item: dict, cache: ContentCache) -> dict:

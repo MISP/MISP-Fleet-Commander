@@ -250,6 +250,15 @@ class FakeMisp:
             sg["members"][member["Organisation"]["uuid"]] = {"name": member["Organisation"]["name"],
                                                              "extend": member["extend"]}
 
+    def editSharingGroup(self, server, uuid, attributes, servers=None):
+        self.writes.append(("edit sg", server.id, uuid, copy.deepcopy(attributes), servers))
+        self.sgs[server.id][uuid].update(attributes)
+
+    def addSharingGroupOrg(self, server, uuid, orgUuid, extend):
+        self.writes.append(("add sg org", server.id, uuid, orgUuid, extend))
+        org = self.orgs[server.id][orgUuid]
+        self.sgs[server.id][uuid]["members"][orgUuid] = {"name": org["name"], "extend": extend}
+
     def listing(self, server, url, model, what):
         assert url == "/galaxies/index"
         return [{"id": str(galaxy["id"]), "uuid": uuid, "name": galaxy["name"], "namespace": "ls26",
@@ -283,6 +292,7 @@ def misp(monkeypatch):
     from application.models import mispOps
     fake = FakeMisp()
     for name in ("organisations", "addOrganisation", "editOrganisation", "sharingGroups", "captureSharingGroup",
+                 "editSharingGroup", "addSharingGroupOrg",
                  "listing", "galaxyClusters", "exportGalaxyClusters", "importGalaxyClusters", "setGalaxyEnabled"):
         monkeypatch.setattr(mispOps, name, getattr(fake, name))
     return fake
@@ -358,13 +368,12 @@ def test_the_unit_creates_and_completes_items(fleet, client, auth_headers, misp,
 
     outcomes = {o["rule_id"]: o for o in unit.response["rules"]}
     # Organisations go first, then sharing groups
-    assert [w[0] for w in misp.writes] == ["edit org", "add org", "capture sg", "import"]
+    assert [w[0] for w in misp.writes] == ["edit org", "add org", "add sg org", "import"]
     assert misp.writes[0] == ("edit org", beta.id, 1, {"name": "team-ALB"})
     assert misp.writes[1] == ("add org", beta.id, ORG_EST, {"name": "team-EST", "sector": "Defence"}, False)
-    # Only the missing member is sent: the others stay as they are
-    payload = misp.writes[2][2]
-    assert payload == {"uuid": SG_NATO, "name": "NATO Nations", "releasability": "NATO",
-                       "SharingGroupOrg": [{"extend": False, "Organisation": {"uuid": ORG_EST, "name": "team-EST"}}]}
+    # The existing group only gets its missing member (no capture: it would add a "Local instance" server row), and
+    # the organisation created just before is not created again
+    assert misp.writes[2] == ("add sg org", beta.id, SG_NATO, ORG_EST, False)
     assert misp.galaxies[beta.id][CUSTOM]["clusters"] == {CLUSTER_1: 100}
     for rule in (sg, alb, est, galaxy):
         assert outcomes[rule["id"]]["status"] == "fixed", outcomes[rule["id"]]
@@ -397,6 +406,25 @@ def test_a_missing_sharing_group_is_created_whole(fleet, client, auth_headers, m
     payload = misp.writes[-1][2]
     assert payload["active"] is True and payload["roaming"] is False and payload["description"] == ""
     assert [member["Organisation"]["uuid"] for member in payload["SharingGroupOrg"]] == [ORG_ALB, ORG_EST]
+
+
+def test_an_existing_sharing_group_is_completed_without_a_capture(fleet, client, auth_headers, misp, published):  # noqa: F811,E501
+    """A capture would also add a "Local instance" server row to the group (MISP's add controller does so when the
+    body has neither `roaming` nor servers), which stops a non-roaming group without server rows from being pushed"""
+    from application.DBModels import BaselineRule, db
+    from application.models.baselineRemediation import remediationUnit
+    user, theFleet, (beta, alpha) = fleet
+    sg, *_ = driftingItems(client, auth_headers(user), theFleet, beta, alpha, misp)
+    db.session.get(BaselineRule, sg["id"]).expected = {**sg["expected"], "active": False}
+    db.session.commit()
+    item = {"rule_id": sg["id"], "type": "sharing_group", "key": SG_NATO, "label": "", "expected": {}}
+    unit = remediationUnit(beta, {"fleet_id": theFleet.id, "servers": {str(beta.id): [item]}})
+    assert unit.ok, unit.response
+    # Only what differs is changed; the member's organisation, unknown there, is created first (external)
+    assert misp.writes == [("edit sg", beta.id, SG_NATO, {"active": False}, None),
+                           ("add org", beta.id, ORG_EST, {"name": "team-EST"}, False),
+                           ("add sg org", beta.id, SG_NATO, ORG_EST, False)]
+    assert unit.response["rules"][0]["status"] == "fixed"
 
 
 def test_a_galaxy_is_not_copied_from_another_users_server(fleet, client, auth_headers, misp, published, db,  # noqa: F811
