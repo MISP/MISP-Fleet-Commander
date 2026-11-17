@@ -208,6 +208,9 @@ def create_app():
         flaskApp.register_blueprint(BPbaselines)
         registerWSListeners()
 
+        from application.compression import compressResponse
+        flaskApp.after_request(compressResponse)
+
         # Add CLI commands
         from application.cli import server_cli, user_cli, security_cli
 
