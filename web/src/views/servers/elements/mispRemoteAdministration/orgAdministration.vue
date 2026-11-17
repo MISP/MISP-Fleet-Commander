@@ -1,11 +1,11 @@
 <template>
-<div class="org-admin">
-    <header class="org-head">
-        <div class="org-head-text">
-            <h6 class="org-title">Organisations</h6>
-            <span v-if="listed" class="org-head-note" :title="listedTitle">{{ listedLabel }}</span>
+<div class="ra-tab">
+    <header class="ra-head">
+        <div class="ra-head-text">
+            <h6 class="ra-title">Organisations</h6>
+            <span v-if="listed" class="ra-head-note" :title="listedTitle">{{ listedLabel }}</span>
         </div>
-        <div class="org-head-actions">
+        <div class="ra-head-actions">
             <button
                 type="button"
                 class="btn btn-link refresh-button"
@@ -44,7 +44,7 @@
         </span>
     </div>
 
-    <div class="org-toolbar">
+    <div class="ra-toolbar">
         <div class="scope-segments" role="group" aria-label="Which organisations">
             <button
                 v-for="option in scopeOptions"
@@ -80,17 +80,17 @@
         </div>
     </div>
 
-    <div v-if="loading && !listed" class="org-state" role="status">
+    <div v-if="loading && !listed" class="ra-state" role="status">
         <i class="fas fa-circle-notch fa-spin" aria-hidden="true"></i> Listing the organisations of {{ server.name }}…
     </div>
-    <div v-else-if="error && !listed" class="org-state org-error" role="alert">
+    <div v-else-if="error && !listed" class="ra-state ra-error" role="alert">
         <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
         Could not list the organisations: {{ error }}
         <button type="button" class="btn btn-link inline-link" @click="reload(true)">Try again</button>
     </div>
     <template v-else-if="listed">
         <div class="table-frame">
-            <table class="org-table">
+            <table class="ra-table">
                 <thead>
                     <tr>
                         <th v-for="column in visibleColumns" :key="column.key" :class="['col-' + column.key]" scope="col"
@@ -112,14 +112,14 @@
                     <tr
                         v-for="row in pageRows"
                         :key="row.org.uuid"
-                        :class="['org-row', { 'just-saved': row.org.uuid === highlightUuid }]"
+                        :class="['ra-row', { 'just-saved': row.org.uuid === highlightUuid }]"
                         tabindex="0"
                         @click="openDetail(row)"
                         @keydown.enter.prevent="openDetail(row)"
                     >
                         <td class="col-name">
                             <div class="name-line">
-                                <span class="org-name">{{ row.org.name }}</span>
+                                <span class="ra-name">{{ row.org.name }}</span>
                                 <span :class="['kind-badge', row.org.local ? 'kind-local' : 'kind-external']">{{ row.org.local ? "Local" : "External" }}</span>
                                 <span v-if="row.sync.length > 0" class="sync-badge" :title="row.sync.map(reason => reason.text).join('\n')">
                                     <i class="fas fa-sync-alt" aria-hidden="true"></i> Sync
@@ -160,7 +160,7 @@
                 </tbody>
             </table>
         </div>
-        <footer v-if="filteredRows.length > perPage" class="org-pager">
+        <footer v-if="filteredRows.length > perPage" class="ra-pager">
             <span class="pager-note">{{ pageStart + 1 }}–{{ Math.min(pageStart + perPage, filteredRows.length) }} of {{ filteredRows.length }}</span>
             <b-pagination
                 v-model="currentPage"
@@ -237,7 +237,12 @@ export default {
         server: {
             type: Object,
             required: true
-        }
+        },
+        // `{uuid}`: an organisation to show (asked by the Sharing groups tab)
+        revealRequest: {
+            type: Object,
+            default: null
+        },
     },
     data: function() {
         return {
@@ -258,6 +263,8 @@ export default {
             // The organisation just added or edited, shown and highlighted once listed again
             highlightUuid: null,
             highlightTimer: null,
+            // Asked to show before the list was there
+            pendingReveal: null,
             formOrg: null,
             copyRow: null,
             baselineOrg: null,
@@ -428,6 +435,11 @@ export default {
         "server.id"() {
             this.reload(false)
         },
+        revealRequest(request) {
+            if (request && request.uuid) {
+                this.revealWhenListed(request.uuid)
+            }
+        },
     },
     methods: {
         syncOf(org) {
@@ -446,6 +458,11 @@ export default {
                     listed.organisations = Object.freeze(listed.organisations)
                     this.listed = listed
                     this.now = Math.floor(Date.now() / 1000)
+                    if (this.pendingReveal) {
+                        const uuid = this.pendingReveal
+                        this.pendingReveal = null
+                        this.$nextTick(() => this.reveal(uuid))
+                    }
                 })
                 .catch((error) => {
                     this.error = error.message
@@ -556,8 +573,18 @@ export default {
         onCopyDone() {
             this.loadComparison(false)
         },
+        revealWhenListed(uuid) {
+            if (this.listed && !this.loading) {
+                this.reveal(uuid)
+            } else {
+                this.pendingReveal = uuid
+            }
+        },
     },
     created() {
+        if (this.revealRequest && this.revealRequest.uuid) {
+            this.pendingReveal = this.revealRequest.uuid
+        }
         this.reload(false)
         this.clock = setInterval(() => { this.now = Math.floor(Date.now() / 1000) }, 30000)
     },
@@ -568,320 +595,9 @@ export default {
 }
 </script>
 
+<style scoped src="./remoteAdminList.css"></style>
+
 <style scoped>
-.org-admin {
-    font-size: 0.875rem;
-    color: var(--var-color-yankeesblue);
-}
-
-.org-head {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem 1rem;
-    margin-bottom: 0.6rem;
-}
-
-.org-head-text {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 0.25rem 0.75rem;
-    min-width: 0;
-}
-
-.org-title {
-    margin: 0;
-    font-size: 1.1em;
-    font-weight: 700;
-}
-
-.org-head-note {
-    color: #6c757d;
-    font-variant-numeric: tabular-nums;
-}
-
-.org-head-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-}
-
-.refresh-button {
-    padding: 0.15rem 0.45rem;
-    color: #6c757d;
-}
-
-.refresh-button:hover,
-.refresh-button:focus {
-    color: var(--var-color-lapislazuli);
-}
-
-.add-button {
-    white-space: nowrap;
-}
-
-.fleet-strip {
-    display: flex;
-    align-items: baseline;
-    gap: 0.55em;
-    margin-bottom: 0.75rem;
-    padding: 0.45rem 0.75rem;
-    border-left: 3px solid var(--health-info);
-    border-radius: 0 0.25rem 0.25rem 0;
-    background: var(--health-info-tint);
-    color: #2f3b45;
-}
-
-.fleet-strip > i {
-    color: var(--health-info-ink);
-}
-
-.fleet-strip-warning {
-    border-left-color: var(--health-warning);
-    background: var(--health-warning-tint);
-}
-
-.fleet-strip-warning > i {
-    color: var(--health-warning-ink);
-}
-
-.fleet-strip-error {
-    border-left-color: var(--health-critical);
-    background: var(--health-critical-tint);
-}
-
-.fleet-strip-error > i {
-    color: var(--health-critical-ink);
-}
-
-.fleet-unavailable {
-    margin-left: 0.25em;
-    color: #6c757d;
-    text-decoration: underline dotted;
-    cursor: help;
-}
-
-.inline-link {
-    padding: 0;
-    border: 0;
-    font-size: inherit;
-    vertical-align: baseline;
-}
-
-.org-toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.5rem 0.75rem;
-    margin-bottom: 0.6rem;
-}
-
-.scope-segments {
-    display: inline-flex;
-    border: 1px solid #ced4da;
-    border-radius: 0.25rem;
-    overflow: hidden;
-}
-
-.scope-segment,
-.attention-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35em;
-    padding: 0.25rem 0.65rem;
-    border: 0;
-    background: #fff;
-    color: #495057;
-    font-size: 0.8125rem;
-    line-height: 1.5;
-}
-
-.scope-segment + .scope-segment {
-    border-left: 1px solid #ced4da;
-}
-
-.scope-segment:hover {
-    background: #f4f6f8;
-}
-
-.scope-segment.active {
-    background: var(--var-color-lapislazuli);
-    color: #fff;
-}
-
-.segment-count {
-    min-width: 1.4em;
-    padding: 0 0.35em;
-    border-radius: 0.6em;
-    background: rgba(0, 0, 0, 0.07);
-    font-size: 0.9em;
-    font-variant-numeric: tabular-nums;
-    text-align: center;
-}
-
-.active .segment-count {
-    background: rgba(255, 255, 255, 0.22);
-}
-
-.attention-toggle {
-    border: 1px solid #ced4da;
-    border-radius: 0.25rem;
-}
-
-.attention-toggle i {
-    color: var(--health-warning-ink);
-}
-
-.attention-toggle:hover:not(:disabled) {
-    background: var(--health-warning-tint);
-}
-
-.attention-toggle.active {
-    border-color: var(--health-warning);
-    background: var(--health-warning-tint);
-    color: #5c4300;
-    font-weight: 600;
-}
-
-.attention-toggle:disabled {
-    opacity: 0.55;
-}
-
-.attention-toggle.empty i {
-    color: inherit;
-}
-
-.search-box {
-    position: relative;
-    flex: 1 1 14rem;
-    max-width: 22rem;
-    margin-left: auto;
-}
-
-.search-box > i {
-    position: absolute;
-    top: 50%;
-    left: 0.6rem;
-    transform: translateY(-50%);
-    color: #9aa1a7;
-    font-size: 0.8em;
-    pointer-events: none;
-}
-
-.search-box input {
-    padding-left: 1.8rem;
-}
-
-.org-state {
-    padding: 1.5rem 0.5rem;
-    color: #6c757d;
-    text-align: center;
-}
-
-.org-error {
-    color: var(--health-critical-ink);
-}
-
-.table-frame {
-    overflow-x: auto;
-    border: 1px solid var(--health-rule);
-    border-radius: 0.25rem;
-}
-
-.org-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.org-table th {
-    position: sticky;
-    top: 0;
-    padding: 0;
-    border-bottom: 1px solid #d5dae0;
-    background: #f7f8fa;
-    font-size: 0.78rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    color: #5a6270;
-    white-space: nowrap;
-}
-
-.sort-button {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35em;
-    width: 100%;
-    padding: 0.45rem 0.6rem;
-    border: 0;
-    background: none;
-    color: inherit;
-    font: inherit;
-    letter-spacing: inherit;
-    text-transform: inherit;
-    text-align: left;
-}
-
-.sort-button:hover {
-    color: var(--var-color-yankeesblue);
-}
-
-.sort-idle {
-    opacity: 0.3;
-}
-
-.org-table td {
-    padding: 0.45rem 0.6rem;
-    border-top: 1px solid var(--health-rule);
-    vertical-align: top;
-}
-
-.org-row {
-    cursor: pointer;
-}
-
-.org-row:hover,
-.org-row:focus {
-    background: var(--health-focus-bg);
-    outline: none;
-}
-
-.org-row.just-saved {
-    animation: just-saved 2.5s ease-out;
-}
-
-@keyframes just-saved {
-    0%, 40% {
-        background: #e3f1e8;
-    }
-    100% {
-        background: transparent;
-    }
-}
-
-.org-row:focus-visible {
-    box-shadow: inset 3px 0 0 var(--var-color-lapislazuli);
-}
-
-.col-name {
-    min-width: 14rem;
-}
-
-.name-line {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.25rem 0.45rem;
-}
-
-.org-name {
-    font-weight: 600;
-    overflow-wrap: anywhere;
-}
-
-.kind-badge,
 .sync-badge {
     display: inline-flex;
     align-items: center;
@@ -939,11 +655,6 @@ export default {
     color: #6c757d;
 }
 
-.col-uuid code {
-    color: #5f6873;
-    font-size: 0.8rem;
-}
-
 .col-users {
     text-align: right;
     font-variant-numeric: tabular-nums;
@@ -951,66 +662,6 @@ export default {
 
 th.col-users .sort-button {
     justify-content: flex-end;
-}
-
-.muted {
-    color: #9aa1a7;
-}
-
-.fleet-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3em;
-    padding: 0 0.5em;
-    border: 1px solid #d5dae0;
-    border-radius: 1em;
-    background: #fff;
-    font-size: 0.8rem;
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-    cursor: help;
-}
-
-.fleet-ok {
-    border-color: #b9dfc7;
-    background: #ebf6ef;
-    color: var(--health-ok-ink);
-}
-
-.fleet-warning {
-    border-color: #f3d27a;
-    background: var(--health-warning-tint);
-    color: var(--health-warning-ink);
-    font-weight: 600;
-}
-
-.fleet-partial {
-    color: #5f6873;
-}
-
-.fleet-loading {
-    border-style: dashed;
-    color: #9aa1a7;
-}
-
-.no-rows {
-    padding: 1.5rem 0.5rem !important;
-    color: #6c757d;
-    text-align: center;
-}
-
-.org-pager {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    margin-top: 0.6rem;
-}
-
-.pager-note {
-    color: #6c757d;
-    font-variant-numeric: tabular-nums;
 }
 
 @media (max-width: 1199.98px) {
@@ -1021,29 +672,14 @@ th.col-users .sort-button {
 }
 
 @media (max-width: 767.98px) {
-    .col-uuid,
     .col-type {
         display: none;
-    }
-
-    .col-name {
-        min-width: 10rem;
-    }
-
-    .search-box {
-        flex-basis: 100%;
-        max-width: none;
-        margin-left: 0;
     }
 }
 
 @media (max-width: 575.98px) {
     .col-users {
         display: none;
-    }
-
-    .col-name {
-        min-width: 0;
     }
 }
 </style>

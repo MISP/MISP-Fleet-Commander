@@ -12,7 +12,12 @@
             </b-tab>
             <b-tab lazy title="Organisations">
                 <b-card-text>
-                    <orgAdministration :server="getServer" @show-users="showUsersOf"></orgAdministration>
+                    <orgAdministration :server="getServer" :reveal-request="orgReveal" @show-users="showUsersOf"></orgAdministration>
+                </b-card-text>
+            </b-tab>
+            <b-tab lazy title="Sharing groups">
+                <b-card-text>
+                    <sgAdministration :server="getServer" @show-organisation="showOrganisation"></sgAdministration>
                 </b-card-text>
             </b-tab>
             <b-tab lazy title="Server Settings">
@@ -33,16 +38,19 @@
 import { mapState } from "vuex"
 import userAdministration from "@/views/servers/elements/mispRemoteAdministration/userAdministration.vue"
 import orgAdministration from "@/views/servers/elements/mispRemoteAdministration/orgAdministration.vue"
+import sgAdministration from "@/views/servers/elements/mispRemoteAdministration/sgAdministration.vue"
 import settingsAdministration from "@/views/servers/elements/mispRemoteAdministration/settingsAdministration.vue"
 import restAPIAdministration from "@/views/servers/elements/mispRemoteAdministration/restAPIAdministration.vue"
 
 const USERS_TAB = 0
+const ORGANISATIONS_TAB = 1
 
 export default {
     name: "MISPRemoteAdministration",
     components: {
         userAdministration,
         orgAdministration,
+        sgAdministration,
         settingsAdministration,
         restAPIAdministration,
     },
@@ -57,6 +65,8 @@ export default {
             activeTab: USERS_TAB,
             // The organisation the Users tab is narrowed to ("Show users" of the Organisations tab)
             userOrgFilter: null,
+            // The organisation the Organisations tab is asked to show ("show in Organisations" of a sharing group member)
+            orgReveal: null,
         }
     },
     computed: {
@@ -71,6 +81,11 @@ export default {
         showUsersOf(org) {
             this.userOrgFilter = org
             this.activeTab = USERS_TAB
+        },
+        showOrganisation(member) {
+            // A new object each time, so that asking twice for the same organisation shows it again
+            this.orgReveal = { uuid: member.uuid }
+            this.activeTab = ORGANISATIONS_TAB
         },
     }
 }

@@ -1,0 +1,203 @@
+/* Detail panels of the Remote administration tabs (organisations, sharing groups): actions, field grid, sections,
+   per-server fleet rows. Imported scoped by each detail modal */
+
+.ra-detail {
+    font-size: 0.875rem;
+    color: var(--var-color-yankeesblue);
+}
+
+.detail-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 1rem;
+}
+
+.action-count {
+    margin-left: 0.4em;
+    padding: 0 0.4em;
+    border-radius: 0.6em;
+    background: rgba(0, 0, 0, 0.08);
+    font-size: 0.85em;
+    font-variant-numeric: tabular-nums;
+}
+
+.detail-actions ::v-deep .misp-links {
+    padding: 0.25rem 0.5rem;
+    color: #6c757d;
+}
+
+.detail-section + .detail-section {
+    margin-top: 1rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid var(--health-rule);
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: 0.3rem 1.25rem;
+    margin: 0;
+}
+
+.detail-grid dt {
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.detail-grid dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.pre {
+    white-space: pre-line;
+}
+
+.uuid-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.uuid-cell code {
+    color: #3c4650;
+}
+
+.copy-button {
+    padding: 0 0.3rem;
+    color: #6c757d;
+    font-size: 0.9em;
+}
+
+.section-title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.45em;
+    margin: 0 0 0.45rem;
+    font-size: 0.95em;
+    font-weight: 700;
+}
+
+.section-title i {
+    color: #6c757d;
+}
+
+.section-note {
+    color: #6c757d;
+    font-weight: 400;
+}
+
+.plain-list {
+    margin: 0;
+    padding-left: 1.2rem;
+}
+
+.fleet-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.fleet-row {
+    display: grid;
+    grid-template-columns: 1.6em minmax(8rem, 0.8fr) minmax(0, 1.4fr);
+    align-items: center;
+    column-gap: 0.5em;
+    padding: 0.3rem 0;
+    border-top: 1px solid var(--health-rule);
+}
+
+.fleet-row:first-child {
+    border-top: 0;
+}
+
+.state-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5em;
+    height: 1.5em;
+    border: 2px solid #ced4da;
+    border-radius: 50%;
+    font-size: 0.75em;
+    color: #6c757d;
+}
+
+.state-same .state-mark {
+    border-color: var(--health-ok);
+    color: var(--health-ok-ink);
+}
+
+.state-renamed .state-mark,
+.state-differs .state-mark,
+.state-other_uuid .state-mark {
+    border-color: var(--health-warning);
+    background: var(--health-warning-tint);
+    color: var(--health-warning-ink);
+}
+
+.state-unknown .state-mark {
+    border-style: dashed;
+}
+
+.fleet-server {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.fleet-state {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.state-renamed .fleet-state,
+.state-differs .fleet-state,
+.state-other_uuid .fleet-state {
+    color: var(--health-warning-ink);
+}
+
+.state-missing .fleet-state,
+.state-unknown .fleet-state {
+    color: #6c757d;
+}
+
+.unknown-reason {
+    display: block;
+    overflow: hidden;
+    color: #8a9199;
+    font-size: 0.85em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fleet-state code {
+    margin-left: 0.3em;
+    color: inherit;
+    font-size: 0.85em;
+}
+
+.muted {
+    color: #6c757d;
+}
+
+@media (max-width: 575.98px) {
+    .detail-grid {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.1rem;
+    }
+
+    .detail-grid dd {
+        margin-bottom: 0.4rem;
+    }
+
+    .fleet-row {
+        grid-template-columns: 1.6em minmax(0, 1fr);
+    }
+
+    .fleet-state {
+        grid-column: 2;
+    }
+}
