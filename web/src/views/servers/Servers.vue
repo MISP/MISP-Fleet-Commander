@@ -220,7 +220,7 @@
 
             <template v-slot:cell(name)="row">
                 <div class="d-flex flex-nowrap align-items-center justify-content-left">
-                    <b-img v-if="instancePicturesB64[row.item.id]" :src="instancePicturesB64[row.item.id]" class="instance-picture mr-1"></b-img>
+                    <b-img v-if="instancePictures[row.item.id]" :src="instancePictures[row.item.id]" class="instance-picture mr-1"></b-img>
                     <span>{{ row.value }}</span>
                 </div>
             </template>
@@ -418,6 +418,7 @@
 
 <script>
 import pluginAPI from "@/api/plugins"
+import Vue from "vue"
 import api from "@/api/servers"
 import { websocketMixin } from "@/helpers/websocketMixin"
 import { mapState, mapGetters } from "vuex"
@@ -451,6 +452,13 @@ import ServerHealthBadge from "@/components/health/ServerHealthBadge.vue"
 import { EMPTY_DIGEST } from "@/store/modules/health"
 import JobList from "@/components/jobs/JobList.vue"
 import BaselineTab from "@/components/baselines/BaselineTab.vue"
+
+// Instance pictures by server ID (a data URI, or "" for none), asked for once per session and shared by every
+// fleet page. Each one is a request that may reach the MISP server: a few at a time, so that they never hold up
+// the browser's connections to the API (with 51 servers they delayed the plugin values and the rest of the page)
+const instancePictures = Vue.observable({})
+const instancePicturesPending = new Set()
+const INSTANCE_PICTURE_CONCURRENCY = 2
 
 // The fleet page's views, opened with `?tab=` (Servers when absent)
 const FLEET_TABS = [
@@ -624,7 +632,6 @@ export default {
             tableItems: [],
             selectedServers: [],
             selectedServerIDs: [],
-            instancePicturesB64: {},
         }
     },
     computed: {
@@ -663,6 +670,9 @@ export default {
         }),
         getIndex() {
             return (this.getServerList || []).map(server => ({ ...server }))
+        },
+        instancePictures() {
+            return instancePictures
         },
         validServerToEdit() {
             return this.serverToEdit.formData
@@ -1087,14 +1097,34 @@ export default {
             })
         },
         getInstancePictures() {
+            const queue = []
             this.getIndex.forEach((server) => {
-                api.getInstancePicture(server.id, (picture) => {
-                    // A data URI, or '' when the server has no picture or it could not be read
-                    if (typeof picture === "string" && picture.startsWith("data:image/")) {
-                        this.$set(this.instancePicturesB64, server.id, picture)
-                    }
-                })
+                if (instancePictures[server.id] === undefined && !instancePicturesPending.has(server.id)) {
+                    instancePicturesPending.add(server.id)
+                    queue.push(server.id)
+                }
             })
+            const next = () => {
+                const server_id = queue.shift()
+                if (server_id === undefined) {
+                    return
+                }
+                let answered = false
+                const done = (picture) => {
+                    if (answered) {
+                        return
+                    }
+                    answered = true
+                    // A data URI, or '' when the server has no picture or it could not be read
+                    Vue.set(instancePictures, server_id, typeof picture === "string" && picture.startsWith("data:image/") ? picture : "")
+                    instancePicturesPending.delete(server_id)
+                    next()
+                }
+                api.getInstancePicture(server_id, done, () => done(""))
+            }
+            for (let i = 0; i < INSTANCE_PICTURE_CONCURRENCY; i++) {
+                next()
+            }
         },
     },
     watch: {
