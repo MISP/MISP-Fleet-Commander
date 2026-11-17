@@ -160,6 +160,31 @@ def test_confirming_starts_a_job_with_each_servers_rules(fleet, client, auth_hea
                        headers=other).status_code == 404
 
 
+def test_confirming_by_servers_and_rules(fleet, client, auth_headers, published, queued, monkeypatch):
+    """A whole fleet can drift on more values than `items` takes: the preview's servers and rules start the fix"""
+    from application.DBModels import Job
+    import application.models.baselineRemediation as remediation
+    user, theFleet, (beta, alpha) = fleet
+    headers = auth_headers(user)
+    live, timeout, pap, tlp, version, correlation = driftingFleet(client, headers, theFleet, beta, alpha)
+    url = f"/baselines/fleet/{theFleet.id}/remediation"
+    monkeypatch.setattr(remediation, "MAX_ITEMS", 1)
+
+    tooMany = [{"server_id": beta.id, "rule_id": live["id"]}, {"server_id": beta.id, "rule_id": pap["id"]}]
+    assert client.post(url, json={"items": tooMany}, headers=headers).status_code == 400
+
+    # Only the rules named: `MISP.live` stays out
+    response = client.post(url, json={"server_ids": [beta.id, alpha.id], "rule_ids": [pap["id"], timeout["id"]]},
+                           headers=headers)
+    assert response.status_code == 202, response.get_json()
+    planned = Job.query.get(response.get_json()["job_id"]).secret_params["servers"]
+    assert list(planned) == [str(beta.id)]
+    assert [p["rule_id"] for p in planned[str(beta.id)]] == [pap["id"]]
+
+    for body in ({"server_ids": [beta.id]}, {"server_ids": [], "rule_ids": [pap["id"]]}, {"rule_ids": "all"}, {}):
+        assert client.post(url, json=body, headers=headers).status_code == 400, body
+
+
 def test_the_unit_fixes_checks_and_updates_the_snapshot(fleet, client, auth_headers, misp, published):
     from application.models.baselineRemediation import remediationUnit
     user, theFleet, (beta, alpha) = fleet

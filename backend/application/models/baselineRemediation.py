@@ -184,14 +184,21 @@ def jobTitle(plan: dict, applied: List[dict]) -> str:
     return f'Fix {len(applied)} baseline values on {where}'
 
 
-def startForUser(user, fleet_id: int, pairs: Any) -> 'Job':
-    """Fixes the given `[{server_id, rule_id}]`, as far as they still drift and can be fixed from here. The plan is
-    computed again: what the user previewed may have changed since"""
+def startForUser(user, fleet_id: int, pairs: Any = None, server_ids: Any = None, rule_ids: Any = None) -> 'Job':
+    """Fixes the given `[{server_id, rule_id}]`, or the given rules on the given servers (what a preview listed: a
+    whole fleet can drift on more values than `items` takes), as far as they still drift and can be fixed from here.
+    The plan is computed again: what the user previewed may have changed since"""
     from application.models import jobs as jobModel
     from application.models import userJobs
-    if pairs is None:
-        raise BaselineError('`items` is required', field='items')
-    plan = previewForUser(user, fleet_id, pairs=pairs)
+    if pairs is not None:
+        plan = previewForUser(user, fleet_id, pairs=pairs)
+    elif server_ids is not None and rule_ids is not None:
+        if not isinstance(server_ids, list) or not isinstance(rule_ids, list) or not server_ids or not rule_ids:
+            raise BaselineError('`server_ids` and `rule_ids` must name at least one server and one rule',
+                                field='server_ids')
+        plan = previewForUser(user, fleet_id, server_ids=server_ids, rule_ids=rule_ids)
+    else:
+        raise BaselineError('`items`, or `server_ids` and `rule_ids`, are required', field='items')
     perServer, applied = {}, []
     for server in plan['servers']:
         todo = [item for item in server['items'] if item['action'] == APPLY]

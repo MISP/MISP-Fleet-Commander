@@ -141,10 +141,13 @@ def remediationPreview(user, fleet_id):
 @BPbaselines.route('/baselines/fleet/<int:fleet_id>/remediation', methods=['POST'])
 @token_required
 def remediate(user, fleet_id):
-    """`{items: [{server_id, rule_id}]}` (from a preview): starts a job fixing those that still drift and can be fixed
-    from here. Answers 202 with the job, 409 when nothing is left to fix"""
+    """`{items: [{server_id, rule_id}]}`, or `{server_ids, rule_ids}` (the servers and rules a preview listed): starts a
+    job fixing those that still drift and can be fixed from here. Answers 202 with the job, 409 when nothing is left
+    to fix"""
     try:
-        job = baselineRemediation.startForUser(user, fleet_id, jsonBody().get('items'))
+        body = jsonBody()
+        job = baselineRemediation.startForUser(user, fleet_id, body.get('items'), body.get('server_ids'),
+                                               body.get('rule_ids'))
         return jsonify({'job_id': job.id, 'job': jobModel.serializeJob(job, withResults=True)}), 202
     except baselineModel.BaselineError as e:
         return errorResponse(e)
