@@ -9,7 +9,7 @@
                 No open issue<span v-if="acknowledgedCount > 0"> ({{ acknowledgedCount }} acknowledged)</span>.
             </p>
             <ul v-else class="issue-list">
-                <li v-for="issue in active" :key="issue.id" :class="['issue', `sev-${issue.severity}`]">
+                <li v-for="issue in shown" :key="issue.id" :class="['issue', `sev-${issue.severity}`]">
                     <i :class="['issue-icon', severityMeta(issue).icon]" :title="severityMeta(issue).label" aria-hidden="true"></i>
                     <div class="issue-main">
                         <div class="issue-title">
@@ -22,7 +22,7 @@
                 </li>
             </ul>
             <div class="issues-footer">
-                <span v-if="active.length > 0 && acknowledgedCount > 0" class="text-muted">{{ acknowledgedCount }} acknowledged, not shown.</span>
+                <span v-if="hiddenOrAckedText" class="text-muted">{{ hiddenOrAckedText }}</span>
                 <router-link :to="attentionLink" class="attention-link">
                     Open in Needs attention <i class="fas fa-arrow-right" aria-hidden="true"></i>
                 </router-link>
@@ -34,8 +34,10 @@
 <script>
 import { mapState } from "vuex"
 import moment from "moment"
-import { compareIssues } from "@/store/modules/health"
+import { EMPTY_DIGEST } from "@/store/modules/health"
 import { SEVERITY_META } from "@/views/attention/healthLabels"
+
+const MAX_SHOWN = 8
 
 // The open issues of one server, compact (side panels). Acknowledging and actions stay on the Needs attention page
 export default {
@@ -53,16 +55,35 @@ export default {
     computed: {
         ...mapState({
             loaded: state => state.health.loaded,
-            issuesByServer: state => state.health.issuesByServer,
+            digest(state) {
+                return state.health.digests[this.server_id] || EMPTY_DIGEST
+            },
         }),
-        issues() {
-            return this.issuesByServer[this.server_id] || []
-        },
         active() {
-            return this.issues.filter(issue => issue.ack === null).sort(compareIssues)
+            return this.digest.active
+        },
+        // A drifting baseline can give a server hundreds of issues: the card lists the most severe ones
+        shown() {
+            return this.active.slice(0, MAX_SHOWN)
+        },
+        hiddenCount() {
+            return this.active.length - this.shown.length
         },
         acknowledgedCount() {
-            return this.issues.length - this.active.length
+            return this.digest.ackedCount
+        },
+        hiddenOrAckedText() {
+            if (this.active.length === 0) {
+                return ""
+            }
+            const parts = []
+            if (this.hiddenCount > 0) {
+                parts.push(`${this.hiddenCount} more`)
+            }
+            if (this.acknowledgedCount > 0) {
+                parts.push(`${this.acknowledgedCount} acknowledged`)
+            }
+            return parts.length > 0 ? `${parts.join(", ")}, not shown.` : ""
         },
         attentionLink() {
             const query = { server_id: String(this.server_id) }

@@ -180,7 +180,7 @@
                     </div>
                     <ul class="issue-list">
                         <IssueRow
-                            v-for="issue in group.issues"
+                            v-for="issue in shownIssues(group)"
                             :key="issue.id"
                             :issue="issue"
                             :now="now"
@@ -190,6 +190,12 @@
                             @ack="openAck"
                             @unack="unacknowledge"
                         ></IssueRow>
+                        <li v-if="hiddenCount(group) > 0" class="issue-more">
+                            <span class="issue-more-count">{{ hiddenCount(group) }} more {{ hiddenCount(group) === 1 ? "issue" : "issues" }}</span>
+                            <b-button size="sm" variant="link" class="issue-more-button" @click="showMore(group)">
+                                Show {{ Math.min(moreStep, hiddenCount(group)) }} more
+                            </b-button>
+                        </li>
                     </ul>
                 </li>
             </ul>
@@ -214,9 +220,9 @@
                             <span :class="['group-counts', `ink-${group.worst}`]">{{ group.countsText }}</span>
                         </span>
                     </button>
-                    <ul v-show="isExpanded(group.rule)" class="issue-list">
+                    <ul v-if="isExpanded(group.rule)" class="issue-list">
                         <IssueRow
-                            v-for="issue in group.issues"
+                            v-for="issue in shownIssues(group)"
                             :key="issue.id"
                             :issue="issue"
                             :now="now"
@@ -227,6 +233,12 @@
                             @ack="openAck"
                             @unack="unacknowledge"
                         ></IssueRow>
+                        <li v-if="hiddenCount(group) > 0" class="issue-more">
+                            <span class="issue-more-count">{{ hiddenCount(group) }} more {{ hiddenCount(group) === 1 ? "issue" : "issues" }}</span>
+                            <b-button size="sm" variant="link" class="issue-more-button" @click="showMore(group)">
+                                Show {{ Math.min(moreStep, hiddenCount(group)) }} more
+                            </b-button>
+                        </li>
                     </ul>
                 </li>
             </ul>
@@ -260,6 +272,10 @@ import AckModal from "./AckModal.vue"
 
 const GROUP_BY_STORAGE_KEY = "mfc.attention.groupBy"
 const NOW_TICK_MS = 30 * 1000
+// Rows rendered per group at first, and how many more each "Show more" adds: a baseline drifting on every server
+// can give thousands of issues, and rendering them all froze the page
+const ROWS_PER_GROUP = 10
+const MORE_STEP = 50
 
 function readStoredGroupBy() {
     try {
@@ -295,6 +311,8 @@ export default {
             selectedFleets: this.fleetsFromQuery(),
             showAcked: false,
             expandedRules: [],
+            shownRows: {},  // group key -> rows shown, when more than ROWS_PER_GROUP
+            moreStep: MORE_STEP,
             ackTarget: null,
             serverToEdit: null,
             now: Math.floor(Date.now() / 1000),
@@ -373,6 +391,7 @@ export default {
             this.visibleIssues.forEach((issue) => {
                 if (groups[issue.server_id] === undefined) {
                     groups[issue.server_id] = {
+                        key: `server:${issue.server_id}`,
                         server_id: issue.server_id, server_name: issue.server_name, fleet_name: issue.fleet_name, issues: [],
                     }
                 }
@@ -393,7 +412,7 @@ export default {
             const groups = {}
             this.visibleIssues.forEach((issue) => {
                 if (groups[issue.rule] === undefined) {
-                    groups[issue.rule] = { rule: issue.rule, label: RULE_LABELS[issue.rule] || issue.title, issues: [] }
+                    groups[issue.rule] = { key: `rule:${issue.rule}`, rule: issue.rule, label: RULE_LABELS[issue.rule] || issue.title, issues: [] }
                 }
                 groups[issue.rule].issues.push(issue)
             })
@@ -507,6 +526,15 @@ export default {
         },
         isExpanded(rule) {
             return this.expandedRules.includes(rule)
+        },
+        shownIssues(group) {
+            return group.issues.slice(0, this.shownRows[group.key] || ROWS_PER_GROUP)
+        },
+        hiddenCount(group) {
+            return Math.max(0, group.issues.length - (this.shownRows[group.key] || ROWS_PER_GROUP))
+        },
+        showMore(group) {
+            this.$set(this.shownRows, group.key, (this.shownRows[group.key] || ROWS_PER_GROUP) + MORE_STEP)
         },
         setGroupBy(groupBy) {
             this.groupBy = groupBy
@@ -885,6 +913,28 @@ button.pulse-cell:focus-visible {
     list-style: none;
     padding: 0;
     margin: 0;
+}
+
+.issue-more {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.35rem 0.75rem 0.35rem 3.25rem;
+    border-top: 1px dashed var(--health-rule);
+    background: #fafbfc;
+}
+
+.issue-more-count {
+    color: #6c757d;
+    font-size: 0.875rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.issue-more-button {
+    padding-top: 0.15rem;
+    padding-bottom: 0.15rem;
+    font-weight: 600;
 }
 
 .server-group {

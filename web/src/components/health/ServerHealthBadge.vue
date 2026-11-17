@@ -46,9 +46,9 @@
 </template>
 
 <script>
-import { mapState, mapGetters } from "vuex"
+import { mapState } from "vuex"
 import { SEVERITY_META, countsText } from "@/views/attention/healthLabels"
-import { emptyCounts } from "@/store/modules/health"
+import { EMPTY_DIGEST } from "@/store/modules/health"
 
 const MAX_LISTED = 6
 
@@ -66,19 +66,19 @@ export default {
     computed: {
         ...mapState({
             loaded: state => state.health.loaded,
-            issuesByServer: state => state.health.issuesByServer,
-        }),
-        ...mapGetters({
-            serverActiveIssues: "health/serverActiveIssues",
+            // Only this server's updates re-render the badge
+            digest(state) {
+                return state.health.digests[this.server_id] || EMPTY_DIGEST
+            },
         }),
         issues() {
-            return this.serverActiveIssues[this.server_id] || []
+            return this.digest.active
         },
         ackedCount() {
-            return (this.issuesByServer[this.server_id] || []).length - this.issues.length
+            return this.digest.ackedCount
         },
         worst() {
-            return this.issues.length > 0 ? this.issues[0].severity : null
+            return this.digest.worst
         },
         shownIssues() {
             return this.issues.slice(0, MAX_LISTED)
@@ -87,9 +87,7 @@ export default {
             return this.issues.length - this.shownIssues.length
         },
         countsLabel() {
-            const counts = emptyCounts()
-            this.issues.forEach((issue) => { counts[issue.severity] += 1 })
-            return countsText(counts)
+            return countsText(this.digest.counts)
         },
         ariaLabel() {
             return `${this.countsLabel}. Show in Needs attention`

@@ -97,7 +97,6 @@ export default {
             serverList: "servers/getServerList",
             counts: "health/counts",
             attentionCount: "health/attentionCount",
-            activeIssues: "health/activeIssues",
             topIssuesGetter: "health/topIssues",
         }),
         // Same rule as the sidebar badge: info issues do not need attention
@@ -105,7 +104,7 @@ export default {
             return this.topIssuesGetter(SHOWN_ISSUES).filter(issue => issue.severity !== "info")
         },
         activeCount() {
-            return this.activeIssues.length
+            return this.counts.critical + this.counts.warning + this.counts.info
         },
         countsLabel() {
             return countsText({ critical: this.counts.critical, warning: this.counts.warning, info: 0 })

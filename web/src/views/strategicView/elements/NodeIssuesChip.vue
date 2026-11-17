@@ -12,9 +12,9 @@
 </template>
 
 <script>
-import { mapGetters } from "vuex"
+import { mapState } from "vuex"
 import { SEVERITY_META, countsText } from "@/views/attention/healthLabels"
-import { emptyCounts } from "@/store/modules/health"
+import { EMPTY_DIGEST } from "@/store/modules/health"
 
 // The server's unacknowledged issues, for the zoomed-out node views: sized relative to the text around it
 export default {
@@ -28,19 +28,19 @@ export default {
         }
     },
     computed: {
-        ...mapGetters({
-            serverActiveIssues: "health/serverActiveIssues",
+        ...mapState({
+            digest(state) {
+                return state.health.digests[this.server_id] || EMPTY_DIGEST
+            },
         }),
         issues() {
-            return this.serverActiveIssues[this.server_id] || []
+            return this.digest.active
         },
         worst() {
-            return this.issues[0].severity
+            return this.digest.worst
         },
         summary() {
-            const counts = emptyCounts()
-            this.issues.forEach((issue) => { counts[issue.severity] += 1 })
-            return `Server: ${countsText(counts)}`
+            return `Server: ${countsText(this.digest.counts)}`
         },
     },
 }

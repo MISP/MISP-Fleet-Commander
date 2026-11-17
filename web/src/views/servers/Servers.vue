@@ -448,6 +448,7 @@ import iconButton from "@/components/ui/elements/iconButton.vue"
 import MonitoringStatusBadge from "@/components/ui/elements/MonitoringStatusBadge.vue"
 import FleetWatchingStatusBadge from "@/components/ui/elements/FleetWatchingStatusBadge.vue"
 import ServerHealthBadge from "@/components/health/ServerHealthBadge.vue"
+import { EMPTY_DIGEST } from "@/store/modules/health"
 import JobList from "@/components/jobs/JobList.vue"
 import BaselineTab from "@/components/baselines/BaselineTab.vue"
 
@@ -652,13 +653,13 @@ export default {
             last_refresh: state => state.servers.last_refresh,
             diagnostic_full: state => state.servers.diagnostic_full,
             healthLoaded: state => state.health.loaded,
+            healthDigests: state => state.health.digests,
         }),
         ...mapGetters({
             serverCount: "servers/serverCount",
             getServerList: "servers/getServerList",
             indexPlugins: "plugins/indexPlugins",
             quickActionPlugins: "plugins/quickActionPlugins",
-            serverActiveIssues: "health/serverActiveIssues",
         }),
         getIndex() {
             return (this.getServerList || []).map(server => ({ ...server }))
@@ -685,11 +686,11 @@ export default {
         },
         // Open drift issues of the fleet's servers, on the Baseline tab
         baselineDriftCount() {
-            return this.getIndex.reduce((count, server) => count + (this.serverActiveIssues[server.id] || [])
+            return this.getIndex.reduce((count, server) => count + this.activeIssuesOf(server.id)
                 .filter(issue => issue.rule === "baseline_drift" && !issue.id.endsWith(":unchecked")).length, 0)
         },
         serversWithIssuesCount() {
-            return this.getIndex.filter(server => (this.serverActiveIssues[server.id] || []).length > 0).length
+            return this.getIndex.filter(server => this.activeIssuesOf(server.id).length > 0).length
         },
         // IDs of the servers to show, or null when nothing filters the table.
         // Recomputed on live health updates, but the table only re-filters (and clears its selection)
@@ -701,7 +702,7 @@ export default {
             }
             return this.getIndex
                 .filter((server) => {
-                    const issues = this.serverActiveIssues[server.id] || []
+                    const issues = this.activeIssuesOf(server.id)
                     if (this.table.onlyIssues && issues.length === 0) {
                         return false
                     }
@@ -748,14 +749,15 @@ export default {
         filterServer(server, criteria) {
             return criteria.ids.split(",").includes(String(server.id))
         },
+        activeIssuesOf(server_id) {
+            return (this.healthDigests[server_id] || EMPTY_DIGEST).active
+        },
         // Most severe first when sorted descending: criticals, then warnings, then info, by count
         healthSortKey(server_id) {
             if (!this.healthLoaded) {
                 return -1
             }
-            const weights = { critical: 1000000, warning: 1000, info: 1 }
-            return (this.serverActiveIssues[server_id] || [])
-                .reduce((total, issue) => total + (weights[issue.severity] || 0), 0)
+            return (this.healthDigests[server_id] || EMPTY_DIGEST).weight
         },
         onFiltered(filteredItems) {
             this.table.totalRows = filteredItems.length

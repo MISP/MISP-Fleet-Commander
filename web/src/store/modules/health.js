@@ -24,21 +24,67 @@ export function worstSeverity(issues) {
     return worst
 }
 
-// Most severe first, then the oldest
+// Most severe first, then the oldest. IDs compare as plain strings, as the backend sorts them
 export function compareIssues(a, b) {
     return severityRank(a.severity) - severityRank(b.severity)
         || (a.first_seen || 0) - (b.first_seen || 0)
-        || a.id.localeCompare(b.id)
+        || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
 }
 
 export function emptyCounts() {
     return { critical: 0, warning: 0, info: 0 }
 }
 
+function addCounts(total, counts) {
+    SEVERITIES.forEach((severity) => { total[severity] += counts[severity] })
+    return total
+}
+
+// Issues are frozen: a large fleet can have thousands (a baseline drifting on every server) and making each one
+// reactive, then tracking every read of it, is what made the UI slow. They are replaced, never changed in place
+function frozenIssues(issues) {
+    return Object.freeze((Array.isArray(issues) ? issues : []).map(issue => Object.freeze(issue)))
+}
+
+// What the UI shows about one server, computed once per update of that server rather than from every issue of
+// every server on each read:
+//   - active: unacknowledged issues, most severe first;
+//   - counts: unacknowledged issues per severity, and per fleet in `fleetCounts` (from the issues' fleet);
+//   - worst: worst unacknowledged severity, or null;
+//   - ackedCount: acknowledged issues;
+//   - weight: sort key, criticals then warnings then info, by count.
+export function serverDigest(issues) {
+    const active = issues.filter(issue => issue.ack === null).sort(compareIssues)
+    const counts = emptyCounts()
+    const fleetCounts = {}
+    active.forEach((issue) => {
+        if (counts[issue.severity] === undefined) {
+            return
+        }
+        counts[issue.severity] += 1
+        if (fleetCounts[issue.fleet_id] === undefined) {
+            fleetCounts[issue.fleet_id] = emptyCounts()
+        }
+        fleetCounts[issue.fleet_id][issue.severity] += 1
+    })
+    return Object.freeze({
+        active: Object.freeze(active),
+        counts: Object.freeze(counts),
+        fleetCounts: Object.freeze(fleetCounts),
+        worst: active.length > 0 ? active[0].severity : null,
+        ackedCount: issues.length - active.length,
+        weight: counts.critical * 1000000 + counts.warning * 1000 + counts.info,
+    })
+}
+
+export const EMPTY_DIGEST = serverDigest([])
+
 // Issues of every fleet of the user, unlike the `servers` module that only tracks the selected fleet.
 // Kept up to date by the HEALTH_UPDATED socket event, which carries all current issues of one server.
+// Components showing one server read `digests[server_id]` from the state: only that server's updates reach them.
 const state = {
-    issuesByServer: {},
+    issuesByServer: {},  // server_id -> frozen issues, acknowledged ones included
+    digests: {},  // server_id -> serverDigest of its issues
     summary: null,
     loaded: false,
     loading: false,
@@ -50,46 +96,45 @@ const getters = {
     allIssues: (state) => {
         return [].concat(...Object.values(state.issuesByServer))
     },
-    activeIssues: (state, getters) => {
-        return getters.allIssues.filter(issue => issue.ack === null)
+    activeIssues: (state) => {
+        return [].concat(...Object.values(state.digests).map(digest => digest.active))
     },
     acknowledgedIssues: (state, getters) => {
         return getters.allIssues.filter(issue => issue.ack !== null)
     },
-    counts: (state, getters) => {
-        const counts = emptyCounts()
-        getters.activeIssues.forEach((issue) => { counts[issue.severity] += 1 })
-        return counts
+    counts: (state) => {
+        return Object.values(state.digests).reduce((total, digest) => addCounts(total, digest.counts), emptyCounts())
     },
     // What the navigation shows: info issues do not need attention
     attentionCount: (state, getters) => {
         return getters.counts.critical + getters.counts.warning
     },
-    fleetCounts: (state, getters) => {
+    fleetCounts: (state) => {
         const counts = {}
-        getters.activeIssues.forEach((issue) => {
-            if (counts[issue.fleet_id] === undefined) {
-                counts[issue.fleet_id] = emptyCounts()
-            }
-            counts[issue.fleet_id][issue.severity] += 1
+        Object.values(state.digests).forEach((digest) => {
+            Object.entries(digest.fleetCounts).forEach(([fleet_id, fleetCounts]) => {
+                counts[fleet_id] = addCounts(counts[fleet_id] || emptyCounts(), fleetCounts)
+            })
         })
         return counts
     },
     // server_id -> unacknowledged issues, most severe first
     serverActiveIssues: (state) => {
         const byServer = {}
-        Object.entries(state.issuesByServer).forEach(([server_id, issues]) => {
-            byServer[server_id] = issues.filter(issue => issue.ack === null).sort(compareIssues)
+        Object.entries(state.digests).forEach(([server_id, digest]) => {
+            byServer[server_id] = digest.active
         })
         return byServer
     },
-    topIssues: (state, getters) => (limit) => {
-        return getters.activeIssues.slice().sort(compareIssues).slice(0, limit)
+    // The most severe issues of all servers: each server's list is sorted, so its first `limit` are enough
+    topIssues: (state) => (limit) => {
+        const candidates = [].concat(...Object.values(state.digests).map(digest => digest.active.slice(0, limit)))
+        return candidates.sort(compareIssues).slice(0, limit)
     },
     serverWorst: (state) => {
         const worst = {}
-        Object.entries(state.issuesByServer).forEach(([server_id, issues]) => {
-            worst[server_id] = worstSeverity(issues.filter(issue => issue.ack === null))
+        Object.entries(state.digests).forEach(([server_id, digest]) => {
+            worst[server_id] = digest.worst
         })
         return worst
     },
@@ -188,19 +233,28 @@ const mutations = {
         state.summary = summary
     },
     setAllIssues(state, issues) {
-        const byServer = {}
-        Object.keys(state.issuesByServer).forEach((server_id) => { byServer[server_id] = [] })
+        const lists = {}
+        Object.keys(state.issuesByServer).forEach((server_id) => { lists[server_id] = [] })
         issues.forEach((issue) => {
-            if (byServer[issue.server_id] === undefined) {
-                byServer[issue.server_id] = []
+            if (lists[issue.server_id] === undefined) {
+                lists[issue.server_id] = []
             }
-            byServer[issue.server_id].push(issue)
+            lists[issue.server_id].push(issue)
+        })
+        const byServer = {}
+        const digests = {}
+        Object.entries(lists).forEach(([server_id, list]) => {
+            byServer[server_id] = frozenIssues(list)
+            digests[server_id] = serverDigest(byServer[server_id])
         })
         state.issuesByServer = byServer
+        state.digests = digests
         state.loaded = true
     },
     setServerIssues(state, { server_id, issues }) {
-        Vue.set(state.issuesByServer, server_id, issues)
+        const frozen = frozenIssues(issues)
+        Vue.set(state.issuesByServer, server_id, frozen)
+        Vue.set(state.digests, server_id, serverDigest(frozen))
     },
     updateIssue(state, updated) {
         const issues = state.issuesByServer[updated.server_id]
@@ -209,7 +263,9 @@ const mutations = {
         }
         const index = issues.findIndex(issue => issue.id === updated.id)
         if (index !== -1) {
-            Vue.set(issues, index, Object.assign({}, issues[index], { ack: updated.ack }))
+            const replaced = issues.slice()
+            replaced[index] = Object.assign({}, issues[index], { ack: updated.ack })
+            mutations.setServerIssues(state, { server_id: updated.server_id, issues: replaced })
         }
     },
     setPending(state, { server_id, kind }) {
