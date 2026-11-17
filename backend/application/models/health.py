@@ -56,14 +56,21 @@ def acksByIssue(user_id: int, server_ids: Iterable[int]) -> Dict[str, HealthAck]
     return {ack.issue_id: ack for ack in acks}
 
 
-def evaluateServers(user, servers: List[Server], ctx: Optional[Context] = None) -> List[dict]:
-    """Every current issue of the given servers (all owned by `user`), acknowledged or not, most severe first"""
+def evaluateServers(user, servers: List[Server], ctx: Optional[Context] = None,
+                    snapshotTimes: Optional[Dict[int, Optional[int]]] = None) -> List[dict]:
+    """Every current issue of the given servers (all owned by `user`), acknowledged or not, most severe first.
+    `snapshotTimes`, when given, receives the time of each server's snapshot (None without one): reading a snapshot
+    again for it would decode it a second time"""
+    from application import redisModel
     ctx = ctx or Context.for_user(user)
     acks = acksByIssue(user.id, [server.id for server in servers])
     serverByID = {server.id: server for server in servers}
     issues = []
     for server in servers:
-        issues.extend(evaluate_server(server, ctx))
+        snapshot = redisModel.getServerInfo(server.uuid)
+        if snapshotTimes is not None:
+            snapshotTimes[server.id] = snapshotTimestamp(snapshot)
+        issues.extend(evaluate_server(server, ctx, snapshot=snapshot))
     return [serializeIssue(issue, serverByID[issue.server_id], acks.get(issue.id), ctx.now)
             for issue in sort_issues(issues)]
 
@@ -113,7 +120,8 @@ def summaryForUser(user) -> dict:
     (listed with its name and fleet, so that healthy servers can be shown too)"""
     ctx = Context.for_user(user)
     servers = ownedServers(user)
-    issues = evaluateServers(user, servers, ctx)
+    snapshotTimes = {}
+    issues = evaluateServers(user, servers, ctx, snapshotTimes)
     fleetIDs = [fleet_id for (fleet_id,) in db.session.query(Fleet.id).filter_by(user_id=user.id).all()]
 
     totals = emptyCounts()
@@ -128,8 +136,7 @@ def summaryForUser(user) -> dict:
         fleets.setdefault(issue["fleet_id"], emptyCounts())[issue["severity"]] += 1
         issuesByServer[issue["server_id"]].append(issue)
 
-    snapshotTimes = [snapshotTimestamp(server) for server in servers]
-    snapshotTimes = [ts for ts in snapshotTimes if ts is not None]
+    refreshTimes = [ts for ts in snapshotTimes.values() if ts is not None]
     return {
         "totals": totals,
         "acknowledged": acknowledged,
@@ -137,8 +144,8 @@ def summaryForUser(user) -> dict:
         "servers": {server.id: {"name": server.name, "fleet_id": server.fleet_id,
                                 "worst": worstSeverity(issuesByServer[server.id])} for server in servers},
         "server_count": len(servers),
-        "oldest_refresh": min(snapshotTimes) if snapshotTimes else None,
-        "newest_refresh": max(snapshotTimes) if snapshotTimes else None,
+        "oldest_refresh": min(refreshTimes) if refreshTimes else None,
+        "newest_refresh": max(refreshTimes) if refreshTimes else None,
         "evaluated_at": ctx.now,
     }
 
@@ -148,9 +155,7 @@ def worstSeverity(issues: List[dict]) -> Optional[str]:
     return SEVERITIES[min(ranks)] if ranks else None
 
 
-def snapshotTimestamp(server) -> Optional[int]:
-    from application import redisModel
-    snapshot = redisModel.getServerInfo(server.uuid)
+def snapshotTimestamp(snapshot) -> Optional[int]:
     timestamp = snapshot.get("timestamp") if isinstance(snapshot, dict) else None
     return timestamp if isinstance(timestamp, int) else None
 

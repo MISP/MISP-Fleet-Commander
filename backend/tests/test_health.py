@@ -145,6 +145,24 @@ def test_issues_are_serializable():
                              "subject", "evidence", "action", "first_seen"}
 
 
+def test_issue_dict_is_a_copy_with_every_field():
+    """`to_dict` replaced `dataclasses.asdict` (too slow for thousands of issues): same result, nested values copied"""
+    import dataclasses
+    from application.health.engine import Issue
+
+    issue = Issue(id="r:1:s", rule="r", severity="info", category="config", server_id=1, fleet_id=2, title="t",
+                  detail="d", subject="s", evidence={"expected": {"name": "x"}, "values": [1, {"a": 2}], "pair": (1, 2)},
+                  action={"kind": "open_baseline", "rule_id": 3}, first_seen=10)
+    data = issue.to_dict()
+    assert data == dataclasses.asdict(issue)
+    assert set(data) == {f.name for f in dataclasses.fields(Issue)}
+    data["evidence"]["expected"]["name"] = "changed"
+    data["evidence"]["values"][1]["a"] = 0
+    data["action"]["kind"] = "changed"
+    assert issue.evidence == {"expected": {"name": "x"}, "values": [1, {"a": 2}], "pair": (1, 2)}
+    assert issue.action == {"kind": "open_baseline", "rule_id": 3}
+
+
 # --- Availability -----------------------------------------------------------------------------------------------------
 
 def test_no_api_key():

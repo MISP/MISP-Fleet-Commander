@@ -7,7 +7,8 @@ Rules are plain functions registered with `@rule(...)`. They receive a `ServerSt
 `Finding`s; the engine turns findings into `Issue`s. Other modules add rules the same way, without touching the engine.
 """
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
+from functools import cached_property
 import time
 from typing import Callable, Iterable, List, Optional
 
@@ -50,7 +51,32 @@ class Issue:
     first_seen: Optional[int] = None
 
     def to_dict(self) -> dict:
-        return asdict(self)
+        return {
+            "id": self.id,
+            "rule": self.rule,
+            "severity": self.severity,
+            "category": self.category,
+            "server_id": self.server_id,
+            "fleet_id": self.fleet_id,
+            "title": self.title,
+            "detail": self.detail,
+            "subject": self.subject,
+            "evidence": plain_copy(self.evidence),
+            "action": plain_copy(self.action),
+            "first_seen": self.first_seen,
+        }
+
+
+def plain_copy(value):
+    """A copy of nested dicts and lists. What `dataclasses.asdict` gave, without its cost: it was most of the time
+    spent answering a fleet's issues when a baseline drifts on every server (thousands of issues)"""
+    if isinstance(value, dict):
+        return {key: plain_copy(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [plain_copy(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(plain_copy(item) for item in value)
+    return value
 
 
 @dataclass
@@ -120,9 +146,9 @@ class ServerState:
         settings = self.section("serverSettings")
         return settings if isinstance(settings, dict) else {}
 
-    @property
+    @cached_property
     def final_settings(self) -> dict:
-        """`finalSettings` as {setting name: value}"""
+        """`finalSettings` as {setting name: value}. Several rules read it: built once per evaluation"""
         entries = self.server_settings.get("finalSettings")
         if not isinstance(entries, list):
             return {}
