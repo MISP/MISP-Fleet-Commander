@@ -11,7 +11,7 @@ import application
 import application.models.plugins as pluginsModel
 from application.DBModels import Server
 from application.controllers.utils import errorText, misplabelledFailure, mispGetRequest, mispPostRequest
-from application.models import serverManagement
+from application.models import organisations, serverManagement
 from application.models.jobs import UnitResult
 
 
@@ -129,7 +129,7 @@ def restQueryUnit(server: Server, params: dict) -> UnitResult:
     return requestUnit(restQuery(server, params.get('method'), params.get('url'), params.get('data')))
 
 
-# Remote Admin (users of a MISP server)
+# Remote Admin (users and organisations of a MISP server)
 
 SERVER_MANAGEMENT_OPERATIONS: Dict[str, Callable] = {
     'add_user': lambda server, params: serverManagement.addUser(server, params.get('payload') or {}),
@@ -139,14 +139,18 @@ SERVER_MANAGEMENT_OPERATIONS: Dict[str, Callable] = {
     'gen_authkey': lambda server, params: serverManagement.genAuthkey(server, params.get('user_id')),
     'disable': lambda server, params: serverManagement.disable(server, params.get('user_id')),
     'enable': lambda server, params: serverManagement.enable(server, params.get('user_id')),
+    'add_organisation': organisations.addOperation,
+    'edit_organisation': organisations.editOperation,
 }
+# Operations on one user of the MISP server
+USER_OPERATIONS = ('set_password', 'reset_password', 'gen_authkey', 'disable', 'enable')
 
 
 def serverManagementUnit(server: Server, params: dict) -> UnitResult:
     operation = SERVER_MANAGEMENT_OPERATIONS.get(params.get('operation'))
     if operation is None:
         return UnitResult(False, summary=f"Unknown operation `{params.get('operation')}`")
-    if params.get('operation') != 'add_user' and not isinstance(params.get('user_id'), int):
+    if params.get('operation') in USER_OPERATIONS and not isinstance(params.get('user_id'), int):
         return UnitResult(False, summary='A user ID is required')
     result = operation(server, params)
     if not isinstance(result, dict):
@@ -177,6 +181,10 @@ def editConnectionUnit(server: Server, params: dict) -> UnitResult:
     return requestUnit(editConnection(server, remoteServerID, params.get('payload') or {}))
 
 
+def organisationCopyUnit(server: Server, params: dict) -> UnitResult:
+    return organisations.copyUnit(server, params)
+
+
 def baselineRemediationUnit(server: Server, params: dict) -> UnitResult:
     from application.models.baselineRemediation import remediationUnit
     return remediationUnit(server, params)
@@ -189,6 +197,7 @@ EXECUTORS: Dict[str, Callable[[Server, dict], UnitResult]] = {
     'server_management': serverManagementUnit,
     'edit_connection': editConnectionUnit,
     'baseline_remediation': baselineRemediationUnit,
+    'organisation_copy': organisationCopyUnit,
 }
 
 

@@ -89,3 +89,117 @@ def enable(user, server_id, user_id):
     """Enable a user on the MISP instance"""
     return runOperation(user, server_id, 'enable', f'Enable user #{user_id}', 'Could not enable user.',
                         user_id=user_id)
+
+
+# Organisations
+
+def organisationError(e):
+    body = {'message': e.message}
+    if getattr(e, 'field', None):
+        body['field'] = e.field
+    return jsonify(body), e.status
+
+
+def ownedServerOr404(user, server_id):
+    server = serverModel.getForUser(user, server_id)
+    if server is None:
+        import application.models.organisations as organisationModel
+        raise organisationModel.OrganisationError('Unknown server', 404)
+    return server
+
+
+def wantsRefresh() -> bool:
+    return request.args.get('refresh', '').lower() in ('1', 'true', 'yes')
+
+
+@BPserverManagement.route('/server-management/organisations/<int:server_id>', methods=['GET'])
+@token_required
+def organisationIndex(user, server_id):
+    """The organisations of the MISP instance, kept 10 minutes (`?refresh=1` lists them again):
+    `{server_id, fetched_at, cached, organisations}`"""
+    import application.models.mispOps as mispOps
+    import application.models.organisations as organisationModel
+    try:
+        server = ownedServerOr404(user, server_id)
+        return jsonify({'server_id': server.id, **organisationModel.organisationsOf(server, refresh=wantsRefresh())})
+    except organisationModel.OrganisationError as e:
+        return organisationError(e)
+    except mispOps.MispOpError as e:
+        return jsonify({'message': e.message}), 502
+
+
+@BPserverManagement.route('/server-management/organisations/<int:server_id>/fleet', methods=['GET'])
+@token_required
+def organisationFleet(user, server_id):
+    """How the server's organisations compare with the other servers of its fleet, by UUID: `{compared,
+    unavailable, organisations: {uuid: {same, renamed, other_uuid}}}`"""
+    import application.models.mispOps as mispOps
+    import application.models.organisations as organisationModel
+    try:
+        server = ownedServerOr404(user, server_id)
+        return jsonify(organisationModel.fleetComparison(server, refresh=wantsRefresh()))
+    except organisationModel.OrganisationError as e:
+        return organisationError(e)
+    except mispOps.MispOpError as e:
+        return jsonify({'message': e.message}), 502
+
+
+def runOrganisationOperation(user, server, operation, title, params):
+    """A one-server job: the saved organisation (`{"Organisation": …}`), 502 with MISP's reason otherwise"""
+    from application.controllers.websocket import socketEmitter
+    import application.models.jobRunner as jobRunner
+    unit = jobRunner.runInline(user, 'server_management', server, {'operation': operation, **params},
+                               title=f'{title} on {server.name}', emitter=socketEmitter)
+    if not unit.ok:
+        return jsonify({'message': unit.summary or 'MISP refused the change'}), 502
+    return jsonify(unit.response)
+
+
+@BPserverManagement.route('/server-management/organisations/<int:server_id>/add', methods=['POST'])
+@token_required
+def organisationAdd(user, server_id):
+    """Create an organisation on the MISP instance: `{name, uuid?, local?, type?, nationality?, sector?,
+    description?, contacts?, restricted_to_domain?}`"""
+    import application.models.organisations as organisationModel
+    try:
+        server = ownedServerOr404(user, server_id)
+        fields = organisationModel.cleanFields(request.get_json(silent=True))
+    except organisationModel.OrganisationError as e:
+        return organisationError(e)
+    return runOrganisationOperation(user, server, 'add_organisation', f"Add organisation {fields['name']}",
+                                    {'payload': fields})
+
+
+@BPserverManagement.route('/server-management/organisations/<int:server_id>/edit/<int:org_id>', methods=['POST'])
+@token_required
+def organisationEdit(user, server_id, org_id):
+    """Change an organisation of the MISP instance: only the fields given"""
+    import application.models.organisations as organisationModel
+    try:
+        server = ownedServerOr404(user, server_id)
+        changes = organisationModel.cleanFields(request.get_json(silent=True), partial=True)
+    except organisationModel.OrganisationError as e:
+        return organisationError(e)
+    return runOrganisationOperation(user, server, 'edit_organisation', f'Edit organisation #{org_id}',
+                                    {'org_id': org_id, 'payload': changes})
+
+
+@BPserverManagement.route('/server-management/organisations/<int:server_id>/copy', methods=['POST'])
+@token_required
+def organisationCopy(user, server_id):
+    """Create one of the server's organisations, with its UUID, on other servers of its fleet: `{uuid, server_ids,
+    local?}`. Answers 202 with the job"""
+    import application.models.jobs as jobModel
+    import application.models.mispOps as mispOps
+    import application.models.organisations as organisationModel
+    import application.models.userJobs as userJobs
+    try:
+        server = ownedServerOr404(user, server_id)
+        job = organisationModel.startCopy(user, server, request.get_json(silent=True))
+    except organisationModel.OrganisationError as e:
+        return organisationError(e)
+    except userJobs.JobError as e:
+        return jsonify({'message': e.message}), e.status
+    except mispOps.MispOpError as e:
+        return jsonify({'message': e.message}), 502
+    return jsonify({'job_id': job.id, 'job': jobModel.serializeJob(job, withResults=True)}), 202
