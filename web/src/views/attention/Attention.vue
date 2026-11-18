@@ -552,15 +552,16 @@ export default {
         reload() {
             this.$store.dispatch("health/fetch")
         },
-        serverLink(server_id, tab) {
+        // `org`: the organisation to show in the Organisations tab
+        serverLink(server_id, tab, org) {
             const link = { name: "servers.view", params: { server_id } }
             if (tab) {
-                link.query = { tab }
+                link.query = org ? { tab, org } : { tab }
             }
             return link
         },
-        openServer(server_id, tab) {
-            this.$router.push(this.serverLink(server_id, tab)).catch(() => {})
+        openServer(server_id, tab, org) {
+            this.$router.push(this.serverLink(server_id, tab, org)).catch(() => {})
         },
         openIssue(issue) {
             const action = issue.action || {}
@@ -568,7 +569,11 @@ export default {
                 this.openBaseline(issue.fleet_id, action.rule_id)
                 return
             }
-            this.openServer(issue.server_id, action.kind === "open_tab" ? action.target : undefined)
+            if (action.kind === "open_tab") {
+                this.openServer(issue.server_id, action.target, action.uuid)
+                return
+            }
+            this.openServer(issue.server_id)
         },
         // The fleet page's Baseline tab, on the drifting rule
         openBaseline(fleet_id, rule_id) {

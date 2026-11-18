@@ -35,12 +35,14 @@ export const RULE_LABELS = {
     sync_link: "Broken sync links",
     pending_registrations: "Pending account requests",
     baseline_drift: "Baseline drift",
+    organisation_mismatch: "Organisation mismatches",
 }
 
 const TAB_ACTIONS = {
     diagnostic: { label: "Open diagnostic", icon: "fas fa-stethoscope" },
     connections: { label: "Open connections", icon: "fas fa-network-wired" },
     profile: { label: "Open user profile", icon: "fas fa-user" },
+    organisations: { label: "Open organisation", icon: "fas fa-building" },
 }
 
 // What the button of an issue's suggested action says

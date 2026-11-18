@@ -37,6 +37,7 @@
                         <serverInfoAndManagements 
                             :server_id="server_id"
                             :tab="$route.query.tab || ''"
+                            :org="$route.query.org || ''"
                             max_content_size="80vh"
                         ></serverInfoAndManagements>
                     </b-overlay>

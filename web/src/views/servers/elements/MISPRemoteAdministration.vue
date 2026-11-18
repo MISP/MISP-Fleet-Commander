@@ -58,7 +58,12 @@ export default {
         server_id: {
             type: Number,
             required: true
-        }
+        },
+        // `{tab: "organisations", org: <uuid or "">}`: open the Organisations tab, on that organisation
+        focus: {
+            type: Object,
+            default: null
+        },
     },
     data: function() {
         return {
@@ -75,6 +80,20 @@ export default {
         }),
         getServer: function() {
             return this.servers[this.server_id]
+        },
+    },
+    watch: {
+        focus: {
+            immediate: true,
+            handler(focus) {
+                if (!focus || focus.tab !== "organisations") {
+                    return
+                }
+                this.activeTab = ORGANISATIONS_TAB
+                if (focus.org) {
+                    this.orgReveal = { uuid: focus.org }
+                }
+            },
         },
     },
     methods: {

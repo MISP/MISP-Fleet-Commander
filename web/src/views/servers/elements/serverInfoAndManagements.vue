@@ -8,6 +8,7 @@
                 <keep-alive>
                 <MISPRemoteAdministration
                     :server_id="server_id"
+                    :focus="remoteAdminFocus"
                 ></MISPRemoteAdministration>
                 </keep-alive>
             </div>
@@ -200,6 +201,8 @@ import JobList from "@/components/jobs/JobList.vue"
 
 // Position of the tabs that can be opened by name
 const TAB_INDEX = {
+    // Remote administration, on its Organisations tab
+    organisations: 0,
     diagnostic: 3,
     profile: 4,
     connections: 5,
@@ -235,6 +238,11 @@ export default {
             type: String,
             default: "",
         },
+        // With `tab=organisations`: the UUID of the organisation to show there
+        org: {
+            type: String,
+            default: "",
+        },
     },
     data: function() {
         return {
@@ -246,6 +254,10 @@ export default {
         }
     },
     computed: {
+        // What Remote administration is asked to show (a link to `?tab=organisations&org=<uuid>`)
+        remoteAdminFocus() {
+            return this.tab === "organisations" ? { tab: "organisations", org: this.org } : null
+        },
         ...mapState({
             servers: state => state.servers.servers,
             server_status: state => state.servers.server_status,
