@@ -205,6 +205,31 @@ It works from other origins than the one serving the UI, so the API endpoints it
     </tr>
 </table>
 
+## 📈 Scraping the metrics with Prometheus
+The usage metrics collected from the servers of monitored fleets are also served in the Prometheus text format at `GET /metrics`. A scrape only reads what MISP Fleet Commander stored: it never queries MISP. Each user sees their own servers.
+
+Authenticate with an MISP Fleet Commander API key, sent as `Authorization: Apikey <key>`:
+```yaml
+scrape_configs:
+  - job_name: misp-fleet-commander
+    scrape_interval: 1m
+    metrics_path: /metrics
+    # scheme: https  # When MISP Fleet Commander is behind TLS
+    authorization:
+      type: Apikey
+      credentials: <MISP Fleet Commander API key>
+    static_configs:
+      - targets: ['mfc.example:5001']
+```
+
+Every series has the `server`, `server_id` and `fleet` labels.
+- One gauge per collected metric, from the latest sample: `misp_events`, `misp_attributes`, `misp_users`, `misp_load_1`, `misp_memory_used_ratio`, `misp_db_size_bytes`, `misp_queue_jobs{queue="default"}`, … A metric that could not be read at the last collection is left out.
+- `misp_logins_total` and `misp_failed_logins_total`: counters of the logins seen in the MISP logs.
+- `misp_up`: 1 when the last collection read something. `misp_last_sample_timestamp_seconds`: when the latest sample was taken. `misp_info{version="…"}`: the MISP version.
+- `mfc_monitoring_enabled`: 0 when monitoring is disabled in the settings. Servers then have no series.
+
+For example, `time() - misp_last_sample_timestamp_seconds > 3600` catches a server that hasn't been collected for an hour.
+
 ## Setting up metric collection with InfluxDB and Grafana
 1. Install the needed dependencies.
 ```bash
