@@ -90,6 +90,8 @@ class Context:
     full_refresh_interval: int = DEFAULT_FULL_REFRESH_INTERVAL
     # Baseline rules per fleet, read from the database on first use (see `drift.rulesFor`)
     baseline_rules: dict = field(default_factory=dict)
+    # Organisations that do not line up in each fleet, read on first use (see `organisations.findingsFor`)
+    organisation_findings: dict = field(default_factory=dict)
 
     @classmethod
     def for_user(cls, user, now: Optional[int] = None, latest_release: Optional[str] = None) -> "Context":
@@ -293,4 +295,5 @@ def ensure_rules_loaded():
     if not _rulesLoaded:
         import application.health.rules  # noqa: F401  (registers the built-in rules)
         import application.health.drift  # noqa: F401  (baseline drift)
+        import application.health.organisations  # noqa: F401  (organisations across a fleet)
         _rulesLoaded = True

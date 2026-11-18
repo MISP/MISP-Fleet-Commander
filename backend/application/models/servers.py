@@ -15,6 +15,7 @@ from application.marshmallowSchemas import ServerSchema, serverQuerySchema
 
 from application.models.utils import MonitoringImages, asyncFetcher, asyncFetcherManyServer
 from application.models import baselineDrift
+import application.models.organisations as organisationModel
 
 import nest_asyncio
 nest_asyncio.apply()
@@ -240,6 +241,8 @@ def fetchServerInfo(server, use_cache=True):
     connectedServers = attachConnectedServerStatus(server, connectedServers)
     userRegistrations = summarizeRegistrations(mispGetRequest(server, '/users/registrations', nocache=not use_cache))
     contentPlan = baselineDrift.contentPlanOfFleet(server.fleet_id)
+    contentUrls, organisationIndex = contentRequests(server, contentPlan)
+    answers = {url: mispGetRequest(server, url, nocache=not use_cache) for url in contentUrls}
     serverContent = None
     server_query = {
         'serverSettings': serverSettings,
@@ -250,8 +253,7 @@ def fetchServerInfo(server, use_cache=True):
         'serverContent': serverContent
     }
     if contentPlan:
-        server_query['baselineState'] = contentPlan.state([
-            mispGetRequest(server, url, nocache=not use_cache) for url in contentPlan.urls])
+        server_query['baselineState'] = contentPlan.state([answers[url] for url in contentPlan.urls])
     fullQuery = {
         'timestamp': int(time.time()),
         'query_result': server_query,
@@ -259,8 +261,21 @@ def fetchServerInfo(server, use_cache=True):
     saveInfo(server, fullQuery)
     redisModel.setServerWatchedTimestamp(server.uuid)
     baselineDrift.afterContentFetched(server, server_query.get('baselineState'))
+    if organisationIndex is not None:
+        organisationModel.listedByRefresh(server, answers[organisationIndex])
     publishHealth(server)
     return fullQuery
+
+
+def contentRequests(server, contentPlan):
+    """The listings a full refresh asks for besides the snapshot: the content the fleet's baseline rules need, and
+    the organisations when the fleet has other servers to compare them with (asked once if the baseline needs them
+    too). `(urls, organisation index URL or None)`"""
+    urls = list(contentPlan.urls)
+    organisationIndex = organisationModel.listedByRefreshUrl(server)
+    if organisationIndex is not None and organisationIndex not in urls:
+        urls.append(organisationIndex)
+    return urls, organisationIndex
 
 
 def doFleetInfoTask(servers: list, clientSocketEmitterUpdateFuns):
@@ -329,7 +344,8 @@ async def fetchServerInfoAsync(server, clientSocketEmitterUpdateFuns):
     # Taxonomies, galaxies, object templates, organisations or sharing groups, when the fleet's baseline has rules
     # about them
     contentPlan = baselineDrift.contentPlanOfFleet(server.fleet_id)
-    results = await asyncFetcher(server, urls + contentPlan.urls)
+    contentUrls, organisationIndex = contentRequests(server, contentPlan)
+    results = await asyncFetcher(server, urls + contentUrls)
     serverSettings = results[0]
     serverUser = results[1]
     connectedServers = stripRemoteAuthkeys(results[2])
@@ -345,7 +361,7 @@ async def fetchServerInfoAsync(server, clientSocketEmitterUpdateFuns):
         'serverContent': serverContent
     }
     if contentPlan:
-        server_query['baselineState'] = contentPlan.state(results[len(urls):])
+        server_query['baselineState'] = contentPlan.state(results[len(urls):len(urls) + len(contentPlan.urls)])
     fullQuery = {
         'timestamp': int(time.time()),
         'query_result': server_query,
@@ -357,6 +373,8 @@ async def fetchServerInfoAsync(server, clientSocketEmitterUpdateFuns):
         clientSocketEmitterUpdateFuns["udpate_server"](server.id, fullQueryWithServer)
     saveInfo(server, fullQuery)
     redisModel.setServerWatchedTimestamp(server.uuid)
+    if organisationIndex is not None:
+        organisationModel.listedByRefresh(server, results[len(urls) + contentUrls.index(organisationIndex)])
 
     connectedServers = await attachConnectedServerStatusAsync(server, connectedServers)
     savePartialInfo(server, "connectedServers", connectedServers)

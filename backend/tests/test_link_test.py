@@ -267,7 +267,8 @@ def test_task_releases_its_locks_when_the_run_fails(monkeypatch, owned, misp, em
 
 
 def test_fleet_link_test_is_faster_than_a_full_refresh(owned, misp):
-    """A link test makes fewer requests than a full refresh: no diagnostics, user, registrations or usage"""
+    """A link test makes fewer requests than a full refresh: no diagnostics, user, registrations, usage or
+    organisations (listed by the refresh when the fleet has other servers to compare them with)"""
     import application.models.servers as serverModel
     hub = owned[2]["hub"]
     run([hub])
@@ -277,4 +278,5 @@ def test_fleet_link_test_is_faster_than_a_full_refresh(owned, misp):
                             "/users/registrations": [], "/users/statistics": {}})
     asyncio.run(serverModel.fetchServerInfoAsync(hub, {}))
     assert set(misp["fetched"]) - set(linkTestRequests) == {
-        "/servers/serverSettings/diagnostics/light:1", "/users/view/me", "/users/registrations", "/users/statistics"}
+        "/servers/serverSettings/diagnostics/light:1", "/users/view/me", "/users/registrations", "/users/statistics",
+        "/organisations/index/scope:all"}

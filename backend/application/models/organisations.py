@@ -7,8 +7,10 @@ import re
 from typing import Dict, Iterable, List, Optional
 
 import application.models.mispOps as mispOps
+import application.models.organisationDigests as organisationDigests
 from application.DBModels import Job, Server
 from application.models.jobs import UnitResult
+from application.models.organisationDigests import normalisedName
 from application.models.remoteLists import FLEET_TIMEOUT, ListCache, RemoteListError, gatherFleet
 from application.redisModel import KEY_SERVER_ORGANISATIONS
 
@@ -64,14 +66,19 @@ def parse(records: Iterable[dict]) -> List[dict]:
     return sorted(organisations, key=lambda org: (org['name'].lower(), org['uuid']))
 
 
-def normalisedName(name: str) -> str:
-    """Names compared across servers: case and runs of whitespace do not matter"""
-    return ' '.join(str(name or '').split()).lower()
-
-
 # Cache
 
-CACHE = ListCache(KEY_SERVER_ORGANISATIONS, 'organisations')
+class OrganisationCache(ListCache):
+    """Every listing also replaces the server's digest, which the fleet's health compares (see
+    `organisationDigests`). `publish_self=False` when the caller publishes the server's health itself"""
+
+    def store(self, server: Server, items: List[dict], now: Optional[int] = None, publish_self: bool = True) -> dict:
+        listed = super().store(server, items, now)
+        organisationDigests.remember(server, items, now=listed['fetched_at'], publish_self=publish_self)
+        return listed
+
+
+CACHE = OrganisationCache(KEY_SERVER_ORGANISATIONS, 'organisations')
 readCached = CACHE.read
 store = CACHE.store
 forget = CACHE.forget
@@ -123,6 +130,32 @@ def compare(own: List[dict], others: Dict[int, List[dict]]) -> Dict[str, dict]:
 def decodeList(answers: list) -> List[dict]:
     """The organisations of another client's decoded index answer"""
     return parse(mispOps.decodedRecords(answers[0], *mispOps.ORGANISATION_INDEX[1:]))
+
+
+def listedByRefresh(server: Server, answer) -> None:
+    """The organisations a full refresh listed (the decoded index answer): kept for the tab and as the server's
+    digest. The refresh publishes the server's health itself. Never raises: a failed listing keeps the previous
+    digest, which expires on its own"""
+    try:
+        organisations = decodeList([answer])
+    except mispOps.MispOpError:
+        return
+    except Exception as e:
+        print(f'Could not read the organisations of server {server.id}: {e}')
+        return
+    try:
+        CACHE.store(server, organisations, publish_self=False)
+    except Exception as e:
+        print(f'Could not keep the organisations of server {server.id}: {e}')
+
+
+def listedByRefreshUrl(server: Server) -> Optional[str]:
+    """The index a full refresh lists for the fleet's health: only when the server has another server in its fleet
+    to compare with"""
+    if server.fleet_id is None:
+        return None
+    other = Server.query.filter(Server.fleet_id == server.fleet_id, Server.id != server.id).first()
+    return mispOps.ORGANISATION_INDEX[0] if other is not None else None
 
 
 def fleetComparison(server: Server, refresh: bool = False) -> dict:

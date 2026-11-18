@@ -539,6 +539,8 @@ def test_full_refresh_collects_registrations(monkeypatch):
         return [copy.deepcopy(answers[url]) for url in urls]
     monkeypatch.setattr(serverModel, "asyncFetcher", fakeFetcher)
     monkeypatch.setattr(redisModel, "setServerWatchedTimestamp", lambda uuid: None)
+    # The fake server's fleet may hold servers of other tests: organisations are not what this test is about
+    monkeypatch.setattr(serverModel.organisationModel, "listedByRefreshUrl", lambda server: None)
 
     asyncio.run(serverModel.fetchServerInfoAsync(srv, {}))
 
