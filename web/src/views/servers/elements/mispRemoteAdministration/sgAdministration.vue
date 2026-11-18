@@ -33,7 +33,7 @@
             Compared by UUID with {{ comparison.compared.length }} other server{{ comparison.compared.length === 1 ? "" : "s" }}
             of <strong>{{ fleetName }}</strong>.
             <template v-if="mismatchCount > 0">
-                <button type="button" class="btn btn-link inline-link" @click="differsOnly = true">
+                <button type="button" class="btn btn-link inline-link" @click="showAttentionOnly">
                     {{ mismatchCount }} sharing group{{ mismatchCount === 1 ? "" : "s" }} differ{{ mismatchCount === 1 ? "s" : "" }}
                 </button>.
             </template>
@@ -58,16 +58,15 @@
             </button>
         </div>
         <button
-            v-if="hasFleet"
             type="button"
-            :class="['attention-toggle', { active: differsOnly, empty: mismatchCount === 0 }]"
-            :aria-pressed="differsOnly ? 'true' : 'false'"
-            :disabled="mismatchCount === 0 && !differsOnly"
-            title="Groups that another server of the fleet has with other members, flags or name, or under another UUID"
-            @click="differsOnly = !differsOnly"
+            :class="['attention-toggle', { active: attentionOnly, empty: attentionCount === 0 }]"
+            :aria-pressed="attentionOnly ? 'true' : 'false'"
+            :disabled="attentionCount === 0 && !attentionOnly"
+            title="Groups that differ in the fleet, look-alike names, no member, creator not a member, inactive but still syncing"
+            @click="attentionOnly = !attentionOnly"
         >
-            <i class="fas fa-exchange-alt" aria-hidden="true"></i>
-            Differs in the fleet<span class="segment-count">{{ mismatchCount }}</span>
+            <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+            Needs attention<span class="segment-count">{{ attentionCount }}</span>
         </button>
         <div class="search-box">
             <i class="fas fa-search" aria-hidden="true"></i>
@@ -124,6 +123,13 @@
                                 <span v-if="!row.group.active" class="kind-badge badge-inactive" title="Cannot be chosen for new events or attributes. Data already shared with it still syncs.">Inactive</span>
                             </div>
                             <div v-if="row.description" class="sub-line" :title="row.description">{{ row.description }}</div>
+                            <ul v-if="row.flags.length > 0" class="flag-list">
+                                <li v-for="(flag, index) in row.flags.slice(0, 2)" :key="flag.code + index" :class="['flag', `flag-${flag.tone}`]">
+                                    <i :class="['fas', flag.tone === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle']" aria-hidden="true"></i>
+                                    {{ flag.text }}
+                                </li>
+                                <li v-if="row.flags.length > 2" class="flag flag-more">+{{ row.flags.length - 2 }} more</li>
+                            </ul>
                         </td>
                         <td class="col-uuid"><code :title="row.group.uuid">{{ row.group.uuid.slice(0, 8) }}</code></td>
                         <td class="col-creator">{{ row.group.creator ? row.group.creator.name : "—" }}</td>
@@ -208,7 +214,7 @@
 <script>
 import api from "@/api/sharingGroups"
 import { normalisedName } from "@/helpers/organisations"
-import { extendCount, fleetStanding, matchesSearch, serversSummary } from "@/helpers/sharingGroups"
+import { attentionFlags, extendCount, fleetStanding, matchesSearch, nearDuplicateGroups, serversSummary } from "@/helpers/sharingGroups"
 import SharingGroupDetailModal from "@/views/servers/elements/mispRemoteAdministration/sharingGroups/SharingGroupDetailModal.vue"
 import SharingGroupFormModal from "@/views/servers/elements/mispRemoteAdministration/sharingGroups/SharingGroupFormModal.vue"
 import SharingGroupCopyModal from "@/views/servers/elements/mispRemoteAdministration/sharingGroups/SharingGroupCopyModal.vue"
@@ -249,7 +255,7 @@ export default {
             comparing: false,
             comparisonError: null,
             scope: "all",
-            differsOnly: false,
+            attentionOnly: false,
             search: "",
             sort: { key: "name", desc: false },
             currentPage: 1,
@@ -292,15 +298,22 @@ export default {
             }
             return names
         },
+        duplicates() {
+            return nearDuplicateGroups(this.groups)
+        },
         rows() {
-            return this.groups.map(group => Object.freeze({
-                group,
-                standing: fleetStanding(group, this.comparison, this.serverNames),
-                servers: serversSummary(group),
-                extend: extendCount(group),
-                // Shown under the name, unless it only repeats it
-                description: normalisedName(group.description) === normalisedName(group.name) ? "" : group.description,
-            }))
+            return this.groups.map(group => {
+                const standing = fleetStanding(group, this.comparison, this.serverNames)
+                return Object.freeze({
+                    group,
+                    standing,
+                    flags: attentionFlags(group, { standing, duplicates: this.duplicates[group.uuid] || [] }),
+                    servers: serversSummary(group),
+                    extend: extendCount(group),
+                    // Shown under the name, unless it only repeats it
+                    description: normalisedName(group.description) === normalisedName(group.name) ? "" : group.description,
+                })
+            })
         },
         counts() {
             const active = this.groups.filter(group => group.active).length
@@ -316,13 +329,16 @@ export default {
         mismatchCount() {
             return this.rows.filter(row => row.standing && row.standing.mismatches > 0).length
         },
+        attentionCount() {
+            return this.rows.filter(row => row.flags.length > 0).length
+        },
         filtersActive() {
-            return this.scope !== "all" || this.differsOnly || this.search.trim() !== ""
+            return this.scope !== "all" || this.attentionOnly || this.search.trim() !== ""
         },
         filteredRows() {
             const rows = this.rows.filter(row =>
                 (this.scope === "all" || (this.scope === "active") === row.group.active) &&
-                (!this.differsOnly || (row.standing && row.standing.mismatches > 0)) &&
+                (!this.attentionOnly || row.flags.length > 0) &&
                 matchesSearch(row.group, this.search))
             const key = this.sort.key
             const value = (row) => {
@@ -400,7 +416,7 @@ export default {
         scope() {
             this.currentPage = 1
         },
-        differsOnly() {
+        attentionOnly() {
             this.currentPage = 1
         },
         search() {
@@ -473,9 +489,12 @@ export default {
             }
             return parts.join(" · ")
         },
+        showAttentionOnly() {
+            this.attentionOnly = true
+        },
         clearFilters() {
             this.scope = "all"
-            this.differsOnly = false
+            this.attentionOnly = false
             this.search = ""
         },
         openDetail(row) {
@@ -572,6 +591,35 @@ export default {
     font-size: 0.8rem;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.flag-list {
+    margin: 0.2rem 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.flag {
+    font-size: 0.8rem;
+    line-height: 1.45;
+}
+
+.flag i {
+    width: 1em;
+    margin-right: 0.15em;
+    font-size: 0.85em;
+}
+
+.flag-warning {
+    color: var(--health-warning-ink);
+}
+
+.flag-info {
+    color: var(--health-info-ink);
+}
+
+.flag-more {
+    color: #6c757d;
 }
 
 .col-members {

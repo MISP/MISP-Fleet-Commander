@@ -41,7 +41,7 @@
                 </b-dropdown>
             </div>
 
-            <section v-if="row.flags.length > 0" class="detail-section attention" aria-label="Needs attention">
+            <section v-if="row.flags.length > 0" :class="['detail-section', 'attention', { 'attention-info': row.flags.every(flag => flag.tone === 'info') }]" aria-label="Needs attention">
                 <ul class="flag-list">
                     <li v-for="(flag, index) in row.flags" :key="flag.code + index" :class="['flag', `flag-${flag.tone}`]">
                         <i :class="['fas', flag.tone === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle']" aria-hidden="true"></i>
@@ -236,6 +236,12 @@ export default {
     border-left: 3px solid var(--health-warning) !important;
     border-radius: 0 0.25rem 0.25rem 0;
     background: var(--health-warning-tint);
+}
+
+/* Only notes, no warning */
+.attention-info {
+    border-left-color: var(--health-info) !important;
+    background: var(--health-info-tint);
 }
 
 .attention + .detail-section {

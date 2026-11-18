@@ -55,6 +55,15 @@
                 </b-dropdown>
             </div>
 
+            <section v-if="row.flags.length > 0" :class="['detail-section', 'attention', { 'attention-info': row.flags.every(flag => flag.tone === 'info') }]" aria-label="Needs attention">
+                <ul class="flag-list">
+                    <li v-for="(flag, index) in row.flags" :key="flag.code + index" :class="['flag', `flag-${flag.tone}`]">
+                        <i :class="['fas', flag.tone === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle']" aria-hidden="true"></i>
+                        <span>{{ flag.text }}<span class="flag-help">{{ flagHelp[flag.code] }}</span></span>
+                    </li>
+                </ul>
+            </section>
+
             <section class="detail-section">
                 <dl class="detail-grid">
                     <dt>UUID</dt>
@@ -157,7 +166,7 @@ export default {
             type: Object,
             required: true,
         },
-        // A row of the sharing group table: {group, standing, servers, extend}
+        // A row of the sharing group table: {group, standing, servers, extend, flags}
         row: {
             type: Object,
             default: null,
@@ -175,6 +184,14 @@ export default {
         return {
             copied: false,
             states: FLEET_STATES,
+            flagHelp: {
+                other_uuid: " — for MISP they are two groups: events shared with one are not shared with the other. Keep one of them on every server.",
+                differs: " — its events reach different organisations depending on the server they are read on. “Create or complete on other servers” adds the members a server lacks.",
+                duplicate: " — probably one group created more than once, or copied under a new name because its name was taken (MISP adds “_4821”). Events shared with one are not shared with the others.",
+                no_members: " — only site administrators and the organisations that own its events see them.",
+                creator_not_member: " — it can still view and edit the group, but not the events others share with it.",
+                inactive_syncs: " — it can no longer be chosen for new data, but what is already shared with it is still pushed to sync servers.",
+            },
             usage: { uuid: null, loading: false, events: null, error: null },
         }
     },
@@ -336,5 +353,55 @@ export default {
 
 .faded {
     opacity: 0.6;
+}
+
+.attention {
+    padding: 0.55rem 0.75rem !important;
+    border: 0 !important;
+    border-left: 3px solid var(--health-warning) !important;
+    border-radius: 0 0.25rem 0.25rem 0;
+    background: var(--health-warning-tint);
+}
+
+/* Only notes, no warning */
+.attention-info {
+    border-left-color: var(--health-info) !important;
+    background: var(--health-info-tint);
+}
+
+.attention + .detail-section {
+    border-top: 0;
+}
+
+.flag-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.flag {
+    display: flex;
+    gap: 0.45em;
+    line-height: 1.45;
+}
+
+.flag + .flag {
+    margin-top: 0.25rem;
+}
+
+.flag i {
+    margin-top: 0.2em;
+}
+
+.flag-warning i {
+    color: var(--health-warning-ink);
+}
+
+.flag-info i {
+    color: var(--health-info-ink);
+}
+
+.flag-help {
+    color: #5a6270;
 }
 </style>

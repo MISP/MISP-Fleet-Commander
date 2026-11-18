@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import {
-    addPayload, baselineRule, changeCount, differenceTexts, editPayload, extendCount, fleetStanding, formFrom,
-    matchesSearch, namesText, nameTaken, serversSummary,
+    addPayload, attentionFlags, baselineRule, changeCount, differenceTexts, editPayload, extendCount, fleetStanding, formFrom,
+    matchesSearch, namesBeforeRenames, namesText, nameTaken, nearDuplicateGroups, serversSummary,
 } from "@/helpers/sharingGroups"
 
 const ADMIN = { uuid: "5705de1d-143c-4637-959f-016e291a0265", name: "ADMIN", extend: true }
@@ -147,5 +147,73 @@ describe("forms", () => {
         expect(changes.servers).toEqual([{ server_id: 0, all_orgs: true, name: "Local instance" }])
         expect(changeCount(GROUP, changes)).toBe(2)
         expect(editPayload(GROUP, { ...form, roaming: true })).toEqual({ roaming: true })
+    })
+})
+
+describe("attention flags", () => {
+    const standing = fleetStanding(GROUP, COMPARISON, NAMES)
+    const codes = flags => flags.map(flag => flag.code)
+
+    it("strips MISP's rename suffixes one after the other", () => {
+        expect(namesBeforeRenames("X_4821")).toEqual(["X"])
+        expect(namesBeforeRenames("CIRCL + ORG_6 - [2]")).toEqual(["CIRCL + ORG_6", "CIRCL + ORG"])
+        expect(namesBeforeRenames("Benelux")).toEqual([])
+        expect(namesBeforeRenames("_2")).toEqual([])
+    })
+
+    it("groups look-alikes and renamed copies of a group still there", () => {
+        const groups = [
+            { uuid: "a", name: "X" }, { uuid: "b", name: "X_4821" }, { uuid: "c", name: "x. - [3]" },
+            { uuid: "d", name: "Y" }, { uuid: "e", name: "y" },
+            { uuid: "f", name: "ORG_6" }, { uuid: "g", name: "ORG_7" },
+            { uuid: "h", name: "CIRCL + ORG_6" }, { uuid: "i", name: "CIRCL + ORG_6 - [2]" },
+        ]
+        expect(nearDuplicateGroups(groups)).toEqual({
+            a: ["X_4821", "x. - [3]"], b: ["X", "x. - [3]"], c: ["X", "X_4821"],
+            d: ["y"], e: ["Y"],
+            h: ["CIRCL + ORG_6 - [2]"], i: ["CIRCL + ORG_6"],
+        })
+    })
+
+    it("flags nothing for a healthy group", () => {
+        expect(attentionFlags(GROUP)).toEqual([])
+    })
+
+    it("flags what differs in the fleet first", () => {
+        const flags = attentionFlags(GROUP, { standing, duplicates: ["Benelux_2"] })
+        expect(codes(flags)).toEqual(["other_uuid", "differs", "duplicate"])
+        expect(flags[0]).toMatchObject({ tone: "warning", text: "Another UUID on misp-f" })
+        expect(flags[1].text.startsWith("On misp-c: ")).toBe(true)
+        expect(flags[2]).toMatchObject({ tone: "info", text: "Looks like “Benelux_2”" })
+    })
+
+    it("names every look-alike in one flag", () => {
+        expect(attentionFlags(GROUP, { duplicates: ["A", "B"] })).toEqual([{ code: "duplicate", tone: "info", text: "Looks like “A” and “B”" }])
+        expect(attentionFlags(GROUP, { duplicates: ["A", "B", "C"] })[0].text).toBe("Looks like “A”, “B” and 1 more")
+    })
+
+    it("flags a group without member, unless a server takes every organisation", () => {
+        const empty = { ...GROUP, members: [], creator: null }
+        expect(codes(attentionFlags(empty))).toEqual([])
+        expect(codes(attentionFlags({ ...empty, servers: [{ server_id: 0, name: "Local instance", all_orgs: false }] }))).toEqual(["no_members"])
+        expect(codes(attentionFlags({ ...empty, servers: [{ server_id: 0, name: "Local instance", all_orgs: true }] }))).toEqual([])
+    })
+
+    it("flags a creator that is not a member", () => {
+        const group = { ...GROUP, creator: { id: 9, uuid: ADMIN.uuid.toUpperCase(), name: "ADMIN" }, members: [CIRCL] }
+        expect(attentionFlags(group)[0]).toMatchObject({ code: "creator_not_member", text: "Its creator, ADMIN, is not a member" })
+        expect(codes(attentionFlags({ ...group, members: [ADMIN] }))).toEqual([])
+        const everyone = { ...group, servers: [{ server_id: 0, name: "Local instance", all_orgs: true }] }
+        expect(codes(attentionFlags(everyone))).toEqual([])
+        const nobody = { ...group, members: [], servers: [{ server_id: 0, name: "Local instance", all_orgs: false }] }
+        expect(codes(attentionFlags(nobody))).toEqual(["no_members"])
+    })
+
+    it("flags an inactive group that still syncs", () => {
+        const inactive = { ...GROUP, active: false }
+        expect(codes(attentionFlags(inactive))).toEqual(["inactive_syncs"])
+        expect(codes(attentionFlags({ ...inactive, servers: [{ server_id: 0, name: "Local instance", all_orgs: false }] }))).toEqual([])
+        expect(codes(attentionFlags({ ...inactive, servers: [], roaming: false }))).toEqual(["inactive_syncs"])
+        expect(codes(attentionFlags({ ...inactive, roaming: true, servers: [{ server_id: 0, name: "Local instance", all_orgs: false }] }))).toEqual(["inactive_syncs"])
     })
 })

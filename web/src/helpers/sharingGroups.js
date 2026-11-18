@@ -1,6 +1,6 @@
 // What the Sharing groups tab of Remote administration says about each sharing group of a server: how it stands in
 // the fleet, and what its forms send. Plain functions over the API's answers
-import { listText, normalisedName } from "@/helpers/organisations"
+import { duplicateKey, listText, normalisedName } from "@/helpers/organisations"
 
 // The MISP instance itself among a group's servers
 export const LOCAL_INSTANCE = 0
@@ -258,4 +258,82 @@ export function changeCount(group, changes) {
         before.forEach((allOrgs, id) => { count += after.has(id) ? 0 : 1 })
     }
     return count
+}
+
+// MISP renames a new group whose name is taken: "name_<random number>". Copies made by other tools read
+// "name - [2]". The names a group may have had before such renames, most stripped last ("X_2 - [3]" → "X_2", "X")
+const RENAME_SUFFIX = /(?:\s*-\s*\[\d+\]|_\d+)\s*$/
+
+export function namesBeforeRenames(name) {
+    const names = []
+    let current = String(name || "").trim()
+    let stripped = current.replace(RENAME_SUFFIX, "").trim()
+    while (stripped !== "" && stripped !== current) {
+        names.push(stripped)
+        current = stripped
+        stripped = current.replace(RENAME_SUFFIX, "").trim()
+    }
+    return names
+}
+
+// Groups of the server that are probably one group twice: uuid → the other names. Same name once case, accents and
+// punctuation are ignored, or a renamed copy of a group that is still there ("X_4821" next to "X"). Two renamed
+// copies go together only through the group they copy: "ORG_6" and "ORG_7" alone are two groups
+export function nearDuplicateGroups(groups) {
+    const keys = new Set(groups.map(group => duplicateKey(group.name)).filter(key => key !== ""))
+    const clusters = {}
+    groups.forEach((group) => {
+        let key = duplicateKey(group.name)
+        namesBeforeRenames(group.name).forEach((name) => {
+            const before = duplicateKey(name)
+            if (keys.has(before)) {
+                key = before
+            }
+        })
+        if (key) {
+            (clusters[key] = clusters[key] || []).push(group)
+        }
+    })
+    const result = {}
+    Object.values(clusters).forEach((same) => {
+        if (same.length > 1) {
+            same.forEach((group) => {
+                result[group.uuid] = same.filter(other => other.uuid !== group.uuid).map(other => other.name)
+            })
+        }
+    })
+    return result
+}
+
+// What deserves a look in a group, most important first: [{code, tone, text}]
+export function attentionFlags(group, { standing = null, duplicates = [] } = {}) {
+    const flags = []
+    if (standing) {
+        standing.rows.filter(row => row.state === "other_uuid").forEach(row => flags.push({
+            code: "other_uuid", tone: "warning", text: `Another UUID on ${row.name}`,
+        }))
+        standing.rows.filter(row => row.state === "differs").forEach(row => flags.push({
+            code: "differs", tone: "warning", text: `On ${row.name}: ${row.details.join("; ")}`,
+        }))
+    }
+    if (duplicates.length > 0) {
+        flags.push({ code: "duplicate", tone: "info", text: `Looks like ${namesText(duplicates.map(name => `“${name}”`), 2)}` })
+    }
+    const servers = group.servers || []
+    const members = group.members || []
+    const local = servers.find(server => server.server_id === LOCAL_INSTANCE)
+    if (members.length === 0 && !servers.some(server => server.all_orgs)) {
+        flags.push({ code: "no_members", tone: "info", text: "No member" })
+    }
+    // Without any member, "no member" says it all
+    if (group.creator && members.length > 0 && !(local && local.all_orgs)) {
+        const creator = String(group.creator.uuid || "").toLowerCase()
+        if (!members.some(member => String(member.uuid || "").toLowerCase() === creator)) {
+            flags.push({ code: "creator_not_member", tone: "info", text: `Its creator, ${group.creator.name}, is not a member` })
+        }
+    }
+    if (!group.active && (group.roaming || servers.length === 0 || servers.some(server => server.server_id !== LOCAL_INSTANCE))) {
+        flags.push({ code: "inactive_syncs", tone: "info", text: "Inactive, but still syncs" })
+    }
+    return flags
 }
