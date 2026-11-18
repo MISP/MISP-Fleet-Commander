@@ -19,6 +19,7 @@ from application.DBModels import db, MetricSample, MetricState
 from application.controllers.utils import errorText, mispGetRequest, mispPostRequest
 from application.models import metricCatalogue as catalogue
 from application.models.servers import isDue, isUnanswered
+import application.models.setting as settingModel
 from application.models.syncActivity import readableLogError
 
 HOUR = 3600
@@ -30,6 +31,15 @@ BACKFILL_DAYS = (90, 30, 14, 7)
 LOGIN_WINDOW_MARGIN_MINUTES = 10
 LOGIN_WINDOW_MAX_MINUTES = 24 * 60
 ERROR_MAX_LENGTH = 500
+
+
+def monitoringSettings() -> dict:
+    """Read on every call, so that changes made in the settings apply without restarting the workers"""
+    return {
+        'enabled': bool(settingModel.getRefreshValue('monitoring_enabled')),
+        'interval': int(settingModel.getValue('monitoring_interval')) * 60,
+        'max_concurrency': int(settingModel.getValue('health_max_concurrency')),
+    }
 
 
 @dataclass(frozen=True)

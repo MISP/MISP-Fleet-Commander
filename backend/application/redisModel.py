@@ -14,6 +14,7 @@ KEY_FLEET_WATCHED = 'fleet-watched'
 KEY_SERVER_PICTURES_CACHED = "server-pic-cached"
 # Expire on their own (models/syncActivity.py, models/organisations.py, models/sharingGroups.py)
 KEY_SYNC_ACTIVITY = 'sync-activity'
+KEY_SERVER_BENCHMARKS = 'server-benchmarks'
 KEY_SERVER_ORGANISATIONS = 'server-orgs'
 KEY_SERVER_SHARING_GROUPS = 'server-sgs'
 # Which organisations each server has, and how they line up across its fleet (models/organisationDigests.py)
@@ -64,6 +65,7 @@ def deleteServerData(server_uuid: str, server_id: Union[int, None] = None) -> No
     if server_id is not None:
         keys.append(f"{KEY_HEALTH_FIRST_SEEN}:{server_id}")
         keys.append(f"{KEY_SYNC_ACTIVITY}:{server_id}")
+        keys.append(f"{KEY_SERVER_BENCHMARKS}:{server_id}")
     redisClient.delete(*keys)
 
 

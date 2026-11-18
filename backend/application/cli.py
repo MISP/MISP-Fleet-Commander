@@ -57,7 +57,8 @@ def watchFleet(fleet_id: int, minute: int = 5, delay_second: int = 10):
 @server_cli.command('monitor-fleets')
 def monitorFleet():
     """Collect the metrics of every server of the monitored fleets once, whether they are due or not"""
-    if not settingModel.getRefreshValue("monitoring_enabled"):
+    config = metricModel.monitoringSettings()
+    if not config["enabled"]:
         print('Note: monitoring is not enabled in the settings, the workers do not collect metrics on their own')
     fleets = fleetModel.indexMonitored()
     servers = metricModel.monitoredServers(fleets)
@@ -66,8 +67,7 @@ def monitorFleet():
     def report(server, state):
         outcome = 'stored' if state.last_success == state.last_attempt else 'nothing stored'
         print(f'    - {server.name} ({server.id}): {outcome}' + (f'. {state.last_error}' if state.last_error else ''))
-    metricModel.collectAndAnnounce(servers, int(settingModel.getValue("monitoring_interval")) * 60,
-                                   int(settingModel.getValue("health_max_concurrency")), socketioEmitter,
+    metricModel.collectAndAnnounce(servers, config["interval"], config["max_concurrency"], socketioEmitter,
                                    onCollected=report)
 
 @server_cli.command("cache-monitoring-images")

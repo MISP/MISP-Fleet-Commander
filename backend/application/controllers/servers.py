@@ -17,6 +17,9 @@ from application.controllers.utils import mispGetHTMLRequest, mispGetRequest, mi
 from application.marshmallowSchemas import ServerSchema, serverQuerySchema, serverSchema, taskSchema, serversSchema, serversListSchema
 import application.models.servers as serverModel
 import application.models.syncActivity as syncActivityModel
+import application.models.metrics as metricModel
+import application.models.metricSeries as metricSeriesModel
+import application.models.benchmarks as benchmarkModel
 import application.models.instancePicture as instancePictureModel
 from application.models.servers import MONITORING_PANELS, MONITORING_PANEL_BY_ID
 from application.controllers.instance import token_required
@@ -374,6 +377,32 @@ def syncOvertime(user, server_id):
         abort(404)
     refresh = request.args.get('refresh', '0') not in ('', '0', 'false')
     return jsonify(syncActivityModel.getSyncActivity(server, refresh=refresh))
+
+@BPserver.route('/servers/metrics/<int:server_id>', methods=['GET'])
+@token_required
+def serverMetrics(user, server_id):
+    """Stored usage metrics of the server over `range` (24h, 7d, 30d, 90d, 1y), optionally from another `tier`
+    (raw, hour, day) and only the `metrics` given (comma-separated keys), with the collection's state"""
+    server = serverModel.getForUser(user, server_id)
+    if server is None:
+        abort(404)
+    try:
+        rangeName, tier, keys = metricSeriesModel.parseRequest(request.args.get('range'), request.args.get('tier'),
+                                                               request.args.get('metrics'))
+    except metricSeriesModel.SeriesRequestError as e:
+        return jsonify({'message': str(e)}), 400
+    return jsonify(metricSeriesModel.series(server, rangeName, tier, keys, metricModel.monitoringSettings()))
+
+@BPserver.route('/servers/benchmarks/<int:server_id>', methods=['GET'])
+@token_required
+def serverBenchmarks(user, server_id):
+    """Today's most expensive endpoints of the server, from MISP's benchmarking. Cached 5 minutes; `?refresh=1`
+    asks MISP again"""
+    server = serverModel.getForUser(user, server_id)
+    if server is None:
+        abort(404)
+    refresh = request.args.get('refresh', '0') not in ('', '0', 'false')
+    return jsonify(benchmarkModel.getBenchmarks(server, refresh=refresh))
 
 @BPserver.route('/servers/loginOvertime/<int:server_id>', methods=['GET'])
 @token_required

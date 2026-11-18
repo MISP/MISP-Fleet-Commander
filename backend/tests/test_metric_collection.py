@@ -314,9 +314,9 @@ def emitted(monkeypatch):
 
 @pytest.fixture()
 def monitoring(monkeypatch):
-    import application.workers.tasks as tasks
+    import application.models.metrics as metrics
     config = {"enabled": True, "interval": 600, "max_concurrency": 2}
-    monkeypatch.setattr(tasks, "monitoringSettings", lambda: dict(config))
+    monkeypatch.setattr(metrics, "monitoringSettings", lambda: dict(config))
     return config
 
 
@@ -370,8 +370,8 @@ def test_the_task_does_nothing_when_monitoring_is_off(monkeypatch, fleets, monit
 
 
 def test_monitoring_settings(monkeypatch):
+    import application.models.metrics as metrics
     import application.models.setting as settingModel
-    import application.workers.tasks as tasks
     assert settingModel.get("monitoring_enabled")["disabled"] is False
     assert settingModel.get("monitoring_enabled")["error"] is False
     assert settingModel.validate("monitoring_interval", 30) == 30
@@ -381,7 +381,7 @@ def test_monitoring_settings(monkeypatch):
     values = {"monitoring_enabled": True, "monitoring_interval": 15, "health_max_concurrency": 4}
     monkeypatch.setattr(settingModel, "getRefreshValue", lambda name: values[name])
     monkeypatch.setattr(settingModel, "getValue", lambda name: values[name])
-    assert tasks.monitoringSettings() == {"enabled": True, "interval": 900, "max_concurrency": 4}
+    assert metrics.monitoringSettings() == {"enabled": True, "interval": 900, "max_concurrency": 4}
 
 
 # --- Migration --------------------------------------------------------------------------------------------------------
