@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import {
     attentionFlags, baselineRule, changedFields, domainLines, duplicateKey, fleetStanding, listText, matchesSearch,
-    nearDuplicates, normalisedName, syncReasons, userCountOf, usersByOrganisation,
+    namesText, nearDuplicates, normalisedName, syncCopies, syncReasons, userCountOf, usersByOrganisation,
 } from "@/helpers/organisations"
 
 const CIRCL = {
@@ -110,6 +110,42 @@ describe("attention", () => {
             .toEqual(["no_users", "duplicate"])
         expect(attentionFlags({ ...CIRCL, local: false }, { userCount: 0 })).toEqual([])
         expect(attentionFlags(CIRCL, { userCount: null })).toEqual([])
+    })
+
+    it("finds the copies sync made of an organisation of the server", () => {
+        const admin = { id: 1, uuid: "a", name: "ADMIN", local: true }
+        const copyA = { id: 2, uuid: "b", name: "ADMIN_4174", local: false }
+        const copyB = { id: 3, uuid: "c", name: "admin_8886", local: false }
+        const organisations = [
+            admin, copyA, copyB,
+            { id: 4, uuid: "d", name: "CERT-FR_1510", local: false }, // its original is not on this server
+            { id: 5, uuid: "e", name: "Team_2", local: true }, // sync creates external organisations only
+            { id: 6, uuid: "f", name: "Team", local: true },
+            { id: 7, uuid: "g", name: "Year_20245", local: false }, // MISP adds at most 4 digits
+            { id: 8, uuid: "h", name: "Year", local: true },
+        ]
+        const { copyOf, copies } = syncCopies(organisations)
+        expect(copyOf).toEqual({ 2: admin, 3: admin })
+        expect(copies).toEqual({ 1: [copyA, copyB] })
+    })
+
+    it("flags a sync copy and its original, with links to each other", () => {
+        const admin = { id: 1, uuid: "a", name: "ADMIN", local: true }
+        const copy = { id: 2, uuid: "b", name: "ADMIN_4174", local: false }
+        const third = { id: 3, uuid: "c", name: "ADMIN_8886", local: false }
+        expect(attentionFlags(copy, { copyOf: admin })).toEqual([{
+            code: "sync_copy", tone: "warning", text: "Copy of “ADMIN” made by sync", links: [{ uuid: "a", name: "ADMIN" }],
+        }])
+        const [flag] = attentionFlags(admin, { userCount: 5, copies: [copy, third] })
+        expect(flag).toMatchObject({ code: "sync_copies", tone: "info", text: "Copied by sync as “ADMIN_4174” and “ADMIN_8886”" })
+        expect(flag.links.map(link => link.uuid)).toEqual(["b", "c"])
+        expect(attentionFlags(admin, { copies: [copy, third, { ...third, uuid: "d", name: "ADMIN_1" }] })[0].text)
+            .toBe("Copied by sync as “ADMIN_4174”, “ADMIN_8886” and 1 more")
+    })
+
+    it("shortens long lists of names", () => {
+        expect(namesText(["a", "b"], 2)).toBe("a and b")
+        expect(namesText(["a", "b", "c"], 2)).toBe("a, b and 1 more")
     })
 })
 

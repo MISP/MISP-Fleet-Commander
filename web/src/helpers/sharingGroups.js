@@ -1,6 +1,8 @@
 // What the Sharing groups tab of Remote administration says about each sharing group of a server: how it stands in
 // the fleet, and what its forms send. Plain functions over the API's answers
-import { duplicateKey, listText, normalisedName } from "@/helpers/organisations"
+import { duplicateKey, namesText, normalisedName } from "@/helpers/organisations"
+
+export { namesText }
 
 // The MISP instance itself among a group's servers
 export const LOCAL_INSTANCE = 0
@@ -15,14 +17,6 @@ export const FLEET_STATES = {
 
 function plural(count, noun, nouns = `${noun}s`) {
     return `${count} ${count === 1 ? noun : nouns}`
-}
-
-// Names, five at most, then how many more
-export function namesText(names, shown = 5) {
-    if (names.length <= shown) {
-        return listText(names)
-    }
-    return `${names.slice(0, shown).join(", ")} and ${names.length - shown} more`
 }
 
 // What differs on another server, in words. `entry`: a `differs` entry of the fleet answer (their values)

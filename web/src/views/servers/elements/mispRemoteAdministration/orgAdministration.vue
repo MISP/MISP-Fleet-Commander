@@ -62,7 +62,7 @@
             :class="['attention-toggle', { active: attentionOnly, empty: attentionCount === 0 }]"
             :aria-pressed="attentionOnly ? 'true' : 'false'"
             :disabled="attentionCount === 0 && !attentionOnly"
-            title="Names or UUIDs that differ in the fleet, local organisations without users, likely duplicates"
+            title="Names or UUIDs that differ in the fleet, copies made by sync, local organisations without users, likely duplicates"
             @click="attentionOnly = !attentionOnly"
         >
             <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
@@ -182,6 +182,7 @@
         @edit="openForm"
         @copy="openCopy"
         @baseline="openBaseline"
+        @show-organisation="reveal"
     ></OrganisationDetailModal>
     <OrganisationFormModal
         :server="server"
@@ -207,7 +208,7 @@
 import { mapGetters } from "vuex"
 import api from "@/api/organisations"
 import {
-    attentionFlags, fleetStanding, matchesSearch, nearDuplicates, syncIndex, syncReasonsFrom, userCountOf,
+    attentionFlags, fleetStanding, matchesSearch, nearDuplicates, syncCopies, syncIndex, syncReasonsFrom, userCountOf,
     usersByOrganisation,
 } from "@/helpers/organisations"
 import OrganisationDetailModal from "@/views/servers/elements/mispRemoteAdministration/organisations/OrganisationDetailModal.vue"
@@ -310,6 +311,9 @@ export default {
         duplicates() {
             return nearDuplicates(this.organisations)
         },
+        copies() {
+            return syncCopies(this.organisations)
+        },
         syncReasonIndex() {
             return syncIndex({
                 outgoing: this.links.outgoing,
@@ -327,7 +331,13 @@ export default {
                     standing,
                     users,
                     sync: this.syncOf(org),
-                    flags: attentionFlags(org, { standing, userCount: users, duplicates: this.duplicates[org.id] || [] }),
+                    flags: attentionFlags(org, {
+                        standing,
+                        userCount: users,
+                        duplicates: this.duplicates[org.id] || [],
+                        copyOf: this.copies.copyOf[org.id] || null,
+                        copies: this.copies.copies[org.id] || [],
+                    }),
                 })
             })
         },

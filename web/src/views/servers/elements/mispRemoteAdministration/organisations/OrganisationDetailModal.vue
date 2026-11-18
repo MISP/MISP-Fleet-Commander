@@ -45,7 +45,18 @@
                 <ul class="flag-list">
                     <li v-for="(flag, index) in row.flags" :key="flag.code + index" :class="['flag', `flag-${flag.tone}`]">
                         <i :class="['fas', flag.tone === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle']" aria-hidden="true"></i>
-                        <span>{{ flag.text }}<span class="flag-help">{{ flagHelp[flag.code] }}</span></span>
+                        <span>
+                            {{ flag.text }}<span class="flag-help">{{ flagHelp[flag.code] }}</span>
+                            <span v-if="flag.links" class="flag-links">
+                                <button
+                                    v-for="link in flag.links"
+                                    :key="link.uuid"
+                                    type="button"
+                                    class="btn btn-link flag-link"
+                                    @click="$emit('show-organisation', link.uuid)"
+                                >Show “{{ link.name }}”</button>
+                            </span>
+                        </span>
                     </li>
                 </ul>
             </section>
@@ -154,6 +165,8 @@ export default {
                 other_uuid: " — events and sharing groups from that server name a different organisation. Edit one of them so that the UUIDs match.",
                 no_users: " — nobody can log in for it here. Make it external, or remove it in MISP if it is not needed.",
                 duplicate: " — the same organisation may have been created twice.",
+                sync_copy: " — sync brought an organisation with a UUID this server did not know while the name was taken, and MISP renamed it. Probably one organisation under two UUIDs: what servers using this UUID sync goes to this copy. Merging them is done in MISP.",
+                sync_copies: " — organisations sync brought with other UUIDs while this name was taken. Probably this organisation under the UUID other servers use.",
             },
         }
     },
@@ -278,5 +291,20 @@ export default {
 
 .flag-help {
     color: #5a6270;
+}
+
+.flag-links {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0 0.75em;
+    margin-left: 0.4em;
+}
+
+.flag-link {
+    padding: 0;
+    border: 0;
+    font-size: inherit;
+    line-height: inherit;
+    vertical-align: baseline;
 }
 </style>

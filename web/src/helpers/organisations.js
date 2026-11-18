@@ -158,6 +158,39 @@ export function listText(items) {
     return items.length <= 1 ? items.join("") : `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`
 }
 
+// Names, `shown` at most, then how many more
+export function namesText(names, shown = 5) {
+    if (names.length <= shown) {
+        return listText(names)
+    }
+    return `${names.slice(0, shown).join(", ")} and ${names.length - shown} more`
+}
+
+// MISP's capture creates an organisation that sync brings with a UUID unknown here as external, renamed
+// "name_<0-9999>" when the name is taken
+const SYNC_COPY_NAME = /^(.*\S)_\d{1,4}$/
+
+// Organisations of the server that sync created as copies of another one: `copyOf` (copy id → the original) and
+// `copies` (original id → its copies)
+export function syncCopies(organisations) {
+    const byName = {}
+    organisations.forEach((org) => {
+        const name = normalisedName(org.name)
+        byName[name] = byName[name] || org
+    })
+    const copyOf = {}
+    const copies = {}
+    organisations.forEach((org) => {
+        const match = org.local ? null : SYNC_COPY_NAME.exec(String(org.name || "").trim())
+        const original = match ? byName[normalisedName(match[1])] : null
+        if (original && original.id !== org.id) {
+            copyOf[org.id] = original
+            ;(copies[original.id] = copies[original.id] || []).push(org)
+        }
+    })
+    return { copyOf, copies }
+}
+
 export function syncReasonsFrom(index, org) {
     const remotes = index.byUuid[org.uuid] || []
     const reasons = remotes.length === 0 ? [] : [{
@@ -176,8 +209,9 @@ export function syncReasons(org, context) {
     return syncReasonsFrom(syncIndex(context), org)
 }
 
-// What needs attention, most important first
-export function attentionFlags(org, { standing = null, userCount = null, duplicates = [] } = {}) {
+// What needs attention, most important first. `copyOf` / `copies`: see `syncCopies`; flags about other
+// organisations of the server name them in `links` ([{uuid, name}])
+export function attentionFlags(org, { standing = null, userCount = null, duplicates = [], copyOf = null, copies = [] } = {}) {
     const flags = []
     if (standing) {
         standing.rows.filter(row => row.state === "renamed").forEach(row => flags.push({
@@ -187,8 +221,20 @@ export function attentionFlags(org, { standing = null, userCount = null, duplica
             code: "other_uuid", tone: "warning", text: `Another UUID on ${row.name}`,
         }))
     }
+    if (copyOf) {
+        flags.push({
+            code: "sync_copy", tone: "warning", text: `Copy of “${copyOf.name}” made by sync`,
+            links: [{ uuid: copyOf.uuid, name: copyOf.name }],
+        })
+    }
     if (org.local && userCount === 0) {
         flags.push({ code: "no_users", tone: "info", text: "Local, without users" })
+    }
+    if (copies.length > 0) {
+        flags.push({
+            code: "sync_copies", tone: "info", text: `Copied by sync as ${namesText(copies.map(copy => `“${copy.name}”`), 2)}`,
+            links: copies.map(copy => ({ uuid: copy.uuid, name: copy.name })),
+        })
     }
     duplicates.forEach(name => flags.push({ code: "duplicate", tone: "info", text: `Looks like “${name}”` }))
     return flags
