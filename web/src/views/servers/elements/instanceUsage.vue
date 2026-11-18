@@ -1,111 +1,270 @@
 <template>
-    <b-card no-body>
-        <b-tabs pills card vertical>
-            <b-tab lazy no-body
-                title="Usage graphs"
-            >
-            <div v-if="isMonitoringEnabled">
-                <div class="pt-1 pr-1 mb-1 text-right text-nowrap">
-                    <div class="d-flex">
-                        <span>
-                            <b-link :href="getDashboardURL" target="_blank" class="text-nowrap ml-2 align-middle">
-                                View Full Dashboard
-                                <sup class="fa fa-external-link-alt"></sup>
-                            </b-link>
-                        </span>
-                        <span class="ml-auto">
-                            <strong class="mr-1">Graphs generated</strong>
-                            <b-badge variant="light" class="border align-middle">
-                                <timeSinceRefresh
-                                    :timestamp="getMonitoringGraphLastRefresh"
-                                ></timeSinceRefresh>
-                            </b-badge>
-                            <b-button
-                                :variant="getGraphRefreshEnqueued ? 'dark' : 'primary'"
-                                :disabled="getGraphRefreshEnqueued"
-                                size="xs"
-                                title="Refresh Graphs"
-                                href="#"
-                                class="ml-1 px-2"
-                                @click="refreshGraphs()"
-                            >
-                                <span v-if="getGraphRefreshEnqueued">
-                                    <i class="fas fa-sync-alt fa-spin"></i>
-                                    Refresh in progress {{ panel_refreshed_count }} / {{ total_panels }}
-                                </span>
-                                <span v-else>
-                                    <i class="fas fa-sync-alt"></i>
-                                    Full refresh
-                                </span>
-                            </b-button>
-                        </span>
-                    </div>
-                </div>
-                <div class="d-flex flex-wrap p-1" style="gap: 0.25rem;">
-                    <GrafanaRenderedGraph
-                        v-for="panel in sortedPanelsBySize"
-                        :key="panel.panel_id"
-                        :loadingRequested="getGraphRefreshEnqueued && !all_refreshed_panels.includes(panel.panel_id)"
-                        :panelId="panel.panel_id"
-                        :graphAltTitle="panel.alt_title"
-                        :width="panel.width"
-                        :height="panel.height"
-                        :server="getServer"
-                    ></GrafanaRenderedGraph>
+    <div class="usage">
+        <div class="usage-bar">
+            <div class="range-picker" role="group" aria-label="Range of the charts">
+                <button
+                    v-for="option in RANGES"
+                    :key="option.key"
+                    type="button"
+                    :class="['range-option', { 'is-selected': option.key === rangeKey }]"
+                    :aria-pressed="option.key === rangeKey ? 'true' : 'false'"
+                    :title="`Show ${option.phrase}`"
+                    @click="setRange(option.key)"
+                >{{ option.label }}</button>
+            </div>
+            <span v-if="latestTs" class="usage-meta">
+                Last sample <timeSinceRefresh noicon :small="false" :timestamp="latestTs"></timeSinceRefresh>
+                <template v-if="intervalMinutes">· every {{ intervalMinutes }} min</template>
+            </span>
+            <span v-else-if="!hasHistory && snapshotTs" class="usage-meta">
+                Last refresh <timeSinceRefresh noicon :small="false" :timestamp="snapshotTs"></timeSinceRefresh>
+            </span>
+            <span v-if="loading && data" class="usage-updating" role="status">
+                <i class="fas fa-circle-notch fa-spin" aria-hidden="true"></i> Updating…
+            </span>
+        </div>
+
+        <div v-if="notice" :class="['usage-notice', `is-${notice.level}`]" role="status">
+            <i :class="['fas', 'fa-fw', notice.icon]" aria-hidden="true"></i>
+            <div class="notice-text">
+                <strong>{{ notice.title }}</strong>
+                <span v-if="notice.text"> {{ notice.text }}</span>
+                <button v-if="notice.action === 'settings'" type="button" class="btn btn-link notice-action" @click="$bvModal.show('modal-settings')">
+                    Open the settings
+                </button>
+                <router-link v-else-if="notice.action === 'fleet'" :to="{ name: 'home' }" class="notice-action">
+                    Go to the fleets
+                </router-link>
+            </div>
+        </div>
+
+        <div v-if="requestError" class="usage-notice is-critical" role="alert">
+            <i class="fas fa-fw fa-exclamation-triangle" aria-hidden="true"></i>
+            <div class="notice-text">
+                <strong>Could not load the usage history.</strong> {{ requestError }}
+                <button type="button" class="btn btn-link notice-action" @click="load()">Try again</button>
+            </div>
+        </div>
+
+        <div v-if="!data && loading" class="usage-body" aria-hidden="true">
+            <div v-for="section in 2" :key="`s${section}`" class="usage-section">
+                <div class="skeleton skeleton-heading"></div>
+                <div class="tile-grid">
+                    <div v-for="tile in 4" :key="tile" class="skeleton skeleton-tile"></div>
                 </div>
             </div>
-            <MonitoringStatusBadge v-else class="m-2"></MonitoringStatusBadge>
-            </b-tab>
+            <div class="usage-section">
+                <div class="skeleton skeleton-heading"></div>
+                <div class="chart-grid">
+                    <div v-for="chart in 2" :key="chart" class="skeleton skeleton-chart"></div>
+                </div>
+            </div>
+        </div>
 
-            <b-tab lazy no-body
-                title="Usage basic stats"
-            >
-                <b-table-simple
-                    striped small
-                    class="mb-0 w-25"
-                    :bordered="false"
-                    :borderless="true"
-                    :outlined="false"
-                >
-                    <b-tbody>
-                        <b-tr v-for="(v, k) in getServerUsage" v-bind:key="k">
-                            <b-th>
-                                <i v-if="k.startsWith('event_')" class="fas fa-envelope fa-fw"></i>
-                                <i v-else-if="k.startsWith('attribute_')" class="fas fa-cube fa-fw"></i>
-                                <i v-else-if="k.startsWith('object_')" class="fas fa-cubes fa-fw"></i>
-                                <i v-else-if="k.startsWith('eventreport_')" class="fas fa-file-alt fa-fw"></i>
-                                <i v-else-if="k.startsWith('analyst_data_')" class="fas fa-gavel fa-fw"></i>
-                                <i v-else-if="k.startsWith('user_')" class="fas fa-user fa-fw"></i>
-                                <i v-else-if="k.startsWith('org_')" class="fas fa-building fa-fw"></i>
-                                <i v-else-if="k.startsWith('proposal_')" class="fas fa-comment fa-fw"></i>
-                                <i v-else-if="k == 'attributes_per_event' || k == 'objects_per_event'" class="fas fa-chart-pie fa-fw"></i>
-                                <i v-else class="fas fa-none fa-fw"></i>
-                                {{ k }}
-                            </b-th>
-                            <b-td>{{ v }}</b-td>
-                        </b-tr>
-                    </b-tbody>
-                </b-table-simple>
-            </b-tab>
-        </b-tabs>
-    </b-card>
+        <div v-else :class="['usage-body', { 'is-refreshing': loading && data }]">
+            <section class="usage-section" aria-labelledby="usage-content-title">
+                <header class="section-head">
+                    <h3 id="usage-content-title" class="section-title">Content</h3>
+                    <span class="section-note">{{ tileNote }}</span>
+                </header>
+                <div class="tile-grid">
+                    <MetricTile v-for="tile in contentTiles" :key="tile.key" v-bind="tile"></MetricTile>
+                </div>
+                <p v-if="contentTiles.length === 0" class="section-empty">No statistics have been read from this server yet.</p>
+            </section>
+
+            <section v-if="communityTiles.length > 0" class="usage-section" aria-labelledby="usage-community-title">
+                <header class="section-head">
+                    <h3 id="usage-community-title" class="section-title">Community</h3>
+                </header>
+                <div class="tile-grid">
+                    <MetricTile v-for="tile in communityTiles" :key="tile.key" v-bind="tile"></MetricTile>
+                </div>
+            </section>
+
+            <template v-if="hasHistory">
+                <section class="usage-section" aria-labelledby="usage-activity-title">
+                    <header class="section-head">
+                        <h3 id="usage-activity-title" class="section-title">Activity</h3>
+                    </header>
+                    <div class="chart-grid activity-grid">
+                        <div class="chart-card activity-logins">
+                            <TimeSeriesChart
+                                title="Logins"
+                                :subtitle="loginBarsData.size === HOUR ? 'per hour' : 'per day (UTC)'"
+                                mode="bars"
+                                :series="loginSeries"
+                                :from="data.from"
+                                :to="data.to"
+                                :interval="loginBarsData.size"
+                                :partial-since="loginPartialSince"
+                                :height="228"
+                            ></TimeSeriesChart>
+                        </div>
+                        <div class="chart-card activity-heatmap">
+                            <HourHeatmap
+                                title="Logins by hour"
+                                :subtitle="`last ${HEATMAP_DAYS} days, your time zone`"
+                                :points="heatmapPoints"
+                                :now="heatmapNow || data.to"
+                                :days="HEATMAP_DAYS"
+                            ></HourHeatmap>
+                        </div>
+                        <div class="chart-card activity-api">
+                            <TimeSeriesChart
+                                title="API requests"
+                                :subtitle="`over the previous 24 hours, ${tierPhrase}`"
+                                :series="apiSeries"
+                                :from="data.from"
+                                :to="data.to"
+                                :interval="data.interval_s"
+                                :height="140"
+                            ></TimeSeriesChart>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="usage-section" aria-labelledby="usage-system-title">
+                    <header class="section-head">
+                        <h3 id="usage-system-title" class="section-title">System</h3>
+                        <span class="section-note">{{ bandNote }}</span>
+                    </header>
+                    <div class="chart-grid">
+                        <div class="chart-card">
+                            <TimeSeriesChart
+                                title="Load average"
+                                unit="load"
+                                :series="loadSeries"
+                                :from="data.from"
+                                :to="data.to"
+                                :interval="data.interval_s"
+                            ></TimeSeriesChart>
+                        </div>
+                        <div class="chart-card">
+                            <TimeSeriesChart
+                                title="Memory and disk used"
+                                unit="percent"
+                                :y-max="100"
+                                :series="memorySeries"
+                                :from="data.from"
+                                :to="data.to"
+                                :interval="data.interval_s"
+                            ></TimeSeriesChart>
+                        </div>
+                        <div class="chart-card">
+                            <TimeSeriesChart
+                                title="MISP database size"
+                                unit="bytes"
+                                :zero="false"
+                                :series="databaseSeries"
+                                :from="data.from"
+                                :to="data.to"
+                                :interval="data.interval_s"
+                            ></TimeSeriesChart>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="usage-section" aria-labelledby="usage-internals-title">
+                    <header class="section-head">
+                        <h3 id="usage-internals-title" class="section-title">MISP internals</h3>
+                    </header>
+                    <div class="chart-grid internals-grid">
+                        <div class="chart-card">
+                            <TimeSeriesChart
+                                title="Redis memory"
+                                unit="bytes"
+                                :series="redisSeries"
+                                :from="data.from"
+                                :to="data.to"
+                                :interval="data.interval_s"
+                            ></TimeSeriesChart>
+                        </div>
+                        <div class="queues">
+                            <div class="queues-head">
+                                <span class="chart-title">Worker queues</span>
+                                <span class="section-note">jobs waiting · maximum {{ periodPhrase }}</span>
+                            </div>
+                            <div class="tile-grid queue-grid">
+                                <MetricTile v-for="tile in queueTiles" :key="tile.key" v-bind="tile"></MetricTile>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </template>
+
+            <section v-else-if="data" class="usage-section">
+                <p class="section-empty">
+                    <i class="fas fa-chart-line" aria-hidden="true"></i>
+                    Activity, system and queue charts appear here once samples have been collected.
+                    The figures above come from the last refresh of the server.
+                </p>
+            </section>
+
+            <section class="usage-section" aria-labelledby="usage-benchmarks-title">
+                <header class="section-head">
+                    <h3 id="usage-benchmarks-title" class="section-title">Endpoint benchmarks</h3>
+                    <span class="section-note">today's most expensive requests, read live from MISP</span>
+                    <button
+                        type="button"
+                        class="btn btn-sm btn-link section-toggle"
+                        :aria-expanded="benchmarksOpen ? 'true' : 'false'"
+                        aria-controls="usage-benchmarks"
+                        @click="benchmarksOpen = !benchmarksOpen"
+                    >
+                        <i :class="['fas', benchmarksOpen ? 'fa-chevron-up' : 'fa-chevron-down']" aria-hidden="true"></i>
+                        {{ benchmarksOpen ? "Hide" : "Show" }}
+                    </button>
+                </header>
+                <div id="usage-benchmarks">
+                    <UsageBenchmarks v-if="benchmarksOpen" :server-id="server_id"></UsageBenchmarks>
+                </div>
+            </section>
+        </div>
+    </div>
 </template>
 
 <script>
-import { mapState, mapGetters } from "vuex"
-import api from "@/api/servers"
-import { websocketMixin } from "@/helpers/websocketMixin"
-import GrafanaRenderedGraph from "@/components/ui/elements/GrafanaRenderedGraph.vue"
+import { mapGetters, mapState } from "vuex"
+import api from "@/api/metrics"
+import {
+    changePhrase, collectionStatus, DEFAULT_RANGE, HOUR, loginBars, RANGES, rangeOf, ratio, snapshotValues,
+} from "@/helpers/metrics"
+import MetricTile from "@/components/ui/charts/MetricTile.vue"
+import TimeSeriesChart from "@/components/ui/charts/TimeSeriesChart.vue"
+import HourHeatmap from "@/components/ui/charts/HourHeatmap.vue"
 import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
-import MonitoringStatusBadge from "@/components/ui/elements/MonitoringStatusBadge.vue"
+import UsageBenchmarks from "@/views/servers/elements/usage/UsageBenchmarks.vue"
+
+const HEATMAP_DAYS = 14
+
+const CONTENT = [
+    { key: "events", label: "Events", icon: "fa-envelope" },
+    { key: "attributes", label: "Attributes", icon: "fa-cube" },
+    { key: "objects", label: "Objects", icon: "fa-cubes" },
+    { key: "event_reports", label: "Event reports", icon: "fa-file-alt" },
+    { key: "analyst_data", label: "Analyst data", icon: "fa-gavel" },
+    { key: "correlations", label: "Correlations", icon: "fa-project-diagram" },
+    { key: "proposals", label: "Proposals", icon: "fa-comment" },
+]
+const COMMUNITY = [
+    { key: "users", label: "Users", icon: "fa-user" },
+    { key: "orgs", label: "Organisations", icon: "fa-building" },
+    { key: "contributing_orgs", label: "Contributing organisations", icon: "fa-handshake" },
+    { key: "pending_registrations", label: "Pending registrations", icon: "fa-user-clock" },
+]
+const QUEUES = [
+    { key: "queue_default", label: "Default" },
+    { key: "queue_prio", label: "Priority" },
+    { key: "queue_email", label: "Email" },
+    { key: "queue_cache", label: "Cache" },
+    { key: "queue_update", label: "Update" },
+]
 
 export default {
     name: "instanceUsage",
-    mixins: [websocketMixin],
     components: {
-        GrafanaRenderedGraph,
-        timeSinceRefresh,
-        MonitoringStatusBadge,
+        MetricTile, TimeSeriesChart, HourHeatmap, timeSinceRefresh, UsageBenchmarks,
     },
     props: {
         server_id: {
@@ -113,88 +272,584 @@ export default {
             type: Number,
         },
     },
-    sockets: {
-        SERVER_GRAPH_REFRESH_STATUS: function (data) {
-            if (data.server_id == this.server_id) {
-                this.panel_refreshed_count = data.status.panel_refreshed_count
-                this.total_panels = data.status.total_panels
-                this.all_refreshed_panels.push(data.status.last_panel_refreshed)
-            }
-        }
-    },
-    data: function () {
+    data() {
         return {
-            panels: [],
-            panel_refreshed_count: 0,
-            total_panels: 0,
-            all_refreshed_panels: [],
-            grafana_base_url: '',
-            grafana_dashboard: '',
+            RANGES,
+            HOUR,
+            HEATMAP_DAYS,
+            rangeKey: DEFAULT_RANGE,
+            data: null,
+            loading: false,
+            requestError: "",
+            heatmapPoints: [],
+            heatmapNow: null,
+            benchmarksOpen: false,
+            requestCount: 0,
         }
     },
     computed: {
         ...mapState({
-            servers: state => state.servers.servers,
-            server_usage: state => state.servers.server_usage,
-            server_publication_activity: state => state.servers.server_publication_activity,
-            last_refresh: state => state.servers.last_refresh,
-            server_graphs_refresh_enqueued: state => state.servers.server_graphs_refresh_enqueued,
+            servers: (state) => state.servers.servers,
+            serverUsage: (state) => state.servers.server_usage,
+            lastRefresh: (state) => state.servers.last_refresh,
+            fleets: (state) => state.fleets.all,
         }),
         ...mapGetters({
-            isMonitoringEnabled: "settings/isMonitoringEnabled",
+            isAdmin: "auth/isAdmin",
         }),
-        getServer: function () {
-            return this.servers[this.server_id]
+        range() {
+            return rangeOf(this.rangeKey)
         },
-        hasServerUsage() {
-            return this.usage !== undefined
+        server() {
+            return this.servers[this.server_id] || null
         },
-        getServerUsage: function () {
-            return this.server_usage[this.server_id]?.stats
+        fleetMonitoredTimestamp() {
+            const fleetId = this.server && this.server.fleet ? this.server.fleet.id : null
+            const fleet = Object.values(this.fleets || {}).find((item) => item.id === fleetId)
+            return fleet ? fleet.monitored_timestamp : null
         },
-        getServerPublicationActivity: function () {
-            return this.server_publication_activity[this.server_id]
+        hasHistory() {
+            return Boolean(this.data && this.data.latest)
         },
-        getGraphRefreshEnqueued: function() {
-            return this.server_graphs_refresh_enqueued[this.server_id]
+        latestTs() {
+            return this.hasHistory ? this.data.latest.ts : null
         },
-        getMonitoringGraphLastRefresh: function() {
-            return this.servers[this.server_id].monitoring_picture_cached
+        snapshotTs() {
+            return this.lastRefresh[this.server_id] || null
         },
-        getDashboardURL: function() {
-            const bucket = 'MISP-Fleet-Commander'
-            const instance = this.getServer.name
-            const time = 'from=now-24h&to=now&timezone=browser' // -24h
-            return `${this.grafana_base_url}/${this.grafana_dashboard}?var-bucket=${bucket}&var-instance=${instance}&${time}`
+        intervalMinutes() {
+            const interval = this.data && this.data.state && this.data.state.interval_s
+            return interval ? Math.round(interval / 60) : null
         },
-        sortedPanelsBySize: function() {
-            const sortedPanels = [...this.panels].sort((a, b) => {
-                return a.width*a.height - b.width*b.height
-            })
-            return sortedPanels
-        }
+        values() {
+            // The newest sample; without history, what the regular refresh read
+            if (this.hasHistory) {
+                return this.data.latest.values
+            }
+            const usage = this.serverUsage[this.server_id]
+            return snapshotValues(usage && usage.stats)
+        },
+        periodPhrase() {
+            // The samples may start after the range does (monitoring enabled recently)
+            const events = this.hasHistory ? this.data.series.events || [] : []
+            return changePhrase(this.range, this.data ? this.data.from : 0, events.length > 0 ? events[0][0] : null)
+        },
+        tileNote() {
+            return this.hasHistory ? `change ${this.periodPhrase}` : "from the last refresh, without history"
+        },
+        tierPhrase() {
+            const tier = this.data && this.data.tier
+            return { raw: "every sample", hour: "hourly average", day: "daily average" }[tier] || ""
+        },
+        bandNote() {
+            const tier = this.data && this.data.tier
+            if (tier === "hour") return "hourly averages, shaded up to each hour's maximum"
+            if (tier === "day") return "daily averages, shaded up to each day's maximum"
+            return "every sample"
+        },
+        contentTiles() {
+            const values = this.values
+            const notes = {
+                attributes: this.perEvent(values.attributes, values.events),
+                objects: this.perEvent(values.objects, values.events),
+            }
+            return CONTENT.filter((tile) => this.isKnown(tile.key)).map((tile) => this.tile(tile, notes[tile.key]))
+        },
+        communityTiles() {
+            const values = this.values
+            const share = (part, whole) => {
+                const value = ratio(part, whole, 3)
+                return value === null ? "" : `${Math.round(value * 100)}%`
+            }
+            const notes = {
+                users: values.users_pgp !== undefined && values.users ? `${share(values.users_pgp, values.users)} with a PGP key` : "",
+                orgs: values.local_orgs !== undefined ? `${values.local_orgs.toLocaleString("en-US")} local` : "",
+                contributing_orgs: values.orgs ? `${share(values.contributing_orgs, values.orgs)} of the organisations` : "",
+            }
+            return COMMUNITY.filter((tile) => this.isKnown(tile.key)).map((tile) => this.tile(tile, notes[tile.key]))
+        },
+        queueTiles() {
+            return QUEUES.filter((tile) => this.isKnown(tile.key)).map((tile) => ({
+                ...this.tile(tile),
+                icon: "",
+                unit: "jobs",
+                kind: "gauge",
+                peaks: this.peaksOf(tile.key),
+            }))
+        },
+        apiSeries() {
+            return this.lineSeries([{ key: "api_requests_24h", label: "Requests" }])
+        },
+        loadSeries() {
+            // The 5 and 15 minute loads smooth the 1 minute one: a band each would pile up into a grey mass
+            return this.lineSeries([
+                { key: "load_1", label: "1 min" },
+                { key: "load_5", label: "5 min", band: false },
+                { key: "load_15", label: "15 min", band: false },
+            ])
+        },
+        memorySeries() {
+            return this.lineSeries([{ key: "memory_used_pct", label: "Memory" }, { key: "disk_used_pct", label: "Disk" }])
+        },
+        databaseSeries() {
+            return this.lineSeries([{ key: "db_size_bytes", label: "Size" }])
+        },
+        redisSeries() {
+            return this.lineSeries([
+                { key: "redis_memory_bytes", label: "Used" },
+                { key: "redis_memory_peak_bytes", label: "Peak since Redis started", band: false },
+            ])
+        },
+        loginBarsData() {
+            return loginBars(this.data ? this.data.series : {}, this.rangeKey, this.data ? this.data.interval_s : HOUR)
+        },
+        loginSeries() {
+            return [
+                { key: "logins", label: "Logins", points: this.loginBarsData.logins },
+                { key: "failed_logins", label: "Failed logins", points: this.loginBarsData.failed_logins },
+            ]
+        },
+        loginPartialSince() {
+            if (!this.data) {
+                return null
+            }
+            const size = this.loginBarsData.size
+            return this.data.to - (this.data.to % size)
+        },
+        notice() {
+            if (!this.data) {
+                return null
+            }
+            const status = collectionStatus(this.data.state)
+            const interval = this.intervalMinutes
+            const past = this.hasHistory ? " The charts show what was collected before." : ""
+            switch (status.code) {
+            case "off":
+                return {
+                    level: "muted",
+                    icon: "fa-power-off",
+                    title: "Monitoring is off.",
+                    text: (this.isAdmin
+                        ? "Enable it in the settings (Scheduler tab) to keep a history of this server's usage."
+                        : "An administrator can enable it in the settings to keep a history of this server's usage.") + past,
+                    action: this.isAdmin ? "settings" : null,
+                }
+            case "fleet":
+                return {
+                    level: "muted",
+                    icon: "fa-eye-slash",
+                    title: "This server's fleet is not monitored.",
+                    text: `Edit the fleet and tick "Monitor" to collect the usage of its servers.${past}`,
+                    action: "fleet",
+                }
+            case "authkey":
+                return {
+                    level: "warning",
+                    icon: "fa-key",
+                    title: "This server has no API key,",
+                    text: "so its usage cannot be read from MISP.",
+                }
+            case "waiting":
+                return {
+                    level: "info",
+                    icon: "fa-hourglass-half",
+                    title: "Waiting for the first sample.",
+                    text: `It is collected within a minute${interval ? `, then every ${interval} minutes` : ""}.`,
+                }
+            case "failed":
+                return {
+                    level: "warning",
+                    icon: "fa-exclamation-triangle",
+                    title: "The last collection failed:",
+                    text: status.error,
+                }
+            case "partial":
+                return {
+                    level: "muted",
+                    icon: "fa-info-circle",
+                    title: "Some figures could not be read at the last collection:",
+                    text: status.error,
+                }
+            default:
+                return null
+            }
+        },
+    },
+    watch: {
+        server_id() {
+            this.data = null
+            this.reload()
+        },
+        fleetMonitoredTimestamp(current, previous) {
+            // A collection tick went through the server's fleet: show its sample, without dimming the tab
+            if (previous && current && current !== previous) {
+                this.reload({ quiet: true })
+            }
+        },
+    },
+    mounted() {
+        this.reload()
     },
     methods: {
-        refreshGraphs: function() {
-            return new Promise((resolve, reject) => {
-                this.all_refreshed_panels = []
-                this.wsServerGraphsRefresh(this.server_id)
-            })
+        reload(options = {}) {
+            this.load(options)
+            this.loadHeatmap()
         },
-        getUsageDashboardConfig: function() {
-            return api.getUsageDashboardConfig((dashboardConfig) => {
-                this.panels = dashboardConfig.panels
-                this.grafana_base_url = dashboardConfig.grafana_base_url
-                this.grafana_dashboard = dashboardConfig.grafana_dashboard
-            })
+        load({ quiet = false } = {}) {
+            const request = this.requestCount + 1
+            this.requestCount = request
+            this.loading = !quiet || this.loading
+            this.requestError = ""
+            return api.series(this.server_id, { range: this.rangeKey })
+                .then((data) => {
+                    if (request === this.requestCount) {
+                        this.data = data
+                    }
+                })
+                .catch((error) => {
+                    if (request === this.requestCount) {
+                        this.requestError = (error.response && error.response.data && error.response.data.message) || error.message
+                    }
+                })
+                .finally(() => {
+                    if (request === this.requestCount) {
+                        this.loading = false
+                    }
+                })
+        },
+        loadHeatmap() {
+            // Last 14 days of hourly logins, whatever the range (the 30-day hourly series, cut by the heatmap)
+            return api.series(this.server_id, { range: "30d", tier: "hour", metrics: ["logins"] })
+                .then((data) => {
+                    this.heatmapPoints = data.series.logins || []
+                    this.heatmapNow = data.to
+                })
+                .catch(() => {
+                    this.heatmapPoints = []
+                })
+        },
+        setRange(key) {
+            if (key !== this.rangeKey) {
+                this.rangeKey = key
+                this.load()
+            }
+        },
+        isKnown(key) {
+            const value = this.values[key]
+            return value !== undefined && value !== null
+        },
+        series(key) {
+            return this.data && this.data.series ? this.data.series[key] || [] : null
+        },
+        tile({ key, label, icon }, note = "") {
+            return {
+                key,
+                label,
+                icon,
+                value: this.values[key],
+                points: this.hasHistory ? this.series(key) : null,
+                rangePhrase: this.periodPhrase,
+                note,
+            }
+        },
+        perEvent(count, events) {
+            const value = ratio(count, events)
+            return value === null ? "" : `${value.toLocaleString("en-US")} per event`
+        },
+        lineSeries(items) {
+            return items.map(({ key, label, band }) => ({
+                key,
+                label,
+                band,
+                points: this.series(key) || [],
+                peaks: this.peaksOf(key),
+            }))
+        },
+        peaksOf(key) {
+            return (this.data && this.data.peaks && this.data.peaks[key]) || []
         },
     },
-    mounted: function() {
-        this.getUsageDashboardConfig()
-    }
 }
 </script>
 
 <style scoped>
+.usage {
+    padding: 0.75rem 1rem 1.25rem;
+    font-size: 0.875rem;
+    color: var(--var-color-yankeesblue);
+}
 
+.usage-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.range-picker {
+    display: inline-flex;
+    padding: 2px;
+    border: 1px solid #d5dbe3;
+    border-radius: 6px;
+    background: #f4f6f9;
+}
+
+.range-option {
+    min-width: 3rem;
+    padding: 0.2rem 0.6rem;
+    border: 0;
+    border-radius: 4px;
+    background: none;
+    color: #52514e;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+.range-option:hover {
+    color: #212d40;
+    background: rgba(255, 255, 255, 0.7);
+}
+
+.range-option:focus-visible {
+    outline: 2px solid rgba(41, 120, 160, 0.5);
+    outline-offset: 1px;
+}
+
+.range-option.is-selected {
+    background: #fff;
+    color: #212d40;
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(33, 45, 64, 0.15);
+}
+
+.usage-meta {
+    color: #6c757d;
+    font-size: 0.8125rem;
+}
+
+.usage-updating {
+    color: #6c757d;
+    font-size: 0.8125rem;
+}
+
+.usage-notice {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin-bottom: 0.9rem;
+    padding: 0.55rem 0.75rem;
+    border: 1px solid #e4e7ec;
+    border-left-width: 3px;
+    border-radius: 4px;
+    background: #fff;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+}
+
+.usage-notice.is-muted {
+    border-left-color: #9aa1a7;
+    background: #f8f9fb;
+}
+
+.usage-notice.is-muted > i {
+    color: #6c757d;
+}
+
+.usage-notice.is-info {
+    border-left-color: var(--health-info);
+    background: var(--health-info-tint);
+}
+
+.usage-notice.is-info > i {
+    color: var(--health-info-ink);
+}
+
+.usage-notice.is-warning {
+    border-left-color: var(--health-warning);
+    background: var(--health-warning-tint);
+}
+
+.usage-notice.is-warning > i {
+    color: var(--health-warning-ink);
+}
+
+.usage-notice.is-critical {
+    border-left-color: var(--health-critical);
+    background: var(--health-critical-tint);
+}
+
+.usage-notice.is-critical > i {
+    color: var(--health-critical-ink);
+}
+
+.notice-text {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.notice-action {
+    padding: 0;
+    margin-left: 0.35rem;
+    font-size: inherit;
+    vertical-align: baseline;
+    font-weight: 600;
+}
+
+.usage-body {
+    transition: opacity 0.15s;
+}
+
+.usage-body.is-refreshing {
+    opacity: 0.55;
+}
+
+.usage-section + .usage-section {
+    margin-top: 1.1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--health-rule);
+}
+
+.section-head {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.2rem 0.6rem;
+    margin-bottom: 0.6rem;
+}
+
+.section-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.section-note {
+    color: #6c757d;
+    font-size: 0.8rem;
+}
+
+.section-toggle {
+    margin-left: auto;
+    padding: 0 0.25rem;
+    font-size: 0.8125rem;
+}
+
+.section-empty {
+    margin: 0;
+    color: #6c757d;
+}
+
+.section-empty i {
+    margin-right: 0.3rem;
+    color: #9aa1a7;
+}
+
+.tile-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+    gap: 0.6rem;
+}
+
+.chart-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 0.75rem;
+}
+
+.chart-card {
+    min-width: 0;
+    padding: 0.6rem 0.75rem 0.5rem;
+    border: 1px solid #e4e7ec;
+    border-radius: 6px;
+    background: #fff;
+}
+
+.chart-title {
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: #212d40;
+}
+
+@media (min-width: 1100px) {
+    .activity-grid {
+        grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    }
+
+    .activity-api {
+        grid-column: 1 / -1;
+    }
+
+    .internals-grid {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+}
+
+.queues {
+    min-width: 0;
+}
+
+.queues-head {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.15rem 0.5rem;
+    margin: 0.6rem 0 0.45rem;
+}
+
+.queue-grid {
+    grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+}
+
+.skeleton {
+    border-radius: 6px;
+    background: linear-gradient(90deg, #f0f2f5 25%, #e6e9ee 37%, #f0f2f5 63%);
+    background-size: 400% 100%;
+    animation: shimmer 1.4s ease infinite;
+}
+
+.skeleton-heading {
+    width: 8rem;
+    height: 1rem;
+    margin-bottom: 0.7rem;
+}
+
+.skeleton-tile {
+    height: 6.5rem;
+}
+
+.skeleton-chart {
+    height: 13rem;
+}
+
+@keyframes shimmer {
+    0% { background-position: 100% 50%; }
+    100% { background-position: 0 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .skeleton {
+        animation: none;
+    }
+
+    .usage-body {
+        transition: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .usage {
+        padding: 0.6rem 0.6rem 1rem;
+    }
+
+    .tile-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .chart-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
 </style>

@@ -188,6 +188,7 @@ const mutations = {
                     }
                 }
                 if (fleetTimestamps.monitored_timestamp) {
+                    knownFleets[i].monitored_timestamp = fleetTimestamps.monitored_timestamp
                     if (state.selected !== null) {
                         if (state.selected.id == fleetTimestamps.fleet_id)
                             state.selected.monitored_timestamp = fleetTimestamps.monitored_timestamp
