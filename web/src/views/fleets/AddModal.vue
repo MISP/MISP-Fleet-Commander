@@ -51,7 +51,7 @@
                     </span>
                     <strong>Monitor</strong> Fleet
                 </div>
-                <small class="d-block text-muted">The monitoring system requires Grafana and InfluxDB to be running and reachable by the server.</small>
+                <small class="d-block text-muted">Collects usage metrics from the fleet's servers and keeps their history. Monitoring must also be enabled in the settings.</small>
                 </b-form-checkbox>
 
                 <b-form-checkbox

@@ -13,9 +13,7 @@ import application.models.servers as serverModel
 import application.models.fleets as fleetModel
 import application.models.users as userModel
 import application.models.setting as settingModel
-from application import redisModel
-
-from application import MONITORING_SYSTEM_AVAILABLE, MONITORING_UNAVAILABLE_REASON, MONITORING_SYSTEM as monitor
+import application.models.metrics as metricModel
 
 socketioEmitter = SocketioEmitter()
 
@@ -57,33 +55,20 @@ def watchFleet(fleet_id: int, minute: int = 5, delay_second: int = 10):
         time.sleep(minute*60)
 
 @server_cli.command('monitor-fleets')
-@click.option('--minute', required=False, default=5)
-@click.option("--cache_images", is_flag=True, default=False)
-def monitorFleet(minute: int = 5, cache_images: bool = False):
-    if not MONITORING_SYSTEM_AVAILABLE:
-        print(MONITORING_UNAVAILABLE_REASON)
-    elif not settingModel.getRefreshValue("monitoring_enabled"):
-        print('Monitoring is not enabled')
-    else:
-        while True:
-            fleets = fleetModel.indexMonitored()
-            print('Starting monitoring fleets:')
-            for fleet in fleets:
-                print(f'    - {fleet.name} ({fleet.server_count} servers)')
-            asyncio.run(monitor(fleets))
-            for fleet in fleets:
-                monitored_timestamp = redisModel.setFleetMonitoredTimestamp(fleet.id)
-                if monitored_timestamp is not None:
-                    socketioEmitter.fleet_update_timestamps(fleet.id, monitored_timestamp = monitored_timestamp)
+def monitorFleet():
+    """Collect the metrics of every server of the monitored fleets once, whether they are due or not"""
+    if not settingModel.getRefreshValue("monitoring_enabled"):
+        print('Note: monitoring is not enabled in the settings, the workers do not collect metrics on their own')
+    fleets = fleetModel.indexMonitored()
+    servers = metricModel.monitoredServers(fleets)
+    print(f'Collecting the metrics of {len(servers)} servers from {len(fleets)} monitored fleets:')
 
-            if cache_images:
-                print("Caching images for fleets:")
-                for fleet in fleets:
-                    print(f"    - {fleet.name} ({fleet.server_count} servers)")
-                    asyncio.run(serverModel.doCacheMonitoringImages(fleet.servers, force=True))
-
-            print(f'Sleeping {minute*60}')
-            time.sleep(minute*60)
+    def report(server, state):
+        outcome = 'stored' if state.last_success == state.last_attempt else 'nothing stored'
+        print(f'    - {server.name} ({server.id}): {outcome}' + (f'. {state.last_error}' if state.last_error else ''))
+    metricModel.collectAndAnnounce(servers, int(settingModel.getValue("monitoring_interval")) * 60,
+                                   int(settingModel.getValue("health_max_concurrency")), socketioEmitter,
+                                   onCollected=report)
 
 @server_cli.command("cache-monitoring-images")
 @click.option("--minute", required=False, default=5)

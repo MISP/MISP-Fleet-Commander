@@ -5,8 +5,6 @@ import os
 from typing import List, Union
 from pathlib import Path
 
-from application import MONITORING_SYSTEM_AVAILABLE, MONITORING_UNAVAILABLE_REASON
-
 
 current_path = Path(__file__).resolve().parent
 setting_path = current_path / "../../config.json"
@@ -39,7 +37,7 @@ setting_configuration = {
     },
     "monitoring_enabled": {
         "name": "Monitoring Enabled",
-        "description": "If the monitoring system is started and functionnal, should the monitoring system be enabled.",
+        "description": "Collect usage metrics (content, users, logins, load, queues) from the servers of the fleets marked as monitored, and keep their history.",
         "panel": "Scheduler",
         "scope": "Monitoring System",
         "type": "checkbox",
@@ -49,17 +47,15 @@ setting_configuration = {
     },
     "monitoring_interval": {
         "name": "Monitoring Interval",
-        "description": "The frequency (minute) at which the monitoring system collect metrics",
+        "description": "How often (minutes) metrics are collected from each server of a monitored fleet.",
         "panel": "Scheduler",
         "scope": "Monitoring System",
         "type": "number",
         "default": 10,
         "min": 1,
-        "disabled": True,
-        "error": {
-            "error_message": "The frequency cannot be configured at the moment.",
-            "variant": "info",
-        },
+        "max": 1440,
+        "disabled": False,
+        "error": False,
     },
     "health_background_refresh_enabled": {
         "name": "Background Refresh Enabled",
@@ -194,18 +190,6 @@ def loadSetting():
         else:
             settings[setting_name]['value'] = setting_config.get('default', None)
 
-    if not MONITORING_SYSTEM_AVAILABLE:
-        settings["monitoring_enabled"]["value"] = False
-        settings['monitoring_enabled']['disabled'] = True
-        settings["monitoring_enabled"]["error"] = {
-            "error_message": MONITORING_UNAVAILABLE_REASON,
-            "variant": "warning",
-        }
-    elif not os.environ.get('GRAFANA_APIKEY'):  # Same source as config.GRAFANA_APIKEY; runs outside the app context too
-        settings["monitoring_enabled"]["error"] = {
-            "error_message": "Metrics are collected, but the monitoring graphs are not rendered: GRAFANA_APIKEY is not set.",
-            "variant": "warning",
-        }
 
 def saveSettings():
     global settings

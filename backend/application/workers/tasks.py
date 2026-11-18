@@ -18,6 +18,8 @@ import application.models.fleets as fleetModel
 import application.models.setting as settingModel
 import application.models.jobs as jobModel
 import application.models.jobRunner as jobRunner
+import application.models.metrics as metricModel
+import application.models.metricRollups as metricRollups
 from application import redisModel
 
 from application import MONITORING_SYSTEM_AVAILABLE, MONITORING_SYSTEM as monitor
@@ -312,6 +314,36 @@ def backgroundFullRefresh():
         "udpate_server_usage": socketioEmitter.udpate_server_usage,
     }
     serverModel.refreshServersInBackground(servers, clientSocketEmitterUpdateFuns, config["max_concurrency"])
+
+
+def monitoringSettings():
+    """Read on every run, like the background refresh settings"""
+    return {
+        "enabled": bool(settingModel.getRefreshValue("monitoring_enabled")),
+        "interval": int(settingModel.getValue("monitoring_interval")) * 60,
+        "max_concurrency": int(settingModel.getValue("health_max_concurrency")),
+    }
+
+
+@huey_app.periodic_task(crontab(minute="*"))
+@skipIfRunning("metrics-collect-lock")
+def collectMetrics():
+    """Usage metrics of every server of a monitored fleet whose last collection is older than the configured
+    interval. Runs every minute, like the background refresh, so that interval changes apply without a restart"""
+    config = monitoringSettings()
+    if not config["enabled"]:
+        return None
+    candidates = metricModel.monitoredServers(fleetModel.indexMonitored())
+    servers = metricModel.serversDueForCollection(candidates, config["interval"], int(time.time()))
+    return len(metricModel.collectAndAnnounce(servers, config["interval"], config["max_concurrency"], socketioEmitter))
+
+
+@huey_app.periodic_task(crontab(minute="7"))
+@skipIfRunning("metrics-rollup-lock")
+def rollupMetrics():
+    """Hourly and daily roll-ups of the metrics, then retention. Runs even when monitoring is off, so that old
+    samples still go away"""
+    return metricRollups.run()
 
 
 @huey_app.periodic_task(crontab(hour="3", minute="17"))

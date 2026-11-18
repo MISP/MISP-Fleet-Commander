@@ -241,6 +241,8 @@ def forgetDeletedServer(mapper, connection, server):
     except Exception as e:  # Redis being down must not prevent deleting the server
         print(f'Could not clear the cached data of server {server.uuid}: {e}')
     connection.execute(HealthAck.__table__.delete().where(HealthAck.__table__.c.server_id == server.id))
+    connection.execute(MetricSample.__table__.delete().where(MetricSample.__table__.c.server_id == server.id))
+    connection.execute(MetricState.__table__.delete().where(MetricState.__table__.c.server_id == server.id))
     connection.execute(JobResult.__table__.update().where(JobResult.__table__.c.server_id == server.id)
                        .values(server_id=None))
     from application.models.health import publishServerRemoved
@@ -601,6 +603,73 @@ class BaselineRule(BaseModel):
                         nullable=False)
 
     baseline = db.relationship('Baseline', back_populates='rules')
+
+
+METRIC_TIERS = ('raw', 'hour', 'day')
+
+
+class MetricSample(BaseModel):
+    """Usage metrics of a server at one time. `raw` rows are single collections, timed when they were stored; `hour`
+    and `day` rows sum them up over the bucket starting at `ts` (UTC), from `samples` raw rows. `values` maps metric
+    keys (see models/metricCatalogue.py) to numbers and only holds the keys that were read; `peaks` holds the
+    maximum of each gauge over a bucket"""
+    __tablename__ = 'metric_samples'
+    __table_args__ = (UniqueConstraint('server_id', 'tier', 'ts', name='uq_metric_samples_server_tier_ts'),
+                      db.Index('ix_metric_samples_tier_ts', 'tier', 'ts'))
+
+    id = db.Column(db.Integer,
+                   primary_key=True)
+    server_id = db.Column(db.Integer,
+                          db.ForeignKey('servers.id'),
+                          nullable=False)
+    tier = db.Column(db.String(8),
+                     nullable=False)
+    ts = db.Column(db.Integer,
+                   nullable=False)
+    values = db.Column(db.JSON,
+                       nullable=False,
+                       default=dict)
+    peaks = db.Column(db.JSON,
+                      nullable=True)
+    samples = db.Column(db.Integer,
+                        nullable=False,
+                        default=1)
+
+
+class MetricState(BaseModel):
+    """Where the metric collection of a server stands: when it was last tried and how it went, and the MISP log id
+    up to which logins have been counted"""
+    __tablename__ = 'metric_states'
+
+    server_id = db.Column(db.Integer,
+                          db.ForeignKey('servers.id'),
+                          primary_key=True,
+                          autoincrement=False)
+    login_cursor = db.Column(db.Integer,
+                             nullable=True)
+    logins_backfilled = db.Column(db.Boolean,
+                                  nullable=False,
+                                  default=False,
+                                  server_default='0')
+    logins_read_at = db.Column(db.Integer,
+                               nullable=True)
+    logins_total = db.Column(db.Integer,
+                             nullable=False,
+                             default=0,
+                             server_default='0')
+    failed_logins_total = db.Column(db.Integer,
+                                    nullable=False,
+                                    default=0,
+                                    server_default='0')
+    last_attempt = db.Column(db.Integer,
+                             nullable=True)
+    last_success = db.Column(db.Integer,
+                             nullable=True)
+    last_error = db.Column(db.String(500),
+                           nullable=True)
+
+    def __repr__(self):
+        return f"<MetricState>(server_id={self.server_id!r})"
 
 
 # SQLite does not enforce foreign keys here, so the ON DELETE clauses above are applied by these listeners

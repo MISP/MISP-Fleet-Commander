@@ -1,0 +1,316 @@
+{
+ "_about": "Answers of MISP 3.0.0 to the metric sources, trimmed. Emails, API key names, organisations and host names are replaced",
+ "statistics": {
+  "stats": {
+   "event_count": "4291",
+   "event_count_month": "3",
+   "attribute_count": "2923792",
+   "attribute_count_month": "593",
+   "attributes_per_event": "681",
+   "object_count": "70189",
+   "object_count_month": "2",
+   "objects_per_event": "16",
+   "analyst_data_count": "764",
+   "analyst_data_count_month": "764",
+   "eventreport_count": "173",
+   "eventreport_count_month": "0",
+   "correlation_count": "342383",
+   "proposal_count": "8",
+   "user_count": "6",
+   "user_count_pgp": "0",
+   "org_count": "91",
+   "local_org_count": "4",
+   "contributing_org_count": "67",
+   "average_user_per_org": "1.5"
+  }
+ },
+ "registrations": [
+  {
+   "Inbox": {
+    "id": "1",
+    "uuid": "00000000-0000-4000-8000-000000000002",
+    "type": "registration",
+    "title": "User registration",
+    "data": {}
+   }
+  }
+ ],
+ "diagnostics": {
+  "version": {
+   "current": "3.0.0"
+  },
+  "redisInfo": {
+   "extensionVersion": "6.2.0",
+   "connection": true,
+   "redis_version": "7.2.4",
+   "used_memory": 42894624,
+   "used_memory_human": "40.91M",
+   "used_memory_peak": 206394256,
+   "used_memory_peak_human": "196.83M",
+   "db13": "keys=1009,expires=559,avg_ttl=1303130091"
+  },
+  "workers": {
+   "cache": {
+    "ok": true,
+    "jobCount": 0,
+    "workers": [
+     {
+      "pid": 100,
+      "user": "www-data",
+      "alive": true,
+      "correct_user": true,
+      "ok": true
+     }
+    ]
+   },
+   "default": {
+    "ok": true,
+    "jobCount": 0,
+    "workers": [
+     {
+      "pid": 100,
+      "user": "www-data",
+      "alive": true,
+      "correct_user": true,
+      "ok": true
+     }
+    ]
+   },
+   "email": {
+    "ok": true,
+    "jobCount": 0,
+    "workers": [
+     {
+      "pid": 100,
+      "user": "www-data",
+      "alive": true,
+      "correct_user": true,
+      "ok": true
+     }
+    ]
+   },
+   "prio": {
+    "ok": true,
+    "jobCount": 0,
+    "workers": [
+     {
+      "pid": 100,
+      "user": "www-data",
+      "alive": true,
+      "correct_user": true,
+      "ok": true
+     }
+    ]
+   },
+   "update": {
+    "ok": true,
+    "jobCount": 0,
+    "workers": [
+     {
+      "pid": 100,
+      "user": "www-data",
+      "alive": true,
+      "correct_user": true,
+      "ok": true
+     }
+    ]
+   },
+   "scheduler": {
+    "ok": true,
+    "workers": [
+     {
+      "pid": 100,
+      "user": "www-data",
+      "alive": true,
+      "correct_user": true,
+      "ok": true
+     }
+    ]
+   },
+   "proc_accessible": true,
+   "controls": 1,
+   "supervisord_status": true
+  }
+ },
+ "system_widget": {
+  "data": [
+   {
+    "title": "User",
+    "value": "admin@misp.test"
+   },
+   {
+    "title": "System",
+    "value": "Linux misp 6.1.0-amd64 #1 SMP x86_64"
+   },
+   {
+    "title": "Disk usage",
+    "value": "77.27%",
+    "class": ""
+   },
+   {
+    "title": "Load",
+    "value": "4.16015625 - 4.869140625 - 4.6298828125"
+   },
+   {
+    "title": "Memory",
+    "value": "3099.95 MB free (90.23 % used)"
+   }
+  ],
+  "_latency": 0.26,
+  "_status_code": 200
+ },
+ "admin_widget": {
+  "data": [
+   {
+    "title": "Current Redis memory usage",
+    "value": "41M"
+   },
+   {
+    "title": "Peak Redis memory usage",
+    "value": "197M"
+   },
+   {
+    "title": "MySQL DB disk usage",
+    "value": "8893.8M"
+   }
+  ],
+  "_latency": 0.26,
+  "_status_code": 200
+ },
+ "api_activity_widget": {
+  "data": [
+   {
+    "type": "header",
+    "value": "8 keys · 1998 requests · 6 unknown"
+   },
+   {
+    "type": "user",
+    "name": "user1@misp.test",
+    "meta": "key ab01 · ORGNAME · admin",
+    "badge": 1772,
+    "org": {
+     "id": 1,
+     "name": "ORGNAME",
+     "uuid": "00000000-0000-4000-8000-000000000001"
+    },
+    "drilldown": "/auth_keys/view/1"
+   },
+   {
+    "type": "user",
+    "glyph": "warn",
+    "name": "unknownkey2",
+    "meta": "Unknown key — left over from a deleted entry, or legacy-auth mis-identification",
+    "badge": 167,
+    "muted": true
+   },
+   {
+    "type": "user",
+    "glyph": "warn",
+    "name": "unknownkey3",
+    "meta": "Unknown key — left over from a deleted entry, or legacy-auth mis-identification",
+    "badge": 29,
+    "muted": true
+   },
+   {
+    "type": "user",
+    "glyph": "warn",
+    "name": "unknownkey4",
+    "meta": "Unknown key — left over from a deleted entry, or legacy-auth mis-identification",
+    "badge": 7,
+    "muted": true
+   },
+   {
+    "type": "user",
+    "glyph": "warn",
+    "name": "unknownkey5",
+    "meta": "Unknown key — left over from a deleted entry, or legacy-auth mis-identification",
+    "badge": 7,
+    "muted": true
+   },
+   {
+    "type": "user",
+    "glyph": "warn",
+    "name": "unknownkey6",
+    "meta": "Unknown key — left over from a deleted entry, or legacy-auth mis-identification",
+    "badge": 6,
+    "muted": true
+   },
+   {
+    "type": "user",
+    "glyph": "warn",
+    "name": "unknownkey7",
+    "meta": "Unknown key — left over from a deleted entry, or legacy-auth mis-identification",
+    "badge": 5,
+    "muted": true
+   },
+   {
+    "type": "user",
+    "name": "user8@misp.test",
+    "meta": "key ab08 · ORGNAME · admin",
+    "badge": 5,
+    "org": {
+     "id": 1,
+     "name": "ORGNAME",
+     "uuid": "00000000-0000-4000-8000-000000000001"
+    },
+    "drilldown": "/auth_keys/view/8"
+   }
+  ],
+  "_latency": 0.32,
+  "_status_code": 200
+ },
+ "logs": {
+  "data": [
+   {
+    "Log": {
+     "id": "267013",
+     "title": "User (1): user@misp.test",
+     "created": "2026-11-17 15:26:32",
+     "model": "User",
+     "model_id": "1",
+     "action": "login",
+     "user_id": "1",
+     "change": "",
+     "email": "user@misp.test",
+     "org": "ORGNAME",
+     "description": "",
+     "ip": "192.0.2.10"
+    }
+   },
+   {
+    "Log": {
+     "id": "267020",
+     "title": "Failed authentication using API key (abcd)",
+     "created": "2026-11-17 15:27:40",
+     "model": "User",
+     "model_id": "0",
+     "action": "auth_fail",
+     "user_id": "0",
+     "change": "",
+     "email": "",
+     "org": "",
+     "description": "",
+     "ip": "192.0.2.11"
+    }
+   },
+   {
+    "Log": {
+     "id": "267426",
+     "title": "User (2): other@misp.test",
+     "created": "2026-11-18 07:26:53",
+     "model": "User",
+     "model_id": "2",
+     "action": "login",
+     "user_id": "2",
+     "change": "",
+     "email": "other@misp.test",
+     "org": "ORGNAME",
+     "description": "",
+     "ip": "192.0.2.12"
+    }
+   }
+  ],
+  "_latency": 0.4,
+  "_status_code": 200
+ }
+}
