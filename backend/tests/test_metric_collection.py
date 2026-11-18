@@ -164,8 +164,8 @@ def test_unreadable_logs(monkeypatch):
 
 
 def test_backfill_steps_down_and_buckets_by_hour(monkeypatch):
-    """90 days hit the 5000-entry limit: 30 days are read. Ended hours become hour counts, the current hour goes
-    into the first sample"""
+    """90 days hit the 5000-entry limit: 30 days are read. Ended hours become hour counts, zero included, the current
+    hour goes into the first sample"""
     from application.models.metrics import LoginState, readLogins
     now = int(time.time())
     hourStart = now - now % HOUR
@@ -176,8 +176,14 @@ def test_backfill_steps_down_and_buckets_by_hour(monkeypatch):
     misp = FakeMisp(logs=lambda created: answers[created]).install(monkeypatch)
     result = readLogins(target(), LoginState(), 600, now)
     assert misp.calls == [("LOGS", "90d"), ("LOGS", "30d")]
-    assert result["hours"] == {hourStart - 2 * HOUR: {"logins": 2, "failed_logins": 0},
-                               hourStart - HOUR: {"logins": 0, "failed_logins": 1}}
+    assert {bucket: counts for bucket, counts in result["hours"].items() if any(counts.values())} == {
+        hourStart - 2 * HOUR: {"logins": 2, "failed_logins": 0},
+        hourStart - HOUR: {"logins": 0, "failed_logins": 1},
+    }
+    # Every hour of the 30 days read in full has its row: no login there is known, not missing
+    assert len(result["hours"]) == 30 * 24 - 1
+    assert result["hours"][hourStart - 3 * HOUR] == {"logins": 0, "failed_logins": 0}
+    assert min(result["hours"]) > now - 30 * 24 * HOUR and max(result["hours"]) == hourStart - HOUR
     assert result["counts"] == {"logins": 1, "failed_logins": 1}
     assert result["cursor"] == 14 and result["backfilled"] and result["error"] is None
 
@@ -254,6 +260,16 @@ def test_first_collection_stores_the_sample_and_the_backfill(fleets):
     assert (state.login_cursor, state.logins_backfilled, state.logins_read_at) == (40, True, now)
     assert (state.logins_total, state.failed_logins_total) == (4, 2)
     assert (state.last_attempt, state.last_success, state.last_error) == (now, now, None)
+
+    # Hours that already have a row are merged into, the others are added
+    storeCollection(server.id, {"values": {"events": 11}, "errors": [], "logins": {
+        "counts": {"logins": 0, "failed_logins": 0}, "cursor": 41, "error": None,
+        "hours": {hourStart - HOUR: {"logins": 4, "failed_logins": 2},
+                  hourStart - 2 * HOUR: {"logins": 0, "failed_logins": 0}}}}, now + 1)
+    assert [(row.ts, row.values) for row in samples(server.id, "hour")] == [
+        (hourStart - 2 * HOUR, {"logins": 0, "failed_logins": 0}),
+        (hourStart - HOUR, {"logins": 4, "failed_logins": 2}),
+    ]
 
 
 def test_failures_are_recorded(fleets):

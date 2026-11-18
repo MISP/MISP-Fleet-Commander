@@ -146,8 +146,9 @@ def readLogins(target: Target, state: LoginState, interval_seconds: int, now: in
 
 def backfillLogins(target: Target, now: int) -> dict:
     """First read of a server's logins: the past 90 days (30, 14 or 7 when there are more than 5000 entries). Hours
-    that are over become hour rows; the current hour's entries are counted in the first raw sample, which the hour
-    roll-up will sum up with the next ones. Tried once (`backfilled`), even when it fails"""
+    that are over become hour rows, those without any login too; the current hour's entries are counted in the first
+    raw sample, which the hour roll-up will sum up with the next ones. Tried once (`backfilled`), even when it
+    fails"""
     entries, full, days = None, False, None
     for days in BACKFILL_DAYS:
         entries, full, error = readLogEntries(target, f'{days}d')
@@ -157,6 +158,10 @@ def backfillLogins(target: Target, now: int) -> dict:
             break
     hourStart = now - now % HOUR
     hours = defaultdict(lambda: {key: 0 for key in catalogue.LOGIN_ACTIONS.values()})
+    # Every hour read in full gets a row, zero included: an hour without one means "not known", not "no login"
+    windowStart = now - days * 24 * HOUR
+    for bucket in range(windowStart - windowStart % HOUR + HOUR, hourStart, HOUR):
+        hours[bucket]
     current = []
     for entry in entries:
         if entry.created is None or entry.created >= hourStart:
@@ -210,6 +215,21 @@ def _upsert(server_id: int, tier: str, ts: int, values: dict, peaks: Optional[di
     return row
 
 
+def _upsertHours(server_id: int, hours: dict):
+    """Hour rows of the login backfill (up to 90 days of them): the rows already there are read in one query"""
+    if not hours:
+        return
+    existing = {row.ts: row for row in MetricSample.query.filter(
+        MetricSample.server_id == server_id, MetricSample.tier == 'hour',
+        MetricSample.ts >= min(hours), MetricSample.ts <= max(hours))}
+    for bucket, counts in hours.items():
+        row = existing.get(bucket)
+        if row is None:
+            db.session.add(MetricSample(server_id=server_id, tier='hour', ts=bucket, values=dict(counts), samples=0))
+        else:
+            row.values = {**(row.values or {}), **counts}
+
+
 def storeCollection(server_id: int, result: dict, now: Optional[int] = None) -> MetricState:
     """Save what a collection read: a raw row when anything was read, the backfilled hours, and the state"""
     now = int(time.time()) if now is None else now
@@ -230,8 +250,9 @@ def storeCollection(server_id: int, result: dict, now: Optional[int] = None) -> 
         if logins.get('cursor') is not None:
             state.login_cursor = logins['cursor']
         state.logins_read_at = now
-    for bucket, counts in (logins.get('hours') or {}).items():
-        _upsert(server_id, 'hour', int(bucket), counts, samples=0)
+    backfilled = {int(bucket): counts for bucket, counts in (logins.get('hours') or {}).items()}
+    _upsertHours(server_id, backfilled)
+    for counts in backfilled.values():
         state.logins_total += counts['logins']
         state.failed_logins_total += counts['failed_logins']
     if logins.get('error'):
