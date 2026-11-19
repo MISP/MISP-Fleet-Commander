@@ -466,8 +466,8 @@ const INSTANCE_PICTURE_CONCURRENCY = 2
 // The fleet page's views, opened with `?tab=` (Servers when absent)
 const FLEET_TABS = [
     { name: "servers", label: "Servers", icon: "server" },
-    { name: "baseline", label: "Baseline", icon: "ruler-combined" },
     { name: "usage", label: "Usage", icon: "chart-line" },
+    { name: "baseline", label: "Baseline", icon: "ruler-combined" },
     { name: "jobs", label: "Jobs", icon: "list-check" },
 ]
 
