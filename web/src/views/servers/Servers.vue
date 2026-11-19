@@ -25,6 +25,8 @@
 
         <BaselineTab v-if="activeTab === 'baseline' && selectedFleet" :fleet-id="selectedFleet.id"></BaselineTab>
 
+        <FleetUsageTab v-if="activeTab === 'usage' && selectedFleet" :fleet-id="selectedFleet.id"></FleetUsageTab>
+
         <div v-show="activeTab === 'servers'">
         <div class="table-header">
             <div class="d-flex" style="margin-top: -5px">
@@ -452,6 +454,7 @@ import ServerHealthBadge from "@/components/health/ServerHealthBadge.vue"
 import { EMPTY_DIGEST } from "@/store/modules/health"
 import JobList from "@/components/jobs/JobList.vue"
 import BaselineTab from "@/components/baselines/BaselineTab.vue"
+import FleetUsageTab from "@/components/usage/FleetUsageTab.vue"
 
 // Instance pictures by server ID (a data URI, or "" for none), asked for once per session and shared by every
 // fleet page. Each one is a request that may reach the MISP server: a few at a time, so that they never hold up
@@ -464,6 +467,7 @@ const INSTANCE_PICTURE_CONCURRENCY = 2
 const FLEET_TABS = [
     { name: "servers", label: "Servers", icon: "server" },
     { name: "baseline", label: "Baseline", icon: "ruler-combined" },
+    { name: "usage", label: "Usage", icon: "chart-line" },
     { name: "jobs", label: "Jobs", icon: "list-check" },
 ]
 
@@ -498,6 +502,7 @@ export default {
         ServerHealthBadge,
         JobList,
         BaselineTab,
+        FleetUsageTab,
     },
     data: function() {
         return {
@@ -1211,6 +1216,17 @@ export default {
 .fleet-tab:focus-visible {
     outline: 2px solid var(--var-color-lapislazuli);
     outline-offset: -2px;
+}
+
+/* Four tabs fit a phone once their icons go */
+@media (max-width: 480px) {
+    .fleet-tab {
+        padding: 0.4rem 0.6rem;
+    }
+
+    .fleet-tab > .fas {
+        display: none;
+    }
 }
 
 .fleet-jobs {

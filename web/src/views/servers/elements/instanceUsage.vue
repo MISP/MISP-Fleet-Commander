@@ -1,17 +1,7 @@
 <template>
     <div class="usage">
         <div class="usage-bar">
-            <div class="range-picker" role="group" aria-label="Range of the charts">
-                <button
-                    v-for="option in RANGES"
-                    :key="option.key"
-                    type="button"
-                    :class="['range-option', { 'is-selected': option.key === rangeKey }]"
-                    :aria-pressed="option.key === rangeKey ? 'true' : 'false'"
-                    :title="`Show ${option.phrase}`"
-                    @click="setRange(option.key)"
-                >{{ option.label }}</button>
-            </div>
+            <RangePicker :value="rangeKey" @input="setRange"></RangePicker>
             <span v-if="latestTs" class="usage-meta">
                 Last sample <timeSinceRefresh noicon :small="false" :timestamp="latestTs"></timeSinceRefresh>
                 <template v-if="intervalMinutes">· every {{ intervalMinutes }} min</template>
@@ -228,9 +218,10 @@
 import { mapGetters, mapState } from "vuex"
 import api from "@/api/metrics"
 import {
-    changePhrase, collectionStatus, DEFAULT_RANGE, HOUR, loginBars, RANGES, rangeOf, ratio, snapshotValues,
+    changePhrase, collectionStatus, DEFAULT_RANGE, HOUR, loginBars, rangeOf, ratio, snapshotValues,
 } from "@/helpers/metrics"
 import MetricTile from "@/components/ui/charts/MetricTile.vue"
+import RangePicker from "@/components/ui/charts/RangePicker.vue"
 import TimeSeriesChart from "@/components/ui/charts/TimeSeriesChart.vue"
 import HourHeatmap from "@/components/ui/charts/HourHeatmap.vue"
 import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
@@ -264,7 +255,7 @@ const QUEUES = [
 export default {
     name: "instanceUsage",
     components: {
-        MetricTile, TimeSeriesChart, HourHeatmap, timeSinceRefresh, UsageBenchmarks,
+        MetricTile, RangePicker, TimeSeriesChart, HourHeatmap, timeSinceRefresh, UsageBenchmarks,
     },
     props: {
         server_id: {
@@ -274,7 +265,6 @@ export default {
     },
     data() {
         return {
-            RANGES,
             HOUR,
             HEATMAP_DAYS,
             rangeKey: DEFAULT_RANGE,
@@ -572,216 +562,10 @@ export default {
 }
 </script>
 
+<style scoped src="@/components/ui/charts/usageLayout.css"></style>
+
 <style scoped>
-.usage {
-    padding: 0.75rem 1rem 1.25rem;
-    font-size: 0.875rem;
-    color: var(--var-color-yankeesblue);
-}
-
-.usage-bar {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 0.5rem 1rem;
-    margin-bottom: 0.75rem;
-}
-
-.range-picker {
-    display: inline-flex;
-    padding: 2px;
-    border: 1px solid #d5dbe3;
-    border-radius: 6px;
-    background: #f4f6f9;
-}
-
-.range-option {
-    min-width: 3rem;
-    padding: 0.2rem 0.6rem;
-    border: 0;
-    border-radius: 4px;
-    background: none;
-    color: #52514e;
-    font-size: 0.8125rem;
-    font-weight: 500;
-    line-height: 1.4;
-    white-space: nowrap;
-}
-
-.range-option:hover {
-    color: #212d40;
-    background: rgba(255, 255, 255, 0.7);
-}
-
-.range-option:focus-visible {
-    outline: 2px solid rgba(41, 120, 160, 0.5);
-    outline-offset: 1px;
-}
-
-.range-option.is-selected {
-    background: #fff;
-    color: #212d40;
-    font-weight: 600;
-    box-shadow: 0 1px 2px rgba(33, 45, 64, 0.15);
-}
-
-.usage-meta {
-    color: #6c757d;
-    font-size: 0.8125rem;
-}
-
-.usage-updating {
-    color: #6c757d;
-    font-size: 0.8125rem;
-}
-
-.usage-notice {
-    display: flex;
-    align-items: baseline;
-    gap: 0.5rem;
-    margin-bottom: 0.9rem;
-    padding: 0.55rem 0.75rem;
-    border: 1px solid #e4e7ec;
-    border-left-width: 3px;
-    border-radius: 4px;
-    background: #fff;
-    font-size: 0.8125rem;
-    line-height: 1.5;
-}
-
-.usage-notice.is-muted {
-    border-left-color: #9aa1a7;
-    background: #f8f9fb;
-}
-
-.usage-notice.is-muted > i {
-    color: #6c757d;
-}
-
-.usage-notice.is-info {
-    border-left-color: var(--health-info);
-    background: var(--health-info-tint);
-}
-
-.usage-notice.is-info > i {
-    color: var(--health-info-ink);
-}
-
-.usage-notice.is-warning {
-    border-left-color: var(--health-warning);
-    background: var(--health-warning-tint);
-}
-
-.usage-notice.is-warning > i {
-    color: var(--health-warning-ink);
-}
-
-.usage-notice.is-critical {
-    border-left-color: var(--health-critical);
-    background: var(--health-critical-tint);
-}
-
-.usage-notice.is-critical > i {
-    color: var(--health-critical-ink);
-}
-
-.notice-text {
-    min-width: 0;
-    overflow-wrap: anywhere;
-}
-
-.notice-action {
-    padding: 0;
-    margin-left: 0.35rem;
-    font-size: inherit;
-    vertical-align: baseline;
-    font-weight: 600;
-}
-
-.usage-body {
-    transition: opacity 0.15s;
-}
-
-.usage-body.is-refreshing {
-    opacity: 0.55;
-}
-
-.usage-section + .usage-section {
-    margin-top: 1.1rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--health-rule);
-}
-
-.section-head {
-    display: flex;
-    align-items: baseline;
-    flex-wrap: wrap;
-    gap: 0.2rem 0.6rem;
-    margin-bottom: 0.6rem;
-}
-
-.section-title {
-    margin: 0;
-    font-size: 1rem;
-    font-weight: 700;
-}
-
-.section-note {
-    color: #6c757d;
-    font-size: 0.8rem;
-}
-
-.section-toggle {
-    margin-left: auto;
-    padding: 0 0.25rem;
-    font-size: 0.8125rem;
-}
-
-.section-empty {
-    margin: 0;
-    color: #6c757d;
-}
-
-.section-empty i {
-    margin-right: 0.3rem;
-    color: #9aa1a7;
-}
-
-.tile-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
-    gap: 0.6rem;
-}
-
-.chart-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 0.75rem;
-}
-
-.chart-card {
-    min-width: 0;
-    padding: 0.6rem 0.75rem 0.5rem;
-    border: 1px solid #e4e7ec;
-    border-radius: 6px;
-    background: #fff;
-}
-
-.chart-title {
-    font-weight: 600;
-    font-size: 0.875rem;
-    color: #212d40;
-}
-
 @media (min-width: 1100px) {
-    .activity-grid {
-        grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-    }
-
-    .activity-api {
-        grid-column: 1 / -1;
-    }
-
     .internals-grid {
         grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     }
@@ -803,53 +587,9 @@ export default {
     grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
 }
 
-.skeleton {
-    border-radius: 6px;
-    background: linear-gradient(90deg, #f0f2f5 25%, #e6e9ee 37%, #f0f2f5 63%);
-    background-size: 400% 100%;
-    animation: shimmer 1.4s ease infinite;
-}
-
-.skeleton-heading {
-    width: 8rem;
-    height: 1rem;
-    margin-bottom: 0.7rem;
-}
-
-.skeleton-tile {
-    height: 6.5rem;
-}
-
-.skeleton-chart {
-    height: 13rem;
-}
-
-@keyframes shimmer {
-    0% { background-position: 100% 50%; }
-    100% { background-position: 0 50%; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .skeleton {
-        animation: none;
-    }
-
-    .usage-body {
-        transition: none;
-    }
-}
-
 @media (max-width: 480px) {
-    .usage {
-        padding: 0.6rem 0.6rem 1rem;
-    }
-
-    .tile-grid {
+    .queue-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .chart-grid {
-        grid-template-columns: minmax(0, 1fr);
     }
 }
 </style>

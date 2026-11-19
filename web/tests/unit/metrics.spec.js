@@ -197,3 +197,67 @@ describe("collection status", () => {
         expect(metrics.ratio(null, 3)).toBeNull()
     })
 })
+
+describe("fleet", () => {
+    const state = { enabled: true, fleet_monitored: true, has_authkey: true, last_attempt: 200, last_success: 200 }
+    const server = (id, name, extra = {}) => ({
+        id, name, state, latest: null, sums: {}, change: {}, peaks: {}, since: null, ...extra,
+    })
+
+    it("adds series up point by point", () => {
+        expect(metrics.sumSeries([[[10, 1], [20, 2]], [[20, 3], [30, "4"]], null, [[30, null]]]))
+            .toEqual([[10, 1], [20, 5], [30, 4]])
+        expect(metrics.sumSeries([])).toEqual([])
+        expect(metrics.lastValue([[10, 1], [20, 5]])).toBe(5)
+        expect(metrics.lastValue([])).toBeNull()
+    })
+
+    it("counts the servers reporting and lists the others by reason", () => {
+        const collection = metrics.fleetCollection([
+            server(1, "ok"),
+            server(2, "partial", { state: { ...state, last_error: "Logins: Forbidden" } }),
+            server(3, "down", { state: { ...state, last_success: 100, last_error: "Server unreachable" } }),
+            server(4, "keyless", { state: { ...state, has_authkey: false } }),
+            server(5, "new", { state: { ...state, last_attempt: null, last_success: null } }),
+        ])
+        expect(collection.total).toBe(5)
+        expect(collection.reporting).toBe(2)
+        expect(collection.failed).toEqual([{ id: 3, name: "down", error: "Server unreachable" }])
+        expect(collection.authkey.map((item) => item.name)).toEqual(["keyless"])
+        expect(collection.waiting.map((item) => item.name)).toEqual(["new"])
+    })
+
+    it("shapes one row per server", () => {
+        const [row, empty] = metrics.fleetServerRows([
+            server(1, "misp-a", {
+                latest: {
+                    ts: 500,
+                    values: { load_1: 1.5, memory_used_pct: 64, disk_used_pct: "71.2", db_size_bytes: 1024, events: 40, queue_default: 2, queue_prio: 1 },
+                },
+                sums: { logins: 12, failed_logins: 2 },
+                change: { events: 3, db_size_bytes: -24 },
+                peaks: { load_1: 4 },
+                since: 100,
+            }),
+            server(2, "misp-b"),
+        ])
+        expect(row).toMatchObject({
+            id: 1, name: "misp-a", lastTs: 500, logins: 12, failedLogins: 2, apiRequests: null, load: 1.5, loadPeak: 4,
+            memory: 64, disk: 71.2, dbSize: 1024, dbChange: -24, events: 40, eventsChange: 3, jobs: 3,
+        })
+        expect(row.status.code).toBe("ok")
+        // No bucket in the range: logins unknown, not zero
+        expect(empty).toMatchObject({ logins: null, failedLogins: 0, jobs: null, lastTs: null, dbChange: null })
+    })
+
+    it("sorts rows with unknown values last", () => {
+        const rows = [
+            { name: "c", load: 2 }, { name: "a", load: null }, { name: "B", load: 5 }, { name: "d", load: 2 },
+        ]
+        const names = (sorted) => sorted.map((row) => row.name)
+        expect(names(metrics.sortRows(rows, "load", true))).toEqual(["B", "c", "d", "a"])
+        expect(names(metrics.sortRows(rows, "load", false))).toEqual(["c", "d", "B", "a"])
+        expect(names(metrics.sortRows(rows, "name"))).toEqual(["a", "B", "c", "d"])
+        expect(names(metrics.sortRows(rows, "name", true))).toEqual(["d", "c", "B", "a"])
+    })
+})

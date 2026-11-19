@@ -203,6 +203,7 @@ import JobList from "@/components/jobs/JobList.vue"
 const TAB_INDEX = {
     // Remote administration, on its Organisations tab
     organisations: 0,
+    usage: 2,
     diagnostic: 3,
     profile: 4,
     connections: 5,

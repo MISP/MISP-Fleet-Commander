@@ -1,5 +1,6 @@
-// Shaping the stored usage metrics of a server for the Usage tab: ranges, value formats, series cut at gaps, login
-// buckets, the hour × day heatmap and where the collection stands. Pure functions: no Vue, no store, no d3
+// Shaping the stored usage metrics of a server or a fleet for the Usage tabs: ranges, value formats, series cut at
+// gaps, login buckets, the hour × day heatmap, where the collection stands and the fleet's per-server rows. Pure
+// functions: no Vue, no store, no d3
 
 export const HOUR = 3600
 export const DAY = 24 * HOUR
@@ -375,4 +376,94 @@ export function ratio(a, b, decimals = 1) {
         return null
     }
     return Number((top / bottom).toFixed(decimals))
+}
+
+/* Fleet ------------------------------------------------------------------------------------------------------------ */
+
+export const QUEUE_KEYS = ["queue_default", "queue_prio", "queue_email", "queue_cache", "queue_update"]
+
+/** Several series added up point by point, as [[ts, sum]] over the timestamps of any of them */
+export function sumSeries(seriesList) {
+    const sums = new Map()
+    ;(seriesList || []).forEach((points) => {
+        ;(points || []).forEach(([ts, value]) => {
+            const number = toNumber(value)
+            if (number !== null) {
+                sums.set(ts, (sums.get(ts) || 0) + number)
+            }
+        })
+    })
+    return [...sums.entries()].sort((a, b) => a[0] - b[0])
+}
+
+/** The last value of a series, or null */
+export function lastValue(points) {
+    const list = points || []
+    return list.length > 0 ? toNumber(list[list.length - 1][1]) : null
+}
+
+/** How the collection of a fleet's servers stands: how many were read at their last collection, and the others by
+ * reason (`failed`, `authkey`, `waiting`), each `{id, name, error}` */
+export function fleetCollection(servers) {
+    const result = { total: 0, reporting: 0, failed: [], authkey: [], waiting: [] }
+    ;(servers || []).forEach((server) => {
+        result.total += 1
+        const status = collectionStatus(server.state)
+        if (status.code === "ok" || status.code === "partial") {
+            result.reporting += 1
+        } else if (result[status.code]) {
+            result[status.code].push({ id: server.id, name: server.name, error: status.error || "" })
+        }
+    })
+    return result
+}
+
+/** One row per server of a fleet answer, with the figures its comparison table shows. Values are null when unknown */
+export function fleetServerRows(servers) {
+    return (servers || []).map((server) => {
+        const values = (server.latest && server.latest.values) || {}
+        const value = (key) => toNumber(values[key])
+        const queues = QUEUE_KEYS.map(value).filter((number) => number !== null)
+        const sums = server.sums || {}
+        const change = server.change || {}
+        const peaks = server.peaks || {}
+        return {
+            id: server.id,
+            name: server.name,
+            status: collectionStatus(server.state),
+            lastTs: server.latest ? server.latest.ts : null,
+            since: server.since,
+            logins: server.since === null || server.since === undefined ? null : toNumber(sums.logins) || 0,
+            failedLogins: toNumber(sums.failed_logins) || 0,
+            apiRequests: value("api_requests_24h"),
+            load: value("load_1"),
+            loadPeak: toNumber(peaks.load_1),
+            memory: value("memory_used_pct"),
+            disk: value("disk_used_pct"),
+            dbSize: value("db_size_bytes"),
+            dbChange: toNumber(change.db_size_bytes),
+            events: value("events"),
+            eventsChange: toNumber(change.events),
+            jobs: queues.length > 0 ? queues.reduce((total, number) => total + number, 0) : null,
+        }
+    })
+}
+
+/** Rows sorted on `key`, unknown values last whatever the direction; names break ties */
+export function sortRows(rows, key, descending = false) {
+    const direction = descending ? -1 : 1
+    return [...(rows || [])].sort((a, b) => {
+        const left = a[key]
+        const right = b[key]
+        const leftMissing = left === null || left === undefined
+        const rightMissing = right === null || right === undefined
+        if (leftMissing || rightMissing) {
+            if (leftMissing && rightMissing) {
+                return String(a.name).localeCompare(String(b.name))
+            }
+            return leftMissing ? 1 : -1
+        }
+        const order = typeof left === "string" ? left.localeCompare(right, undefined, { sensitivity: "base" }) : left - right
+        return order !== 0 ? order * direction : String(a.name).localeCompare(String(b.name))
+    })
 }
