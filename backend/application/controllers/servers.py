@@ -2,17 +2,14 @@
 
 import os
 from pathlib import Path
-import time
 import json
-import re
 import concurrent.futures
-from datetime import datetime as dt, timedelta, timezone
 from collections.abc import Mapping, MutableSequence
 from flask import Blueprint, request, jsonify, abort
 from marshmallow import ValidationError
 
 from application.DBModels import db, User, Server
-from application.controllers.utils import mispGetHTMLRequest, mispGetRequest, mispPostRequest, batchRequest
+from application.controllers.utils import mispGetHTMLRequest, mispGetRequest, batchRequest
 from application.marshmallowSchemas import ServerSchema, serverQuerySchema, serverSchema, taskSchema, serversSchema, serversListSchema
 import application.models.servers as serverModel
 import application.models.syncActivity as syncActivityModel
@@ -377,28 +374,6 @@ def serverBenchmarks(user, server_id):
     refresh = request.args.get('refresh', '0') not in ('', '0', 'false')
     return jsonify(benchmarkModel.getBenchmarks(server, refresh=refresh))
 
-@BPserver.route('/servers/loginOvertime/<int:server_id>', methods=['GET'])
-@token_required
-def loginOvertime(user, server_id):
-    """Logins and failed logins of the last 7 days on the server, from its MISP logs: `{timestamp, data: {login,
-    auth_fail}}`, or `{error}` when MISP does not list them (its API key needs admin rights)"""
-    server = serverModel.getForUser(user, server_id)
-    if server is None:
-        return jsonify({})
-    loginLogs = mispPostRequest(server, '/admin/logs/index', {
-        'model': 'User',
-        'action': ['login', 'auth_fail'],
-        'created': f'{LOGIN_WINDOW_DAYS}d',
-        'limit': LOGIN_MAX_ENTRIES,
-    }, timeout=syncActivityModel.REQUEST_TIMEOUT)
-    if not isinstance(loginLogs, dict) or 'error' in loginLogs or (loginLogs.get('_status_code') or 200) >= 400 \
-            or not isinstance(loginLogs.get('data'), list):
-        return jsonify({'error': syncActivityModel.readableLogError(loginLogs if isinstance(loginLogs, dict) else {})})
-    return jsonify({
-        'timestamp': int(time.time()),
-        'data': parseGetLoginLogs(loginLogs['data']),
-    })
-
 @BPserver.route('/servers/restQuery/<int:server_id>', methods=['POST'])
 @token_required
 def restQuery(user, server_id):
@@ -504,53 +479,6 @@ def updateConnectionForNetwork(server, connectedServer, latest=None):
         'push_rule_number': countJsonLeaves(push_rules)
     }
     return link
-
-
-def _toAwareUTC(value):
-    if value.tzinfo is None:
-        return value.replace(tzinfo=timezone.utc)
-    return value.astimezone(timezone.utc)
-
-
-LOGIN_WINDOW_DAYS = 7
-LOGIN_MAX_ENTRIES = 5000
-LOGIN_TITLE_RE = re.compile(r'User \((?P<userid>\d+)\): (?P<email>\S+)')
-
-
-def parseGetLoginLogs(loginLogs, afterTime=None):
-    """MISP log entries (`{"Log": {…}}` or the bare entry) → `{login: [...], auth_fail: [...]}` with the user, IP and
-    time of each, newer than `afterTime` (7 days by default). MISP log times are read as UTC; entries it cannot
-    date or that are not logins are skipped"""
-    if afterTime is None:
-        afterTime = dt.now(timezone.utc) - timedelta(days=LOGIN_WINDOW_DAYS)
-    afterTime = _toAwareUTC(afterTime)
-    logins = {
-        'login': [],
-        'auth_fail': []
-    }
-    for logEntry in loginLogs:
-        log = logEntry.get('Log', logEntry) if isinstance(logEntry, dict) else None
-        if not isinstance(log, dict) or log.get('action') not in logins:
-            continue
-        try:
-            created = _toAwareUTC(dt.fromisoformat(str(log.get('created'))))
-        except ValueError:
-            continue
-        if created <= afterTime:
-            continue
-        userid, email = None, None
-        if log['action'] == 'login':
-            parsedTitle = LOGIN_TITLE_RE.search(log.get('title') or '')
-            if parsedTitle:
-                userid, email = int(parsedTitle.group('userid')), parsedTitle.group('email')
-            email = email or log.get('email') or None
-        logins[log['action']].append({
-            'userid': userid,
-            'email': email,
-            'ip': log.get('ip') or '',
-            'created': int(created.timestamp()),
-        })
-    return logins
 
 
 def countJsonLeaves(json_obj, ignore_empty_string=True):
