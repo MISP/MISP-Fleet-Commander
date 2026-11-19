@@ -22,6 +22,8 @@ jobs:
       SOCKETIO_MESSAGE_QUEUE: ""
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
@@ -30,7 +32,9 @@ jobs:
             backend/requirements.txt
             backend/requirements-dev.txt
       - name: Install the pinned dependencies
-        run: pip install -r requirements.txt -r requirements-dev.txt
+        run: |
+          pip install -r requirements.txt -r requirements-dev.txt
+          pip install --no-deps vendor/mispql
       - name: Migrate an empty database
         run: flask db upgrade
       - name: Check the models match the migrations

@@ -16,6 +16,11 @@ WORKDIR /app
 COPY backend/requirements.txt ./
 RUN pip3 install --no-cache-dir -r requirements.txt
 
+# MispQL, a git submodule: only its compiler and reply readers are used, which need nothing
+# beyond the standard library, so none of its own dependencies are installed.
+COPY backend/vendor/mispql /tmp/mispql
+RUN pip3 install --no-cache-dir --no-deps /tmp/mispql && rm -rf /tmp/mispql
+
 COPY backend/ /app/
 COPY --from=web /web/dist /app/application/dist
 RUN chmod +x /app/docker/entrypoint.sh

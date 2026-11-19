@@ -42,9 +42,11 @@ This is a project built out of real-world need, shaped by curiosity and the desi
 Clone the repository:
 
 ```bash
-git clone https://github.com/mokaddem/MISP-Fleet-Commander.git
+git clone --recursive https://github.com/mokaddem/MISP-Fleet-Commander.git
 cd MISP-Fleet-Commander
 ```
+
+`--recursive` also fetches [MispQL](https://github.com/MISP/MispQL) into `backend/vendor/mispql`. In a clone made without it: `git submodule update --init`.
 
 Install dependencies:
 
@@ -72,7 +74,7 @@ docker compose up -d --build
 
 The UI is then available on port 5001 of the host (e.g. http://localhost:5001). The database, the generated secret and encryption keys, the instance settings and the cached images are kept in `./run`.
 
-To update: `git pull && docker compose up -d --build`.
+To update: `git pull && git submodule update --init && docker compose up -d --build`.
 
 A default admin user is already provisioned with the following credential:
 ```text
@@ -126,6 +128,7 @@ The backend tests need neither Redis nor a MISP instance:
 ```bash
 cd backend
 pip install -r requirements.txt -r requirements-dev.txt
+pip install --no-deps vendor/mispql
 python -m pytest
 ```
 
@@ -145,6 +148,8 @@ The backend's direct dependencies are listed in `backend/requirements*.in`; the 
 ```bash
 pip-compile requirements.in && pip-compile requirements-dev.in
 ```
+
+[MispQL](https://github.com/MISP/MispQL) is a git submodule at `backend/vendor/mispql`, pinned to a commit and installed with `pip install --no-deps vendor/mispql`: Fleet Commander only uses its compiler and reply readers, which need nothing beyond the standard library, so it stays out of the `.in` files. To move it, check out another commit in `backend/vendor/mispql` and commit the new pointer.
 
 
 ### 🏗️ Building for Production
