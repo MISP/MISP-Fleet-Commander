@@ -179,6 +179,8 @@ def test_health_requires_authentication(client, fleet):
     assert client.get("/health/summary").status_code == 401
     assert client.post("/health/ack", json={"issue_id": "unreachable:1"}).status_code == 401
     assert client.delete("/health/ack/unreachable:1").status_code == 401
+    assert client.post("/health/ack/bulk", json={"issue_ids": ["unreachable:1"]}).status_code == 401
+    assert client.post("/health/unack/bulk", json={"issue_ids": ["unreachable:1"]}).status_code == 401
 
 
 # --- Summary ----------------------------------------------------------------------------------------------------------
@@ -322,6 +324,138 @@ def test_invalid_acknowledgements(client, auth_headers, fleet, payload, expected
     response = client.post("/health/ack", json=payload, headers=auth_headers(fleet.alice))
     assert response.status_code == expected and response.get_json()["message"]
     assert HealthAck.query.filter_by(user_id=fleet.alice.id).count() == 0
+
+
+# --- Bulk acknowledgements --------------------------------------------------------------------------------------------
+
+def bulk(client, auth_headers, user, path, payload):
+    response = client.post(path, json=payload, headers=auth_headers(user))
+    return response.status_code, response.get_json()
+
+
+def serverOf(issue_id):
+    return int(issue_id.split(":")[1])
+
+
+def test_bulk_acknowledgement_hides_issues_across_servers(client, auth_headers, fleet, clock, emitted):
+    _, issues = get(client, auth_headers, fleet.alice, "/health/issues")
+    issueIDs = [issue["id"] for issue in issues]
+    serverIDs = {serverOf(issueID) for issueID in issueIDs}
+    assert len(issueIDs) > 1 and fleet.servers["down"].id in serverIDs
+
+    until = clock[0] + 3600
+    status, body = bulk(client, auth_headers, fleet.alice, "/health/ack/bulk",
+                        {"issue_ids": issueIDs, "until": until, "note": "  Known drift  "})
+    assert status == 200
+    assert [issue["id"] for issue in body["acknowledged"]] == issueIDs
+    assert all(issue["ack"] == {"until": until, "note": "Known drift", "created": clock[0]} for issue in body["acknowledged"])
+    assert body["skipped"] == []
+    assert visibleIDs(client, auth_headers, fleet.alice) == set()
+    _, summary = get(client, auth_headers, fleet.alice, "/health/summary")
+    assert summary["acknowledged"] == len(issueIDs)
+
+    # One update per server, each carrying the acknowledgements
+    events = healthEvents(emitted)
+    assert sorted(payload["server_id"] for payload, _ in events) == sorted(serverIDs)
+    assert all(room == f"user:{fleet.alice.id}" for _, room in events)
+    assert all(issue["ack"] is not None for payload, _ in events for issue in payload["issues"])
+
+    clock[0] += 3600  # Expired. The issues themselves may have changed meanwhile (e.g. a snapshot getting stale)
+    assert get(client, auth_headers, fleet.alice, "/health/summary")[1]["acknowledged"] == 0
+
+
+def test_bulk_acknowledgement_skips_what_it_cannot_acknowledge(client, auth_headers, fleet):
+    from application.DBModels import HealthAck
+    down, up, bobs = (fleet.servers[name].id for name in ("down", "up", "bobs"))
+    issueIDs = [f"unreachable:{down}", f"unreachable:{bobs}", f"unreachable:{up}", "garbage", "unreachable:999999",
+                f"unreachable:{down}"]
+    status, body = bulk(client, auth_headers, fleet.alice, "/health/ack/bulk", {"issue_ids": issueIDs})
+    assert status == 200
+    assert [issue["id"] for issue in body["acknowledged"]] == [f"unreachable:{down}"]
+    assert body["acknowledged"][0]["ack"]["until"] is None
+    assert body["skipped"] == [
+        {"issue_id": f"unreachable:{bobs}", "message": "Unknown issue"},
+        {"issue_id": f"unreachable:{up}", "message": "This issue is not current: it may have cleared since"},
+        {"issue_id": "garbage", "message": "Unknown issue"},
+        {"issue_id": "unreachable:999999", "message": "Unknown issue"},
+    ]
+    assert [ack.issue_id for ack in HealthAck.query.filter_by(user_id=fleet.alice.id)] == [f"unreachable:{down}"]
+    assert HealthAck.query.filter_by(server_id=bobs).count() == 0
+
+
+def test_bulk_acknowledgement_updates_existing_acknowledgements(client, auth_headers, fleet, clock):
+    from application.DBModels import HealthAck
+    issueID = f"unreachable:{fleet.servers['down'].id}"
+    ack(client, auth_headers, fleet.alice, issueID, note="first", until=clock[0] + 60)
+    clock[0] += 10
+    status, body = bulk(client, auth_headers, fleet.alice, "/health/ack/bulk", {"issue_ids": [issueID], "note": "second"})
+    assert status == 200 and body["acknowledged"][0]["ack"] == {"until": None, "note": "second", "created": clock[0]}
+    assert HealthAck.query.filter_by(user_id=fleet.alice.id, issue_id=issueID).count() == 1
+
+
+def test_bulk_acknowledgement_of_nothing_current_publishes_nothing(client, auth_headers, fleet, emitted):
+    status, body = bulk(client, auth_headers, fleet.alice, "/health/ack/bulk",
+                        {"issue_ids": [f"unreachable:{fleet.servers['up'].id}"]})
+    assert status == 200 and body["acknowledged"] == [] and len(body["skipped"]) == 1
+    assert healthEvents(emitted) == []
+
+
+@pytest.mark.parametrize("path", ["/health/ack/bulk", "/health/unack/bulk"])
+@pytest.mark.parametrize("payload", [
+    None,
+    [],
+    {},
+    {"issue_ids": "unreachable:{down}"},
+    {"issue_ids": []},
+    {"issue_ids": [12]},
+    {"issue_ids": ["unreachable:{down}", None]},
+    {"issue_ids": [f"unreachable:{i}" for i in range(10_001)]},
+])
+def test_invalid_bulk_requests(client, auth_headers, fleet, path, payload):
+    from application.DBModels import HealthAck
+    if isinstance(payload, dict) and isinstance(payload.get("issue_ids"), list):
+        payload = {"issue_ids": [i.format(down=fleet.servers["down"].id) if isinstance(i, str) else i
+                                 for i in payload["issue_ids"]]}
+    response = client.post(path, json=payload, headers=auth_headers(fleet.alice))
+    assert response.status_code == 400 and response.get_json()["message"]
+    assert HealthAck.query.filter_by(user_id=fleet.alice.id).count() == 0
+
+
+@pytest.mark.parametrize("fields", [
+    {"until": "tomorrow"},
+    {"until": True},
+    {"until": START},
+    {"note": 5},
+    {"note": "x" * 501},
+])
+def test_invalid_bulk_acknowledgement_fields(client, auth_headers, fleet, fields):
+    from application.DBModels import HealthAck
+    payload = {"issue_ids": [f"unreachable:{fleet.servers['down'].id}"], **fields}
+    status, body = bulk(client, auth_headers, fleet.alice, "/health/ack/bulk", payload)
+    assert status == 400 and body["message"]
+    assert HealthAck.query.filter_by(user_id=fleet.alice.id).count() == 0
+
+
+def test_bulk_unacknowledgement(client, auth_headers, fleet, emitted):
+    _, issues = get(client, auth_headers, fleet.alice, "/health/issues")
+    issueIDs = [issue["id"] for issue in issues]
+    bulk(client, auth_headers, fleet.alice, "/health/ack/bulk", {"issue_ids": issueIDs})
+    bobsID = f"unreachable:{fleet.servers['bobs'].id}"
+    bulk(client, auth_headers, fleet.bob, "/health/ack/bulk", {"issue_ids": [bobsID]})
+    emitted.clear()
+
+    status, body = bulk(client, auth_headers, fleet.alice, "/health/unack/bulk",
+                        {"issue_ids": issueIDs + [bobsID, "garbage"]})
+    assert status == 200
+    assert body["unacknowledged"] == issueIDs
+    assert body["skipped"] == [{"issue_id": bobsID, "message": "This issue is not acknowledged"},
+                               {"issue_id": "garbage", "message": "This issue is not acknowledged"}]
+    assert visibleIDs(client, auth_headers, fleet.alice) == set(issueIDs)
+    assert bobsID not in visibleIDs(client, auth_headers, fleet.bob)  # Bob's acknowledgement is untouched
+
+    events = healthEvents(emitted)
+    assert sorted(payload["server_id"] for payload, _ in events) == sorted({serverOf(i) for i in issueIDs})
+    assert all(issue["ack"] is None for payload, _ in events for issue in payload["issues"])
 
 
 # --- Live updates -----------------------------------------------------------------------------------------------------

@@ -59,6 +59,34 @@ def acknowledge(user):
         return errorResponse(e)
 
 
+@BPhealth.route('/health/ack/bulk', methods=['POST'])
+@token_required
+def acknowledgeMany(user):
+    """Hide several issues (`issue_ids`) with the same `until` and `note`. Issues that cannot be acknowledged (unknown,
+    or cleared since) are listed in `skipped`"""
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({'message': '`issue_ids` is required'}), 400
+    try:
+        return jsonify(healthModel.acknowledgeMany(user, payload.get('issue_ids'), payload.get('until'),
+                                                   payload.get('note')))
+    except healthModel.HealthError as e:
+        return errorResponse(e)
+
+
+@BPhealth.route('/health/unack/bulk', methods=['POST'])
+@token_required
+def unacknowledgeMany(user):
+    """Show several issues (`issue_ids`) again. Issues that are not acknowledged are listed in `skipped`"""
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({'message': '`issue_ids` is required'}), 400
+    try:
+        return jsonify(healthModel.unacknowledgeMany(user, payload.get('issue_ids')))
+    except healthModel.HealthError as e:
+        return errorResponse(e)
+
+
 @BPhealth.route('/health/ack/<path:issue_id>', methods=['DELETE'])
 @token_required
 def unacknowledge(user, issue_id):

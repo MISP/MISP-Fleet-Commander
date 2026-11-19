@@ -12,6 +12,8 @@ from application.DBModels import Fleet, HealthAck, Server, User, db
 from application.health import CATEGORIES, SEVERITIES, Context, evaluate_server, sort_issues
 
 MAX_NOTE_LENGTH = 500
+# Issues a bulk acknowledgement takes at once: a baseline drifting on every server stays well below
+MAX_BULK_ISSUES = 10_000
 
 
 class HealthError(Exception):
@@ -172,8 +174,8 @@ def currentIssue(user, issue_id: str):
     raise HealthError("This issue is not current: it may have cleared since", 404)
 
 
-def acknowledge(user, issue_id, until=None, note=None) -> dict:
-    now = int(time.time())
+def validAckFields(until, note, now: int) -> str:
+    """Check an acknowledgement's `until` and `note`; return the note to store"""
     if until is not None:
         if isinstance(until, bool) or not isinstance(until, int):
             raise HealthError("`until` must be a UNIX timestamp")
@@ -184,16 +186,28 @@ def acknowledge(user, issue_id, until=None, note=None) -> dict:
         raise HealthError("`note` must be text")
     if len(note) > MAX_NOTE_LENGTH:
         raise HealthError(f"`note` must be at most {MAX_NOTE_LENGTH} characters long")
-    server, issue = currentIssue(user, issue_id)
+    return note.strip()
 
-    ack = HealthAck.query.filter_by(user_id=user.id, issue_id=issue_id).first()
+
+def saveAck(user, server, issue, ack: Optional[HealthAck], until, note: str, now: int) -> HealthAck:
+    """Create or update the user's acknowledgement of `issue` (not committed)"""
     if ack is None:
-        ack = HealthAck(user_id=user.id, server_id=server.id, issue_id=issue_id)
+        ack = HealthAck(user_id=user.id, server_id=server.id, issue_id=issue.id)
         db.session.add(ack)
     ack.issue_first_seen = issue.first_seen
     ack.until = until
-    ack.note = note.strip()
+    ack.note = note
     ack.created = now
+    return ack
+
+
+def acknowledge(user, issue_id, until=None, note=None) -> dict:
+    now = int(time.time())
+    note = validAckFields(until, note, now)
+    server, issue = currentIssue(user, issue_id)
+
+    ack = saveAck(user, server, issue, HealthAck.query.filter_by(user_id=user.id, issue_id=issue_id).first(),
+                  until, note, now)
     db.session.commit()
     publishServerHealth(server)
     return serializeIssue(issue, server, ack, now)
@@ -208,6 +222,82 @@ def unacknowledge(user, issue_id: str) -> None:
     db.session.commit()
     if server is not None:
         publishServerHealth(server)
+
+
+def validIssueIds(issue_ids) -> List[str]:
+    """The issue IDs of a bulk request, without duplicates, in the order given"""
+    if not isinstance(issue_ids, list) or not issue_ids or not all(isinstance(i, str) for i in issue_ids):
+        raise HealthError("`issue_ids` must be a non-empty list of issue IDs")
+    unique = list(dict.fromkeys(issue_ids))
+    if len(unique) > MAX_BULK_ISSUES:
+        raise HealthError(f"At most {MAX_BULK_ISSUES} issues can be changed at once")
+    return unique
+
+
+def ownedServersOf(user, issue_ids: List[str]) -> Dict[int, Server]:
+    """The user's servers that the given issue IDs are about, by ID"""
+    server_ids = {issueServerId(issue_id) for issue_id in issue_ids} - {None}
+    if not server_ids:
+        return {}
+    servers = Server.query.filter(Server.user_id == user.id, Server.id.in_(server_ids)).all()
+    return {server.id: server for server in servers}
+
+
+def acknowledgeMany(user, issue_ids, until=None, note=None) -> dict:
+    """Acknowledge several current issues at once, with the same `until` and `note`. Issues that are unknown, someone
+    else's or no longer current are skipped: some clearing meanwhile is expected. Each server is evaluated once and
+    its health published once"""
+    now = int(time.time())
+    note = validAckFields(until, note, now)
+    issue_ids = validIssueIds(issue_ids)
+    servers = ownedServersOf(user, issue_ids)
+    ctx = Context.for_user(user)
+    current = {}  # issue ID -> current issue, for the servers asked about
+    for server in servers.values():
+        for issue in evaluate_server(server, ctx):
+            current[issue.id] = issue
+    acks = acksByIssue(user.id, servers.keys())
+
+    acknowledged, skipped, touched = [], [], {}
+    for issue_id in issue_ids:
+        server = servers.get(issueServerId(issue_id))
+        if server is None:
+            skipped.append({"issue_id": issue_id, "message": "Unknown issue"})
+            continue
+        issue = current.get(issue_id)
+        if issue is None:
+            skipped.append({"issue_id": issue_id, "message": "This issue is not current: it may have cleared since"})
+            continue
+        ack = saveAck(user, server, issue, acks.get(issue_id), until, note, now)
+        acknowledged.append(serializeIssue(issue, server, ack, now))
+        touched[server.id] = server
+    if touched:
+        db.session.commit()
+        for server in touched.values():
+            publishServerHealth(server)
+    return {"acknowledged": acknowledged, "skipped": skipped}
+
+
+def unacknowledgeMany(user, issue_ids) -> dict:
+    """Remove several acknowledgements at once. Issues that are not acknowledged are skipped"""
+    issue_ids = validIssueIds(issue_ids)
+    servers = ownedServersOf(user, issue_ids)
+    acks = acksByIssue(user.id, servers.keys())
+
+    unacknowledged, skipped, touched = [], [], {}
+    for issue_id in issue_ids:
+        ack = acks.get(issue_id)
+        if ack is None:
+            skipped.append({"issue_id": issue_id, "message": "This issue is not acknowledged"})
+            continue
+        db.session.delete(ack)
+        unacknowledged.append(issue_id)
+        touched[ack.server_id] = servers[ack.server_id]
+    if touched:
+        db.session.commit()
+        for server in touched.values():
+            publishServerHealth(server)
+    return {"unacknowledged": unacknowledged, "skipped": skipped}
 
 
 def healthPayload(server, issues: List[dict]) -> dict:
