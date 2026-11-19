@@ -13,13 +13,12 @@ from sqlalchemy import func
 
 from application.DBModels import db, MetricSample, MetricState
 from application.models import metricCatalogue as catalogue
-from application.models.metricRollups import DAY, HOUR, HOUR_RETENTION, RAW_RETENTION, summarise
+from application.models.metricRollups import DAY, HOUR, retention, summarise
 
 RANGES = {'24h': DAY, '7d': 7 * DAY, '30d': 30 * DAY, '90d': 90 * DAY, '1y': 365 * DAY}
 DEFAULT_RANGE = '7d'
 DEFAULT_TIERS = {'24h': 'raw', '7d': 'hour', '30d': 'hour', '90d': 'day', '1y': 'day'}
-# Beyond its retention, a tier has nothing more to show
-TIER_MAX_SPAN = {'raw': RAW_RETENTION, 'hour': HOUR_RETENTION, 'day': None}
+TIERS = ('raw', 'hour', 'day')
 BUCKET_SIZES = {'hour': HOUR, 'day': DAY}
 
 
@@ -33,9 +32,10 @@ def parseRequest(rangeName: Optional[str], tier: Optional[str], metrics: Optiona
     if rangeName not in RANGES:
         raise SeriesRequestError(f"Unknown range `{rangeName}`: use one of {', '.join(RANGES)}")
     tier = tier or DEFAULT_TIERS[rangeName]
-    if tier not in TIER_MAX_SPAN:
-        raise SeriesRequestError(f"Unknown tier `{tier}`: use one of {', '.join(TIER_MAX_SPAN)}")
-    maxSpan = TIER_MAX_SPAN[tier]
+    if tier not in TIERS:
+        raise SeriesRequestError(f"Unknown tier `{tier}`: use one of {', '.join(TIERS)}")
+    # Beyond its retention, a tier has nothing more to show
+    maxSpan = retention()[tier]
     if maxSpan is not None and RANGES[rangeName] > maxSpan:
         raise SeriesRequestError(f"The {tier} tier only covers {maxSpan // DAY} days: ask for a shorter range")
     if metrics:

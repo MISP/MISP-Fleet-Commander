@@ -127,3 +127,104 @@ def test_no_day_from_hours_that_failed(db, server, monkeypatch):
     monkeypatch.setattr(metricRollups, "rollupServer", original)
     metricRollups.run(BASE + DAY + 7 * 60)
     assert rows(server, "day")[BASE].values == {"logins": 1, "events": 3}
+
+
+# --- Retention settings -----------------------------------------------------------------------------------------------
+
+RETENTION_SETTINGS = ("monitoring_raw_retention_days", "monitoring_hour_retention_days", "monitoring_day_retention_days")
+
+
+@pytest.fixture()
+def saved(monkeypatch):
+    """The retention settings as saved in config.json; the others keep their value"""
+    import application.models.setting as settingModel
+    values = {"monitoring_raw_retention_days": 14, "monitoring_hour_retention_days": 90,
+              "monitoring_day_retention_days": 0}
+    original = settingModel.getRefreshValue
+    monkeypatch.setattr(settingModel, "getRefreshValue",
+                        lambda name: values[name] if name in values else original(name))
+    return values
+
+
+def test_retention_defaults():
+    from application.models import metricRollups
+    import application.models.setting as settingModel
+    assert [settingModel.getValue(name) for name in RETENTION_SETTINGS] == [14, 90, 0]
+    assert metricRollups.retention() == {"raw": 14 * DAY, "hour": 90 * DAY, "day": None}
+
+
+def test_retention_follows_the_settings(db, server, saved):
+    from application.models import metricRollups
+    saved.update({"monitoring_raw_retention_days": 3, "monitoring_hour_retention_days": 40,
+                  "monitoring_day_retention_days": 400})
+    now = BASE + 1000 * DAY + 7 * 60
+    for age in (2, 4):
+        add(db, server, "raw", now - age * DAY, {"events": age})
+    for age in (39, 41):
+        add(db, server, "hour", now - age * DAY - HOUR, {"events": age})
+    for age in (399, 401):
+        add(db, server, "day", now - age * DAY - DAY, {"events": age})
+    report = metricRollups.run(now)
+    assert [row.values["events"] for row in rows(server, "raw").values()] == [2]
+    assert 41 not in [row.values["events"] for row in rows(server, "hour").values()]
+    assert 39 in [row.values["events"] for row in rows(server, "hour").values()]
+    assert 401 not in [row.values["events"] for row in rows(server, "day").values()]
+    assert 399 in [row.values["events"] for row in rows(server, "day").values()]
+    assert set(report["deleted"]) == {"raw", "hour", "day"} and report["deleted"]["day"] == 1
+
+
+def test_day_rows_are_kept_by_default(db, server, saved):
+    from application.models import metricRollups
+    add(db, server, "day", BASE, {"events": 1}, samples=144)
+    assert "day" not in metricRollups.run(BASE + 3000 * DAY + 7 * 60)["deleted"]
+    assert list(rows(server, "day")) == [BASE]
+
+
+@pytest.mark.parametrize("raw, hour, day, expected", [
+    (1, 90, 0, (2, 90, None)),  # Under the minimum
+    (30, 20, 0, (30, 30, None)),  # Hours never kept for less than samples: no roll-up churn
+    (14, 400, 100, (14, 400, 400)),  # Days never kept for less than hours
+    (14, 90, 10, (14, 90, 365)),
+    ("abc", None, True, (14, 90, None)),  # Not a number: the default
+    (14.0, "60", 0, (14, 60, None)),
+])
+def test_retention_values_edited_by_hand_are_brought_back_in_bounds(saved, raw, hour, day, expected):
+    from application.models import metricRollups
+    saved.update({"monitoring_raw_retention_days": raw, "monitoring_hour_retention_days": hour,
+                  "monitoring_day_retention_days": day})
+    retention = metricRollups.retention()
+    assert (retention["raw"] // DAY, retention["hour"] // DAY,
+            None if retention["day"] is None else retention["day"] // DAY) == expected
+
+
+@pytest.mark.parametrize("name, value, others, message", [
+    ("monitoring_raw_retention_days", 1, {}, "at least 2"),
+    ("monitoring_raw_retention_days", 91, {}, "at most 90"),
+    ("monitoring_raw_retention_days", 60, {"monitoring_hour_retention_days": 45}, "hourly retention (45 days)"),
+    ("monitoring_hour_retention_days", 29, {}, "at least 30"),
+    ("monitoring_hour_retention_days", 30, {"monitoring_raw_retention_days": 60}, "sample retention (60 days)"),
+    ("monitoring_hour_retention_days", 500, {"monitoring_day_retention_days": 400}, "daily retention (400 days)"),
+    ("monitoring_day_retention_days", 100, {}, "at least 365"),
+    ("monitoring_day_retention_days", 400, {"monitoring_hour_retention_days": 500}, "hourly retention (500 days)"),
+    ("monitoring_day_retention_days", 3651, {}, "at most 3650"),
+])
+def test_retention_values_are_validated(saved, name, value, others, message):
+    import re
+    import application.models.setting as settingModel
+    saved.update(others)
+    with pytest.raises(settingModel.SettingError, match=re.escape(message)):
+        settingModel.validate(name, value)
+
+
+@pytest.mark.parametrize("name, value, others", [
+    ("monitoring_raw_retention_days", 90, {"monitoring_hour_retention_days": 90}),
+    ("monitoring_hour_retention_days", 730, {}),  # Days kept as long as the server
+    ("monitoring_day_retention_days", 0, {"monitoring_hour_retention_days": 730}),
+    ("monitoring_day_retention_days", 365, {}),
+    # A sample retention edited by hand doesn't block the other settings
+    ("monitoring_day_retention_days", 365, {"monitoring_raw_retention_days": 500}),
+])
+def test_valid_retention_values(saved, name, value, others):
+    import application.models.setting as settingModel
+    saved.update(others)
+    assert settingModel.validate(name, value) == value

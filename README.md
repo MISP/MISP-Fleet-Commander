@@ -223,7 +223,7 @@ The first samples arrive within a minute or two. The first collection of a serve
 
 Use a site admin API key: with another key, MISP refuses some of these figures and only lists the logins of the key's own organisation.
 
-Every sample is kept for 14 days, hourly figures for 90 days and daily figures for as long as the server exists. With 50 servers, that is roughly 190 MB, plus 20 MB per year.
+By default, every sample is kept for 14 days, hourly figures for 90 days and daily figures for as long as the server exists. With 50 servers, that is roughly 190 MB, plus 20 MB per year. The three periods are settings in the same tab (`Sample Retention`, `Hourly Retention`, `Daily Retention`, in days). Each day kept costs about 110 kB per server for samples (at a 10-minute interval), 26 kB for hourly figures and 1 kB for daily ones. A shorter period applies at the next hourly roll-up.
 
 `flask server monitor-fleets` (Docker: `docker compose exec backend flask server monitor-fleets`) runs one collection right away and prints the outcome for each server.
 

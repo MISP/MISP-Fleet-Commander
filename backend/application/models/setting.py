@@ -57,6 +57,42 @@ setting_configuration = {
         "disabled": False,
         "error": False,
     },
+    "monitoring_raw_retention_days": {
+        "name": "Sample Retention",
+        "description": "How long (days) every collected sample is kept. Samples draw the 24-hour charts. About 110 kB per server and day at a 10-minute interval. A shorter retention applies at the next hourly roll-up.",
+        "panel": "Scheduler",
+        "scope": "Monitoring System",
+        "type": "number",
+        "default": 14,
+        "min": 2,
+        "max": 90,
+        "disabled": False,
+        "error": False,
+    },
+    "monitoring_hour_retention_days": {
+        "name": "Hourly Retention",
+        "description": "How long (days) hourly figures are kept. They draw the 7-day and 30-day charts. Never shorter than the sample retention. About 26 kB per server and day.",
+        "panel": "Scheduler",
+        "scope": "Monitoring System",
+        "type": "number",
+        "default": 90,
+        "min": 30,
+        "max": 730,
+        "disabled": False,
+        "error": False,
+    },
+    "monitoring_day_retention_days": {
+        "name": "Daily Retention",
+        "description": "How long (days) daily figures are kept. They draw the 90-day and 1-year charts. 0 keeps them as long as their server; otherwise at least 365, and never shorter than the hourly retention. About 1 kB per server and day.",
+        "panel": "Scheduler",
+        "scope": "Monitoring System",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 3650,
+        "disabled": False,
+        "error": False,
+    },
     "health_background_refresh_enabled": {
         "name": "Background Refresh Enabled",
         "description": "Keep the status of every server fresh without opening the UI: periodic connection tests and full refreshes of all servers, whether their fleet is watched or not.",
@@ -146,6 +182,49 @@ class SettingError(ValueError):
     pass
 
 
+# Shortest daily retention when it is not 0 (kept as long as the server): the 1-year charts are drawn from days
+DAY_RETENTION_MIN_DAYS = 365
+
+
+def intValue(setting_name: str) -> int:
+    """The saved value as a whole number, or the default when config.json holds something else"""
+    value = getRefreshValue(setting_name)
+    try:
+        if isinstance(value, bool) or not float(value).is_integer():
+            raise ValueError
+        return int(value)
+    except (TypeError, ValueError):
+        return int(settings[setting_name]["default"])
+
+
+def _checkMetricRetention(setting_name: str, days: int):
+    """A coarser tier never keeps less than a finer one: the roll-up would otherwise rebuild the hour rows deleted by
+    retention from the raw rows still there, every hour. Only the neighbours of the edited setting are compared"""
+    if setting_name == "monitoring_raw_retention_days":
+        hour = intValue("monitoring_hour_retention_days")
+        if days > hour:
+            raise SettingError(f"The value must be at most the hourly retention ({hour} days): raise that one first")
+    elif setting_name == "monitoring_hour_retention_days":
+        raw, day = intValue("monitoring_raw_retention_days"), intValue("monitoring_day_retention_days")
+        if days < raw:
+            raise SettingError(f"The value must be at least the sample retention ({raw} days)")
+        if day and days > day:
+            raise SettingError(f"The value must be at most the daily retention ({day} days): raise that one first, or set it to 0")
+    elif setting_name == "monitoring_day_retention_days" and days:
+        hour = intValue("monitoring_hour_retention_days")
+        if days < DAY_RETENTION_MIN_DAYS:
+            raise SettingError(f"The value must be 0 (keep them as long as their server) or at least {DAY_RETENTION_MIN_DAYS}")
+        if days < hour:
+            raise SettingError(f"The value must be 0 or at least the hourly retention ({hour} days)")
+
+
+CROSS_CHECKS = {
+    "monitoring_raw_retention_days": _checkMetricRetention,
+    "monitoring_hour_retention_days": _checkMetricRetention,
+    "monitoring_day_retention_days": _checkMetricRetention,
+}
+
+
 def validate(setting_name: str, setting_value):
     """Check and normalise a value before saving it. Raises SettingError with a message meant for the user"""
     config = settings.get(setting_name)
@@ -168,6 +247,8 @@ def validate(setting_name: str, setting_value):
             raise SettingError(f"The value must be at least {config['min']}")
         if "max" in config and setting_value > config["max"]:
             raise SettingError(f"The value must be at most {config['max']}")
+    if setting_name in CROSS_CHECKS:
+        CROSS_CHECKS[setting_name](setting_name, setting_value)
     return setting_value
 
 

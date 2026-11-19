@@ -1,9 +1,9 @@
 """Hourly and daily roll-ups of the metric samples, and their retention.
 
 Every hour, each hour that is over and has raw rows but no hour row yet gets one, then each UTC day that is over and
-has hour rows but no day row gets one, built from the hour rows. Then raw rows older than 14 days and hour rows
-older than 90 days are deleted; day rows stay as long as their server. Re-running is harmless: a bucket that has its
-row is left alone.
+has hour rows but no day row gets one, built from the hour rows. Then the rows older than their tier's retention are
+deleted (settings, by default raw rows after 14 days and hour rows after 90; day rows stay as long as their server).
+Re-running is harmless: a bucket that has its row is left alone.
 
 How a bucket sums up its rows depends on the metric's kind (see metricCatalogue): the last value of a `total`, the
 sum of a `delta`, and for a `gauge` the average weighted by the raw samples behind each row, with the maximum kept
@@ -15,12 +15,28 @@ from typing import Optional
 
 from application.DBModels import db, MetricSample
 from application.models.metricCatalogue import DELTA, GAUGE, METRICS, TOTAL, kindOf
+import application.models.setting as settingModel
 
 HOUR = 3600
 DAY = 24 * HOUR
-RAW_RETENTION = 14 * DAY
-HOUR_RETENTION = 90 * DAY
 ROLLUPS = (('raw', 'hour', HOUR), ('hour', 'day', DAY))
+
+
+def _days(setting_name: str) -> int:
+    return max(settingModel.intValue(setting_name), settingModel.get(setting_name)['min'])
+
+
+def retention() -> dict:
+    """Seconds each tier is kept, from the settings, read on every call; None: as long as the server. Values edited
+    by hand in config.json are brought back in bounds, and a coarser tier never keeps less than a finer one"""
+    raw = _days('monitoring_raw_retention_days') * DAY
+    hour = max(raw, _days('monitoring_hour_retention_days') * DAY)
+    day = _days('monitoring_day_retention_days')
+    return {
+        'raw': raw,
+        'hour': hour,
+        'day': max(hour, day * DAY, settingModel.DAY_RETENTION_MIN_DAYS * DAY) if day else None,
+    }
 
 
 def _number(key: str, value: float):
@@ -100,7 +116,9 @@ def rollupServer(server_id: int, sourceTier: str, targetTier: str, size: int, bu
 
 def applyRetention(now: int) -> dict:
     deleted = {}
-    for tier, keep in (('raw', RAW_RETENTION), ('hour', HOUR_RETENTION)):
+    for tier, keep in retention().items():
+        if keep is None:
+            continue
         deleted[tier] = MetricSample.query.filter(MetricSample.tier == tier, MetricSample.ts < now - keep) \
             .delete(synchronize_session=False)
     db.session.commit()

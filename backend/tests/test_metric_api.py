@@ -54,6 +54,24 @@ def test_request_defaults_and_validation():
             parseRequest(*args)
 
 
+def test_tier_limits_follow_the_retention(monkeypatch):
+    import application.models.setting as settingModel
+    from application.models.metricSeries import SeriesRequestError, parseRequest
+    values = {"monitoring_raw_retention_days": 30, "monitoring_hour_retention_days": 365,
+              "monitoring_day_retention_days": 0}
+    original = settingModel.getRefreshValue
+    monkeypatch.setattr(settingModel, "getRefreshValue", lambda name: values[name] if name in values else original(name))
+    assert parseRequest("30d", "raw", None)[1] == "raw"
+    assert parseRequest("1y", "hour", None)[1] == "hour"
+    values.update({"monitoring_raw_retention_days": 2, "monitoring_hour_retention_days": 30})
+    for args in (("7d", "raw", None), ("90d", "hour", None)):
+        with pytest.raises(SeriesRequestError):
+            parseRequest(*args)
+    # The default tier of each range stays whole at the shortest retentions
+    assert parseRequest("24h", None, None)[1] == "raw"
+    assert parseRequest("30d", None, None)[1] == "hour"
+
+
 def test_route_is_scoped_and_validated(client, auth_headers, owned):
     alice, bob, server = owned
     assert client.get(f"/servers/metrics/{server.id}").status_code == 401
