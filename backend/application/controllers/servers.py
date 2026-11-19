@@ -17,6 +17,7 @@ import application.models.metrics as metricModel
 import application.models.metricSeries as metricSeriesModel
 import application.models.benchmarks as benchmarkModel
 import application.models.instancePicture as instancePictureModel
+import application.models.queryCapability as queryCapabilityModel
 from application.controllers.instance import token_required
 from application.health.links import classify_link, latest_release_for
 import application.health.versions as healthVersions
@@ -116,6 +117,7 @@ def edit(user):
         # recursively add servers
         pass
     db.session.commit()
+    queryCapabilityModel.forget(server.id)  # another URL or key: another answer
     return serverSchema.dump(server)
 
 
@@ -362,6 +364,17 @@ def serverMetrics(user, server_id):
     except metricSeriesModel.SeriesRequestError as e:
         return jsonify({'message': str(e)}), 400
     return jsonify(metricSeriesModel.series(server, rangeName, tier, keys, metricModel.monitoringSettings()))
+
+@BPserver.route('/servers/queryCapability/<int:server_id>', methods=['GET'])
+@token_required
+def serverQueryCapability(user, server_id):
+    """Whether the server runs complex queries, from its answer to `GET /attributes/queryDescribe` with its key.
+    Cached an hour (a minute when it did not answer clearly); `?refresh=1` asks it again"""
+    server = serverModel.getForUser(user, server_id)
+    if server is None:
+        abort(404)
+    refresh = request.args.get('refresh', '0') not in ('', '0', 'false')
+    return jsonify(queryCapabilityModel.get(server, refresh=refresh))
 
 @BPserver.route('/servers/benchmarks/<int:server_id>', methods=['GET'])
 @token_required

@@ -1,0 +1,320 @@
+{
+ "_comment": "Answers of MISP 3.0 servers to GET /attributes/queryDescribe: with complex queries (site admin key), without them (site admin key), and with them to a key whose role lacks Complex query",
+ "supported": {
+  "status": 200,
+  "body": {
+   "tables": {
+    "attributes": {
+     "endpoint": "/attributes/restSearch",
+     "fields": {
+      "id": {
+       "type": "int",
+       "operators": [
+        "=",
+        "!=",
+        ">",
+        "<",
+        ">=",
+        "<=",
+        "IN",
+        "NOT IN"
+       ],
+       "level": [
+        "attribute"
+       ]
+      },
+      "event_id": {
+       "type": "int",
+       "operators": [
+        "=",
+        "!=",
+        ">",
+        "<",
+        ">=",
+        "<=",
+        "IN",
+        "NOT IN"
+       ],
+       "level": [
+        "attribute"
+       ]
+      },
+      "object_id": {
+       "type": "int",
+       "operators": [
+        "=",
+        "!=",
+        ">",
+        "<",
+        ">=",
+        "<=",
+        "IN",
+        "NOT IN"
+       ],
+       "level": [
+        "attribute"
+       ]
+      },
+      "distribution": {
+       "type": "int",
+       "operators": [
+        "=",
+        "!=",
+        ">",
+        "<",
+        ">=",
+        "<=",
+        "IN",
+        "NOT IN"
+       ],
+       "level": [
+        "attribute"
+       ]
+      },
+      "timestamp": {
+       "type": "timestamp",
+       "operators": [
+        "=",
+        "!=",
+        ">",
+        "<",
+        ">=",
+        "<=",
+        "IN",
+        "NOT IN"
+       ],
+       "level": [
+        "attribute"
+       ]
+      },
+      "event_timestamp": {
+       "type": "timestamp",
+       "operators": [
+        "=",
+        "!=",
+        ">",
+        "<",
+        ">=",
+        "<=",
+        "IN",
+        "NOT IN"
+       ],
+       "level": [
+        "event"
+       ]
+      },
+      "publish_timestamp": {
+       "type": "timestamp",
+       "operators": [
+        "=",
+        "!=",
+        ">",
+        "<",
+        ">=",
+        "<=",
+        "IN",
+        "NOT IN"
+       ],
+       "level": [
+        "event"
+       ]
+      },
+      "threat_level_id": {
+       "type": "int",
+       "operators": [
+        "=",
+        "!=",
+        ">",
+        "<",
+        ">=",
+        "<=",
+        "IN",
+        "NOT IN"
+       ],
+       "level": [
+        "event"
+       ]
+      },
+      "to_ids": {
+       "type": "bool",
+       "operators": [
+        "=",
+        "!="
+       ],
+       "level": [
+        "attribute"
+       ]
+      },
+      "published": {
+       "type": "bool",
+       "operators": [
+        "=",
+        "!="
+       ],
+       "level": [
+        "event"
+       ]
+      },
+      "uuid": {
+       "type": "string",
+       "operators": [
+        "=",
+        "!=",
+        "IN",
+        "NOT IN"
+       ],
+       "level": [
+        "attribute"
+       ]
+      },
+      "type": {
+       "type": "string",
+       "operators": [
+        "=",
+        "!=",
+        "IN",
+        "NOT IN",
+        "LIKE",
+        "NOT LIKE"
+       ],
+       "level": [
+        "attribute"
+       ]
+      },
+      "category": {
+       "type": "string",
+       "operators": [
+        "=",
+        "!=",
+        "IN",
+        "NOT IN",
+        "LIKE",
+        "NOT LIKE"
+       ],
+       "level": [
+        "attribute"
+       ]
+      },
+      "object_relation": {
+       "type": "string",
+       "operators": [
+        "=",
+        "!=",
+        "IN",
+        "NOT IN",
+        "LIKE",
+        "NOT LIKE"
+       ],
+       "level": [
+        "attribute"
+       ]
+      },
+      "comment": {
+       "type": "string",
+       "operators": [
+        "=",
+        "!=",
+        "IN",
+        "NOT IN",
+        "LIKE",
+        "NOT LIKE"
+       ],
+       "level": [
+        "attribute"
+       ]
+      },
+      "eventinfo": {
+       "type": "string",
+       "operators": [
+        "=",
+        "!=",
+        "IN",
+        "NOT IN",
+        "LIKE",
+        "NOT LIKE"
+       ],
+       "level": [
+        "event"
+       ]
+      },
+      "value": {
+       "type": "string",
+       "operators": [
+        "=",
+        "!=",
+        "IN",
+        "NOT IN",
+        "LIKE",
+        "NOT LIKE"
+       ],
+       "level": [
+        "attribute"
+       ]
+      },
+      "tags": {
+       "type": "string",
+       "operators": [
+        "=",
+        "!=",
+        "IN",
+        "NOT IN",
+        "LIKE",
+        "NOT LIKE"
+       ],
+       "level": [
+        "attribute",
+        "event"
+       ]
+      },
+      "org": {
+       "type": "string",
+       "operators": [
+        "=",
+        "!=",
+        "IN",
+        "NOT IN"
+       ],
+       "level": [
+        "event"
+       ]
+      }
+     },
+     "sortable": [
+      "id",
+      "event_id",
+      "object_id",
+      "type",
+      "category",
+      "value",
+      "distribution",
+      "timestamp",
+      "object_relation",
+      "Event.publish_timestamp"
+     ]
+    }
+   },
+   "limits": {
+    "max_depth": 5,
+    "max_nodes": 50,
+    "max_list": 100,
+    "max_value_length": 1024
+   }
+  }
+ },
+ "not_supported": {
+  "status": 404,
+  "body": {
+   "name": "Not Found",
+   "message": "Not Found",
+   "url": "/attributes/queryDescribe"
+  }
+ },
+ "no_permission": {
+  "status": 403,
+  "body": {
+   "name": "You do not have permission to use this functionality.",
+   "message": "You do not have permission to use this functionality.",
+   "url": "/attributes/queryDescribe"
+  }
+ }
+}

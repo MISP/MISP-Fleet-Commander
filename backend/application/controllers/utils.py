@@ -192,6 +192,29 @@ def mispPostRequest(server, url, data={}, rawResponse=False, nocache=True, timeo
     except Exception as e:
         return { "error": "Exception " + str(e) }
 
+def mispRawRequest(server, method, url, data=None, timeout=None):
+    """MISP's response to a request whatever its HTTP status, never from the cache; on a transport failure, the same
+    error dict as the other helpers. For callers that read MISP's refusals themselves (complex queries)"""
+    headers = {
+        "Authorization": server.authkey,
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+    }
+    try:
+        return getRequestPSession().request(method, urljoin(server.url, url), json=data, headers=headers,
+                                            verify=(not getattr(server, 'skip_ssl', True)), timeout=mispTimeout(timeout))
+    except requests.exceptions.SSLError:
+        return { "error": "SSL Error" }
+    except requests.exceptions.ConnectTimeout:
+        return { "error": "Server unreachable" }
+    except requests.exceptions.Timeout:
+        return { "error": "Request timed out" }
+    except requests.exceptions.ConnectionError:
+        return { "error": "Server unreachable" }
+    except Exception as e:
+        return { "error": "Exception " + str(e) }
+
+
 def errorText(errors) -> str:
     """MISP and the plugins report errors as a string, a list, or a dict of field → messages"""
     if errors is None:

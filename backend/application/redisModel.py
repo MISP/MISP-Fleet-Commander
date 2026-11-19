@@ -17,6 +17,8 @@ KEY_SERVER_ORGANISATIONS = 'server-orgs'
 KEY_SERVER_SHARING_GROUPS = 'server-sgs'
 # Which organisations each server has, and how they line up across its fleet (models/organisationDigests.py)
 KEY_SERVER_ORG_DIGEST = 'server-org-digest'
+# Whether the server runs complex queries (models/queryCapability.py): forgotten on refresh and edit, expires
+KEY_QUERY_CAPABILITY = 'query-capability'
 KEY_FLEET_ORG_FINDINGS = 'fleet-org-findings'
 
 
@@ -64,6 +66,7 @@ def deleteServerData(server_uuid: str, server_id: Union[int, None] = None) -> No
         keys.append(f"{KEY_HEALTH_FIRST_SEEN}:{server_id}")
         keys.append(f"{KEY_SYNC_ACTIVITY}:{server_id}")
         keys.append(f"{KEY_SERVER_BENCHMARKS}:{server_id}")
+        keys.append(f"{KEY_QUERY_CAPABILITY}:{server_id}")
     redisClient.delete(*keys)
 
 

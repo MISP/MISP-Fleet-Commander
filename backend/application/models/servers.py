@@ -16,6 +16,7 @@ from application.marshmallowSchemas import ServerSchema, serverQuerySchema
 from application.models.utils import asyncFetcher, asyncFetcherManyServer
 from application.models import baselineDrift
 import application.models.organisations as organisationModel
+import application.models.queryCapability as queryCapabilityModel
 
 import nest_asyncio
 nest_asyncio.apply()
@@ -490,6 +491,8 @@ def attachConnectedServerStatusFor(server, connectedServers, remote_server_id):
 
 
 def saveInfo(server, fullQuery: dict) -> bool:
+    # A refreshed server may have been upgraded, or its key's role changed: ask again when next needed
+    queryCapabilityModel.forget(server.id)
     return redisModel.saveServerInfo(server.uuid, fullQuery)
 
 def savePartialInfo(server, key: str, partialQuery: dict) -> bool:
