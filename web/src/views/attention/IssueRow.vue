@@ -1,11 +1,20 @@
 <template>
     <li
-        :class="['issue-row', `sev-${issue.severity}`, { 'is-acked': issue.ack !== null }]"
+        :class="['issue-row', `sev-${issue.severity}`, { 'is-acked': issue.ack !== null, selectable, 'is-selected': selectable && selected }]"
         tabindex="0"
         data-nav-item
         :aria-label="`${severityMeta.label}: ${issue.title}, ${issue.server_name}`"
         @keydown.enter.self="$emit('open', issue)"
+        @keydown.space.self="onSpace"
     >
+        <label v-if="selectable" class="issue-check">
+            <input
+                type="checkbox"
+                :checked="selected"
+                :aria-label="`Select ${issue.title}, ${issue.server_name}`"
+                @click="onCheck"
+            >
+        </label>
         <i :class="['issue-icon', severityMeta.icon]" :title="severityMeta.label" aria-hidden="true"></i>
         <div class="issue-main">
             <div class="issue-title">
@@ -70,6 +79,9 @@ export default {
         now: { type: Number, required: true },
         showServer: { type: Boolean, default: false },
         pending: { type: String, default: null },
+        // A checkbox to select the row, for acting on many issues at once
+        selectable: { type: Boolean, default: false },
+        selected: { type: Boolean, default: false },
     },
     computed: {
         severityMeta() {
@@ -111,6 +123,17 @@ export default {
         },
     },
     methods: {
+        // `select` carries the new state and the shift key, for selecting a range of rows
+        onCheck(event) {
+            this.$emit("select", { issue: this.issue, checked: event.target.checked, shift: event.shiftKey })
+        },
+        onSpace(event) {
+            if (!this.selectable) {
+                return
+            }
+            event.preventDefault()
+            this.$emit("select", { issue: this.issue, checked: !this.selected, shift: event.shiftKey })
+        },
         onAction() {
             if (!this.actionHref) {
                 this.$emit("action", this.issue)
@@ -133,9 +156,42 @@ export default {
     outline: none;
 }
 
+.issue-row.selectable {
+    grid-template-columns: 1.25rem 1.5rem minmax(0, 1fr) 6.5rem 17rem;
+    grid-template-areas: "check icon main since actions";
+    padding-left: 0.75rem;
+}
+
+.issue-row.is-selected {
+    background-color: var(--health-selected-bg);
+}
+
 .issue-row:focus-visible {
     box-shadow: inset 0 0 0 2px var(--var-color-lapislazuli);
     background-color: var(--health-focus-bg);
+}
+
+.issue-row.is-selected:focus-visible {
+    background-color: var(--health-selected-bg);
+}
+
+/* The whole cell is the target: easier to hit, and shift-click selects a range */
+.issue-check {
+    grid-area: check;
+    display: flex;
+    justify-content: center;
+    align-self: stretch;
+    margin: -0.6rem 0;
+    padding-top: 0.85rem;
+    cursor: pointer;
+}
+
+.issue-check input {
+    width: 1rem;
+    height: 1rem;
+    margin: 0;
+    cursor: pointer;
+    accent-color: var(--var-color-lapislazuli);
 }
 
 .issue-icon {
@@ -254,6 +310,14 @@ export default {
             ". since"
             ". actions";
         row-gap: 0.35rem;
+    }
+
+    .issue-row.selectable {
+        grid-template-columns: 1.25rem 1.5rem minmax(0, 1fr);
+        grid-template-areas:
+            "check icon main"
+            ". . since"
+            ". . actions";
     }
 
     .issue-since {

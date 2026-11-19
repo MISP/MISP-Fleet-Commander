@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
+import api from "@/api/health"
 import health, { EMPTY_DIGEST, compareIssues, serverDigest, severityRank, worstSeverity } from "@/store/modules/health"
 
-vi.mock("@/api/health", () => ({ default: { summary: vi.fn() } }))
+vi.mock("@/api/health", () => ({ default: { summary: vi.fn(), acknowledgeMany: vi.fn(), unacknowledgeMany: vi.fn() } }))
 
 function issue(id, server_id, severity, extra = {}) {
     return { id, server_id, fleet_id: 1, severity, ack: null, first_seen: 100, ...extra }
@@ -103,6 +104,42 @@ describe("health store", () => {
         expect(state.issuesByServer[9]).toBeUndefined()
     })
 
+    it("applies many acknowledgements with one update per server", () => {
+        health.mutations.setServerIssues(state, { server_id: 2, issues: [issue("info", 2, "info"), issue("other", 2, "info")] })
+        const before = { 1: state.issuesByServer[1], 2: state.issuesByServer[2] }
+        const replaced = []
+        const setServerIssues = health.mutations.setServerIssues
+        health.mutations.setServerIssues = (s, payload) => {
+            replaced.push(payload.server_id)
+            setServerIssues(s, payload)
+        }
+        try {
+            health.mutations.updateIssues(state, [
+                { id: "down", server_id: 1, ack: { until: 5 } },
+                { id: "old", server_id: 1, ack: null },
+                { id: "info", server_id: 2, ack: { until: null } },
+                { id: "other", server_id: 2, ack: { until: null } },
+                { id: "gone", server_id: 2, ack: { until: null } },
+                { id: "x", server_id: 9, ack: { until: null } },
+            ])
+        } finally {
+            health.mutations.setServerIssues = setServerIssues
+        }
+        expect(replaced).toEqual([1, 2])
+        expect(state.issuesByServer[1].map(i => [i.id, i.ack])).toEqual([["down", { until: 5 }], ["old", null]])
+        expect(state.digests[1]).toMatchObject({ worst: "warning", ackedCount: 1 })
+        expect(state.digests[2]).toMatchObject({ active: [], worst: null, ackedCount: 2 })
+        expect(state.issuesByServer[9]).toBeUndefined()
+        expect(before[1][0].ack).toBe(null)
+        expect(before[2][0].ack).toBe(null)
+    })
+
+    it("leaves a server alone when none of its issues changes", () => {
+        const before = state.issuesByServer[1]
+        health.mutations.updateIssues(state, [{ id: "unknown", server_id: 1, ack: { until: null } }])
+        expect(state.issuesByServer[1]).toBe(before)
+    })
+
     it("keeps issues frozen, so that the UI never makes them reactive", () => {
         health.mutations.setServerIssues(state, { server_id: 3, issues: [issue("new", 3, "warning")] })
         ;[1, 2, 3].forEach((server_id) => {
@@ -122,6 +159,36 @@ describe("health store", () => {
         expect(getters.serverActiveIssues[3].map(i => i.id)).toEqual(["w1", "w2"])
         expect(getters.activeIssues).toHaveLength(4)
         expect(getters.serverWorst).toEqual({ 1: "critical", 2: "info", 3: "warning" })
+    })
+
+    it("acknowledges many issues in one call and applies what the backend acknowledged", async () => {
+        const acked = { id: "down", server_id: 1, ack: { until: null, note: "", created: 1 } }
+        const skipped = [{ issue_id: "info", message: "This issue is not current: it may have cleared since" }]
+        api.acknowledgeMany.mockImplementation((payload, cb) => cb({ acknowledged: [acked], skipped }))
+        const commit = (name, payload) => health.mutations[name](state, payload)
+        const result = await health.actions.acknowledgeMany({ commit }, { issue_ids: ["down", "info"], note: "" })
+        expect(api.acknowledgeMany).toHaveBeenCalledWith({ issue_ids: ["down", "info"], note: "" }, expect.any(Function), expect.any(Function))
+        expect(result.skipped).toEqual(skipped)
+        expect(state.issuesByServer[1][0].ack).toEqual(acked.ack)
+        expect(state.issuesByServer[2][0].ack).toBe(null)
+    })
+
+    it("shows again only the issues the backend unacknowledged", async () => {
+        health.mutations.updateIssue(state, { id: "info", server_id: 2, ack: { until: null } })
+        api.unacknowledgeMany.mockImplementation((ids, cb) => cb({ unacknowledged: ["old"], skipped: [{ issue_id: "info", message: "" }] }))
+        const commit = (name, payload) => health.mutations[name](state, payload)
+        const issues = [state.issuesByServer[1][1], state.issuesByServer[2][0]]
+        await health.actions.unacknowledgeMany({ commit }, issues)
+        expect(api.unacknowledgeMany).toHaveBeenCalledWith(["old", "info"], expect.any(Function), expect.any(Function))
+        expect(state.issuesByServer[1][1].ack).toBe(null)
+        expect(state.issuesByServer[2][0].ack).toEqual({ until: null })
+    })
+
+    it("rejects with the error of a failed bulk call, changing nothing", async () => {
+        api.acknowledgeMany.mockImplementation((payload, cb, errorCb) => errorCb("Too many issues"))
+        const commit = vi.fn()
+        await expect(health.actions.acknowledgeMany({ commit }, { issue_ids: ["down"] })).rejects.toBe("Too many issues")
+        expect(commit).not.toHaveBeenCalled()
     })
 
     it("ignores live updates until the issues are loaded", () => {

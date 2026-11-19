@@ -4,6 +4,8 @@ const urls = {
     issues: `/health/issues`,
     summary: `/health/summary`,
     ack: `/health/ack`,
+    ackBulk: `/health/ack/bulk`,
+    unackBulk: `/health/unack/bulk`,
 }
 
 export default {
@@ -25,6 +27,24 @@ export default {
     },
     acknowledge(payload, cb, errorCb) {
         return common.getClient().post(urls.ack, payload)
+            .then((response) => {
+                cb(response.data)
+            }).catch(error => {
+                common.handleError(error, errorCb)
+            })
+    },
+    // payload: { issue_ids, until?, note? } -> { acknowledged: [issue], skipped: [{ issue_id, message }] }
+    acknowledgeMany(payload, cb, errorCb) {
+        return common.getClient().post(urls.ackBulk, payload)
+            .then((response) => {
+                cb(response.data)
+            }).catch(error => {
+                common.handleError(error, errorCb)
+            })
+    },
+    // -> { unacknowledged: [issue_id], skipped: [{ issue_id, message }] }
+    unacknowledgeMany(issue_ids, cb, errorCb) {
+        return common.getClient().post(urls.unackBulk, { issue_ids })
             .then((response) => {
                 cb(response.data)
             }).catch(error => {

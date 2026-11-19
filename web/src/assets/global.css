@@ -27,6 +27,7 @@
     --health-info-muted: #76a0a7;
     --health-rule: #e4e7ec;
     --health-focus-bg: #f2f7fb;
+    --health-selected-bg: #e8f1f8;
     /* Sync link health, drawn as lines on a white canvas: the warning amber is darkened to stay visible */
     --link-ok: #3aa564;
     --link-degraded: #e09a00;

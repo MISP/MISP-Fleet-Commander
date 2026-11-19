@@ -192,6 +192,35 @@ const actions = {
             )
         })
     },
+    // payload: { issue_ids, until?, note? }. Resolves with { acknowledged, skipped }
+    acknowledgeMany({ commit }, payload) {
+        return new Promise((resolve, reject) => {
+            api.acknowledgeMany(
+                payload,
+                (result) => {
+                    commit("updateIssues", result.acknowledged)
+                    resolve(result)
+                },
+                reject,
+            )
+        })
+    },
+    // Resolves with { unacknowledged, skipped }
+    unacknowledgeMany({ commit }, issues) {
+        return new Promise((resolve, reject) => {
+            api.unacknowledgeMany(
+                issues.map(issue => issue.id),
+                (result) => {
+                    const shown = new Set(result.unacknowledged)
+                    commit("updateIssues", issues
+                        .filter(issue => shown.has(issue.id))
+                        .map(issue => ({ id: issue.id, server_id: issue.server_id, ack: null })))
+                    resolve(result)
+                },
+                reject,
+            )
+        })
+    },
     markPending({ commit, state }, { server_id, kind }) {
         commit("setPending", { server_id, kind })
         setTimeout(() => {
@@ -257,16 +286,26 @@ const mutations = {
         Vue.set(state.digests, server_id, serverDigest(frozen))
     },
     updateIssue(state, updated) {
-        const issues = state.issuesByServer[updated.server_id]
-        if (issues === undefined) {
-            return
-        }
-        const index = issues.findIndex(issue => issue.id === updated.id)
-        if (index !== -1) {
-            const replaced = issues.slice()
-            replaced[index] = Object.assign({}, issues[index], { ack: updated.ack })
-            mutations.setServerIssues(state, { server_id: updated.server_id, issues: replaced })
-        }
+        mutations.updateIssues(state, [updated])
+    },
+    // Applies the `ack` of each updated issue to the issue it knows: each server's list is replaced once, however many
+    // of its issues change (a bulk acknowledgement can change thousands)
+    updateIssues(state, updates) {
+        const byServer = new Map()  // server_id -> Map(issue ID -> ack)
+        updates.forEach((updated) => {
+            if (!byServer.has(updated.server_id)) {
+                byServer.set(updated.server_id, new Map())
+            }
+            byServer.get(updated.server_id).set(updated.id, updated.ack)
+        })
+        byServer.forEach((acks, server_id) => {
+            const issues = state.issuesByServer[server_id]
+            if (issues === undefined || !issues.some(issue => acks.has(issue.id))) {
+                return
+            }
+            const replaced = issues.map(issue => (acks.has(issue.id) ? Object.assign({}, issue, { ack: acks.get(issue.id) }) : issue))
+            mutations.setServerIssues(state, { server_id, issues: replaced })
+        })
     },
     setPending(state, { server_id, kind }) {
         if (kind === null) {

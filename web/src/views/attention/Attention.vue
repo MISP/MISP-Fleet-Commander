@@ -1,6 +1,6 @@
 <template>
 <Layout name="LayoutDefault">
-    <div class="page-container attention-page">
+    <div class="page-container attention-page" @keydown.esc="clearSelection">
         <header class="attention-header">
             <div>
                 <h1 class="attention-title">Needs attention</h1>
@@ -158,10 +158,21 @@
                     <div class="group-header" tabindex="0" data-nav-item
                         :aria-label="`${group.server_name}, ${group.countsText}`"
                         @keydown.enter.self="openServer(group.server_id)">
-                        <div class="group-title">
-                            <router-link :to="serverLink(group.server_id)" class="server-name" tabindex="-1">{{ group.server_name }}</router-link>
-                            <span class="group-fleet">{{ group.fleet_name }}</span>
-                            <span :class="['group-counts', `ink-${group.worst}`]">{{ group.countsText }}</span>
+                        <div class="group-lead">
+                            <label class="group-check">
+                                <input
+                                    type="checkbox"
+                                    :checked="groupChecks[group.key].all"
+                                    :indeterminate.prop="groupChecks[group.key].some"
+                                    :aria-label="groupCheckLabel(group)"
+                                    @click="toggleGroup(group, $event.target.checked)"
+                                >
+                            </label>
+                            <div class="group-title">
+                                <router-link :to="serverLink(group.server_id)" class="server-name" tabindex="-1">{{ group.server_name }}</router-link>
+                                <span class="group-fleet">{{ group.fleet_name }}</span>
+                                <span :class="['group-counts', `ink-${group.worst}`]">{{ group.countsText }}</span>
+                            </div>
                         </div>
                         <div class="group-actions">
                             <b-button size="sm" variant="link" :disabled="!!pending[group.server_id]" @click="testConnection(group.server_id)">
@@ -185,6 +196,9 @@
                             :issue="issue"
                             :now="now"
                             :pending="pending[issue.server_id] || null"
+                            selectable
+                            :selected="selection.has(issue.id)"
+                            @select="onRowSelect(group, $event)"
                             @action="runAction"
                             @open="openIssue"
                             @ack="openAck"
@@ -206,20 +220,31 @@
                     :key="group.rule"
                     :class="['server-group', `sev-${group.worst}`]"
                 >
-                    <button
-                        type="button"
-                        class="group-header type-header"
-                        data-nav-item
-                        :aria-expanded="isExpanded(group.rule) ? 'true' : 'false'"
-                        @click="toggle(expandedRules, group.rule)"
-                    >
-                        <i :class="['fas', isExpanded(group.rule) ? 'fa-chevron-down' : 'fa-chevron-right', 'chevron']" aria-hidden="true"></i>
-                        <span class="group-title">
-                            <span class="server-name">{{ group.label }}</span>
-                            <span class="group-fleet">{{ group.serverCount }} {{ group.serverCount === 1 ? "server" : "servers" }}</span>
-                            <span :class="['group-counts', `ink-${group.worst}`]">{{ group.countsText }}</span>
-                        </span>
-                    </button>
+                    <div class="group-header type-header">
+                        <label class="group-check">
+                            <input
+                                type="checkbox"
+                                :checked="groupChecks[group.key].all"
+                                :indeterminate.prop="groupChecks[group.key].some"
+                                :aria-label="groupCheckLabel(group)"
+                                @click="toggleGroup(group, $event.target.checked)"
+                            >
+                        </label>
+                        <button
+                            type="button"
+                            class="type-toggle"
+                            data-nav-item
+                            :aria-expanded="isExpanded(group.rule) ? 'true' : 'false'"
+                            @click="toggle(expandedRules, group.rule)"
+                        >
+                            <i :class="['fas', isExpanded(group.rule) ? 'fa-chevron-down' : 'fa-chevron-right', 'chevron']" aria-hidden="true"></i>
+                            <span class="group-title">
+                                <span class="server-name">{{ group.label }}</span>
+                                <span class="group-fleet">{{ group.serverCount }} {{ group.serverCount === 1 ? "server" : "servers" }}</span>
+                                <span :class="['group-counts', `ink-${group.worst}`]">{{ group.countsText }}</span>
+                            </span>
+                        </button>
+                    </div>
                     <ul v-if="isExpanded(group.rule)" class="issue-list">
                         <IssueRow
                             v-for="issue in shownIssues(group)"
@@ -228,6 +253,9 @@
                             :now="now"
                             show-server
                             :pending="pending[issue.server_id] || null"
+                            selectable
+                            :selected="selection.has(issue.id)"
+                            @select="onRowSelect(group, $event)"
                             @action="runAction"
                             @open="openIssue"
                             @ack="openAck"
@@ -242,10 +270,50 @@
                     </ul>
                 </li>
             </ul>
+
+            <transition name="selection-bar">
+                <div v-if="selectedIssues.length > 0" class="selection-bar" role="region" aria-label="Selected issues">
+                    <div class="selection-summary" aria-live="polite">
+                        <span class="selection-count">{{ selectedIssues.length }}</span>
+                        selected
+                        <span class="selection-servers">on {{ selectedServerCount }} {{ selectedServerCount === 1 ? "server" : "servers" }}</span>
+                    </div>
+                    <div class="selection-links">
+                        <button
+                            v-if="selectedIssues.length < visibleIssues.length"
+                            type="button"
+                            class="bar-link"
+                            @click="selectAllShown"
+                        >Select all {{ visibleIssues.length }} shown</button>
+                        <button type="button" class="bar-link" @click="clearSelection">Clear</button>
+                    </div>
+                    <div class="selection-actions">
+                        <b-button
+                            v-if="selectedAcked.length > 0"
+                            size="sm"
+                            variant="outline-light"
+                            :disabled="unacking"
+                            @click="unacknowledgeSelected"
+                        >
+                            <b-spinner v-if="unacking" small class="mr-1"></b-spinner>
+                            <i v-else class="fas fa-bell fa-fw mr-1" aria-hidden="true"></i>Show {{ selectedAcked.length }} again
+                        </b-button>
+                        <b-button
+                            v-if="selectedActive.length > 0"
+                            size="sm"
+                            variant="light"
+                            class="bar-primary"
+                            @click="openAckSelected"
+                        >
+                            <i class="fas fa-bell-slash fa-fw mr-1" aria-hidden="true"></i>Acknowledge {{ selectedActive.length }}…
+                        </b-button>
+                    </div>
+                </div>
+            </transition>
         </template>
 
         <!-- Inside the page: the layout only renders its first child -->
-        <AckModal :issue="ackTarget"></AckModal>
+        <AckModal :issues="ackTargets" @acknowledged="onAcknowledged"></AckModal>
         <AddModal
             v-if="serverToEdit"
             :key="serverToEdit.id"
@@ -313,7 +381,12 @@ export default {
             expandedRules: [],
             shownRows: {},  // group key -> rows shown, when more than ROWS_PER_GROUP
             moreStep: MORE_STEP,
-            ackTarget: null,
+            ackTargets: [],
+            // IDs of the selected issues. A Set is not reactive in Vue 2: it is replaced on every change
+            selection: new Set(),
+            // The row a shift-click selects a range from: { key: group key, id: issue ID }
+            selectionAnchor: null,
+            unacking: false,
             serverToEdit: null,
             now: Math.floor(Date.now() / 1000),
             nowTimer: null,
@@ -426,6 +499,32 @@ export default {
                 })
                 .sort((a, b) => severityRank(a.worst) - severityRank(b.worst) || b.serverCount - a.serverCount || a.label.localeCompare(b.label))
         },
+        // The selection only covers issues on screen: those a filter hides are left out
+        selectedIssues() {
+            if (this.selection.size === 0) {
+                return []
+            }
+            return this.visibleIssues.filter(issue => this.selection.has(issue.id))
+        },
+        selectedActive() {
+            return this.selectedIssues.filter(issue => issue.ack === null)
+        },
+        selectedAcked() {
+            return this.selectedIssues.filter(issue => issue.ack !== null)
+        },
+        selectedServerCount() {
+            return new Set(this.selectedIssues.map(issue => issue.server_id)).size
+        },
+        // Group key -> state of the group's checkbox, over all its issues, rendered or not
+        groupChecks() {
+            const checks = {}
+            const groups = this.groupBy === "server" ? this.serverGroups : this.ruleGroups
+            groups.forEach((group) => {
+                const selected = this.selection.size === 0 ? 0 : group.issues.filter(issue => this.selection.has(issue.id)).length
+                checks[group.key] = { all: selected === group.issues.length, some: selected > 0 && selected < group.issues.length }
+            })
+            return checks
+        },
         fleetOptions() {
             const serverCounts = {}
             this.allServers.forEach((server) => { serverCounts[server.fleet_id] = (serverCounts[server.fleet_id] || 0) + 1 })
@@ -470,6 +569,16 @@ export default {
         },
     },
     watch: {
+        visibleIssues(issues) {
+            if (this.selection.size === 0) {
+                return
+            }
+            const visible = new Set(issues.map(issue => issue.id))
+            const kept = Array.from(this.selection).filter(id => visible.has(id))
+            if (kept.length !== this.selection.size) {
+                this.selection = new Set(kept)
+            }
+        },
         selectedFleets(fleets) {
             const query = Object.assign({}, this.$route.query)
             if (fleets.length > 0) {
@@ -662,8 +771,75 @@ export default {
             }
         },
         openAck(issue) {
-            this.ackTarget = issue
+            this.ackTargets = [issue]
             this.$nextTick(() => this.$bvModal.show("modal-ack-issue"))
+        },
+        openAckSelected() {
+            this.ackTargets = this.selectedActive
+            this.$nextTick(() => this.$bvModal.show("modal-ack-issue"))
+        },
+        onAcknowledged() {
+            this.setSelected(this.ackTargets.map(issue => issue.id), false)
+        },
+        unacknowledgeSelected() {
+            const issues = this.selectedAcked
+            this.unacking = true
+            this.$store.dispatch("health/unacknowledgeMany", issues)
+                .then(({ unacknowledged }) => {
+                    const count = unacknowledged.length
+                    const detail = count === issues.length
+                        ? "They count as open issues again."
+                        : `${issues.length - count} had cleared in the meantime.`
+                    this.$bvToast.toast(detail, {
+                        title: `${count} ${count === 1 ? "issue" : "issues"} shown again`,
+                        variant: "success",
+                    })
+                    this.setSelected(issues.map(issue => issue.id), false)
+                })
+                .catch((error) => {
+                    this.$bvToast.toast(error, { title: "Could not show the issues again", variant: "danger" })
+                })
+                .finally(() => {
+                    this.unacking = false
+                })
+        },
+        setSelected(ids, checked) {
+            const selection = new Set(this.selection)
+            ids.forEach(id => (checked ? selection.add(id) : selection.delete(id)))
+            this.selection = selection
+        },
+        // Shift selects the rows between the previous one and this one, in the same group
+        onRowSelect(group, { issue, checked, shift }) {
+            const anchor = this.selectionAnchor
+            let ids = [issue.id]
+            if (shift && anchor && anchor.key === group.key && anchor.id !== issue.id) {
+                const rows = this.shownIssues(group).map(row => row.id)
+                const from = rows.indexOf(anchor.id)
+                const to = rows.indexOf(issue.id)
+                if (from !== -1 && to !== -1) {
+                    ids = rows.slice(Math.min(from, to), Math.max(from, to) + 1)
+                }
+            }
+            this.setSelected(ids, checked)
+            this.selectionAnchor = { key: group.key, id: issue.id }
+        },
+        toggleGroup(group, checked) {
+            this.setSelected(group.issues.map(issue => issue.id), checked)
+            this.selectionAnchor = null
+        },
+        groupCheckLabel(group) {
+            const count = group.issues.length
+            const name = this.groupBy === "server" ? group.server_name : group.label
+            return count === 1 ? `Select the issue of ${name}` : `Select the ${count} issues of ${name}`
+        },
+        selectAllShown() {
+            this.setSelected(this.visibleIssues.map(issue => issue.id), true)
+        },
+        clearSelection() {
+            if (this.selection.size > 0) {
+                this.selection = new Set()
+                this.selectionAnchor = null
+            }
         },
         unacknowledge(issue) {
             this.$store.dispatch("health/unacknowledge", issue)
@@ -925,7 +1101,7 @@ button.pulse-cell:focus-visible {
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
-    padding: 0.35rem 0.75rem 0.35rem 3.25rem;
+    padding: 0.35rem 0.75rem 0.35rem 5rem;
     border-top: 1px dashed var(--health-rule);
     background: #fafbfc;
 }
@@ -960,7 +1136,7 @@ button.pulse-cell:focus-visible {
     justify-content: space-between;
     gap: 0.5rem 1rem;
     flex-wrap: wrap;
-    padding: 0.55rem 0.75rem 0.55rem 1rem;
+    padding: 0.55rem 0.75rem;
     background: #fafbfc;
     outline: none;
 }
@@ -969,16 +1145,64 @@ button.pulse-cell:focus-visible {
     box-shadow: inset 0 0 0 2px var(--var-color-lapislazuli);
 }
 
+/* Issue type: the checkbox, then a button over the rest of the header that shows or hides the rows */
 .type-header {
-    width: 100%;
-    border: 0;
+    flex-wrap: nowrap;
     justify-content: flex-start;
-    text-align: left;
-    cursor: pointer;
+    gap: 0.75rem;
+    padding-top: 0;
+    padding-bottom: 0;
 }
 
 .type-header:hover {
     background: #f3f5f8;
+}
+
+.type-toggle {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem 1rem;
+    min-width: 0;
+    padding: 0.55rem 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    outline: none;
+}
+
+.type-toggle:focus-visible {
+    box-shadow: 0 0 0 2px var(--var-color-lapislazuli);
+    border-radius: 2px;
+}
+
+.group-lead {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+/* Same column as the rows' checkboxes */
+.group-check {
+    flex: 0 0 1.25rem;
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    cursor: pointer;
+    user-select: none;
+}
+
+.group-check input {
+    width: 1rem;
+    height: 1rem;
+    margin: 0;
+    cursor: pointer;
+    accent-color: var(--var-color-lapislazuli);
 }
 
 .chevron {
@@ -1032,6 +1256,93 @@ a.server-name:hover {
 .group-actions .btn-link:hover,
 .group-actions .btn-link:focus {
     color: var(--var-color-lapislazuli);
+}
+
+/* Selection: stays at the bottom of the window while the list scrolls under it */
+.selection-bar {
+    position: sticky;
+    bottom: 1rem;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    margin-top: 1rem;
+    padding: 0.55rem 0.75rem 0.55rem 1.25rem;
+    background: var(--var-color-yankeesblue);
+    color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 10px 28px rgba(33, 45, 64, 0.3);
+}
+
+.selection-summary {
+    white-space: nowrap;
+}
+
+.selection-count {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.selection-servers {
+    color: #aeb9c9;
+    margin-left: 0.2rem;
+}
+
+.selection-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+.bar-link {
+    border: 0;
+    border-radius: 4px;
+    background: none;
+    color: #cfe3f1;
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 0.25rem 0.5rem;
+}
+
+.bar-link:hover {
+    color: #fff;
+    text-decoration: underline;
+}
+
+.bar-link:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 1px;
+}
+
+.selection-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-left: auto;
+}
+
+.bar-primary {
+    font-weight: 600;
+    color: var(--var-color-yankeesblue);
+}
+
+.selection-bar-enter-active,
+.selection-bar-leave-active {
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.selection-bar-enter,
+.selection-bar-leave-to {
+    opacity: 0;
+    transform: translateY(0.5rem);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .selection-bar-enter-active,
+    .selection-bar-leave-active {
+        transition: none;
+    }
 }
 
 /* States */
@@ -1088,6 +1399,20 @@ a.server-name:hover {
 
     .acked-switch {
         margin-left: 0;
+    }
+
+    .selection-bar {
+        bottom: 0.5rem;
+        padding-left: 1rem;
+    }
+
+    .selection-actions {
+        width: 100%;
+        margin-left: 0;
+    }
+
+    .selection-actions .btn {
+        flex: 1 1 auto;
     }
 }
 </style>
