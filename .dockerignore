@@ -20,6 +20,5 @@ backend/*.log
 backend/hardcopy.*
 backend/database/*
 !backend/database/empty
-backend/data/cached-monitoring-images/*
 backend/data/pin-avatars/*
 !backend/data/**/empty

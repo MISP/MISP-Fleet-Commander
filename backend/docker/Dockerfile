@@ -13,8 +13,8 @@ RUN npx vue-cli-service build --dest /web/dist
 FROM python:3.12-slim
 WORKDIR /app
 
-COPY backend/requirements.txt backend/requirements_monitoring.txt ./
-RUN pip3 install --no-cache-dir -r requirements.txt -r requirements_monitoring.txt
+COPY backend/requirements.txt ./
+RUN pip3 install --no-cache-dir -r requirements.txt
 
 COPY backend/ /app/
 COPY --from=web /web/dist /app/application/dist

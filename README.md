@@ -18,7 +18,7 @@ With MISP Fleet Commander, you can diagnose, configure, update, and monitor MISP
 - **Drag-and-drop plugin support**, integrated directly into the UI.
 - **Visualize sync links and topologies** with the *Strategic View*.
 - **Quickly enroll new servers** via a browser extension.
-- **Built-in integration with Grafana and InfluxDB** for metrics storage and visualization
+- **Built-in usage monitoring**: metric history and charts for every server, with no extra service to run, and a Prometheus endpoint for existing setups.
 - Designed for **flexibility** and ease of use.
 
 ## 💡 Why This Project?
@@ -125,7 +125,7 @@ The backend tests need neither Redis nor a MISP instance:
 
 ```bash
 cd backend
-pip install -r requirements.txt -r requirements_monitoring.txt -r requirements-dev.txt
+pip install -r requirements.txt -r requirements-dev.txt
 python -m pytest
 ```
 
@@ -143,7 +143,7 @@ CI runs all of them, plus the migrations on an empty database.
 The backend's direct dependencies are listed in `backend/requirements*.in`; the `requirements*.txt` files pin the whole set. After changing a `.in` file, regenerate the pins (from `backend/`, with `requirements-dev.txt` installed):
 
 ```bash
-pip-compile requirements.in && pip-compile requirements_monitoring.in && pip-compile requirements-dev.in
+pip-compile requirements.in && pip-compile requirements-dev.in
 ```
 
 
@@ -198,14 +198,35 @@ It works from other origins than the one serving the UI, so the API endpoints it
             Connection page listing all known server synchronisation and their status
             <img src="documentation/screenshots/connections.png" alt="Connection page">
         </td>
-        <td>
-            Grafana page displaying all the collected metrics
-            <img src="documentation/screenshots/grafana.png" alt="Grafana page">
-        </td>
     </tr>
 </table>
 
-## 📈 Scraping the metrics with Prometheus
+## 📈 Monitoring
+MISP Fleet Commander keeps a history of the usage of the servers in monitored fleets, in its own database. There is nothing else to install or configure.
+
+What is collected, every 10 minutes by default:
+- **Content**: events, attributes, objects, event reports, analyst data, correlations and proposals.
+- **Community**: users (and how many have a PGP key), organisations, contributing organisations and pending registrations.
+- **Activity**: logins and failed logins, counted from the MISP logs, and API requests over the last 24 hours. No email, organisation or IP address is stored.
+- **System**: load, memory and disk usage, and the size of MISP's database.
+- **MISP internals**: Redis memory and the jobs waiting in each worker queue.
+
+To turn it on:
+1. Open the settings (button in the top right corner) and enable `Monitoring Enabled` in the `Scheduler` tab. `Monitoring Interval` sets how often the servers are queried, in minutes.
+2. Edit a fleet and tick **Monitor**.
+
+The first samples arrive within a minute or two. The first collection of a server also counts its logins of the last 90 days (fewer when the logs are very busy), so the login charts don't start empty. Each server's page then shows its charts in the `Usage` tab, from the last 24 hours to the last year, along with the most expensive endpoints of the day.
+
+Use a site admin API key: with another key, MISP refuses some of these figures and only lists the logins of the key's own organisation.
+
+Every sample is kept for 14 days, hourly figures for 90 days and daily figures for as long as the server exists. With 50 servers, that is roughly 130 MB, plus 11 MB per year.
+
+`flask server monitor-fleets` (Docker: `docker compose exec backend flask server monitor-fleets`) runs one collection right away and prints the outcome for each server.
+
+> [!NOTE]
+> **Upgrading from the InfluxDB and Grafana integration.** MISP Fleet Commander no longer writes to InfluxDB or renders Grafana panels: the InfluxDB, Grafana and image renderer containers can be shut down, and the `INFLUXDB_*` and `GRAFANA_*` variables removed. Their data isn't imported, so the new charts start from the first collection. Admins who want to keep a Grafana dashboard can scrape the metrics with Prometheus (below).
+
+### Scraping the metrics with Prometheus
 The usage metrics collected from the servers of monitored fleets are also served in the Prometheus text format at `GET /metrics`. A scrape only reads what MISP Fleet Commander stored: it never queries MISP. Each user sees their own servers.
 
 Authenticate with an MISP Fleet Commander API key, sent as `Authorization: Apikey <key>`:
@@ -229,42 +250,6 @@ Every series has the `server`, `server_id` and `fleet` labels.
 - `mfc_monitoring_enabled`: 0 when monitoring is disabled in the settings. Servers then have no series.
 
 For example, `time() - misp_last_sample_timestamp_seconds > 3600` catches a server that hasn't been collected for an hour.
-
-## Setting up metric collection with InfluxDB and Grafana
-1. Install the needed dependencies.
-```bash
-cd backend
-. ./venv/bin/activate
-pip3 install -U -r requirements_monitoring.txt
-```
-2. If you already have Grafana and InfluxDB running, go to step 4.
-3. Start the InfluxDB and Grafana containers. Set your own passwords and InfluxDB admin token in `.env` first.
-```bash
-cd backend/application/monitoring/docker
-cp .env.sample .env
-vim .env  # Replace every change-me value
-docker compose up
-```
-4. Configure MISP Fleet Commander through environment variables, then start (or restart) the server.
-   - `INFLUXDB_TOKEN` is required: without it the monitoring system stays disabled.
-   - `GRAFANA_APIKEY` is a Grafana service account token, used to render the monitoring graphs. Without it, metrics are still collected but graphs are not rendered.
-   - The other variables are optional; their defaults are shown below.
-```bash
-export INFLUXDB_TOKEN=<token created on InfluxDB>
-export INFLUXDB_URL=http://localhost:8086
-export INFLUXDB_ORG=org
-export INFLUXDB_BUCKET=MISP-Fleet-Commander
-export GRAFANA_APIKEY=<grafana service account token>
-export GRAFANA_BASE_URL=http://localhost:3000
-export GRAFANA_DASHBOARD_DATA_RENDER=render/d-solo/ce6olif96756od
-export GRAFANA_DASHBOARD=d/ce6olif96756od/circl-monitoring-misp
-bash start.sh
-```
-   With Docker, put the same variables in a `.env` file next to `docker-compose.yml`; they are passed to the backend and workers.
-5. Check that monitoring is supported.
-   - Login in MISP Fleet Commander and click on the setting button in the top right corner.
-   - If everything went right, you should be able to enable the setting `monitoring_enabled` under the `Scheduler tab`.
-
 
 ## 📬 Feedback & Contributions
 

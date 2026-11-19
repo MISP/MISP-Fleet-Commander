@@ -30,7 +30,7 @@ def queued(monkeypatch):
     import application.workers.tasks as tasks
     calls = []
     for name in ("fetchServerInfoTask", "doFleetInfoTask", "doServerConnectionTestTask",
-                 "doFleetConnectionTestTask", "doCacheMonitoringImages"):
+                 "doFleetConnectionTestTask"):
         monkeypatch.setattr(tasks, name, lambda arg, _name=name: calls.append((_name, arg)))
     return calls
 
@@ -55,8 +55,7 @@ def test_cannot_act_on_resources_of_another_user(socket_client, two_users, queue
     bobClient = socket_client(user=bob)
 
     for event, target in [("refresh_server", aliceServer.id), ("server_connection_test", aliceServer.id),
-                          ("refresh_server_graphs", aliceServer.id), ("refresh_fleet", aliceFleet.id),
-                          ("fleet_connection_test", aliceFleet.id)]:
+                          ("refresh_fleet", aliceFleet.id), ("fleet_connection_test", aliceFleet.id)]:
         bobClient.emit(event, target)
     assert queued == []
 

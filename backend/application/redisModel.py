@@ -7,11 +7,9 @@ from application import redisClient
 KEY_SERVER_INFO = 'server-info'
 KEY_SERVER_STATUS = 'server-status'
 KEY_HEALTH_FIRST_SEEN = 'health-first-seen'
-KEY_SERVER_MONITORED = 'server-monitored'
 KEY_SERVER_WATCHED = 'server-watched'
 KEY_FLEET_MONITORED = 'fleet-monitored'
 KEY_FLEET_WATCHED = 'fleet-watched'
-KEY_SERVER_PICTURES_CACHED = "server-pic-cached"
 # Expire on their own (models/syncActivity.py, models/organisations.py, models/sharingGroups.py)
 KEY_SYNC_ACTIVITY = 'sync-activity'
 KEY_SERVER_BENCHMARKS = 'server-benchmarks'
@@ -59,7 +57,7 @@ def getServerStatus(server_uuid: str) -> Union[None, dict]:
 def deleteServerData(server_uuid: str, server_id: Union[int, None] = None) -> None:
     """Forget everything cached about a server: needed now that snapshots no longer expire"""
     keys = [f"{key}:{server_uuid}" for key in (
-        KEY_SERVER_INFO, KEY_SERVER_STATUS, KEY_SERVER_MONITORED, KEY_SERVER_WATCHED, KEY_SERVER_PICTURES_CACHED,
+        KEY_SERVER_INFO, KEY_SERVER_STATUS, KEY_SERVER_WATCHED,
         KEY_SERVER_ORGANISATIONS, KEY_SERVER_SHARING_GROUPS, KEY_SERVER_ORG_DIGEST,
     )]
     if server_id is not None:
@@ -88,16 +86,6 @@ def syncHealthFirstSeen(server_id: int, issue_ids: list, now: int) -> dict:
     return firstSeen
 
 
-def getServerMonitoredTimestamp(server_uuid: str) -> Union[int, None]:
-    lastMonitoredTS = redisClient.get(f"{KEY_SERVER_MONITORED}:{server_uuid}")
-    if lastMonitoredTS is not None:
-        return int(lastMonitoredTS)
-    return None
-
-def setServerMonitoredTimestamp(server_uuid: str) -> bool:
-    now = int(time.time())
-    return redisClient.set(f"{KEY_SERVER_MONITORED}:{server_uuid}", now)
-
 def getServerWatchedTimestamp(server_uuid: str) -> Union[int, None]:
     lastMonitoredTS = redisClient.get(f"{KEY_SERVER_WATCHED}:{server_uuid}")
     if lastMonitoredTS is not None:
@@ -117,21 +105,6 @@ def getFleetMonitoredTimestamp(fleet_id: int) -> Union[int, None]:
 def setFleetMonitoredTimestamp(fleet_id: int) -> Union[int, None]:
     now = int(time.time())
     success = redisClient.set(f"{KEY_FLEET_MONITORED}:{fleet_id}", now)
-    if success:
-        return now
-    return None
-
-
-def getServerCachedPicturedTimestamp(server_uuid: str) -> Union[int, None]:
-    lastMonitoredTS = redisClient.get(f"{KEY_SERVER_PICTURES_CACHED}:{server_uuid}")
-    if lastMonitoredTS is not None:
-        return int(lastMonitoredTS)
-    return None
-
-
-def setServerCachedPicturedTimestamp(server_uuid: str) -> Union[int, None]:
-    now = int(time.time())
-    success = redisClient.set(f"{KEY_SERVER_PICTURES_CACHED}:{server_uuid}", now)
     if success:
         return now
     return None

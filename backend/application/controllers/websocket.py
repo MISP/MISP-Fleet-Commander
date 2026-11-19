@@ -2,7 +2,7 @@ import os
 from flask import request, session
 from flask_socketio import SocketIO, ConnectionRefusedError, emit, join_room
 from application import socketioApp
-from application.DBModels import Server, ServerMinimal, Fleet, User
+from application.DBModels import Server, Fleet, User
 from application.marshmallowSchemas import lightServerInfo, serverSchemaWithoutInfo
 import application.models.servers as serverModel
 import application.models.fleets as fleetModel
@@ -115,13 +115,6 @@ def registerListeners():
         if server is not None:
             doLinkTestTask([server.id], remote_server_id=None if remoteServerID is None else int(remoteServerID))
 
-    @socketioApp.on("refresh_server_graphs")
-    def refresh_server_graphs(serverID):
-        from application.workers.tasks import doCacheMonitoringImages
-        server = ownedServer(serverID)
-        if server is not None:
-            doCacheMonitoringImages(server.id)
-
     @socketioApp.on("workers_health_check")
     def workers_health_check():
         ok = do_workers_health_check(sid=request.sid)
@@ -204,31 +197,6 @@ class SocketioEmitter:
         if error:
             payload["error"] = error
         self._emitToServerOwner('SERVER_LINK_TEST', server, payload)
-
-    def server_graphs_updating(self, server):
-        self._emitToServerOwner("SERVER_GRAPHS_UPDATING", server, self._id(server))
-
-    def server_graphs_update_done(self, serverID, timestamp):
-        server = ServerMinimal.query.get(serverID)
-        if server is None:
-            return
-        self._emitToServerOwner("SERVER_GRAPHS_UPDATE_DONE", server, serverID)
-        payload = {
-            "server_id": serverID,
-            "partial_data_key": "_monitoringGraphLastRefresh",
-            "data": {
-                "monitoring_graph_last_refresh": timestamp,
-            },
-            "server": serverSchemaWithoutInfo.dump(server),
-        }
-        self._emitToServerOwner("UPDATE_SERVER_PARTIAL_DATA", server, payload)
-
-    def server_graphs_resfresh_status(self, serverID, status):
-        payload = {
-            "server_id": serverID,
-            "status": status,
-        }
-        self._emitToServerOwner("SERVER_GRAPH_REFRESH_STATUS", serverID, payload)
 
     def job_started(self, job):
         """`{job_id, started}`: a worker took the job (until then it waits in the queue)"""

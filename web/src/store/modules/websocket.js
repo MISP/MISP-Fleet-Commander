@@ -65,20 +65,6 @@ const actions = {
     SOCKET_SERVER_LINK_TEST({ commit }, payload) {
         commit("servers/setServerLinkTest", payload, { root: true })
     },
-    SOCKET_SERVER_GRAPHS_UPDATING({ commit }, serverData) {
-        const payload = {
-            server_id: serverData,
-            is_enqueued: true,
-        }
-        commit("servers/setServerGraphsRefreshEnqueued", payload, { root: true })
-    },
-    SOCKET_SERVER_GRAPHS_UPDATE_DONE({ commit }, serverData) {
-        const payload = {
-            server_id: serverData,
-            is_enqueued: false,
-        }
-        commit("servers/setServerGraphsRefreshEnqueued", payload, { root: true })
-    },
     SOCKET_FLEET_UPDATE_TIMESTAMPS({ commit }, fleetData) {
         const payload = { fleet_id: fleetData.fleet_id }
         if (fleetData.watched_timestamp)

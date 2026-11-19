@@ -36,25 +36,18 @@ def png(tmp_path):
 @pytest.fixture()
 def stub_images(monkeypatch, png):
     import application.controllers.pinLists as pinListsController
-    import application.controllers.servers as serversController
     monkeypatch.setattr(pinListsController.AvatarGenerator, "getPath", lambda self: str(png))
-    monkeypatch.setattr(serversController.MonitoringImages, "getImagePaths", lambda self: (str(png.parent), png.name))
 
 
-def test_images_and_dashboard_config_need_authentication(owned, client, stub_images):
-    for url in [f"/servers/monitoringImage/{owned['server'].id}/panel-7", f"/pinlists/getAvatar/{owned['pin'].id}.png",
-                "/servers/getUsageDashboardConfig"]:
-        assert client.get(url).status_code == 401, url
+def test_images_need_authentication(owned, client, stub_images):
+    assert client.get(f"/pinlists/getAvatar/{owned['pin'].id}.png").status_code == 401
 
 
 def test_images_are_only_served_to_their_owner(owned, client, auth_headers, stub_images):
-    imageUrl, avatarUrl = f"/servers/monitoringImage/{owned['server'].id}/panel-7", f"/pinlists/getAvatar/{owned['pin'].id}.png"
+    avatarUrl = f"/pinlists/getAvatar/{owned['pin'].id}.png"
     alice, bob = auth_headers(owned["alice"]), auth_headers(owned["bob"])
-    assert client.get(imageUrl, headers=alice).status_code == 200
     assert client.get(avatarUrl, headers=alice).status_code == 200
-    assert client.get(imageUrl, headers=bob).status_code == 404
     assert client.get(avatarUrl, headers=bob).status_code == 404
-    assert client.get(f"/servers/monitoringImage/{owned['server'].id}/unknown-panel", headers=alice).status_code == 404
 
 
 def test_login_token_only_identifies_the_user(app, client, make_user):

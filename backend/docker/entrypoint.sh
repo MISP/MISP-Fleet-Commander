@@ -3,7 +3,7 @@
 set -euo pipefail
 
 DATA_DIR=/app/database
-mkdir -p "$DATA_DIR" /app/data/cached-monitoring-images /app/data/pin-avatars
+mkdir -p "$DATA_DIR" /app/data/pin-avatars
 
 # The application generates its signing secret (secret_key) and its encryption key (encryption_key) in
 # $DATA_DIR on first start, unless SECRET_KEY / MFC_ENCRYPTION_KEY are set

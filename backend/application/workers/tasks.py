@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import asyncio
 from functools import wraps
 import time
 import uuid
@@ -22,10 +21,7 @@ import application.models.metrics as metricModel
 import application.models.metricRollups as metricRollups
 from application import redisModel
 
-from application import MONITORING_SYSTEM_AVAILABLE, MONITORING_SYSTEM as monitor
-
 fleet_watching_interval_min = settingModel.getRefreshValue("fleet_watching_interval")
-monitoring_interval_min = settingModel.getRefreshValue("monitoring_interval")
 
 socketioEmitter = SocketioEmitter()
 
@@ -162,20 +158,6 @@ def doLinkTestTask(server_ids, remote_server_id=None):
                 linkTestDone(server, {"error": "The link test failed unexpectedly"})
 
 
-@huey_app.task()
-def doCacheMonitoringImages(server_id):
-    server = serverModel.get(server_id)
-    if server is None:
-        return
-    socketioEmitter.server_graphs_updating(server)
-
-    callbacks = {
-        "server_graphs_resfresh_status": socketioEmitter.server_graphs_resfresh_status,
-        "server_graphs_update_done": socketioEmitter.server_graphs_update_done,
-    }
-    serverModel.cacheMonitoringImages([server], force=True, callbacks=callbacks)
-
-
 @huey_app.task(priority=3)
 def runJob(job_id):
     """Run a queued job; its parameters are read from the job (encrypted), never passed through the queue"""
@@ -222,18 +204,6 @@ def watchMonitoredFleets():
             serverModel.doFleetInfoTask(serversDict, clientSocketEmitterUpdateFuns)
             watched_timestamp = redisModel.getFleetWatchedTimestamp(fleet.id)
             socketioEmitter.fleet_update_timestamps(fleet, watched_timestamp = watched_timestamp)
-
-
-@huey_app.periodic_task(crontab(minute=f"*/{monitoring_interval_min}"))
-@huey_app.lock_task("monitor-lock")
-def monitorMonitoredFleets():
-    if MONITORING_SYSTEM_AVAILABLE and settingModel.getRefreshValue("monitoring_enabled"):
-        fleets = fleetModel.indexMonitored()
-        asyncio.run(monitor(fleets))
-        for fleet in fleets:
-            monitored_timestamp = redisModel.setFleetMonitoredTimestamp(fleet.id)
-            if monitored_timestamp is not None:
-                socketioEmitter.fleet_update_timestamps(fleet, monitored_timestamp = monitored_timestamp)
 
 
 def backgroundRefreshSettings():
@@ -343,12 +313,3 @@ def purgeOldJobs():
     """Jobs are kept for the configured number of days, then deleted with their results"""
     retention_days = int(settingModel.getRefreshValue("job_retention_days"))
     return jobModel.purge(retention_days)
-
-
-@huey_app.periodic_task(crontab(hour="*/12"))
-@huey_app.lock_task("monitor-image-lock")
-def cacheMonitoringImages():
-    if MONITORING_SYSTEM_AVAILABLE and settingModel.getRefreshValue("monitoring_enabled"):
-        fleets = fleetModel.indexMonitored()
-        for fleet in fleets:
-            asyncio.run(serverModel.doCacheMonitoringImages(fleet.servers))

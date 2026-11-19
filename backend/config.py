@@ -32,14 +32,6 @@ class Config:
     ENCRYPTION_KEY = environ.get('MFC_ENCRYPTION_KEY') or None
     ENCRYPTION_KEY_FILE = environ.get('MFC_ENCRYPTION_KEY_FILE') or osPath.join(basedir, 'database', 'encryption_key')
 
-    # Monitoring
-    GRAFANA_BASE_URL = environ.get('GRAFANA_BASE_URL') or 'http://localhost:3000'
-    GRAFANA_DASHBOARD_DATA_RENDER = environ.get('GRAFANA_DASHBOARD_DATA_RENDER') or 'render/d-solo/ce6olif96756od'
-    GRAFANA_DASHBOARD = environ.get('GRAFANA_DASHBOARD') or 'd/ce6olif96756od/circl-monitoring-misp'
-    # Grafana service account token used to render the monitoring graphs. No default: graphs are not
-    # rendered until it is set.
-    GRAFANA_APIKEY = environ.get('GRAFANA_APIKEY') or None
-
 
 class ProductionConfig(Config):
     FLASK_DEBUG = False

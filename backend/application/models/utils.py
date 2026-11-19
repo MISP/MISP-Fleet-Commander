@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
 
-from datetime import datetime, timedelta, timezone
 from math import floor
-import shutil
-from typing import Tuple, Union
-from urllib.parse import urlencode
 from PIL import Image
 from random import randint
 import time
@@ -14,15 +10,8 @@ from urllib.parse import urljoin
 import aiohttp
 import asyncio
 
-import nest_asyncio
-import requests  # Make the asyncio's event loop re-entrant
-from application import flaskApp
+import nest_asyncio  # Make the asyncio's event loop re-entrant
 nest_asyncio.apply()
-
-
-GRAFANA_BASE_URL = flaskApp.config['GRAFANA_BASE_URL']
-GRAFANA_DASHBOARD_DATA_RENDER = flaskApp.config['GRAFANA_DASHBOARD_DATA_RENDER']
-GRAFANA_APIKEY = flaskApp.config['GRAFANA_APIKEY']
 
 
 class AvatarGenerator:
@@ -115,139 +104,6 @@ class AvatarGenerator:
             colorG = int(uuidPortion[2:4], 16)
             colorB = int(uuidPortion[4:6], 16)
         return (colorR, colorG, colorB,)
-
-
-class MonitoringImages:
-    global GRAFANA_BASE_URL, GRAFANA_DASHBOARD_DATA_RENDER, GRAFANA_APIKEY
-    IMAGE_REFRESH_FREQUENCY_MIN = 5
-    ROOT_PATH = Path(__file__).resolve().parent / ".." / ".." / "data" / "cached-monitoring-images"
-    ROOT_PATH = ROOT_PATH.resolve()
-    grafana_base_url = GRAFANA_BASE_URL
-    grafana_dashboard_data_render = GRAFANA_DASHBOARD_DATA_RENDER
-    grafana_apikey = GRAFANA_APIKEY
-
-    def __init__(self, server, panel: Union[dict, str], from_time: Union[str, None]=None) -> None:
-        if type(server) is str or type(server) is int:
-            self.server_id = str(server)
-            self.server = None
-        else:
-            self.server_id = str(server.id)
-            self.server = server
-        if type(panel) is str:
-            self.panel_id = panel
-            from application.models.servers import MONITORING_PANEL_BY_ID
-            self.panel = MONITORING_PANEL_BY_ID[self.panel_id]
-        else:
-            self.panel_id = panel['panel_id']
-            self.panel = panel
-        self.width = panel.get('width', 200)  if type(panel) is dict else 200
-        self.height = panel.get('height', 150)  if type(panel) is dict else 150
-        from_time = None
-        if from_time is not None:
-            self.parsed_time = datetime.strptime(from_time, "%Y-%m-%dT%H:%M:%S.%fZ")
-        else:
-            self.parsed_time = datetime.now(timezone.utc) - timedelta(days=self.panel["relative_time_days"])
-        self.from_time = self.parsed_time.strftime("%Y-%m-%dT%H:%M:%S.000Z")
-
-    def generateGrafanaURL(self):
-        url_params = {
-            "timezone": "utc",
-            "theme": "light",
-            "var-bucket": "MISP-Fleet-Commander",
-            "width": self.width,
-            "height": self.height,
-            "from": self.from_time,
-            "to": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
-            "var-instance": str(self.server.name),
-            "panelId": str(self.panel_id),
-        }
-        return f"{self.grafana_base_url}/{self.grafana_dashboard_data_render}?" + urlencode(url_params)
-
-    def canonizeTime(self):
-        return self.parsed_time.strftime("%Y-%m-%dT%H_%M_%S")
-
-    def shouldReloadImage(self):
-        now = self.getExistingImageCreationTime()
-        if now is None:
-            return True
-        one_hour_ago = now - timedelta(minutes=self.IMAGE_REFRESH_FREQUENCY_MIN)
-        return one_hour_ago <= self.parsed_time <= now
-
-    def canonizedName(self):
-        return f"{self.server_id}_{self.panel_id}"
-
-    def getImageBasePath(self):
-        return f"{self.canonizedName()}.png"
-
-    def getFolderBasePath(self):
-        return Path(self.ROOT_PATH).resolve()
-
-    def getImageFullPath(self):
-        return (Path(self.ROOT_PATH) / self.getImageBasePath()).resolve()
-
-    def cacheImage(self):
-        if not self.grafana_apikey:
-            return  # Graphs can't be rendered without a Grafana token
-        r = requests.get(
-            self.generateGrafanaURL(),
-            stream=True,
-            headers={
-                "Authorization": f"Bearer {self.grafana_apikey}",
-                "Accept": "image/png",
-            },
-        )
-        path = self.getImageFullPath()
-        if r.status_code == 200:
-            with open(path, 'wb') as f:
-                r.raw.decode_content = True
-                shutil.copyfileobj(r.raw, f)
-
-    async def asyncCacheImage(self, callback=None):
-        if not self.grafana_apikey:
-            # Graphs can't be rendered without a Grafana token
-            if callback is not None:
-                callback()
-            return
-        headers = {
-            "Authorization": f"Bearer {self.grafana_apikey}",
-            "Accept": "image/png",
-        }
-        path = self.getImageFullPath()
-        connector = aiohttp.TCPConnector(force_close=True, enable_cleanup_closed=True)
-        async with aiohttp.ClientSession(connector=connector) as session:
-            async with session.get(self.generateGrafanaURL(), headers=headers) as resp:
-                try:
-                    if resp.status == 200:
-                        with open(path, "wb") as f:
-                            async for chunk in resp.content.iter_chunked(1024 * 1024):
-                                f.write(chunk)
-                except Exception:
-                    pass
-                finally:
-                    if callback is not None:
-                        callback()
-
-    def getExistingImageCreationTime(self):
-        try:
-            return datetime.fromtimestamp(
-                os.stat(self.getImageFullPath()).st_mtime, tz=timezone.utc
-            )
-        except FileNotFoundError:
-            return None
-
-    def getImagePaths(self) -> Tuple[str, str]:
-        return (str(self.getFolderBasePath()), self.getImageBasePath())
-
-    def refreshImage(self, force=False):
-        if self.shouldReloadImage() or force:
-            self.cacheImage()
-
-    async def asyncRefreshImage(self, force=False, callback=None):
-        if self.shouldReloadImage() or force:
-            await self.asyncCacheImage(callback)
-
-    def deleteImage(self):
-        os.unlink(self.getImageFullPath())
 
 
 def defaultMispTimeout() -> int:

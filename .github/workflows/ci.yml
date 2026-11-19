@@ -28,10 +28,9 @@ jobs:
           cache: pip
           cache-dependency-path: |
             backend/requirements.txt
-            backend/requirements_monitoring.txt
             backend/requirements-dev.txt
       - name: Install the pinned dependencies
-        run: pip install -r requirements.txt -r requirements_monitoring.txt -r requirements-dev.txt
+        run: pip install -r requirements.txt -r requirements-dev.txt
       - name: Migrate an empty database
         run: flask db upgrade
       - name: Check the models match the migrations

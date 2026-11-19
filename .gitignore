@@ -2,7 +2,6 @@
 node_modules
 /dist
 backend/data/pin-avatars/
-backend/data/cached-monitoring-images/
 backend/config.json
 
 # local env files
@@ -29,9 +28,6 @@ yarn-error.log*
 venv
 *.db
 *.sqlite
-
-# Monitoring stack secrets (copy from .env.sample)
-backend/application/monitoring/docker/.env
 
 # Instance state: database, signing secret and encryption key (docker-compose keeps them in ./run)
 run/

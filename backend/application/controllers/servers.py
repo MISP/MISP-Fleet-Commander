@@ -8,10 +8,9 @@ import re
 import concurrent.futures
 from datetime import datetime as dt, timedelta, timezone
 from collections.abc import Mapping, MutableSequence
-from flask import Blueprint, request, jsonify, abort, send_from_directory
+from flask import Blueprint, request, jsonify, abort
 from marshmallow import ValidationError
 
-from application import flaskApp
 from application.DBModels import db, User, Server
 from application.controllers.utils import mispGetHTMLRequest, mispGetRequest, mispPostRequest, batchRequest
 from application.marshmallowSchemas import ServerSchema, serverQuerySchema, serverSchema, taskSchema, serversSchema, serversListSchema
@@ -21,11 +20,9 @@ import application.models.metrics as metricModel
 import application.models.metricSeries as metricSeriesModel
 import application.models.benchmarks as benchmarkModel
 import application.models.instancePicture as instancePictureModel
-from application.models.servers import MONITORING_PANELS, MONITORING_PANEL_BY_ID
 from application.controllers.instance import token_required
 from application.health.links import classify_link, latest_release_for
 import application.health.versions as healthVersions
-from application.models.utils import MonitoringImages
 
 DEFAULT_PULL_RULE = {
     "tags": {"OR": [], "NOT": []},
@@ -331,19 +328,6 @@ def getConnection(user, server_id, connection_id):
         return jsonify({})
 
 
-@BPserver.route('/servers/getUsageDashboardConfig', methods=['GET'])
-@token_required
-def getUsageDashboardConfig(user):
-    GRAFANA_BASE_URL = flaskApp.config['GRAFANA_BASE_URL']
-    GRAFANA_DASHBOARD = flaskApp.config['GRAFANA_DASHBOARD']
-    dashboardConfig = {
-        "panels": MONITORING_PANELS,
-        "grafana_base_url": GRAFANA_BASE_URL,
-        "grafana_dashboard": GRAFANA_DASHBOARD,
-    }
-    return jsonify(dashboardConfig)
-
-
 @BPserver.route("/servers/getInstancePicture/<int:server_id>", methods=["GET"])
 @token_required
 def getInstancePicture(user, server_id):
@@ -354,17 +338,6 @@ def getInstancePicture(user, server_id):
     # Read anonymously: without an authkey, MISP serves the login page
     anonymousServer = DictToObject(id=server.id, name=server.name, url=server.url, skip_ssl=server.skip_ssl, authkey=None)
     return jsonify(instancePictureModel.getPicture(server, anonymousServer))
-
-
-@BPserver.route('/servers/monitoringImage/<int:server_id>/<panel_id>', methods=['GET'])
-@token_required
-def monitoringImage(user, server_id, panel_id):
-    server = serverModel.getForUser(user, server_id)
-    if server is None or panel_id not in MONITORING_PANEL_BY_ID:
-        abort(404)
-    panelImage = MonitoringImages(server_id, panel_id)
-    (directoryPath, imagePath) = panelImage.getImagePaths()
-    return send_from_directory(directoryPath, imagePath, max_age=0)
 
 
 @BPserver.route('/servers/syncOvertime/<int:server_id>', methods=['GET'])

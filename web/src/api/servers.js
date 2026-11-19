@@ -13,7 +13,6 @@ const urls = {
     delete: `/servers/delete`,
     restQuery: `/servers/restQuery`,
     getUsers: `/servers/getUsers`,
-    getUsageDashboardConfig: `/servers/getUsageDashboardConfig`,
     getInstancePicture: `/servers/getInstancePicture`,
     batchTest: `/servers/batchTest`,
     discoverConnected: `/servers/discoverConnected`,
@@ -145,16 +144,6 @@ export default {
         }).catch(error => {
             common.handleError(error, errorCb)
         })
-    },
-
-    getUsageDashboardConfig(cb, errorCb) {
-        const url = `${urls.getUsageDashboardConfig}`
-        return common.getClient().get(url)
-            .then((response) => {
-                cb(response.data)
-            }).catch(error => {
-                common.handleError(error, errorCb)
-            })
     },
 
     get(server_id, cb, errorCb) {

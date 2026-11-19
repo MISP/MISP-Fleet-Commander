@@ -205,32 +205,14 @@ class Server(BaseModel):
         return redisModel.getServerWatchedTimestamp(self.uuid)
 
     @property
-    def monitored_timestamp(self):
-        import application.redisModel as redisModel
-        return redisModel.getServerMonitoredTimestamp(self.uuid)
-
-    @property
     def connection_status(self):
         """Latest connection test, persisted in Redis"""
         import application.redisModel as redisModel
         return redisModel.getServerStatus(self.uuid)
 
-    @property
-    def monitoring_picture_cached(self):
-        import application.redisModel as redisModel
-        return redisModel.getServerCachedPicturedTimestamp(self.uuid)
-
-    @monitored_timestamp.setter
-    def monitored_timestamp(self, ts):
-        self._monitored_timestamp = ts
-
     @watched_timestamp.setter
     def watched_timestamp(self, ts):
         self._watched_timestamp = ts
-
-    @monitoring_picture_cached.setter
-    def monitoring_picture_cached(self, ts):
-        self._monitoring_picture_cached = ts
 
 
 @event.listens_for(Server, 'after_delete')

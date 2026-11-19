@@ -26,9 +26,6 @@ export const websocketMixin = {
             const payload = remoteServerID === undefined ? serverID : { server_id: serverID, remote_server_id: remoteServerID }
             this.$socket.emit('server_link_test', payload);
         },
-        wsServerGraphsRefresh: function (serverID) {
-            this.$socket.emit('refresh_server_graphs', serverID);
-        },
 
         // emit with ack
         wsServerRefreshWithAck: async function (serverID, callback) {

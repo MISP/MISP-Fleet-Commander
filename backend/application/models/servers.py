@@ -13,45 +13,12 @@ from application.DBModels import db, User, Server
 from application.controllers.utils import mispGetRequest, mispPostRequest
 from application.marshmallowSchemas import ServerSchema, serverQuerySchema
 
-from application.models.utils import MonitoringImages, asyncFetcher, asyncFetcherManyServer
+from application.models.utils import asyncFetcher, asyncFetcherManyServer
 from application.models import baselineDrift
 import application.models.organisations as organisationModel
 
 import nest_asyncio
 nest_asyncio.apply()
-
-
-MONITORING_PANELS = [
-    { 'panel_id': 'panel-7', 'alt_title': '# Events (Last 3 months)', 'width': 200, 'height': 150, 'relative_time_days': 3*31 },
-    { 'panel_id': 'panel-8', 'alt_title': '# Objects (Last 3 months)', 'width': 200, 'height': 150, 'relative_time_days': 3*31 },
-    { 'panel_id': 'panel-23', 'alt_title': '# Attributes (Last 3 months)', 'width': 200, 'height': 150, 'relative_time_days': 3*31 },
-    { 'panel_id': 'panel-30', 'alt_title': '# Event Reports  (Last 3 months)', 'width': 200, 'height': 150, 'relative_time_days': 3*31 },
-    { 'panel_id': 'panel-29', 'alt_title': '# Analyst Data  (Last 3 months)', 'width': 200, 'height': 150, 'relative_time_days': 3*31 },
-    { 'panel_id': 'panel-9', 'alt_title': '# Proposals  (Last 3 months)', 'width': 200, 'height': 150, 'relative_time_days': 3*31 },
-    { 'panel_id': 'panel-10', 'alt_title': '# Correlation  (Last 3 months)', 'width': 200, 'height': 150, 'relative_time_days': 3*31 },
-    { 'panel_id': 'panel-5', 'alt_title': '# Organisations  (Last 3 months)', 'width': 200, 'height': 150, 'relative_time_days': 3*31 },
-    { 'panel_id': 'panel-17', 'alt_title': '# Users  (Last 3 months)', 'width': 200, 'height': 150, 'relative_time_days': 3*31 },
-    { 'panel_id': 'panel-16', 'alt_title': 'Users / Org Ratio', 'width': 200, 'height': 150, 'relative_time_days': 1 },
-    { 'panel_id': 'panel-15', 'alt_title': '# Users with PGP', 'width': 200, 'height': 150, 'relative_time_days': 1 },
-    { 'panel_id': 'panel-13', 'alt_title': '# Local / Global Org ratio', 'width': 200, 'height': 150, 'relative_time_days': 1 },
-    { 'panel_id': 'panel-18', 'alt_title': '# Open registration (Last 3 months)', 'width': 200, 'height': 150, 'relative_time_days': 3*31 },
-    { 'panel_id': 'panel-14', 'alt_title': 'Contributing Org (Last year)', 'width': 200, 'height': 150, 'relative_time_days': 365} ,
-    { 'panel_id': 'panel-2', 'alt_title': '# Data Amount over time (Last year)', 'width': 600, 'height': 300, 'relative_time_days': 365 },
-    { 'panel_id': 'panel-1', 'alt_title': 'Login over time (Last year)', 'width': 600, 'height': 300, 'relative_time_days': 365 },
-    { 'panel_id': 'panel-3', 'alt_title': 'Login Heatmap (Last 14 days)', 'width': 800, 'height': 600, 'relative_time_days': 14 },
-    { 'panel_id': 'panel-32', 'alt_title': 'Load avg medium', 'width': 200, 'height': 150, 'relative_time_days': 365 },
-    { 'panel_id': 'panel-33', 'alt_title': 'RAM Usage', 'width': 200, 'height': 150, 'relative_time_days': 365 },
-    { 'panel_id': 'panel-34', 'alt_title': 'Disk Usage', 'width': 200, 'height': 150, 'relative_time_days': 365 },
-    { 'panel_id': 'panel-20', 'alt_title': 'Redis Memory Usage (Last 7 days)', 'width': 600, 'height': 300, 'relative_time_days': 7 },
-    { 'panel_id': 'panel-35', 'alt_title': 'MySQL Memory Usage (Last 7 days)', 'width': 200, 'height': 150, 'relative_time_days': 7 },
-    { 'panel_id': 'panel-26', 'alt_title': 'Workers Queues (Last 7 days)', 'width': 600, 'height': 300, 'relative_time_days': 7 },
-    { 'panel_id': 'panel-19', 'alt_title': 'Top 5 Endpoint Daily Time', 'width': 600, 'height': 300, 'relative_time_days': 1 },
-    { 'panel_id': 'panel-21', 'alt_title': 'Top 5 Endpoint Daily SQL Time', 'width': 600, 'height': 300, 'relative_time_days': 1 },
-    { 'panel_id': 'panel-22', 'alt_title': 'Top 5 Endpoint Daily Memory', 'width': 600, 'height': 300, 'relative_time_days': 1 },
-]
-MONITORING_PANEL_BY_ID = {}
-for panel in MONITORING_PANELS:
-    MONITORING_PANEL_BY_ID[panel['panel_id']] = panel
 
 
 def index(fleet_id=None):
@@ -520,61 +487,6 @@ def attachConnectedServerStatusFor(server, connectedServers, remote_server_id):
         else:
             connectedServers = attachConnectedServerStatus(server, connectedServers)
     return connectedServers
-
-
-def cacheMonitoringImages(servers: list, force: bool = False, callbacks: dict = {}):
-    allResults = asyncio.run(doCacheMonitoringImages(servers, force=force, callbacks=callbacks))
-    return allResults
-
-
-async def doCacheMonitoringImages(servers: list, force: bool = False, callbacks: dict = {}):
-    global MONITORING_PANELS
-    panels = MONITORING_PANELS
-    # No explicit start: each panel uses its own relative_time_days window
-    from_time = None
-
-    # Wrap callbacks to keep track of the reload status per server
-    wrappedCallbacks = {}
-    if 'server_graphs_resfresh_status' in callbacks:
-        panelRefreshedCount = 0
-        def graphRefreshStatus(serverID, refresh_panel_id):
-            nonlocal panelRefreshedCount
-            panelRefreshedCount += 1
-            status = {
-                "total_panels": len(panels),
-                "panel_refreshed_count": panelRefreshedCount,
-                "last_panel_refreshed": refresh_panel_id,
-            }
-            callbacks['server_graphs_resfresh_status'](serverID, status)
-        wrappedCallbacks['server_graphs_resfresh_status'] = graphRefreshStatus
-
-    if 'server_graphs_update_done' in callbacks:
-        wrappedCallbacks['server_graphs_update_done'] = callbacks['server_graphs_update_done']
-
-    tasks = []
-    for server in servers:
-        for panel in panels:
-            tasks.append(
-                cacheMonitoringImageAsync(server, panel, from_time, force, wrappedCallbacks)
-            )
-    result = await asyncio.gather(*tasks)
-    for server in servers:
-        timestamp = int(time.time())
-        if 'server_graphs_update_done' in wrappedCallbacks:
-            wrappedCallbacks["server_graphs_update_done"](server.id, timestamp)
-        redisModel.setServerCachedPicturedTimestamp(server.uuid)
-    return result
-
-
-async def cacheMonitoringImageAsync(server, panel, from_time, force, callbacks = {}):
-    monitoringImage = MonitoringImages(server, panel, from_time)
-    if "server_graphs_resfresh_status" in callbacks:
-        def callback():
-            nonlocal server, panel
-            callbacks["server_graphs_resfresh_status"](server.id, panel["panel_id"])
-        await monitoringImage.asyncRefreshImage(force, callback)
-    else:
-        await monitoringImage.asyncRefreshImage(force)
 
 
 def saveInfo(server, fullQuery: dict) -> bool:

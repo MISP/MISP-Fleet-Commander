@@ -10,7 +10,6 @@ const init_state = () => {
         server_query_in_progress: {},
         server_refresh_enqueued: {},
         server_status_refresh_enqueued: {},
-        server_graphs_refresh_enqueued: {},
         // server_id -> {testing, error, updated}: link tests in progress, why the last one could not be done
         server_link_test: {},
         server_query_error: {},
@@ -172,9 +171,6 @@ const actions = {
             if (partial_data_key == 'serverUsage') {
                 commit("setServerUsage", { server_id: server_id, server_usage: partial_data })
             }
-            if (partial_data_key == '_monitoringGraphLastRefresh') {
-                commit("setMonitoringGraphLastRefresh", { server_id: server_id, monitoring_graph_last_refresh: partial_data.monitoring_graph_last_refresh })
-            }
             resolve()
         })
     },
@@ -243,7 +239,6 @@ const mutations = {
             server._loading = false
             Vue.set(state.server_query_in_progress, server.id, false)
             Vue.set(state.server_refresh_enqueued, server.id, false)
-            Vue.set(state.server_graphs_refresh_enqueued, server.id, false)
             Vue.set(state.server_status_refresh_enqueued, server.id, false)
             Vue.set(state.server_query_error, server.id, false)
             Vue.set(state.server_status, server.id, {})
@@ -292,11 +287,6 @@ const mutations = {
             error: payload.error || null,
             updated: Date.now(),
         })
-    },
-    setServerGraphsRefreshEnqueued(state, payload) {
-        const server_id = payload.server_id
-        const is_enqueued = payload.is_enqueued
-        state.server_graphs_refresh_enqueued[server_id] = is_enqueued
     },
     setServerUser(state, payload) {
         if (state.server_user[payload.server_id] === undefined) {
@@ -349,11 +339,6 @@ const mutations = {
             Vue.set(state.last_refresh, payload.server_id, "")
         }
         Vue.set(state.last_refresh, payload.server_id, payload.last_refresh)
-    },
-    setMonitoringGraphLastRefresh(state, payload) {
-        const newServer = state.servers[payload.server_id]
-        newServer.monitoring_picture_cached = payload.monitoring_graph_last_refresh
-        Vue.set(state.servers, payload.server_id, newServer)
     },
     setFullInfo(state, { server_id, timestamp }) {
         Vue.set(state.full_info, server_id, timestamp)

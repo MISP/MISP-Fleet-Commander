@@ -146,9 +146,8 @@ def test_socket_emits_never_contain_authkey(monkeypatch, fleet_with_server):
 
     emitter.udpate_server_connection_list(server, [{"Server": {"id": "1"}}])
     emitter.udpate_server_usage(server, {})
-    emitter.server_graphs_update_done(server.id, 1)
 
-    assert {event for event, _ in emitted} >= {"UPDATE_SERVER_PARTIAL_DATA", "SERVER_GRAPHS_UPDATE_DONE"}
+    assert {event for event, _ in emitted} == {"UPDATE_SERVER_PARTIAL_DATA"}
     for event, data in emitted:
         assert find_authkeys(data) == [], event
 

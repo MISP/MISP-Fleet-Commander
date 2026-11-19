@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 
-import asyncio
 import time
 from pprint import pprint
 import click
@@ -69,21 +68,6 @@ def monitorFleet():
         print(f'    - {server.name} ({server.id}): {outcome}' + (f'. {state.last_error}' if state.last_error else ''))
     metricModel.collectAndAnnounce(servers, config["interval"], config["max_concurrency"], socketioEmitter,
                                    onCollected=report)
-
-@server_cli.command("cache-monitoring-images")
-@click.option("--minute", required=False, default=5)
-@click.option("--force", is_flag=True, default=False)
-def cacheMonitoringImages(minute: int = 5, force: bool = False):
-    while True:
-        fleets = fleetModel.indexMonitored()
-        print("Starting caching images:")
-        for fleet in fleets:
-            print(f"- {fleet.name} ({fleet.server_count} servers)")
-            asyncio.run(serverModel.doCacheMonitoringImages(fleet.servers, force))
-
-        print(f"Sleeping {minute*60}")
-        time.sleep(minute * 60)
-
 
 def doQueryFleet(fleet_id: int, delay_second: int = 10):
     fleet = fleetModel.get(fleet_id)

@@ -24,15 +24,6 @@ x-mfc-common: &mfc-common
         SOCKETIO_MESSAGE_QUEUE: redis://redis:6379/3
         WORKER_BROKER_URL: redis://redis
         WORKER_RESULT_BACKEND: redis://redis
-        # Optional monitoring (InfluxDB + Grafana), read from the environment or a .env file
-        INFLUXDB_TOKEN: ${INFLUXDB_TOKEN:-}
-        INFLUXDB_URL: ${INFLUXDB_URL:-}
-        INFLUXDB_ORG: ${INFLUXDB_ORG:-}
-        INFLUXDB_BUCKET: ${INFLUXDB_BUCKET:-}
-        GRAFANA_APIKEY: ${GRAFANA_APIKEY:-}
-        GRAFANA_BASE_URL: ${GRAFANA_BASE_URL:-}
-        GRAFANA_DASHBOARD_DATA_RENDER: ${GRAFANA_DASHBOARD_DATA_RENDER:-}
-        GRAFANA_DASHBOARD: ${GRAFANA_DASHBOARD:-}
     volumes:
         - "./run:/app/database"
         - "./run/data:/app/data"
