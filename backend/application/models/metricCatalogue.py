@@ -68,6 +68,16 @@ CATALOGUE = (
 )
 METRICS = {metric.key: metric for metric in CATALOGUE}
 
+# The keys that add up across the servers of a fleet. Content synced between them counts once per server holding it.
+# Not summed: organisations (the same ones are known, or local, on several servers), and load, memory, disk and
+# Redis, which describe one machine each
+FLEET_SUMMED = frozenset((
+    'events', 'attributes', 'objects', 'event_reports', 'analyst_data', 'correlations', 'proposals',
+    'users', 'users_pgp', 'pending_registrations',
+    'logins', 'failed_logins', 'api_requests_24h',
+    'db_size_bytes', 'queue_cache', 'queue_default', 'queue_email', 'queue_prio', 'queue_update',
+))
+
 
 def kindOf(key: str) -> Optional[str]:
     metric = METRICS.get(key)

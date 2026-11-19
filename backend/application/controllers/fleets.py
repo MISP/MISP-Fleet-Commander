@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, abort, request, jsonify
 # from flask import current_app as app
 from datetime import datetime as dt
 import time
@@ -6,6 +6,9 @@ from application.DBModels import db, User, Server, Fleet
 from application.marshmallowSchemas import fleetSchema, fleetsSchema
 from application.controllers.instance import token_required
 import application.models.fleets as fleetModel
+import application.models.fleetMetrics as fleetMetricsModel
+import application.models.metrics as metricModel
+import application.models.metricSeries as metricSeriesModel
 import application.models.servers as serverModel
 
 
@@ -82,3 +85,18 @@ def getFromServerId(user, server_id):
         return fleetSchema.dump(fleet)
     else:
         return jsonify({})
+
+
+@BPfleet.route('/fleets/metrics/<int:fleet_id>', methods=['GET'])
+@token_required
+def fleetMetrics(user, fleet_id):
+    """Usage metrics of the fleet over `range` (24h, 7d, 30d, 90d, 1y): its servers' figures summed per hour or day,
+    and each server's own figures, optionally only for the `metrics` given (comma-separated keys)"""
+    fleet = fleetModel.getForUser(user, fleet_id)
+    if fleet is None:
+        abort(404)
+    try:
+        rangeName, tier, keys = fleetMetricsModel.parseRequest(request.args.get('range'), request.args.get('metrics'))
+    except metricSeriesModel.SeriesRequestError as e:
+        return jsonify({'message': str(e)}), 400
+    return jsonify(fleetMetricsModel.fleetSeries(fleet, rangeName, tier, keys, metricModel.monitoringSettings()))

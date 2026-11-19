@@ -54,34 +54,74 @@ def _rows(server_id: int, tier: str, since: int) -> list:
                                      MetricSample.ts >= since).order_by(MetricSample.ts).all()
 
 
-def _lastBucketEnd(server_id: int, tier: str, size: int) -> Optional[int]:
-    last = db.session.query(func.max(MetricSample.ts)).filter(MetricSample.server_id == server_id,
-                                                              MetricSample.tier == tier).scalar()
-    return None if last is None else last + size
+def _rowsSince(tier: str, since: dict) -> dict:
+    """{server_id: rows of `tier` from since[server_id]}, one query per distinct start (servers mostly share one)"""
+    byStart = defaultdict(list)
+    for server_id, start in since.items():
+        byStart[start].append(server_id)
+    rows = defaultdict(list)
+    for start, server_ids in byStart.items():
+        for row in MetricSample.query.filter(MetricSample.server_id.in_(server_ids), MetricSample.tier == tier,
+                                             MetricSample.ts >= start).order_by(MetricSample.ts):
+            rows[row.server_id].append(row)
+    return rows
+
+
+def _lastBucketEnds(server_ids: list, tier: str, size: int) -> dict:
+    """{server_id: end of its newest bucket of `tier`}, for the servers that have one"""
+    return {server_id: last + size for server_id, last in
+            db.session.query(MetricSample.server_id, func.max(MetricSample.ts))
+            .filter(MetricSample.server_id.in_(server_ids), MetricSample.tier == tier)
+            .group_by(MetricSample.server_id)}
+
+
+def pendingBucketsOf(tier: str, since: dict) -> dict:
+    """{server_id: buckets of `tier` from since[server_id] that the roll-up has not written yet}, summed up from the
+    finer rows: raw rows for hours; for days, the hour rows plus the raw rows of the hours not rolled up yet"""
+    size = BUCKET_SIZES[tier]
+    if not since:
+        return {}
+    if tier == 'hour':
+        finer = _rowsSince('raw', since)
+    else:
+        finer = _rowsSince('hour', since)
+        hourEnds = _lastBucketEnds(list(since), 'hour', HOUR)
+        rawSince = {server_id: max(start, hourEnds.get(server_id) or start) for server_id, start in since.items()}
+        for server_id, rows in _rowsSince('raw', rawSince).items():
+            finer[server_id] += rows
+    pending = {}
+    for server_id, rows in finer.items():
+        byBucket = defaultdict(list)
+        for row in rows:
+            byBucket[row.ts - row.ts % size].append(row)
+        pending[server_id] = []
+        for bucket in sorted(byBucket):
+            values, peaks, samples = summarise(byBucket[bucket])
+            pending[server_id].append(SimpleNamespace(ts=bucket, values=values, peaks=peaks, samples=samples))
+    return pending
 
 
 def pendingBuckets(server_id: int, tier: str, since: int) -> list:
-    """Buckets of `tier` from `since` that the roll-up has not written yet, summed up from the finer rows: raw rows
-    for hours; for days, the hour rows plus the raw rows of the hours not rolled up yet"""
-    size = BUCKET_SIZES[tier]
-    if tier == 'hour':
-        finer = _rows(server_id, 'raw', since)
-    else:
-        finer = _rows(server_id, 'hour', since)
-        rawSince = max(since, _lastBucketEnd(server_id, 'hour', HOUR) or since)
-        finer += _rows(server_id, 'raw', rawSince)
-    byBucket = defaultdict(list)
-    for row in finer:
-        byBucket[row.ts - row.ts % size].append(row)
-    buckets = []
-    for bucket in sorted(byBucket):
-        values, peaks, samples = summarise(byBucket[bucket])
-        buckets.append(SimpleNamespace(ts=bucket, values=values, peaks=peaks, samples=samples))
-    return buckets
+    return pendingBucketsOf(tier, {server_id: since}).get(server_id, [])
 
 
 def latestSample(server_id: int) -> Optional[MetricSample]:
     return MetricSample.query.filter_by(server_id=server_id, tier='raw').order_by(MetricSample.ts.desc()).first()
+
+
+def latestSamples(server_ids: list) -> dict:
+    """server id → its newest raw sample"""
+    if not server_ids:
+        return {}
+    newest = (db.session.query(MetricSample.server_id, func.max(MetricSample.ts).label('ts'))
+              .filter(MetricSample.tier == 'raw', MetricSample.server_id.in_(server_ids))
+              .group_by(MetricSample.server_id)
+              .subquery())
+    rows = (MetricSample.query
+            .join(newest, (MetricSample.server_id == newest.c.server_id) & (MetricSample.ts == newest.c.ts))
+            .filter(MetricSample.tier == 'raw')
+            .all())
+    return {row.server_id: row for row in rows}
 
 
 def collectionState(server, settings: dict) -> dict:

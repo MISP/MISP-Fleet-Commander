@@ -16,11 +16,10 @@ import math
 from dataclasses import dataclass
 from typing import Optional
 
-from sqlalchemy import func
-
 from application import redisModel
-from application.DBModels import db, Fleet, MetricSample, MetricState, Server
+from application.DBModels import db, Fleet, MetricState, Server
 import application.models.metricCatalogue as catalogue
+import application.models.metricSeries as metricSeries
 import application.models.metrics as metricModel
 
 CONTENT_TYPE = 'text/plain; version=0.0.4; charset=utf-8'
@@ -113,17 +112,7 @@ def scrapedServers(user) -> list:
 
 def latestSamples(server_ids: list) -> dict:
     """server id → values of its newest raw sample"""
-    if not server_ids:
-        return {}
-    newest = (db.session.query(MetricSample.server_id, func.max(MetricSample.ts).label('ts'))
-              .filter(MetricSample.tier == 'raw', MetricSample.server_id.in_(server_ids))
-              .group_by(MetricSample.server_id)
-              .subquery())
-    rows = (MetricSample.query
-            .join(newest, (MetricSample.server_id == newest.c.server_id) & (MetricSample.ts == newest.c.ts))
-            .filter(MetricSample.tier == 'raw')
-            .all())
-    return {row.server_id: row.values or {} for row in rows}
+    return {server_id: row.values or {} for server_id, row in metricSeries.latestSamples(server_ids).items()}
 
 
 def mispVersion(server) -> Optional[str]:
