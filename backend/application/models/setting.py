@@ -41,7 +41,7 @@ setting_configuration = {
         "panel": "Scheduler",
         "scope": "Monitoring System",
         "type": "checkbox",
-        "default": False,
+        "default": True,
         "disabled": False,
         "error": False,
     },

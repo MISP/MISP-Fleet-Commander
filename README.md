@@ -211,9 +211,9 @@ What is collected, every 10 minutes by default:
 - **System**: load, memory and disk usage, and the size of MISP's database.
 - **MISP internals**: Redis memory and the jobs waiting in each worker queue.
 
-To turn it on:
-1. Open the settings (button in the top right corner) and enable `Monitoring Enabled` in the `Scheduler` tab. `Monitoring Interval` sets how often the servers are queried, in minutes.
-2. Edit a fleet and tick **Monitor**.
+To monitor a fleet, edit it and tick **Monitor**.
+
+Monitoring is on by default. It can be turned off for every fleet with `Monitoring Enabled`, in the `Scheduler` tab of the settings (button in the top right corner), where `Monitoring Interval` sets how often the servers are queried, in minutes. Existing installs keep their current value: check that it is enabled after upgrading.
 
 The first samples arrive within a minute or two. The first collection of a server also counts its logins of the last 90 days (fewer when the logs are very busy), so the login charts don't start empty. Each server's page then shows its charts in the `Usage` tab, from the last 24 hours to the last year, along with the most expensive endpoints of the day.
 
