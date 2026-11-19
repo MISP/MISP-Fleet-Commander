@@ -141,6 +141,12 @@ export function formatTick(value, unit, bytes = null) {
     return Math.abs(value) < 10000 ? grouped.format(value) : compact.format(value)
 }
 
+/** The axis ticks worth labelling: counts only take whole numbers (an axis up to 2 logins ticks 0, 1, 2, not 0, 0.5, 1,
+ * 1.5, 2 shown as 0, 1, 1, 2, 2) */
+export function axisTicks(ticks, unit) {
+    return unit === "count" ? ticks.filter((value) => Number.isInteger(value)) : ticks
+}
+
 /** A duration given in seconds, as MISP's benchmarks report them: `340 ms`, `12.3 s`, `4 min 12 s`, `1.6 h` */
 export function formatDuration(seconds) {
     const number = toNumber(seconds)

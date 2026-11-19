@@ -58,6 +58,14 @@ describe("formats", () => {
         expect(formatTick(1.5, "load")).toBe("1.5")
     })
 
+    it("keeps whole ticks on count axes", () => {
+        const { axisTicks } = metrics
+        expect(axisTicks([0, 0.5, 1, 1.5, 2], "count")).toEqual([0, 1, 2])
+        expect(axisTicks([0, 10, 20], "count")).toEqual([0, 10, 20])
+        expect(axisTicks([0, 0.5, 1, 1.5, 2], "load")).toEqual([0, 0.5, 1, 1.5, 2])
+        expect(axisTicks([0, 0.5, 1], "percent")).toEqual([0, 0.5, 1])
+    })
+
     it("formats benchmark durations", () => {
         const { formatDuration } = metrics
         expect(formatDuration(0.34)).toBe("340 ms")

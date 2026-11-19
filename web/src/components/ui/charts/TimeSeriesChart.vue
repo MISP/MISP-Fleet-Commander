@@ -150,7 +150,7 @@
 
 <script>
 import { area, line, scaleLinear, scaleTime, timeDay, timeFormat, timeHour, timeMonth, timeYear } from "d3"
-import { bytesUnit, formatBucket, formatTick, formatValue, segments } from "@/helpers/metrics"
+import { axisTicks, bytesUnit, formatBucket, formatTick, formatValue, segments } from "@/helpers/metrics"
 import { SERIES_COLORS, widthMixin } from "./chartTheme"
 
 const formatClock = timeFormat("%H:%M")
@@ -277,7 +277,7 @@ export default {
         yTickValues() {
             const factor = this.bytes ? this.bytes.factor : 1
             const [lo, hi] = this.yScale.domain()
-            return scaleLinear().domain([lo / factor, hi / factor]).ticks(4).map((value) => value * factor)
+            return axisTicks(scaleLinear().domain([lo / factor, hi / factor]).ticks(4), this.unit).map((value) => value * factor)
         },
         margin() {
             const labels = this.yTickValuesForMargin.map((value) => formatTick(value, this.unit, this.bytes))
@@ -289,7 +289,8 @@ export default {
             const [min, max] = this.extent
             const factor = this.bytes ? this.bytes.factor : 1
             const top = this.yMax !== null ? Math.max(max, this.yMax) : max
-            return scaleLinear().domain([Math.min(0, min) / factor, top / factor]).nice(4).ticks(4).map((value) => value * factor)
+            const ticks = scaleLinear().domain([Math.min(0, min) / factor, top / factor]).nice(4).ticks(4)
+            return axisTicks(ticks, this.unit).map((value) => value * factor)
         },
         plotBottom() {
             return this.height - 24
