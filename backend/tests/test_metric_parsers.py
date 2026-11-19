@@ -164,11 +164,12 @@ def test_api_activity_formats():
 
 
 def test_login_log_entries(answers):
+    """Web logins and failed web logins; a rejected API key (`auth_fail`, 267020) is not a login"""
     from application.models.metricCatalogue import LoginEntry, parseLoginLogs, parseLogCreated
     entries = parseLoginLogs(answers["logs"])
     assert entries == [
         LoginEntry(267013, "logins", parseLogCreated("2026-11-17 15:26:32")),
-        LoginEntry(267020, "failed_logins", parseLogCreated("2026-11-17 15:27:40")),
+        LoginEntry(267021, "failed_logins", parseLogCreated("2026-11-17 15:28:05")),
         LoginEntry(267426, "logins", parseLogCreated("2026-11-18 07:26:53")),
     ]
     assert parseLogCreated("2026-11-18 07:26:53") == int(datetime(2026, 11, 18, 7, 26, 53, tzinfo=timezone.utc).timestamp())

@@ -45,7 +45,7 @@ class FakeMisp:
 
     def post(self, server, url, data={}, timeout=None, **kwargs):
         if url == "/admin/logs/index":
-            assert data["model"] == "User" and data["action"] == ["login", "auth_fail"] and data["limit"] == 5000
+            assert data["model"] == "User" and data["action"] == ["login", "login_fail"] and data["limit"] == 5000
             self.calls.append(("LOGS", data["created"]))
             return self.logs(data["created"])
         self.calls.append(("POST", data["widget"]))
@@ -122,7 +122,7 @@ def test_logins_above_the_cursor_are_counted(monkeypatch):
     from application.models.metrics import readLogins
     now = int(time.time())
     misp = FakeMisp(logs=lambda created: {"data": [logRow(99, "login", now - 60), logRow(101, "login", now - 50),
-                                                   logRow(102, "auth_fail", now - 40),
+                                                   logRow(102, "login_fail", now - 40),
                                                    logRow(103, "login", now - 30)]}).install(monkeypatch)
     result = readLogins(target(), backfilledState(cursor=100, read_at=now - 600), 600, now)
     assert result == {"counts": {"logins": 2, "failed_logins": 1}, "cursor": 103, "error": None}
@@ -170,8 +170,8 @@ def test_backfill_steps_down_and_buckets_by_hour(monkeypatch):
     now = int(time.time())
     hourStart = now - now % HOUR
     recent = [logRow(10, "login", hourStart - 2 * HOUR + 5), logRow(11, "login", hourStart - 2 * HOUR + 50),
-              logRow(12, "auth_fail", hourStart - HOUR + 1), logRow(13, "login", hourStart),
-              logRow(14, "auth_fail", hourStart + 4 * HOUR)]  # MISP ahead of UTC: counted now
+              logRow(12, "login_fail", hourStart - HOUR + 1), logRow(13, "login", hourStart),
+              logRow(14, "login_fail", hourStart + 4 * HOUR)]  # MISP ahead of UTC: counted now
     answers = {"90d": {"data": [logRow(i, "login", now) for i in range(5000)]}, "30d": {"data": recent}}
     misp = FakeMisp(logs=lambda created: answers[created]).install(monkeypatch)
     result = readLogins(target(), LoginState(), 600, now)

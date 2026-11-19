@@ -295,6 +295,22 @@
    },
    {
     "Log": {
+     "id": "267021",
+     "title": "Failed login attempt using username other@misp.test from IP: 192.0.2.12.",
+     "created": "2026-11-17 15:28:05",
+     "model": "User",
+     "model_id": "2",
+     "action": "login_fail",
+     "user_id": "2",
+     "change": "{\"user_agent\":\"Mozilla\\/5.0\",\"ip\":\"192.0.2.12\",\"accept_lang\":null,\"geoip\":\"None\",\"ua_pattern\":\"*\",\"ua_platform\":\"unknown\",\"ua_browser\":\"Default Browser\"}",
+     "email": "other@misp.test",
+     "org": "ORGNAME",
+     "description": "",
+     "ip": "192.0.2.12"
+    }
+   },
+   {
+    "Log": {
      "id": "267426",
      "title": "User (2): other@misp.test",
      "created": "2026-11-18 07:26:53",

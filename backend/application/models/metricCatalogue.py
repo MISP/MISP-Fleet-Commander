@@ -298,7 +298,9 @@ SOURCES = (
            {'config': json.dumps({'days': 1}), 'widget': 'APIActivityWidget'}),
 )
 
-LOGIN_ACTIONS = {'login': 'logins', 'auth_fail': 'failed_logins'}
+# Web logins. `login_fail` is a failed one (wrong password or OTP, unknown account). `auth_fail` is not counted: it
+# is an API request with a wrong, expired or disabled key, not a login
+LOGIN_ACTIONS = {'login': 'logins', 'login_fail': 'failed_logins'}
 
 
 @dataclass(frozen=True)
