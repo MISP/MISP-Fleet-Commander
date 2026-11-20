@@ -68,6 +68,10 @@ class User(BaseModel):
     # Not delete-orphan: a fleet's baseline has no user, and would count as an orphan of this relationship
     saved_baselines = db.relationship("Baseline", uselist=True, back_populates="user", cascade="all")
     saved_queries = db.relationship("SavedQuery", uselist=True, back_populates="user", cascade="all, delete-orphan")
+    # Deleting a user deletes what they own: their fleets with their servers (and what is kept about those), their
+    # pin lists (`pinlists`, below). Their jobs stay, without user, as the record of what was done.
+    # Not delete-orphan: fleets, servers and pin lists are created from their owner's id, not added to these lists
+    fleets = db.relationship("Fleet", uselist=True, cascade="all")
 
     @classmethod
     def byAPIKey(cls, apikey):
@@ -175,7 +179,7 @@ class Server(BaseModel):
     #                     index=True)
 
     user = db.relationship('User',
-        backref=db.backref('servers', lazy='joined'))
+        backref=db.backref('servers', lazy='joined', cascade='all'))
 
     # fleet = db.relationship('Fleet',
     #     backref=db.backref('fleet', lazy='joined', uselist=True))
@@ -319,7 +323,7 @@ class PinList(BaseModel):
                         index=True)
 
     user = db.relationship('User',
-        backref=db.backref('pinlists', lazy='joined'))
+        backref=db.backref('pinlists', lazy='joined', cascade='all'))
     pinlist_entries = db.relationship("PinListEntry", back_populates="pinlist", cascade="all, delete-orphan")
     # pinlist_entries = db.relationship("PinListEntry", cascade="all, delete-orphan")
 

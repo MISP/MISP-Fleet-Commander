@@ -116,9 +116,12 @@ def test_the_history_goes_with_its_saved_query_its_server_and_its_owner(db, flee
     own = Fleet(name='Own', description='', user_id=owner.id, timestamp=1)
     db.session.add(own)
     db.session.commit()
+    ownServer = Server(name='own', url='https://own.test/', user_id=owner.id, fleet_id=own.id)
+    db.session.add(ownServer)
+    db.session.commit()
     owned = save(owner, fleet_id=own.id)
     ownedId = owned.id
-    record(owned, servers[1], BASE + HOUR, 1)  # Its owner's servers are not needed to keep rows
+    record(owned, ownServer, BASE + HOUR, 1)
     users.delete(owner.id)
     assert SavedQuerySample.query.filter_by(saved_query_id=ownedId).count() == 0
 

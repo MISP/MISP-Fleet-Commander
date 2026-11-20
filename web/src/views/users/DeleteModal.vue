@@ -10,6 +10,12 @@
             stacked small responsive
         >
         </b-table-lite>
+        <p class="delete-consequence">
+            <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
+            Their fleets and servers are deleted with them, with everything kept about those servers (usage history,
+            saved query answers), and so are their saved queries, baselines, pin lists, acknowledgements and settings.
+            Their jobs stay on the Jobs page, shown as by a deleted user.
+        </p>
 
             <template v-slot:modal-footer="{ ok, cancel }">
             <b-button variant="danger" @click="ok()" :disabled="postInProgress">
@@ -28,7 +34,14 @@
 </template>
 
 <style scoped>
-
+.delete-consequence {
+    display: flex;
+    gap: 0.5rem;
+    align-items: baseline;
+    margin: 0.75rem 0 0;
+    font-size: 0.875rem;
+    color: var(--health-critical-ink);
+}
 </style>
 
 <script>
