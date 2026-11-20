@@ -182,10 +182,9 @@ def savedQueryAnswers(user) -> list:
         kept[(result.saved_query_id, result.server_id)] = result
     answers = []
     for saved in scheduled:
-        if saved.fleet_id is not None:
-            targets = sorted(serverId for serverId, (server, _) in servers.items() if server.fleet_id == saved.fleet_id)
-        else:
-            targets = [serverId for serverId in (saved.server_ids or []) if serverId in servers]
+        fleetIds, listedIds = savedQueries.idList(saved.fleet_ids), savedQueries.idList(saved.server_ids)
+        targets = sorted(serverId for serverId, (server, _) in servers.items() if server.fleet_id in fleetIds)
+        targets += [serverId for serverId in listedIds if serverId in servers and serverId not in targets]
         kind = None
         for serverId in targets:
             result = kept.get((saved.id, serverId))

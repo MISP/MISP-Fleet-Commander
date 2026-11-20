@@ -59,25 +59,17 @@
                 </div>
                 <div class="sq-what-item">
                     <span class="sq-label" id="sq-target-label">Runs on</span>
-                    <b-form-radio-group
-                        v-if="selected && fleet"
-                        v-model="form.target"
-                        stacked
-                        aria-labelledby="sq-target-label"
-                        class="sq-target"
-                    >
-                        <b-form-radio value="fleet">
-                            Fleet <strong>{{ fleet.name }}</strong>
-                            <span class="sq-hint">whichever servers it has when it runs ({{ fleet.servers.length }} now)</span>
-                        </b-form-radio>
-                        <b-form-radio value="servers">
-                            These {{ serverCount }} only
-                            <span class="sq-hint">{{ serverNames }}</span>
-                        </b-form-radio>
-                    </b-form-radio-group>
-                    <p v-else-if="selected" class="sq-target-text">
-                        {{ serverCount }} <span class="sq-hint">{{ serverNames }}</span>
-                    </p>
+                    <template v-if="selected">
+                        <div v-if="fleetsWhole.length" class="sq-target" role="group" aria-labelledby="sq-target-label">
+                            <b-form-checkbox v-for="entry in fleetsWhole" :key="entry.id" v-model="form.follow" :value="entry.id">
+                                Follow fleet <strong>{{ entry.name }}</strong>
+                                <span class="sq-hint">servers added to it later run it too ({{ entry.servers.length }} now)</span>
+                            </b-form-checkbox>
+                        </div>
+                        <p v-if="others.length" :class="['sq-target-text', { 'is-extra': fleetsWhole.length > 0 }]">
+                            {{ othersLead }} <span class="sq-hint">{{ serverNames }}</span>
+                        </p>
+                    </template>
                     <p v-else class="sq-target-text">
                         {{ savedTarget }}
                         <span class="sq-hint">Open it in Query to change its statement or servers.</span>
@@ -173,14 +165,14 @@
 import { SEVERITY_META } from "@/views/attention/healthLabels"
 import api from "@/api/queries"
 import {
-    CHECKED_KINDS, consequenceText, expectationForm, formExpectation, savedBody, targetText, wholeFleet,
+    CHECKED_KINDS, consequenceText, expectationForm, formExpectation, otherServers, savedBody, targetText, wholeFleets,
 } from "@/helpers/savedQueries"
 
 const SEVERITIES = ["info", "warning", "critical"]
 const NAMES_SHOWN = 4
 
 function emptyForm() {
-    return { name: "", description: "", target: "servers", schedule: null, comparator: "", value: 0, rows: "none", severity: "warning" }
+    return { name: "", description: "", follow: [], schedule: null, comparator: "", value: 0, rows: "none", severity: "warning" }
 }
 
 // Saves a statement with its servers, schedule and expectation: a new saved query, or changes to one. Without
@@ -227,17 +219,26 @@ export default {
         checkable() {
             return CHECKED_KINDS.includes(this.kind)
         },
-        fleet() {
-            return this.selected ? wholeFleet(this.selected, this.fleets) : null
+        // The fleets whose servers are all selected: each may be followed
+        fleetsWhole() {
+            return this.selected ? wholeFleets(this.selected, this.fleets) : []
         },
-        serverCount() {
-            const count = this.selected ? this.selected.length : 0
-            return `${count} server${count === 1 ? "" : "s"}`
+        // The selected servers no followed fleet holds: listed on their own
+        others() {
+            return this.selected ? otherServers(this.selected, this.form.follow, this.fleetsWhole) : []
+        },
+        othersLead() {
+            const count = this.others.length
+            const servers = `${count} server${count === 1 ? "" : "s"}`
+            if (this.fleetsWhole.length === 0) {
+                return servers
+            }
+            return this.form.follow.length > 0 ? `Plus ${servers}` : `These ${servers} only`
         },
         serverNames() {
             const byId = {}
             this.fleets.forEach(fleet => fleet.servers.forEach((server) => { byId[server.id] = server.name }))
-            const names = (this.selected || []).map(id => byId[id] || `#${id}`)
+            const names = this.others.map(id => byId[id] || `#${id}`)
             const shown = names.slice(0, NAMES_SHOWN).join(", ")
             return names.length > NAMES_SHOWN ? `${shown} and ${names.length - NAMES_SHOWN} more` : shown
         },
@@ -301,8 +302,9 @@ export default {
                     severity: saved.severity || "warning",
                 }, saved.kind === this.kind ? expectationForm(this.kind, saved.expectation) : {})
             }
-            // A whole fleet is saved as the fleet, unless the saved query lists its servers
-            form.target = this.fleet && !(saved && saved.fleet_id === null && saved.server_ids) ? "fleet" : "servers"
+            // Every whole fleet is followed in a new saved query; one being changed follows those it followed
+            const whole = this.fleetsWhole.map(fleet => fleet.id)
+            form.follow = saved ? whole.filter(id => (saved.fleet_ids || []).includes(id)) : whole
             if (!this.checkable) {
                 form.schedule = null
             }
@@ -328,7 +330,7 @@ export default {
             this.errors = {}
             this.statementErrors = []
             this.message = ""
-            const body = savedBody(this.form, { kind: this.kind, statement: this.statement, selected: this.selected, fleet: this.fleet })
+            const body = savedBody(this.form, { kind: this.kind, statement: this.statement, selected: this.selected, fleets: this.fleetsWhole })
             const request = mode === "update" ? api.savedUpdate(this.saved.id, body) : api.savedCreate(body)
             request.then((answer) => {
                 if (!answer.ok) {
@@ -417,6 +419,11 @@ export default {
 
 .sq-target >>> .custom-control {
     margin-bottom: 0.3rem;
+}
+
+.sq-target-text.is-extra {
+    margin-top: 0.15rem;
+    padding-left: 1.5rem;
 }
 
 .sq-target-text {

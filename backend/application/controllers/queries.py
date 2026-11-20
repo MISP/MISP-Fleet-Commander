@@ -129,8 +129,9 @@ def savedIndex(user):
 @BPqueries.route('/queries/saved', methods=['POST'])
 @token_required
 def savedCreate(user):
-    """Save a statement: `{name, description?, statement, fleet_id | server_ids, schedule_minutes?, expectation?:
-    {comparator, value}, severity?}`. 400 with `field`, or the statement's mistakes in `errors`"""
+    """Save a statement: `{name, description?, statement, fleet_ids?, server_ids?, schedule_minutes?, expectation?:
+    {comparator, value}, severity?}`: it runs on the followed fleets' servers and the servers listed, at least one
+    of the two. 400 with `field`, or the statement's mistakes in `errors`"""
     try:
         saved = savedQueries.create(user, jsonBody())
         return jsonify(savedQueries.serialize(saved, withServers=True)), 201

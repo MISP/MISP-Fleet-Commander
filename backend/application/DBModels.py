@@ -2,7 +2,7 @@
 from datetime import datetime
 import json
 import uuid
-from sqlalchemy import event, func
+from sqlalchemy import event, func, select
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.dialects.sqlite import JSON
@@ -601,10 +601,11 @@ SAVED_QUERY_SEVERITIES = ('info', 'warning', 'critical')
 
 
 class SavedQuery(BaseModel):
-    """A MispQL statement kept by a user, with where it runs: a fleet (whatever servers it has when the query runs)
-    or a list of servers. It may run on a schedule and say what each server's answer should be (`comparator`,
-    `expected`): a server answering otherwise raises a health issue of `severity`. A saved query whose fleet was
-    deleted keeps no target, and does not run"""
+    """A MispQL statement kept by a user, with where it runs: fleets it follows (whatever servers they have when the
+    query runs) and servers listed on their own, each server once. It may run on a schedule and say what each
+    server's answer should be (`comparator`, `expected`): a server answering otherwise raises a health issue of
+    `severity`. A deleted fleet leaves the saved queries following it; one left without fleets or servers does not
+    run"""
     __tablename__ = 'saved_queries'
     __table_args__ = (UniqueConstraint('user_id', 'name', name='uq_saved_queries_user_id_name'),)
 
@@ -622,10 +623,9 @@ class SavedQuery(BaseModel):
                             server_default='')
     statement = db.Column(db.Text,
                           nullable=False)
-    fleet_id = db.Column(db.Integer,
-                         db.ForeignKey('fleets.id', ondelete='SET NULL'),
-                         nullable=True,
-                         index=True)
+    # Fleets followed, and servers listed on their own: lists of IDs, None or [] for none
+    fleet_ids = db.Column(db.JSON,
+                          nullable=True)
     server_ids = db.Column(db.JSON,
                            nullable=True)
     # Minutes between runs; None: run by hand only
@@ -876,6 +876,10 @@ def forgetDeletedFleetWidgets(mapper, connection, fleet):
 
 @event.listens_for(Fleet, 'after_delete')
 def detachDeletedFleetQueries(mapper, connection, fleet):
-    """Saved queries aimed at the fleet are the user's work: they stay, without target"""
-    connection.execute(SavedQuery.__table__.update().where(SavedQuery.__table__.c.fleet_id == fleet.id)
-                       .values(fleet_id=None))
+    """Saved queries following the fleet are the user's work: they stay, without it"""
+    table = SavedQuery.__table__
+    for savedId, fleetIds in connection.execute(
+            select(table.c.id, table.c.fleet_ids).where(table.c.user_id == fleet.user_id)).all():
+        if fleetIds and fleet.id in fleetIds:
+            connection.execute(table.update().where(table.c.id == savedId)
+                               .values(fleet_ids=[fleetId for fleetId in fleetIds if fleetId != fleet.id]))

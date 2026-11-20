@@ -215,13 +215,16 @@ export default {
         },
         targetNote() {
             const saved = this.saved
-            if (saved.fleet_id !== null) {
-                return `Follows the fleet: ${saved.server_count} server${saved.server_count === 1 ? "" : "s"} now`
+            const servers = `${saved.server_count} server${saved.server_count === 1 ? "" : "s"}`
+            const fleets = saved.fleets || []
+            if (fleets.length > 0) {
+                const names = fleets.length > 1 ? `: ${fleets.map(fleet => fleet.name).join(", ")}` : ""
+                return `Follows ${fleets.length === 1 ? "the fleet" : `${fleets.length} fleets`}${names} · ${servers} now`
             }
-            if (!saved.server_ids) {
+            const listed = (saved.server_ids || []).length
+            if (listed === 0) {
                 return ""
             }
-            const listed = saved.server_ids.length
             return listed === saved.server_count ? "As chosen" : `${listed - saved.server_count} of those chosen no longer exist`
         },
         scheduleText() {

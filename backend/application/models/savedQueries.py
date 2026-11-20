@@ -109,23 +109,36 @@ def checkedStatement(statement: Any) -> fleetQueries.Prepared:
         raise SavedQueryError(e.errors[0]['message'], field='statement', errors=e.errors)
 
 
-def checkedTarget(user, fleetId: Any, serverIds: Any):
-    """(fleet_id, server_ids): one of them, the other None. A fleet is followed (its servers when a run starts);
-    servers are kept as listed, in their order"""
-    if (fleetId is None) == (serverIds is None):
-        raise SavedQueryError('Give either `fleet_id` or `server_ids`', field='target')
-    if fleetId is not None:
-        if isinstance(fleetId, bool) or not isinstance(fleetId, int):
-            raise SavedQueryError('`fleet_id` must be a fleet ID', field='target')
-        if fleetModel.getForUser(user, fleetId) is None:
-            raise SavedQueryError('Unknown fleet', 404, field='target')
-        return fleetId, None
-    try:
-        ids = userJobs.parseServerIds(serverIds)
-        userJobs.ownedServers(user, ids)
-    except JobError as e:
-        raise SavedQueryError(e.message, e.status, field='target')
-    return None, ids
+TARGET_FIELDS = ('fleet_ids', 'server_ids', 'fleet_id')
+
+
+def checkedTarget(user, body: dict):
+    """(fleet_ids, server_ids) from `fleet_ids` and `server_ids`, either may be empty, not both. Fleets are followed
+    (their servers when a run starts); servers are kept as listed, in their order. `fleet_id` alone, as clients
+    built before fleet lists send it, is a list of one"""
+    fleetIds, serverIds = body.get('fleet_ids'), body.get('server_ids')
+    if body.get('fleet_id') is not None:
+        if fleetIds is not None:
+            raise SavedQueryError('Give `fleet_ids`, not `fleet_id` as well', field='target')
+        fleetIds = [body['fleet_id']]
+    fleetIds = [] if fleetIds is None else fleetIds
+    if not isinstance(fleetIds, list) or any(isinstance(fleetId, bool) or not isinstance(fleetId, int)
+                                             for fleetId in fleetIds):
+        raise SavedQueryError('`fleet_ids` must be a list of fleet IDs', field='target')
+    fleetIds = list(dict.fromkeys(fleetIds))
+    if any(fleetModel.getForUser(user, fleetId) is None for fleetId in fleetIds):
+        raise SavedQueryError('Unknown fleet', 404, field='target')
+    if serverIds is None or serverIds == []:
+        serverIds = []
+    else:
+        try:
+            serverIds = userJobs.parseServerIds(serverIds)
+            userJobs.ownedServers(user, serverIds)
+        except JobError as e:
+            raise SavedQueryError(e.message, e.status, field='target')
+    if not fleetIds and not serverIds:
+        raise SavedQueryError('Choose where it runs: fleets to follow, servers, or both', field='target')
+    return fleetIds, serverIds
 
 
 def checkedSchedule(value: Any, kind: str) -> Optional[int]:
@@ -171,18 +184,18 @@ def checkedSeverity(value: Any) -> str:
 # Saving
 
 def create(user, body: dict) -> SavedQuery:
-    """`{name, description?, statement, fleet_id | server_ids, schedule_minutes?, expectation?, severity?}`"""
+    """`{name, description?, statement, fleet_ids?, server_ids?, schedule_minutes?, expectation?, severity?}`"""
     if ownedQuery(user).count() >= MAX_SAVED:
         raise SavedQueryError(f'You can keep at most {MAX_SAVED} saved queries', 409)
     name = checkedName(user, body.get('name'))
     description = checkedDescription(body.get('description'))
     prepared = checkedStatement(body.get('statement'))
-    fleetId, serverIds = checkedTarget(user, body.get('fleet_id'), body.get('server_ids'))
+    fleetIds, serverIds = checkedTarget(user, body)
     schedule = checkedSchedule(body.get('schedule_minutes'), prepared.kind)
     comparator, expected = checkedExpectation(body.get('expectation'), prepared.kind)
     now = int(time.time())
     saved = SavedQuery(user_id=user.id, name=name, description=description, statement=body['statement'],
-                       fleet_id=fleetId, server_ids=serverIds, schedule_minutes=schedule, comparator=comparator,
+                       fleet_ids=fleetIds, server_ids=serverIds, schedule_minutes=schedule, comparator=comparator,
                        expected=expected, severity=checkedSeverity(body.get('severity')), created=now, updated=now)
     db.session.add(saved)
     db.session.commit()
@@ -190,19 +203,20 @@ def create(user, body: dict) -> SavedQuery:
 
 
 def update(user, savedId, body: dict) -> SavedQuery:
-    """Any field of `create`. A new statement drops the results and the history kept for the old one; a new target
-    drops the results of servers no longer in it, and keeps their history (not shown while they are out of it). A schedule or an expectation that does not suit the statement is refused. A scheduled
-    saved query whose statement, servers or schedule change runs at the scheduler's next turn"""
+    """Any field of `create`; any target field given replaces the whole target. A new statement drops the results
+    and the history kept for the old one; a new target drops the results of servers no longer in it, and keeps their
+    history (not shown while they are out of it). A schedule or an expectation that does not suit the statement is
+    refused. A scheduled saved query whose statement, servers or schedule change runs at the scheduler's next turn"""
     saved = ownedSaved(user, savedId)
-    before = (saved.statement, saved.fleet_id, saved.server_ids, saved.schedule_minutes)
+    before = (saved.statement, saved.fleet_ids, saved.server_ids, saved.schedule_minutes)
     if 'name' in body:
         saved.name = checkedName(user, body['name'], exceptId=saved.id)
     if 'description' in body:
         saved.description = checkedDescription(body['description'])
     statement = body['statement'] if 'statement' in body else saved.statement
     kind = checkedStatement(statement).kind if 'statement' in body else statementKind(saved.statement)
-    if 'fleet_id' in body or 'server_ids' in body:
-        saved.fleet_id, saved.server_ids = checkedTarget(user, body.get('fleet_id'), body.get('server_ids'))
+    if any(field in body for field in TARGET_FIELDS):
+        saved.fleet_ids, saved.server_ids = checkedTarget(user, body)
     schedule = body['schedule_minutes'] if 'schedule_minutes' in body else saved.schedule_minutes
     saved.schedule_minutes = checkedSchedule(schedule, kind)
     if 'expectation' in body:
@@ -220,7 +234,7 @@ def update(user, savedId, body: dict) -> SavedQuery:
         kept = {server.id for server in targetServers(saved)}
         saved.results = [result for result in saved.results if result.server_id in kept]
     if saved.schedule_minutes is not None and \
-            before != (saved.statement, saved.fleet_id, saved.server_ids, saved.schedule_minutes):
+            before != (saved.statement, saved.fleet_ids, saved.server_ids, saved.schedule_minutes):
         saved.last_run_at = None  # its last run answered something else
     saved.updated = int(time.time())
     db.session.commit()
@@ -260,32 +274,43 @@ def statementError(statement: str) -> Optional[dict]:
 
 # Where it runs
 
+def idList(values) -> List[int]:
+    return [value for value in (values or []) if isinstance(value, int) and not isinstance(value, bool)]
+
+
 def targetServers(saved: SavedQuery) -> List[Server]:
-    """The owner's servers a run would query now: the fleet's, by name, or the listed ones still there, as listed"""
-    if saved.fleet_id is not None:
-        return Server.query.filter(Server.fleet_id == saved.fleet_id, Server.user_id == saved.user_id) \
+    """The owner's servers a run would query now, each once: the followed fleets' (fleet by fleet, each by name),
+    then the servers listed on their own that are still there, as listed"""
+    fleetIds, listedIds = idList(saved.fleet_ids), idList(saved.server_ids)
+    servers = []
+    if fleetIds:
+        inFleets = Server.query.filter(Server.fleet_id.in_(fleetIds), Server.user_id == saved.user_id) \
             .order_by(Server.name, Server.id).all()
-    ids = [serverId for serverId in (saved.server_ids or []) if isinstance(serverId, int)]
-    if not ids:
-        return []
-    byId = {server.id: server for server in
-            Server.query.filter(Server.id.in_(ids), Server.user_id == saved.user_id).all()}
-    return [byId[serverId] for serverId in ids if serverId in byId]
+        for fleetId in fleetIds:
+            servers += [server for server in inFleets if server.fleet_id == fleetId]
+    if listedIds:
+        seen = {server.id for server in servers}
+        byId = {server.id: server for server in
+                Server.query.filter(Server.id.in_(listedIds), Server.user_id == saved.user_id).all()}
+        servers += [byId[serverId] for serverId in listedIds if serverId in byId and serverId not in seen]
+    return servers
 
 
 def aims(check: dict, server) -> bool:
     """Whether a saved query (as `healthChecks` gives it) still runs on this server"""
-    if check['fleet_id'] is not None:
-        return getattr(server, 'fleet_id', None) == check['fleet_id']
-    return server.id in (check['server_ids'] or [])
+    return getattr(server, 'fleet_id', None) in idList(check['fleet_ids']) or server.id in idList(check['server_ids'])
 
 
 def noServersMessage(saved: SavedQuery) -> str:
-    if saved.fleet_id is None and saved.server_ids is None:
+    fleetIds, listedIds = idList(saved.fleet_ids), idList(saved.server_ids)
+    if not fleetIds and not listedIds:
         return 'Its fleet was deleted: choose where it runs'
-    if saved.fleet_id is not None:
-        return 'Its fleet has no servers'
-    return 'None of its servers exist anymore'
+    parts = []
+    if fleetIds:
+        parts.append('Its fleet has no servers' if len(fleetIds) == 1 else 'Its fleets have no servers')
+    if listedIds:
+        parts.append('none of its other servers exist anymore' if fleetIds else 'None of its servers exist anymore')
+    return ', and '.join(parts)
 
 
 # Runs
@@ -506,7 +531,7 @@ def healthChecks(userId: int) -> Dict[int, List[dict]]:
         checks.setdefault(result.server_id, []).append({
             'id': saved.id, 'name': saved.name, 'description': saved.description,
             'statement': saved.statement, 'kind': kinds[saved.id],
-            'fleet_id': saved.fleet_id, 'server_ids': saved.server_ids,
+            'fleet_ids': saved.fleet_ids, 'server_ids': saved.server_ids,
             'comparator': saved.comparator, 'expected': saved.expected, 'severity': saved.severity,
             'result': serializeResult(result),
         })
@@ -540,7 +565,9 @@ def serialize(saved: SavedQuery, withServers: bool = False) -> dict:
     for entry in states:
         overview[entry['state']] += 1
     job = lastJob(saved)
-    fleet = saved.fleet_id and fleetModel.getForUser(saved.user, saved.fleet_id)
+    fleets = [fleet for fleet in (fleetModel.getForUser(saved.user, fleetId) for fleetId in idList(saved.fleet_ids))
+              if fleet is not None]
+    followedIds = {fleet.id for fleet in fleets}
     data = {
         'id': saved.id,
         'name': saved.name,
@@ -548,10 +575,12 @@ def serialize(saved: SavedQuery, withServers: bool = False) -> dict:
         'statement': saved.statement,
         'kind': kind,
         'statement_error': statementError(saved.statement),
-        'fleet_id': saved.fleet_id,
-        'fleet_name': fleet.name if fleet else None,
-        'server_ids': saved.server_ids,
+        'fleet_ids': [fleet.id for fleet in fleets],
+        'fleets': [{'id': fleet.id, 'name': fleet.name} for fleet in fleets],
+        'server_ids': idList(saved.server_ids),
         'server_count': len(servers),
+        # Of those, the servers it runs on besides its fleets'
+        'other_server_count': sum(1 for server in servers if server.fleet_id not in followedIds),
         'schedule_minutes': saved.schedule_minutes,
         'expectation': ({'comparator': saved.comparator, 'value': saved.expected}
                         if saved.comparator is not None else None),

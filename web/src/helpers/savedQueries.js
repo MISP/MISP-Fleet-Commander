@@ -45,15 +45,22 @@ export function scheduleLabel(minutes, schedules) {
     return found ? found.label : `Every ${minutes} minutes`
 }
 
+const FLEETS_NAMED = 3
+
+// Where a saved query runs, short: "Fleet Dev", "Fleets Dev, Lab", "4 fleets", "Fleet Dev + 2 servers", "3 servers"
 export function targetText(saved) {
-    if (saved.fleet_id !== null && saved.fleet_id !== undefined) {
-        return saved.fleet_name ? `Fleet ${saved.fleet_name}` : "A fleet"
+    const fleets = saved.fleets || []
+    const others = fleets.length > 0 ? (saved.other_server_count || 0) : saved.server_count
+    const parts = []
+    if (fleets.length === 1) {
+        parts.push(`Fleet ${fleets[0].name}`)
+    } else if (fleets.length > 1) {
+        parts.push(fleets.length > FLEETS_NAMED ? `${fleets.length} fleets` : `Fleets ${fleets.map(fleet => fleet.name).join(", ")}`)
     }
-    if (!saved.server_ids) {
-        return "No servers"
+    if (others > 0 || fleets.length === 0) {
+        parts.push(others > 0 ? `${others} server${others === 1 ? "" : "s"}` : "No servers")
     }
-    const count = saved.server_count
-    return `${count} server${count === 1 ? "" : "s"}`
+    return parts.join(" + ")
 }
 
 // What a server answered, as short as the table cell holding it allows
@@ -101,23 +108,31 @@ export function runStartedText(saved, job) {
     return `“${saved.name}” is running on ${total} server${total === 1 ? "" : "s"}. Open the run.`
 }
 
-// The fleet whose servers are exactly the selection, if there is one: such a selection can be saved as the fleet
-export function wholeFleet(selected, fleets) {
-    if (!selected || selected.length === 0) {
-        return null
-    }
-    const chosen = new Set(selected)
-    return (fleets || []).find(fleet => fleet.servers.length === chosen.size && fleet.servers.every(server => chosen.has(server.id))) || null
+// The fleets whose servers are all in the selection: a saved query can follow them, and run on the servers they
+// will have
+export function wholeFleets(selected, fleets) {
+    const chosen = new Set(selected || [])
+    return (fleets || []).filter(fleet => fleet.servers.length > 0 && fleet.servers.every(server => chosen.has(server.id)))
 }
 
-// The servers a saved query runs on, among those listed in `fleets`
+// The selected servers that the followed fleets (IDs) do not hold: those a saved query lists on their own
+export function otherServers(selected, followedIds, fleets) {
+    const followed = new Set(followedIds || [])
+    const covered = new Set((fleets || []).filter(fleet => followed.has(fleet.id)).flatMap(fleet => fleet.servers.map(server => server.id)))
+    return (selected || []).filter(id => !covered.has(id))
+}
+
+// The servers a saved query runs on, among those listed in `fleets`: its fleets' then the ones it lists, each once
 export function savedSelection(saved, fleets) {
-    if (saved.fleet_id !== null && saved.fleet_id !== undefined) {
-        const fleet = (fleets || []).find(entry => entry.id === saved.fleet_id)
-        return fleet ? fleet.servers.map(server => server.id) : []
-    }
+    const followed = new Set(saved.fleet_ids || [])
+    const selection = (fleets || []).filter(fleet => followed.has(fleet.id)).flatMap(fleet => fleet.servers.map(server => server.id))
     const known = new Set((fleets || []).flatMap(fleet => fleet.servers.map(server => server.id)))
-    return (saved.server_ids || []).filter(id => known.has(id))
+    ;(saved.server_ids || []).forEach((id) => {
+        if (known.has(id) && !selection.includes(id)) {
+            selection.push(id)
+        }
+    })
+    return selection
 }
 
 // The form's expectation as the API takes it, or null. `count`: `{ comparator, value }` (a comparator of "" is
@@ -154,9 +169,10 @@ export function expectationForm(kind, expectation) {
     return Object.assign(form, { comparator: expectation.comparator, value: expectation.value })
 }
 
-// What saving the form asks of the API. `target` is "fleet" or "servers"; DESCRIBE and SHOW TABLES take neither a
-// schedule nor an expectation
-export function savedBody(form, { kind, statement, selected, fleet }) {
+// What saving the form asks of the API. `form.follow`: the IDs of the fleets to follow, among `fleets` (those whose
+// servers are all selected); the other selected servers are listed on their own. DESCRIBE and SHOW TABLES take
+// neither a schedule nor an expectation
+export function savedBody(form, { kind, statement, selected, fleets }) {
     const checked = CHECKED_KINDS.includes(kind)
     const body = {
         name: form.name,
@@ -169,11 +185,9 @@ export function savedBody(form, { kind, statement, selected, fleet }) {
         body.statement = statement
     }
     if (selected) {
-        if (form.target === "fleet" && fleet) {
-            body.fleet_id = fleet.id
-        } else {
-            body.server_ids = selected.slice()
-        }
+        const whole = new Set((fleets || []).map(fleet => fleet.id))
+        body.fleet_ids = (form.follow || []).filter(id => whole.has(id))
+        body.server_ids = otherServers(selected, body.fleet_ids, fleets)
     }
     return body
 }

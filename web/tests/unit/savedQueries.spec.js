@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import {
     answerText, consequenceText, expectationForm, expectationText, formExpectation, overviewParts, savedBody,
-    savedSelection, scheduleLabel, stateMeta, targetText, wholeFleet,
+    otherServers, savedSelection, scheduleLabel, stateMeta, targetText, wholeFleets,
 } from "@/helpers/savedQueries"
 
 // As `GET /queries/language` gives them, under `saved`
@@ -41,9 +41,13 @@ describe("words", () => {
         expect(scheduleLabel(null, OPTIONS.schedules)).toBe("By hand")
         expect(scheduleLabel(60, OPTIONS.schedules)).toBe("Every hour")
         expect(scheduleLabel(90, OPTIONS.schedules)).toBe("Every 90 minutes")
-        expect(targetText({ fleet_id: 1, fleet_name: "Production" })).toBe("Fleet Production")
-        expect(targetText({ fleet_id: null, server_ids: [1], server_count: 1 })).toBe("1 server")
-        expect(targetText({ fleet_id: null, server_ids: null, server_count: 0 })).toBe("No servers")
+        const named = names => names.map((name, index) => ({ id: index + 1, name }))
+        expect(targetText({ fleets: named(["Production"]), server_count: 2, other_server_count: 0 })).toBe("Fleet Production")
+        expect(targetText({ fleets: named(["Production", "Lab"]), server_count: 3, other_server_count: 0 })).toBe("Fleets Production, Lab")
+        expect(targetText({ fleets: named(["A", "B", "C", "D"]), server_count: 9, other_server_count: 1 })).toBe("4 fleets + 1 server")
+        expect(targetText({ fleets: named(["Production"]), server_count: 4, other_server_count: 2 })).toBe("Fleet Production + 2 servers")
+        expect(targetText({ fleets: [], server_ids: [1], server_count: 1 })).toBe("1 server")
+        expect(targetText({ fleets: [], server_ids: [], server_count: 0 })).toBe("No servers")
     })
 
     it("says what a server answered", () => {
@@ -82,18 +86,29 @@ describe("words", () => {
 })
 
 describe("targets", () => {
-    it("recognises a whole fleet, whatever the order", () => {
-        expect(wholeFleet([12, 11], FLEETS).name).toBe("Production")
-        expect(wholeFleet([11], FLEETS)).toBe(null)
-        expect(wholeFleet([11, 12, 21], FLEETS)).toBe(null)
-        expect(wholeFleet([], FLEETS)).toBe(null)
+    it("finds every fleet chosen whole, whatever the order and what else is chosen", () => {
+        const ids = selected => wholeFleets(selected, FLEETS).map(fleet => fleet.name)
+        expect(ids([12, 11])).toEqual(["Production"])
+        expect(ids([11, 12, 21])).toEqual(["Production", "Lab"])
+        expect(ids([21, 11])).toEqual(["Lab"])
+        expect(ids([11])).toEqual([])
+        expect(ids([])).toEqual([])
+        // A fleet without servers is never chosen whole
+        expect(wholeFleets([11], [{ id: 3, name: "Empty", servers: [] }])).toEqual([])
     })
 
-    it("selects a saved query's servers among those known", () => {
-        expect(savedSelection({ fleet_id: 1 }, FLEETS)).toEqual([11, 12])
-        expect(savedSelection({ fleet_id: 9 }, FLEETS)).toEqual([])
-        expect(savedSelection({ fleet_id: null, server_ids: [21, 99, 11] }, FLEETS)).toEqual([21, 11])
-        expect(savedSelection({ fleet_id: null, server_ids: null }, FLEETS)).toEqual([])
+    it("lists on their own the servers no followed fleet holds", () => {
+        expect(otherServers([11, 21, 12], [1], FLEETS)).toEqual([21])
+        expect(otherServers([11, 21, 12], [], FLEETS)).toEqual([11, 21, 12])
+        expect(otherServers([11, 12, 21], [1, 2], FLEETS)).toEqual([])
+    })
+
+    it("selects a saved query's servers among those known: its fleets', then its own, once", () => {
+        expect(savedSelection({ fleet_ids: [1] }, FLEETS)).toEqual([11, 12])
+        expect(savedSelection({ fleet_ids: [9] }, FLEETS)).toEqual([])
+        expect(savedSelection({ fleet_ids: [], server_ids: [21, 99, 11] }, FLEETS)).toEqual([21, 11])
+        expect(savedSelection({ fleet_ids: [1], server_ids: [21, 12] }, FLEETS)).toEqual([11, 12, 21])
+        expect(savedSelection({ fleet_ids: null, server_ids: null }, FLEETS)).toEqual([])
     })
 })
 
@@ -111,19 +126,22 @@ describe("the form", () => {
         expect(expectationForm("count", null)).toEqual({ comparator: "", value: 0, rows: "none" })
     })
 
-    it("builds the body: the fleet when it was chosen whole, else the servers", () => {
-        const form = { name: "q", description: "", schedule: 60, comparator: "eq", value: 0, rows: "none", severity: "critical", target: "fleet" }
-        expect(savedBody(form, { kind: "count", statement: "S", selected: [11, 12], fleet: FLEETS[0] })).toEqual({
-            name: "q", description: "", statement: "S", fleet_id: 1, schedule_minutes: 60,
+    it("builds the body: the fleets followed, and the other servers on their own", () => {
+        const form = { name: "q", description: "", schedule: 60, comparator: "eq", value: 0, rows: "none", severity: "critical", follow: [1] }
+        const whole = [FLEETS[0]]
+        expect(savedBody(form, { kind: "count", statement: "S", selected: [11, 21, 12], fleets: whole })).toEqual({
+            name: "q", description: "", statement: "S", fleet_ids: [1], server_ids: [21], schedule_minutes: 60,
             expectation: { comparator: "eq", value: 0 }, severity: "critical",
         })
-        const servers = savedBody(Object.assign({}, form, { target: "servers" }), { kind: "count", statement: "S", selected: [11, 12], fleet: FLEETS[0] })
-        expect(servers.server_ids).toEqual([11, 12])
-        expect(servers.fleet_id).toBe(undefined)
+        const none = savedBody(Object.assign({}, form, { follow: [] }), { kind: "count", statement: "S", selected: [11, 12], fleets: whole })
+        expect([none.fleet_ids, none.server_ids]).toEqual([[], [11, 12]])
+        // A fleet no longer chosen whole is not followed
+        const partial = savedBody(form, { kind: "count", statement: "S", selected: [11], fleets: [] })
+        expect([partial.fleet_ids, partial.server_ids]).toEqual([[], [11]])
         // Details only: neither the statement nor the target
         const details = savedBody(form, { kind: "count" })
         expect(details.statement).toBe(undefined)
-        expect(details.fleet_id).toBe(undefined)
+        expect(details.fleet_ids).toBe(undefined)
         expect(details.server_ids).toBe(undefined)
         // DESCRIBE: no schedule, no expectation
         expect(savedBody(form, { kind: "describe", statement: "DESCRIBE events" })).toMatchObject({ schedule_minutes: null, expectation: null })

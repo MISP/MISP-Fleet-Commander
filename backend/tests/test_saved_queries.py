@@ -92,8 +92,8 @@ def test_a_saved_query_is_checked_and_kept(db, client, auth_headers, fleet):
         'schedule_minutes': 60, 'expectation': {'comparator': 'eq', 'value': 0}, 'severity': 'critical'})
     assert answer.status_code == 201, answer.json
     saved = answer.json
-    assert (saved['name'], saved['kind'], saved['fleet_name'], saved['server_count']) == \
-        ('No bad IP', 'count', 'Query fleet', 3)
+    assert (saved['name'], saved['kind'], saved['fleets'], saved['server_count']) == \
+        ('No bad IP', 'count', [{'id': fleetRow.id, 'name': 'Query fleet'}], 3)
     assert (saved['expectation'], saved['expectation_text'], saved['severity']) == \
         ({'comparator': 'eq', 'value': 0}, 'exactly 0', 'critical')
     assert [s['server_name'] for s in saved['servers']] == ['misp-a', 'misp-b', 'misp-c']
@@ -107,7 +107,7 @@ def test_a_saved_query_is_checked_and_kept(db, client, auth_headers, fleet):
     ({'statement': 'SELECT * FROM nowhere'}, 400, 'statement'),
     ({'statement': 'USE hub'}, 400, 'statement'),
     ({'fleet_id': None}, 400, 'target'),
-    ({'server_ids': [1]}, 400, 'target'),  # both a fleet and servers
+    ({'fleet_ids': [1]}, 400, 'target'),  # both a fleet list and the single fleet of older clients
     ({'schedule_minutes': 7}, 400, 'schedule_minutes'),
     ({'statement': 'DESCRIBE events', 'schedule_minutes': 60}, 400, 'schedule_minutes'),
     ({'statement': 'DESCRIBE events', 'expectation': {'comparator': 'eq', 'value': 0}}, 400, 'expectation'),
@@ -432,7 +432,7 @@ def test_deleting_the_fleet_keeps_its_saved_queries_without_target(db, fleet, mi
     db.session.delete(db.session.get(Fleet, fleetRow.id))
     db.session.commit()
     db.session.refresh(saved)
-    assert (saved.fleet_id, saved.server_ids) == (None, None)
+    assert (saved.fleet_ids, saved.server_ids) == ([], [])
     assert SavedQueryResult.query.filter_by(saved_query_id=saved.id).count() == 0  # its servers went with it
     data = savedQueries.serialize(saved)
     assert (data['server_count'], data['last_error']) == (0, 'Its fleet was deleted: choose where it runs')

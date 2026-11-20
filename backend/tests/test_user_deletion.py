@@ -26,7 +26,7 @@ def owners(db, make_user):
         db.session.commit()
         first = servers[0].id
         saved = SavedQuery(user_id=owner.id, name='q', statement='SELECT COUNT(*) FROM events WHERE id < 5',
-                           fleet_id=fleet.id, created=1, updated=1)
+                           fleet_ids=[fleet.id], created=1, updated=1)
         pinlist = PinList(model='events', uuid=f'{role}-{stamp}', user_id=owner.id,
                           pinlist_entries=[PinListEntry(server_id=first, data={})])
         db.session.add_all([saved, pinlist,

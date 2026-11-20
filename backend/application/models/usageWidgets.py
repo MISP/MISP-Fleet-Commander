@@ -113,7 +113,7 @@ def candidates(user, fleetId: int) -> dict:
             'expectation_text': savedQueries.expectationText(kind, saved.comparator, saved.expected),
             'fleet_servers': inFleet,
             'server_count': len(servers),
-            'aims_at_fleet': saved.fleet_id == fleet.id,
+            'aims_at_fleet': fleet.id in savedQueries.idList(saved.fleet_ids),
             'added': saved.id in added,
         })
     return {'saved': found, 'fleet_servers': Server.query.filter(Server.fleet_id == fleet.id).count()}
