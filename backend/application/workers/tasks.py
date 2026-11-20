@@ -287,10 +287,16 @@ def backgroundFullRefresh():
 
 
 @huey_app.periodic_task(crontab(minute="*"))
-@skipIfRunning("metrics-collect-lock")
 def collectMetrics():
     """Usage metrics of every server of a monitored fleet whose last collection is older than the configured
-    interval. Runs every minute, like the background refresh, so that interval changes apply without a restart"""
+    interval. Runs every minute, like the background refresh, so that interval changes apply without a restart.
+    Each run is noted first, even when the previous one is still going: the Usage tabs tell when runs stop coming"""
+    metricModel.noteCollectorRun()
+    return collectDueMetrics()
+
+
+@skipIfRunning("metrics-collect-lock")
+def collectDueMetrics():
     config = metricModel.monitoringSettings()
     if not config["enabled"]:
         return None

@@ -218,7 +218,7 @@
 import { mapGetters, mapState } from "vuex"
 import api from "@/api/metrics"
 import {
-    changePhrase, collectionStatus, DEFAULT_RANGE, HOUR, loginBars, rangeOf, ratio, snapshotValues,
+    changePhrase, collectionStatus, DEFAULT_RANGE, HOUR, loginBars, rangeOf, ratio, snapshotValues, stalledNotice,
 } from "@/helpers/metrics"
 import MetricTile from "@/components/ui/charts/MetricTile.vue"
 import RangePicker from "@/components/ui/charts/RangePicker.vue"
@@ -439,6 +439,8 @@ export default {
                     title: "This server has no API key,",
                     text: "so its usage cannot be read from MISP.",
                 }
+            case "stalled":
+                return stalledNotice(status.lastRun, { now: this.data.to, isAdmin: this.isAdmin, past })
             case "waiting":
                 return {
                     level: "info",

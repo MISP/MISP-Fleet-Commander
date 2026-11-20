@@ -385,6 +385,54 @@ def test_the_task_does_nothing_when_monitoring_is_off(monkeypatch, fleets, monit
     assert misp.calls == []
 
 
+def test_each_run_is_noted_even_while_the_previous_one_goes_on(monkeypatch, fleets, monitoring):
+    import application.models.metrics as metrics
+    import application.workers.tasks as tasks
+    from application import redisModel
+    misp = FakeMisp().install(monkeypatch)
+    redisModel.redisClient.delete(metrics.COLLECTOR_RUN_KEY)
+    redisModel.redisClient.set("metrics-collect-lock", "an earlier run")
+    try:
+        before = int(time.time())
+        assert tasks.collectMetrics.call_local() is None
+        assert misp.calls == []
+        assert before <= int(redisModel.redisClient.get(metrics.COLLECTOR_RUN_KEY)) <= int(time.time())
+    finally:
+        redisModel.redisClient.delete("metrics-collect-lock")
+    # Monitoring off: still noted (nothing is stalled, the tab says monitoring is off)
+    redisModel.redisClient.delete(metrics.COLLECTOR_RUN_KEY)
+    monitoring["enabled"] = False
+    tasks.collectMetrics.call_local()
+    assert redisModel.redisClient.get(metrics.COLLECTOR_RUN_KEY) is not None
+
+
+def test_the_collector_is_stalled_once_it_has_not_run_for_five_minutes(monkeypatch):
+    import application.models.metrics as metrics
+    from application import redisModel
+    now = 1_800_000_000
+    redisModel.redisClient.delete(metrics.COLLECTOR_RUN_KEY)
+    # Never seen: counted from when this process started
+    monkeypatch.setattr(metrics, "PROCESS_STARTED", now - 300)
+    assert metrics.collectorState(now) == {"last_run": None, "stalled": False}
+    monkeypatch.setattr(metrics, "PROCESS_STARTED", now - 301)
+    assert metrics.collectorState(now) == {"last_run": None, "stalled": True}
+    metrics.noteCollectorRun(now - 60)
+    assert metrics.collectorState(now) == {"last_run": now - 60, "stalled": False}
+    metrics.noteCollectorRun(now - 400)
+    assert metrics.collectorState(now) == {"last_run": now - 400, "stalled": True}
+    redisModel.redisClient.delete(metrics.COLLECTOR_RUN_KEY)
+
+    class Down:
+        def get(self, key):
+            raise ConnectionError("Redis is down")
+
+        def set(self, key, value):
+            raise ConnectionError("Redis is down")
+    monkeypatch.setattr(redisModel, "redisClient", Down())
+    metrics.noteCollectorRun(now)  # Does not raise: the collection goes on
+    assert metrics.collectorState(now) == {"last_run": None, "stalled": False}
+
+
 def test_monitoring_settings(monkeypatch):
     import application.models.metrics as metrics
     import application.models.setting as settingModel

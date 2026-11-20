@@ -32,6 +32,33 @@ LOGIN_WINDOW_MARGIN_MINUTES = 10
 LOGIN_WINDOW_MAX_MINUTES = 24 * 60
 ERROR_MAX_LENGTH = 500
 
+# When the collection task last ran, whatever it found to do: the Usage tabs tell when the workers no longer run it
+COLLECTOR_RUN_KEY = 'metrics:collector-run'
+# A run is every minute; queued behind busy workers it may come late
+COLLECTOR_STALL_SECONDS = 5 * 60
+# Before any run is known, counted from when this process started: a fresh install is not stalled at once
+PROCESS_STARTED = int(time.time())
+
+
+def noteCollectorRun(now: Optional[int] = None) -> None:
+    try:
+        redisModel.redisClient.set(COLLECTOR_RUN_KEY, int(time.time()) if now is None else now)
+    except Exception as e:  # Redis being down must not stop the collection
+        print(f'Could not note the collection run: {e}')
+
+
+def collectorState(now: Optional[int] = None) -> dict:
+    """Whether the usage collection still runs: when it last ran (`last_run`), and `stalled` once it has not run
+    for COLLECTOR_STALL_SECONDS (never seen: since this process started). Redis unreadable: cannot tell, not stalled"""
+    now = int(time.time()) if now is None else now
+    try:
+        lastRun = redisModel.redisClient.get(COLLECTOR_RUN_KEY)
+    except Exception:
+        return {'last_run': None, 'stalled': False}
+    lastRun = int(lastRun) if lastRun else None
+    since = lastRun if lastRun is not None else PROCESS_STARTED
+    return {'last_run': lastRun, 'stalled': now - since > COLLECTOR_STALL_SECONDS}
+
 
 def monitoringSettings() -> dict:
     """Read on every call, so that changes made in the settings apply without restarting the workers"""

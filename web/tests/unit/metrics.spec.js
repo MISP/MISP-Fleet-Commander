@@ -191,6 +191,34 @@ describe("collection status", () => {
         expect(collectionStatus(base).code).toBe("ok")
     })
 
+    it("says when the collection no longer runs, whatever the server's last sample", () => {
+        const { collectionStatus } = metrics
+        const stalled = { last_run: 1000, stalled: true }
+        expect(collectionStatus({ ...base, collector: stalled })).toEqual({ code: "stalled", lastRun: 1000 })
+        expect(collectionStatus({ ...base, last_attempt: null, collector: { last_run: null, stalled: true } }))
+            .toEqual({ code: "stalled", lastRun: null })
+        // What the user can act on comes first
+        expect(collectionStatus({ ...base, enabled: false, collector: stalled }).code).toBe("off")
+        expect(collectionStatus({ ...base, fleet_monitored: false, collector: stalled }).code).toBe("fleet")
+        expect(collectionStatus({ ...base, has_authkey: false, collector: stalled }).code).toBe("authkey")
+        expect(collectionStatus({ ...base, collector: { last_run: 1000, stalled: false } }).code).toBe("ok")
+    })
+
+    it("tells how long the collection has not run, and who can start it again", () => {
+        const notice = metrics.stalledNotice(1000, { now: 1000 + 23 * 60, isAdmin: true })
+        expect(notice).toEqual({
+            level: "warning",
+            icon: "fa-pause-circle",
+            title: "Usage collection is not running.",
+            text: "It last ran 23 min ago: samples are collected by MFC's workers, check that they are running.",
+        })
+        expect(metrics.stalledNotice(null, { now: 5000, past: " The charts show what was collected before." }).text)
+            .toBe("It has not run since MFC was started: samples are collected by MFC's workers, an administrator "
+                + "should check that they are running. The charts show what was collected before.")
+        expect([20, 600, 5340, 5400, 3 * 3600, 47 * 3600, 3 * 86400].map(metrics.agoText))
+            .toEqual(["1 min", "10 min", "89 min", "2 h", "3 h", "47 h", "3 days"])
+    })
+
     it("computes ratios", () => {
         expect(metrics.ratio(2923792, 4291)).toBe(681.4)
         expect(metrics.ratio(3, 0)).toBeNull()

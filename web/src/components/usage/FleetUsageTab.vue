@@ -162,7 +162,7 @@ import { mapGetters, mapState } from "vuex"
 import api from "@/api/metrics"
 import {
     changePhrase, DEFAULT_RANGE, fleetCollection, fleetServerRows, HOUR, lastValue, loginBars, QUEUE_KEYS, rangeOf,
-    ratio, sumSeries,
+    ratio, stalledNotice, sumSeries,
 } from "@/helpers/metrics"
 import MetricTile from "@/components/ui/charts/MetricTile.vue"
 import RangePicker from "@/components/ui/charts/RangePicker.vue"
@@ -346,13 +346,20 @@ export default {
             }
             const { failed, authkey, waiting, total } = this.collection
             const notices = []
+            // The workers no longer run the collection: nothing below will change until they do
+            const stalled = Boolean(state.collector && state.collector.stalled)
+            if (stalled) {
+                notices.push(Object.assign({ key: "stalled" }, stalledNotice(state.collector.last_run, {
+                    now: this.data.to, isAdmin: this.isAdmin, past,
+                })))
+            }
             if (failed.length > 0) {
                 notices.push(this.serversNotice("failed", "fa-exclamation-triangle", failed, "The last collection failed on"))
             }
             if (authkey.length > 0) {
                 notices.push(this.serversNotice("authkey", "fa-key", authkey, "No API key on"))
             }
-            if (waiting.length > 0 && waiting.length === total) {
+            if (!stalled && waiting.length > 0 && waiting.length === total) {
                 notices.push({
                     key: "waiting",
                     level: "info",

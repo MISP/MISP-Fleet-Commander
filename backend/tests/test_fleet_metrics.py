@@ -1,4 +1,6 @@
 """Usage metrics of a fleet (`/fleets/metrics/<id>`): sums over its servers and each server's figures"""
+import time
+
 import pytest
 
 HOUR = 3600
@@ -70,6 +72,12 @@ def test_route_is_scoped_and_validated(client, auth_headers, fleet):
     assert [server["name"] for server in answer["servers"]] == ["a-misp", "b-misp", "c-misp"]
     assert answer["state"]["servers"] == 3 and answer["state"]["fleet_monitored"] is True
     assert answer["metrics"]["events"]["summed"] is True and answer["metrics"]["load_1"]["summed"] is False
+    # Whether the collection still runs
+    import application.models.metrics as metrics
+    now = int(time.time())
+    metrics.noteCollectorRun(now - 3600)
+    answer = client.get(f"/fleets/metrics/{theFleet.id}?range=24h", headers=auth_headers(alice)).json
+    assert answer["state"]["collector"] == {"last_run": now - 3600, "stalled": True}
 
 
 def test_levels_carry_forward_and_deltas_add_up(db, fleet):

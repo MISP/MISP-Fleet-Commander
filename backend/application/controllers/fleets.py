@@ -101,7 +101,9 @@ def fleetMetrics(user, fleet_id):
         rangeName, tier, keys = fleetMetricsModel.parseRequest(request.args.get('range'), request.args.get('metrics'))
     except metricSeriesModel.SeriesRequestError as e:
         return jsonify({'message': str(e)}), 400
-    return jsonify(fleetMetricsModel.fleetSeries(fleet, rangeName, tier, keys, metricModel.monitoringSettings()))
+    answer = fleetMetricsModel.fleetSeries(fleet, rangeName, tier, keys, metricModel.monitoringSettings())
+    answer['state']['collector'] = metricModel.collectorState()
+    return jsonify(answer)
 
 
 # Widgets of the Usage tab

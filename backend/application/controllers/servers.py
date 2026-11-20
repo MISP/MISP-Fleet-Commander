@@ -363,7 +363,9 @@ def serverMetrics(user, server_id):
                                                                request.args.get('metrics'))
     except metricSeriesModel.SeriesRequestError as e:
         return jsonify({'message': str(e)}), 400
-    return jsonify(metricSeriesModel.series(server, rangeName, tier, keys, metricModel.monitoringSettings()))
+    answer = metricSeriesModel.series(server, rangeName, tier, keys, metricModel.monitoringSettings())
+    answer['state']['collector'] = metricModel.collectorState()
+    return jsonify(answer)
 
 @BPserver.route('/servers/queryCapability/<int:server_id>', methods=['GET'])
 @token_required

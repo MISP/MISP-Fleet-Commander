@@ -341,8 +341,9 @@ export function hourMatrix(points, days, now) {
 /* Collection ------------------------------------------------------------------------------------------------------- */
 
 /** Where the collection of the server stands, from the answer's `state`, worst first:
- * `off` (monitoring disabled), `fleet` (fleet not monitored), `authkey` (no API key), `waiting` (no attempt yet),
- * `failed` (the last attempt stored nothing), `partial` (stored, some sources failed), `ok` */
+ * `off` (monitoring disabled), `fleet` (fleet not monitored), `authkey` (no API key), `stalled` (the collection has
+ * stopped running: workers down), `waiting` (no attempt yet), `failed` (the last attempt stored nothing), `partial`
+ * (stored, some sources failed), `ok` */
 export function collectionStatus(state) {
     if (!state) {
         return { code: "unknown" }
@@ -356,6 +357,9 @@ export function collectionStatus(state) {
     if (!state.has_authkey) {
         return { code: "authkey" }
     }
+    if (state.collector && state.collector.stalled) {
+        return { code: "stalled", lastRun: state.collector.last_run || null }
+    }
     if (!state.last_attempt) {
         return { code: "waiting" }
     }
@@ -366,6 +370,34 @@ export function collectionStatus(state) {
         return { code: "partial", error: state.last_error }
     }
     return { code: "ok" }
+}
+
+/** How long ago, roughly: `1 min`, `23 min`, `5 h`, `3 days` */
+export function agoText(seconds) {
+    const minutes = Math.round(seconds / 60)
+    if (minutes < 90) {
+        return `${Math.max(1, minutes)} min`
+    }
+    const hours = Math.round(seconds / 3600)
+    if (hours < 48) {
+        return `${hours} h`
+    }
+    return `${Math.round(seconds / 86400)} days`
+}
+
+/** What the Usage tabs say once the usage collection has stopped running (`lastRun`: when it last ran, or null;
+ * `now`: the answer's time). `past`: what the charts still show */
+export function stalledNotice(lastRun, { now, isAdmin = false, past = "" } = {}) {
+    const when = lastRun ? `It last ran ${agoText(now - lastRun)} ago` : "It has not run since MFC was started"
+    const check = isAdmin
+        ? "check that they are running"
+        : "an administrator should check that they are running"
+    return {
+        level: "warning",
+        icon: "fa-pause-circle",
+        title: "Usage collection is not running.",
+        text: `${when}: samples are collected by MFC's workers, ${check}.${past}`,
+    }
 }
 
 /** `a / b` for reading (`681.4`), or null when it can't be computed */

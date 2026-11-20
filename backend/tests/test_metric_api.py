@@ -86,6 +86,18 @@ def test_route_is_scoped_and_validated(client, auth_headers, owned):
     assert body["metrics"] == {"events": {"label": "Events", "group": "content", "kind": "total", "unit": "count"}}
 
 
+def test_the_answer_says_whether_the_collection_still_runs(client, auth_headers, owned, monkeypatch):
+    import application.models.metrics as metrics
+    alice, _, server = owned
+    now = int(time.time())
+    metrics.noteCollectorRun(now - 30)
+    body = client.get(f"/servers/metrics/{server.id}?range=24h", headers=auth_headers(alice)).get_json()
+    assert body["state"]["collector"] == {"last_run": now - 30, "stalled": False}
+    metrics.noteCollectorRun(now - 3600)
+    body = client.get(f"/servers/metrics/{server.id}?range=24h", headers=auth_headers(alice)).get_json()
+    assert body["state"]["collector"] == {"last_run": now - 3600, "stalled": True}
+
+
 # --- Series -----------------------------------------------------------------------------------------------------------
 
 def test_raw_series(db, owned):
