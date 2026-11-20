@@ -180,6 +180,29 @@ def test_a_new_statement_forgets_the_answers_a_new_expectation_does_not(db, flee
     assert kept(saved) == {}
 
 
+def test_a_scheduled_query_that_changes_runs_at_the_next_turn(db, fleet, queued):
+    from application.models import savedQueries
+    user, fleetRow, servers = fleet
+    now = int(time.time())
+    scheduled = watched(user, fleetRow)
+    byHand = save(user, fleet_id=fleetRow.id)
+    for saved in (scheduled, byHand):
+        saved.last_run_at = now - 60
+    db.session.commit()
+    # A new name or expectation changes nothing of what runs
+    savedQueries.update(user, scheduled.id, {'name': 'Renamed', 'expectation': {'comparator': 'lte', 'value': 2}})
+    assert scheduled.last_run_at == now - 60 and not savedQueries.isDue(scheduled, now)
+    for change in ({'statement': COUNT.replace('23', '24')}, {'server_ids': [servers[0].id]},
+                   {'schedule_minutes': 1440}):
+        scheduled.last_run_at = now - 60
+        db.session.commit()
+        savedQueries.update(user, scheduled.id, change)
+        assert scheduled.last_run_at is None and savedQueries.isDue(scheduled, now), change
+    # Run by hand only: its last run stays what it was
+    savedQueries.update(user, byHand.id, {'statement': COUNT.replace('23', '25')})
+    assert byHand.last_run_at == now - 60
+
+
 def test_a_statement_that_cannot_be_scheduled_drops_nothing_silently(db, fleet):
     from application.models import savedQueries
     user, fleetRow, _ = fleet

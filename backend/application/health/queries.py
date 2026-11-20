@@ -47,6 +47,7 @@ def unmetFinding(check: dict) -> Finding:
 
 def uncheckedFinding(check: dict) -> Finding:
     message = check["result"]["message"] or f"It ended as `{check['result']['outcome']}`"
+    message = message[:1].upper() + message[1:]  # mispql's messages start in lower case
     return Finding(
         "info",
         f"Saved query “{check['name']}” could not run",

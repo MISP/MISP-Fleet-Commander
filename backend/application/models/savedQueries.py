@@ -189,8 +189,10 @@ def create(user, body: dict) -> SavedQuery:
 
 def update(user, savedId, body: dict) -> SavedQuery:
     """Any field of `create`. A new statement drops the results kept for the old one; a new target drops those of
-    servers no longer in it. A schedule or an expectation that does not suit the statement is refused"""
+    servers no longer in it. A schedule or an expectation that does not suit the statement is refused. A scheduled
+    saved query whose statement, servers or schedule change runs at the scheduler's next turn"""
     saved = ownedSaved(user, savedId)
+    before = (saved.statement, saved.fleet_id, saved.server_ids, saved.schedule_minutes)
     if 'name' in body:
         saved.name = checkedName(user, body['name'], exceptId=saved.id)
     if 'description' in body:
@@ -214,6 +216,9 @@ def update(user, savedId, body: dict) -> SavedQuery:
     else:
         kept = {server.id for server in targetServers(saved)}
         saved.results = [result for result in saved.results if result.server_id in kept]
+    if saved.schedule_minutes is not None and \
+            before != (saved.statement, saved.fleet_id, saved.server_ids, saved.schedule_minutes):
+        saved.last_run_at = None  # its last run answered something else
     saved.updated = int(time.time())
     db.session.commit()
     return saved
