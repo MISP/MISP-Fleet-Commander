@@ -43,7 +43,6 @@
                 <div v-for="chart in shown" :key="chart.serverId" class="svh-card">
                     <TimeSeriesChart
                         :title="chart.serverName"
-                        :subtitle="latestText(chart.latest)"
                         :series="chart.series"
                         :from="history.from"
                         :to="history.to"
@@ -53,9 +52,13 @@
                         :threshold="chart.latest ? chartThreshold : null"
                         :height="140"
                     >
+                        <!-- Its own line under the name, on every chart: the plots of a row stay level -->
                         <template #badge>
-                            <span v-if="chart.meta" :class="['svh-badge', `job-tone-${chart.meta.tone}`]">
-                                <i :class="['fas', chart.meta.icon]" aria-hidden="true"></i>{{ chart.meta.label }}
+                            <span class="svh-status">
+                                <span v-if="chart.meta" :class="['svh-badge', `job-tone-${chart.meta.tone}`]">
+                                    <i :class="['fas', chart.meta.icon]" aria-hidden="true"></i>{{ chart.meta.label }}
+                                </span>
+                                <span class="svh-latest">{{ latestText(chart.latest) }}</span>
                             </span>
                         </template>
                     </TimeSeriesChart>
@@ -335,6 +338,22 @@ export default {
     .svh-skeleton {
         animation: none;
     }
+}
+
+.svh-status {
+    order: 3;
+    flex-basis: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.2rem 0.5rem;
+    min-width: 0;
+}
+
+.svh-latest {
+    color: #6c757d;
+    font-size: 0.78rem;
+    font-variant-numeric: tabular-nums;
 }
 
 .svh-badge {

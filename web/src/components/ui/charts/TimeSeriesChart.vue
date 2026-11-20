@@ -95,12 +95,16 @@
                         :class="{ 'is-partial': bar.partial }"
                     />
                 </g>
+                <!-- Bands, lines and dots share this parent: their keys must differ, or Vue mixes them up when the
+                     number of segments changes -->
                 <g v-else aria-hidden="true">
-                    <path v-for="band in bands" :key="band.key" :d="band.d" :fill="band.color" class="peak-band" />
-                    <path v-for="path in lines" :key="path.key" :d="path.d" :stroke="path.color" class="series-line" />
+                    <path v-for="band in bands" :key="`band-${band.key}`" :d="band.d" :fill="band.color" class="peak-band" />
+                    <path v-for="path in lines" :key="`line-${path.key}`" :d="path.d" :stroke="path.color" class="series-line" />
+                    <circle v-for="dot in loneDots" :key="`lone-${dot.key}`" :cx="dot.x" :cy="dot.y" r="3" :fill="dot.color" />
+
                     <circle
                         v-for="dot in endDots"
-                        :key="dot.key"
+                        :key="`dot-${dot.key}`"
                         :cx="dot.x"
                         :cy="dot.y"
                         r="4"
@@ -369,7 +373,8 @@ export default {
         },
         xTicks() {
             const plotWidth = this.width - this.margin.left - this.margin.right
-            const count = Math.max(2, Math.floor(plotWidth / 92))
+            // At least three, or a year on a narrow chart gets a single label
+            const count = Math.max(3, Math.floor(plotWidth / 92))
             const span = this.domainEnd - this.domainStart
             const kept = []
             this.xScale.ticks(count).forEach((date) => {
@@ -411,12 +416,26 @@ export default {
             const paths = []
             this.coloured.forEach((item) => {
                 segments(item.points, this.gapLimit).forEach((segment, index) => {
-                    // A lone sample between gaps draws as a dot, not an invisible zero-length line
-                    const shape = segment.length === 1 ? [segment[0], [segment[0][0] + this.interval / 4, segment[0][1]]] : segment
-                    paths.push({ key: `${item.key}-${index}`, color: item.color, d: draw(shape) })
+                    if (segment.length > 1) {
+                        paths.push({ key: `${item.key}-${index}`, color: item.color, d: draw(segment) })
+                    }
                 })
             })
             return paths
+        },
+        // A lone sample between gaps (a run by hand, a collection between two failures) draws as a dot: as a line it
+        // would be a speck
+        loneDots() {
+            const dots = []
+            this.coloured.forEach((item) => {
+                segments(item.points, this.gapLimit).forEach((segment, index) => {
+                    if (segment.length === 1) {
+                        const [ts, value] = segment[0]
+                        dots.push({ key: `${item.key}-${index}`, color: item.color, x: this.xScale(new Date(ts * 1000)), y: this.yScale(value) })
+                    }
+                })
+            })
+            return dots
         },
         bands() {
             const draw = area()
