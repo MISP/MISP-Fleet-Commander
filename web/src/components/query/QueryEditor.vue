@@ -141,6 +141,25 @@ export default {
         focus() {
             this.$refs.input.focus()
         },
+        // Empty the editor through the browser's own editing, so that undo brings the text back
+        clear() {
+            const input = this.$refs.input
+            this.close()
+            input.focus()
+            if (input.value === "") {
+                return
+            }
+            input.setSelectionRange(0, input.value.length)
+            let done = false
+            try {
+                done = document.execCommand("delete")
+            } catch (e) {
+                done = false
+            }
+            if (!done || input.value !== "") {
+                this.$emit("input", "")
+            }
+        },
         // As tall as its text, between the CSS min and max heights; it scrolls beyond
         autosize() {
             const input = this.$refs.input

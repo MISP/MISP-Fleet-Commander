@@ -88,6 +88,16 @@
                     <span>{{ status.text }}</span>
                 </div>
                 <div class="q-footer-actions">
+                    <b-button
+                        variant="link"
+                        size="sm"
+                        class="q-clear"
+                        :disabled="!canClear"
+                        title="Clear the statement and the results. Ctrl+Z brings the statement back, Back the results"
+                        @click="clearAll"
+                    >
+                        <i class="fas fa-eraser mr-1" aria-hidden="true"></i>Clear
+                    </b-button>
                     <b-dropdown variant="link" size="sm" right class="q-examples" toggle-class="q-examples-toggle">
                         <template #button-content>Examples</template>
                         <b-dropdown-item-button v-for="example in examples" :key="example.title" @click="useExample(example)">
@@ -430,6 +440,9 @@ export default {
             }
             return ""
         },
+        canClear() {
+            return this.statement !== "" || Boolean(this.job_id) || this.refused.length > 0
+        },
         canRun() {
             return !this.runBlocker && !this.starting && !this.checking
         },
@@ -688,6 +701,17 @@ export default {
                     this.checking = false
                 }
             })
+        },
+        // An empty editor and no results; the servers stay chosen. The run itself goes on if it was running: it is
+        // still in the recent runs and on the Jobs page
+        clearAll() {
+            this.refused = []
+            this.rowServer = null
+            this.startedJobId = null  // Back to the run then brings its statement back too
+            this.$refs.editor.clear()
+            if (this.job_id) {
+                this.$router.push({ name: "query" }).catch(() => {})
+            }
         },
         useExample(example) {
             this.statement = example.statement
@@ -990,6 +1014,17 @@ export default {
 
 .q-examples >>> .q-examples-toggle {
     font-size: 0.86rem;
+}
+
+/* Quieter than Examples: it takes things away */
+.q-clear {
+    font-size: 0.86rem;
+    color: #5a6270;
+}
+
+.q-clear:hover:not(:disabled) {
+    color: var(--health-critical-ink);
+    text-decoration: none;
 }
 
 .q-examples >>> .dropdown-menu {
