@@ -742,6 +742,47 @@ class SavedQuerySample(BaseModel):
                f"tier={self.tier!r}, ts={self.ts!r})"
 
 
+USAGE_WIDGET_KINDS = ('saved_query',)
+USAGE_WIDGET_DISPLAYS = ('total', 'servers')
+
+
+class UsageWidget(BaseModel):
+    """Something its owner chose to follow on a fleet's Usage tab, in the order they gave (`position`). A
+    `saved_query` widget draws what the fleet's servers answer to one saved query over time, summed over the fleet
+    (`display` = `total`) or server by server (`servers`)"""
+    __tablename__ = 'usage_widgets'
+    __table_args__ = (UniqueConstraint('fleet_id', 'saved_query_id', name='uq_usage_widgets_fleet_saved_query'),)
+
+    id = db.Column(db.Integer,
+                   primary_key=True)
+    fleet_id = db.Column(db.Integer,
+                         db.ForeignKey('fleets.id', ondelete='CASCADE'),
+                         nullable=False,
+                         index=True)
+    kind = db.Column(db.String(32),
+                     nullable=False,
+                     default='saved_query',
+                     server_default='saved_query')
+    saved_query_id = db.Column(db.Integer,
+                               db.ForeignKey('saved_queries.id', ondelete='CASCADE'),
+                               nullable=True,
+                               index=True)
+    display = db.Column(db.String(16),
+                        nullable=False,
+                        default='total',
+                        server_default='total')
+    position = db.Column(db.Integer,
+                         nullable=False,
+                         default=0,
+                         server_default='0')
+    created = db.Column(db.Integer,
+                        nullable=False)
+
+    def __repr__(self):
+        return f"<UsageWidget>(fleet_id={self.fleet_id!r}, kind={self.kind!r}, " \
+               f"saved_query_id={self.saved_query_id!r})"
+
+
 METRIC_TIERS = ('raw', 'hour', 'day')
 
 
@@ -825,6 +866,12 @@ def forgetDeletedQueryHistory(mapper, connection, saved):
     """In bulk: a saved query run every 15 minutes holds thousands of rows"""
     connection.execute(SavedQuerySample.__table__.delete()
                        .where(SavedQuerySample.__table__.c.saved_query_id == saved.id))
+    connection.execute(UsageWidget.__table__.delete().where(UsageWidget.__table__.c.saved_query_id == saved.id))
+
+
+@event.listens_for(Fleet, 'after_delete')
+def forgetDeletedFleetWidgets(mapper, connection, fleet):
+    connection.execute(UsageWidget.__table__.delete().where(UsageWidget.__table__.c.fleet_id == fleet.id))
 
 
 @event.listens_for(Fleet, 'after_delete')

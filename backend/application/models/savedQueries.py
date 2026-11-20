@@ -462,9 +462,10 @@ def foundText(result: dict) -> str:
 
 # History
 
-def historyFor(user, savedId, rangeName: Optional[str], now: Optional[int] = None) -> dict:
-    """What `GET /queries/saved/<id>/history` answers: each current server's numbers over the range, and the
-    expectation they are drawn against"""
+def historyFor(user, savedId, rangeName: Optional[str], now: Optional[int] = None,
+               servers: Optional[List[Server]] = None) -> dict:
+    """What `GET /queries/saved/<id>/history` answers: each current server's numbers over the range (or only
+    `servers`'), and the expectation they are drawn against"""
     saved = ownedSaved(user, savedId)
     try:
         rangeName = savedQueryHistory.parseRange(rangeName)
@@ -473,7 +474,8 @@ def historyFor(user, savedId, rangeName: Optional[str], now: Optional[int] = Non
     kind = statementKind(saved.statement)
     if kind not in CHECKED_KINDS:
         raise SavedQueryError('Only a SELECT or a COUNT answers a number to keep over time')
-    history = savedQueryHistory.series(saved.id, targetServers(saved), saved.schedule_minutes, rangeName, now)
+    servers = targetServers(saved) if servers is None else servers
+    history = savedQueryHistory.series(saved.id, servers, saved.schedule_minutes, rangeName, now)
     history.update({
         'saved_query_id': saved.id,
         'kind': kind,

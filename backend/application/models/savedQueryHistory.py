@@ -197,3 +197,63 @@ def series(savedId: int, servers: list, scheduleMinutes: Optional[int], rangeNam
         'servers': entries,
         'retention': {'raw_days': keep['raw'] // DAY, 'day_days': None if keep['day'] is None else keep['day'] // DAY},
     }
+
+
+def _lastBefore(savedId: int, serverId: int, before: int, source: str) -> Optional[SavedQuerySample]:
+    """The server's last answer before `before`: a raw row, or for hours whose raw rows were trimmed, the last day
+    that ended by then (its `value` is that day's last answer)"""
+    base = SavedQuerySample.query.filter(SavedQuerySample.saved_query_id == savedId,
+                                         SavedQuerySample.server_id == serverId)
+    if source == 'raw':
+        row = base.filter(SavedQuerySample.tier == 'raw', SavedQuerySample.ts < before) \
+            .order_by(SavedQuerySample.ts.desc()).first()
+        if row is not None:
+            return row
+    return base.filter(SavedQuerySample.tier == 'day', SavedQuerySample.ts <= before - DAY) \
+        .order_by(SavedQuerySample.ts.desc()).first()
+
+
+def total(savedId: int, servers: list, rangeName: str, now: Optional[int] = None) -> dict:
+    """The servers' answers summed, as a fleet's usage totals are: per hour up to 30 days (while raw rows cover them),
+    per day beyond. In each bucket, each server's last answer, carried forward until its next one, its last answer
+    before the range included; a server joins the sum at its first answer. `reporting` gives how many servers each
+    point sums, `capped` the points holding a SELECT's answer at its LIMIT (the fleet has at least that many)"""
+    now = int(time.time()) if now is None else now
+    size = DAY if tierFor(rangeName) == 'day' else HOUR
+    source = 'day' if size == DAY else 'raw'
+    start = now - RANGES[rangeName]
+    first = start - start % size
+    current = now - now % size
+    serverIds = [server.id for server in servers]
+    lastByBucket = {}
+    for serverId, rows in _rows(savedId, serverIds, source, first).items():
+        # Oldest first: the last answer of each bucket stays
+        lastByBucket[serverId] = {row.ts - row.ts % size: (row.value, bool(row.more)) for row in rows}
+    carried = {}
+    for serverId in serverIds:
+        row = _lastBefore(savedId, serverId, first, source)
+        if row is not None:
+            carried[serverId] = (row.value, bool(row.more))
+    points, reporting, capped = [], [], []
+    for bucket in range(first, current + 1, size):
+        for serverId in serverIds:
+            answer = lastByBucket.get(serverId, {}).get(bucket)
+            if answer is not None:
+                carried[serverId] = answer
+        if not carried:
+            continue
+        points.append([bucket, sum(value for value, _ in carried.values())])
+        reporting.append([bucket, len(carried)])
+        if any(more for _, more in carried.values()):
+            capped.append(bucket)
+    return {
+        'tier': 'day' if size == DAY else 'hour',
+        'interval_s': size,
+        'from': start,
+        'to': now,
+        'partial_since': current if points and points[-1][0] == current else None,
+        'points': points,
+        'reporting': reporting,
+        'capped': capped,
+        'servers': len(serverIds),
+    }
