@@ -52,6 +52,14 @@
                         <i class="fas fa-magnifying-glass mr-1" aria-hidden="true"></i>Open in Query
                     </b-button>
                     <b-button
+                        v-if="job.kind === 'mispql_query' && job.params && job.params.saved_query_id"
+                        size="sm"
+                        variant="outline-secondary"
+                        :to="{ name: 'query.saved.view', params: { saved_id: String(job.params.saved_query_id) } }"
+                    >
+                        <i class="fas fa-bookmark mr-1" aria-hidden="true"></i>Saved query
+                    </b-button>
+                    <b-button
                         v-if="!final"
                         size="sm"
                         variant="outline-danger"

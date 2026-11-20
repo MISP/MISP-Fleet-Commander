@@ -15,6 +15,7 @@ export const CATEGORY_LABELS = {
     config: "Configuration",
     freshness: "Freshness",
     users: "Users",
+    queries: "Saved queries",
 }
 
 // One label per rule, for grouping by issue type (finding titles vary per subject)
@@ -36,6 +37,7 @@ export const RULE_LABELS = {
     pending_registrations: "Pending account requests",
     baseline_drift: "Baseline drift",
     organisation_mismatch: "Organisation mismatches",
+    saved_query: "Saved queries",
 }
 
 const TAB_ACTIONS = {
@@ -63,6 +65,8 @@ export function actionMeta(action) {
             return { label: "Open in MISP", icon: "fas fa-arrow-up-right-from-square" }
         case "open_baseline":
             return { label: "Open baseline", icon: "fas fa-ruler-combined" }
+        case "open_saved_query":
+            return { label: "Open saved query", icon: "fas fa-bookmark" }
         default:
             return null
     }

@@ -2,7 +2,7 @@ import Vue from "vue"
 import api from "@/api/health"
 
 export const SEVERITIES = ["critical", "warning", "info"]
-export const CATEGORIES = ["availability", "version", "workers", "sync", "services", "config", "freshness", "users"]
+export const CATEGORIES = ["availability", "version", "workers", "sync", "services", "config", "freshness", "users", "queries"]
 
 const PENDING_TIMEOUT_MS = 90 * 1000
 // Live updates carry issues, not the summary (server list, refresh times): reload it once updates settle

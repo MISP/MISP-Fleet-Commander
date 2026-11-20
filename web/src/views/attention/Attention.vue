@@ -682,6 +682,10 @@ export default {
                 this.openServer(issue.server_id, action.target, action.uuid)
                 return
             }
+            if (action.kind === "open_saved_query") {
+                this.$router.push({ name: "query.saved.view", params: { saved_id: String(action.saved_query_id) } }).catch(() => {})
+                return
+            }
             this.openServer(issue.server_id)
         },
         // The fleet page's Baseline tab, on the drifting rule

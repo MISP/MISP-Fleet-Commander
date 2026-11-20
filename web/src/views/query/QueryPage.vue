@@ -9,31 +9,36 @@
                     asked with its own key, so MISP applies that user's access. Rows are kept {{ ttlLabel }}, for you only.
                 </p>
             </div>
-            <b-dropdown right variant="outline-secondary" size="sm" class="q-recent" @show="loadRecent">
-                <template #button-content>
-                    <i class="fas fa-clock-rotate-left mr-1" aria-hidden="true"></i>Recent runs
-                </template>
-                <b-dropdown-text v-if="recentLoading && recent.length === 0" class="q-recent-note">
-                    <b-spinner small class="mr-1"></b-spinner>Loading…
-                </b-dropdown-text>
-                <b-dropdown-text v-else-if="recentError" class="q-recent-note text-danger">{{ recentError }}</b-dropdown-text>
-                <b-dropdown-text v-else-if="recent.length === 0" class="q-recent-note">No runs yet.</b-dropdown-text>
-                <b-dropdown-item
-                    v-for="job in recent"
-                    :key="job.id"
-                    :to="{ name: 'query', params: { job_id: job.id } }"
-                    :active="job.id === job_id"
-                    link-class="q-recent-item"
-                >
-                    <span :class="['q-recent-dot', `job-tone-${statusMeta(job.status).tone}`]" :title="statusMeta(job.status).label"></span>
-                    <span class="q-recent-title">{{ job.title }}</span>
-                    <span class="q-recent-when">{{ relative(job.created) }}</span>
-                </b-dropdown-item>
-                <b-dropdown-divider></b-dropdown-divider>
-                <b-dropdown-item :to="{ name: 'jobs', query: { kind: 'mispql_query' } }">
-                    <i class="fas fa-list-check fa-fw mr-1" aria-hidden="true"></i>Every query run, on the Jobs page
-                </b-dropdown-item>
-            </b-dropdown>
+            <div class="q-header-actions">
+                <b-button variant="outline-secondary" size="sm" :to="{ name: 'query.saved' }">
+                    <i class="fas fa-bookmark mr-1" aria-hidden="true"></i>Saved queries
+                </b-button>
+                <b-dropdown right variant="outline-secondary" size="sm" class="q-recent" @show="loadRecent">
+                    <template #button-content>
+                        <i class="fas fa-clock-rotate-left mr-1" aria-hidden="true"></i>Recent runs
+                    </template>
+                    <b-dropdown-text v-if="recentLoading && recent.length === 0" class="q-recent-note">
+                        <b-spinner small class="mr-1"></b-spinner>Loading…
+                    </b-dropdown-text>
+                    <b-dropdown-text v-else-if="recentError" class="q-recent-note text-danger">{{ recentError }}</b-dropdown-text>
+                    <b-dropdown-text v-else-if="recent.length === 0" class="q-recent-note">No runs yet.</b-dropdown-text>
+                    <b-dropdown-item
+                        v-for="job in recent"
+                        :key="job.id"
+                        :to="{ name: 'query', params: { job_id: job.id } }"
+                        :active="job.id === job_id"
+                        link-class="q-recent-item"
+                    >
+                        <span :class="['q-recent-dot', `job-tone-${statusMeta(job.status).tone}`]" :title="statusMeta(job.status).label"></span>
+                        <span class="q-recent-title">{{ job.title }}</span>
+                        <span class="q-recent-when">{{ relative(job.created) }}</span>
+                    </b-dropdown-item>
+                    <b-dropdown-divider></b-dropdown-divider>
+                    <b-dropdown-item :to="{ name: 'jobs', query: { kind: 'mispql_query' } }">
+                        <i class="fas fa-list-check fa-fw mr-1" aria-hidden="true"></i>Every query run, on the Jobs page
+                    </b-dropdown-item>
+                </b-dropdown>
+            </div>
         </header>
 
         <section class="q-composer" aria-label="Statement and servers">
@@ -71,6 +76,19 @@
                 ></QueryServerPicker>
             </b-collapse>
 
+            <div v-if="savedQuery" class="q-saved" role="note">
+                <i class="fas fa-bookmark q-saved-icon" aria-hidden="true"></i>
+                <span class="q-saved-text">
+                    Saved query
+                    <router-link :to="{ name: 'query.saved.view', params: { saved_id: String(savedQuery.id) } }" class="q-saved-name">{{ savedQuery.name }}</router-link>
+                    <span class="q-saved-meta">· {{ savedSummary }}</span>
+                </span>
+                <span v-if="savedChanged" class="q-saved-changed" title="The statement or the servers differ from the saved query">Changed</span>
+                <button type="button" class="q-saved-detach" title="Stop editing this saved query: Save then keeps a new one" @click="detachSaved">
+                    <i class="fas fa-xmark" aria-hidden="true"></i><span class="sr-only">Stop editing this saved query</span>
+                </button>
+            </div>
+
             <QueryEditor
                 ref="editor"
                 v-model="statement"
@@ -105,6 +123,32 @@
                             <code class="q-example-code">{{ oneLine(example.statement) }}</code>
                         </b-dropdown-item-button>
                     </b-dropdown>
+                    <b-dropdown
+                        v-if="savedQuery"
+                        split
+                        right
+                        variant="outline-primary"
+                        class="q-save"
+                        split-class="q-save-main"
+                        :disabled="!canSave"
+                        :title="saveBlocker || null"
+                        @click="openSave('update')"
+                    >
+                        <template #button-content>
+                            <i class="fas fa-bookmark mr-1" aria-hidden="true"></i>Save changes
+                        </template>
+                        <b-dropdown-item-button @click="openSave('create')">Save as new…</b-dropdown-item-button>
+                    </b-dropdown>
+                    <b-button
+                        v-else
+                        variant="outline-primary"
+                        class="q-save-main"
+                        :disabled="!canSave"
+                        :title="saveBlocker || 'Keep this statement with its servers, to run it again or on a schedule'"
+                        @click="openSave('create')"
+                    >
+                        <i class="fas fa-bookmark mr-1" aria-hidden="true"></i>Save…
+                    </b-button>
                     <b-button
                         variant="primary"
                         class="q-run"
@@ -167,6 +211,12 @@
                             variant="outline-secondary"
                             @click="statement = runStatement"
                         >Back to this statement</b-button>
+                        <b-button
+                            v-if="runSavedId"
+                            size="sm"
+                            variant="link"
+                            :to="{ name: 'query.saved.view', params: { saved_id: String(runSavedId) } }"
+                        >Saved query</b-button>
                         <b-button size="sm" variant="link" :to="{ name: 'jobs.view', params: { job_id: job.id } }">Job page</b-button>
                     </div>
                 </header>
@@ -221,7 +271,19 @@
             </template>
         </section>
 
-        <section v-else class="q-empty" aria-label="How queries run">
+        <SaveQueryModal
+            modal-id="q-save"
+            :mode="saveMode"
+            :saved="savedQuery"
+            :statement="statement"
+            :kind="check && check.ok ? check.kind : null"
+            :selected="selected"
+            :fleets="fleets"
+            :options="savedOptions"
+            @saved="onSaved"
+        ></SaveQueryModal>
+
+        <section v-if="!job_id" class="q-empty" aria-label="How queries run">
             <div class="q-empty-item">
                 <i class="fas fa-key" aria-hidden="true"></i>
                 <div>
@@ -257,11 +319,13 @@ import QueryRunServers from "@/components/query/QueryRunServers.vue"
 import QueryErrorList from "@/components/query/QueryErrorList.vue"
 import QueryRowsTable from "@/components/query/QueryRowsTable.vue"
 import QueryMatrix from "@/components/query/QueryMatrix.vue"
+import SaveQueryModal from "@/components/query/SaveQueryModal.vue"
 import api from "@/api/queries"
 import { formatDuration, isFinalJob, jobStatusMeta } from "@/helpers/jobs"
 import {
     EXAMPLES, capabilityMeta, groupErrors, statementKind, statementTable, unionFields,
 } from "@/helpers/mispql"
+import { savedSelection, scheduleLabel } from "@/helpers/savedQueries"
 
 const DRAFT_KEY = "mfc.query.draft"
 const CHECK_DELAY = 350
@@ -304,6 +368,7 @@ export default {
         QueryErrorList,
         QueryRowsTable,
         QueryMatrix,
+        SaveQueryModal,
     },
     props: {
         // The run shown, if any
@@ -336,6 +401,9 @@ export default {
             recentLoading: false,
             recentError: null,
             examples: EXAMPLES,
+            // The saved query being edited (`?saved=<id>`): Save then changes it
+            savedQuery: null,
+            saveMode: "create",
         }
     },
     computed: {
@@ -440,8 +508,63 @@ export default {
             }
             return ""
         },
+        savedOptions() {
+            return (this.language && this.language.saved) || null
+        },
+        savedSummary() {
+            const saved = this.savedQuery
+            if (!saved) {
+                return ""
+            }
+            const parts = [scheduleLabel(saved.schedule_minutes, this.savedOptions && this.savedOptions.schedules)]
+            if (saved.expectation_text) {
+                parts.push(`expects ${saved.expectation_text}`)
+            }
+            return parts.join(" · ")
+        },
+        // Whether Save changes would change the saved query's statement or servers
+        savedChanged() {
+            const saved = this.savedQuery
+            if (!saved) {
+                return false
+            }
+            if (this.statement !== saved.statement) {
+                return true
+            }
+            if (!this.fleets.length || this.fleets.some(fleet => fleet.loading)) {
+                return false
+            }
+            const sorted = ids => ids.slice().sort((a, b) => a - b).join(",")
+            return sorted(savedSelection(saved, this.fleets)) !== sorted(this.selected)
+        },
+        saveBlocker() {
+            if (!this.statement.trim()) {
+                return "Write a statement first."
+            }
+            if (!this.check || this.checking) {
+                return "Checking the statement…"
+            }
+            if (!this.check.ok) {
+                return "Fix the statement first."
+            }
+            if (!this.check.kind) {
+                return "The statement could not be checked: try again in a moment."
+            }
+            if (this.selected.length === 0) {
+                return "Choose the servers it runs on."
+            }
+            return ""
+        },
+        canSave() {
+            return !this.saveBlocker && !this.starting
+        },
+        // The saved query this run belongs to, if any
+        runSavedId() {
+            const params = (this.job && this.job.params) || {}
+            return params.saved_query_id || null
+        },
         canClear() {
-            return this.statement !== "" || Boolean(this.job_id) || this.refused.length > 0
+            return this.statement !== "" || Boolean(this.job_id) || this.refused.length > 0 || Boolean(this.savedQuery)
         },
         canRun() {
             return !this.runBlocker && !this.starting && !this.checking
@@ -540,6 +663,21 @@ export default {
             }
             this.scheduleCheck()
         },
+        // A link without `?saved=` (a recent run, Clear) leaves the saved query; one with it opens that one
+        "$route.query.saved"(value) {
+            if (!value) {
+                this.savedQuery = null
+            } else if (!this.savedQuery || String(this.savedQuery.id) !== String(value)) {
+                this.loadSaved(value)
+            }
+        },
+        // A link naming servers while the page is open (from a saved query or a run, Back): select them
+        "$route.query.fleet"() {
+            this.selectFromRoute()
+        },
+        "$route.query.servers"() {
+            this.selectFromRoute()
+        },
         job_id() {
             this.cancelRequested = false
             this.rowServer = null
@@ -580,6 +718,9 @@ export default {
         if (this.job_id) {
             this.loadRun()
         }
+        if (this.$route.query.saved) {
+            this.loadSaved(this.$route.query.saved)
+        }
     },
     beforeDestroy() {
         clearTimeout(this.checkTimer)
@@ -614,6 +755,19 @@ export default {
             const selectedFleet = current ? this.fleets.find(entry => entry.id === current.id) : null
             return selectedFleet ? selectedFleet.servers.map(server => server.id) : []
         },
+        selectFromRoute() {
+            const query = this.$route.query
+            if (this.job_id || query.saved || !(query.fleet || query.servers)) {
+                return
+            }
+            if (!this.fleets.length || this.fleets.some(fleet => fleet.loading)) {
+                return  // loadFleets selects them once the servers are listed
+            }
+            const ids = this.initialSelection().filter(id => this.serversById[id])
+            if (ids.length) {
+                this.selected = ids
+            }
+        },
         loadFleets() {
             api.fleets().then((fleets) => {
                 this.fleets = (fleets || []).map(fleet => ({ id: fleet.id, name: fleet.name, servers: [], loading: true, error: null }))
@@ -623,7 +777,8 @@ export default {
                 }
                 return Promise.all(this.fleets.map(fleet => this.loadFleetServers(fleet)))
             }).then(() => {
-                if (!this.selected.length && !this.startedJobId && !(this.run && this.adoptRun(this.run))) {
+                if (!this.selected.length && !this.startedJobId && !(this.run && this.adoptRun(this.run))
+                    && !(this.savedQuery && !this.job_id && this.adoptSaved())) {
                     this.selected = this.initialSelection().filter(id => this.serversById[id])
                 }
                 if (this.selected.length === 0) {
@@ -708,8 +863,9 @@ export default {
             this.refused = []
             this.rowServer = null
             this.startedJobId = null  // Back to the run then brings its statement back too
+            this.savedQuery = null
             this.$refs.editor.clear()
-            if (this.job_id) {
+            if (this.job_id || this.$route.query.saved) {
                 this.$router.push({ name: "query" }).catch(() => {})
             }
         },
@@ -744,13 +900,64 @@ export default {
                 this.$store.commit("jobs/setJob", answer.job)
                 this.startedJobId = answer.job_id
                 this.pickerOpen = false
-                this.$router.push({ name: "query", params: { job_id: answer.job_id } }).catch(() => {})
+                const query = this.savedQuery ? { saved: String(this.savedQuery.id) } : {}
+                this.$router.push({ name: "query", params: { job_id: answer.job_id }, query }).catch(() => {})
                 this.loadRecent()
             }).catch((error) => {
                 this.$bvToast.toast(String(error), { title: "Could not run the query", variant: "danger", solid: true })
             }).finally(() => {
                 this.starting = false
             })
+        },
+        // A saved query opened from a link: its statement and its servers in the composer; Save then changes it
+        loadSaved(id) {
+            const savedId = Number.parseInt(id, 10)
+            if (Number.isNaN(savedId)) {
+                return
+            }
+            api.savedGet(savedId).then((saved) => {
+                if (String(this.$route.query.saved) !== String(savedId)) {
+                    return
+                }
+                this.savedQuery = saved
+                if (!this.job_id) {
+                    if (saved.statement !== this.statement) {
+                        this.statement = saved.statement
+                    }
+                    this.adoptSaved()
+                }
+            }).catch((error) => {
+                this.$bvToast.toast(String(error), { title: "Could not open the saved query", variant: "danger", solid: true })
+            })
+        },
+        adoptSaved() {
+            if (!this.savedQuery || !this.fleets.length || this.fleets.some(fleet => fleet.loading)) {
+                return false
+            }
+            this.selected = savedSelection(this.savedQuery, this.fleets)
+            return true
+        },
+        openSave(mode) {
+            if (!this.canSave) {
+                return
+            }
+            this.saveMode = mode
+            this.$nextTick(() => this.$bvModal.show("q-save"))
+        },
+        onSaved(saved) {
+            this.savedQuery = saved
+            const query = Object.assign({}, this.$route.query, { saved: String(saved.id) })
+            this.$router.replace({ name: "query", params: this.$route.params, query }).catch(() => {})
+            this.$bvToast.toast(`“${saved.name}” is in your saved queries.`, {
+                title: "Saved", variant: "success", solid: true, autoHideDelay: 4000,
+            })
+        },
+        // Back to a statement of its own: Save then keeps a new saved query
+        detachSaved() {
+            this.savedQuery = null
+            const query = Object.assign({}, this.$route.query)
+            delete query.saved
+            this.$router.replace({ name: "query", params: this.$route.params, query }).catch(() => {})
         },
         // A run opened from a link: its statement and its servers (those the user still has) in the composer
         adoptRun(run) {
@@ -861,6 +1068,77 @@ export default {
     margin: 0.25rem 0 0;
     max-width: 760px;
     font-size: 0.92rem;
+}
+
+.q-header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.q-saved {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    margin-bottom: 0.6rem;
+    padding: 0.35rem 0.4rem 0.35rem 0.7rem;
+    border-radius: 6px;
+    background: var(--health-focus-bg);
+    border: 1px solid #dbe7f0;
+    font-size: 0.86rem;
+    color: #3c4452;
+}
+
+.q-saved-icon {
+    color: var(--var-color-lapislazuli);
+}
+
+.q-saved-text {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.q-saved-name {
+    margin: 0 0.3rem;
+    font-weight: 700;
+}
+
+.q-saved-meta {
+    color: #5f6873;
+}
+
+.q-saved-changed {
+    flex: none;
+    padding: 0.05rem 0.5rem;
+    border-radius: 999px;
+    background: var(--health-warning-tint);
+    color: var(--health-warning-ink);
+    font-size: 0.74rem;
+    font-weight: 700;
+}
+
+.q-saved-detach {
+    flex: none;
+    border: none;
+    background: none;
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    color: #5f6873;
+}
+
+.q-saved-detach:hover {
+    color: var(--var-color-yankeesblue);
+    background: rgba(33, 45, 64, 0.06);
+}
+
+.q-saved-detach:focus-visible {
+    outline: 2px solid var(--var-color-lapislazuli);
+    outline-offset: 1px;
+}
+
+.q-footer-actions >>> .q-save-main {
+    font-weight: 600;
 }
 
 .q-recent >>> .dropdown-menu {

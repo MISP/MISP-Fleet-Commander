@@ -185,11 +185,13 @@ let router =  new Router({
             ]
         },
         {
-            // A statement to run on many servers (`?fleet=<id>` or `?servers=1,2` chooses them), or a run's answers
-            path: "/query/:job_id([0-9a-f-]{36})?",
-            name: "query",
-            component: () => import("./views/query/QueryPage.vue"),
-            props: (route) => ({ job_id: route.params.job_id || null }),
+            path: "/query",
+            component: {
+                name: "QueryRoot",
+                render(h) {
+                    return h("router-view", { on: this.$listeners })
+                },
+            },
             meta: {
                 requiresFleet: false,
                 breadcrumbs: {
@@ -197,7 +199,59 @@ let router =  new Router({
                     to: { name: "query" },
                     icon: "magnifying-glass"
                 }
-            }
+            },
+            children: [
+                {
+                    path: "saved",
+                    component: {
+                        name: "SavedQueriesRoot",
+                        render(h) {
+                            return h("router-view", { on: this.$listeners })
+                        },
+                    },
+                    meta: {
+                        requiresFleet: false,
+                        breadcrumbs: {
+                            text: "Saved queries",
+                            to: { name: "query.saved" },
+                        }
+                    },
+                    children: [
+                        {
+                            path: "",
+                            name: "query.saved",
+                            component: () => import("./views/query/SavedQueries.vue"),
+                            meta: {
+                                requiresFleet: false,
+                            }
+                        },
+                        {
+                            path: ":saved_id(\\d+)",
+                            name: "query.saved.view",
+                            component: () => import("./views/query/SavedQueryView.vue"),
+                            props: (route) => ({ saved_id: Number.parseInt(route.params.saved_id, 10) }),
+                            meta: {
+                                requiresFleet: false,
+                                breadcrumbs: {
+                                    text: "Saved query",
+                                    to: { name: "query.saved.view" },
+                                }
+                            }
+                        },
+                    ]
+                },
+                {
+                    // A statement to run on many servers (`?fleet=<id>` or `?servers=1,2` chooses them, `?saved=<id>`
+                    // opens a saved query), or a run's answers
+                    path: ":job_id([0-9a-f-]{36})?",
+                    name: "query",
+                    component: () => import("./views/query/QueryPage.vue"),
+                    props: (route) => ({ job_id: route.params.job_id || null }),
+                    meta: {
+                        requiresFleet: false,
+                    }
+                },
+            ]
         },
         {
             path: "/baselines",

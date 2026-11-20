@@ -21,6 +21,22 @@ function idList(ids) {
     return Array.isArray(ids) ? ids.join(",") : undefined
 }
 
+// A request whose refusals are part of the answer: resolves `{ ok: true, ...data }`, or `{ ok: false, message,
+// field, errors }` on a 400, 404 or 409 (the client's usual error handling would keep only the message)
+function refusable(method, url, body) {
+    return common.getClient().request({
+        method,
+        url,
+        data: body,
+        validateStatus: status => (status >= 200 && status < 300) || [400, 404, 409].includes(status),
+    }).then((response) => {
+        if (response.status >= 400) {
+            return Object.assign({ ok: false, errors: [] }, response.data)
+        }
+        return Object.assign({ ok: true }, response.data)
+    }).catch(message)
+}
+
 export default {
     // Keywords, tables (default columns, aliases, sort names), FORMATs and the LIMIT cap
     language() {
@@ -54,6 +70,28 @@ export default {
     },
     describe({ table, server_ids, refresh = false }) {
         return get("/queries/describe", { table, server_ids: idList(server_ids), refresh: refresh ? 1 : undefined })
+    },
+    // Saved queries: statements kept with their servers, schedule and expectation
+    savedList() {
+        return get("/queries/saved")
+    },
+    // A saved query, with each of its servers' last answer and state
+    savedGet(saved_id) {
+        return get(`/queries/saved/${encodeURIComponent(saved_id)}`)
+    },
+    // `{ ok: true, ...saved query }` or `{ ok: false, message, field, errors }`
+    savedCreate(body) {
+        return refusable("post", "/queries/saved", body)
+    },
+    savedUpdate(saved_id, body) {
+        return refusable("put", `/queries/saved/${encodeURIComponent(saved_id)}`, body)
+    },
+    savedDelete(saved_id) {
+        return common.getClient().delete(`/queries/saved/${encodeURIComponent(saved_id)}`).then(data).catch(message)
+    },
+    // `{ ok: true, job_id, job }` or `{ ok: false, message, errors }` (already running, statement no longer passes)
+    savedRun(saved_id) {
+        return refusable("post", `/queries/saved/${encodeURIComponent(saved_id)}/run`)
     },
     // The user's latest runs
     recent(limit = 10) {
