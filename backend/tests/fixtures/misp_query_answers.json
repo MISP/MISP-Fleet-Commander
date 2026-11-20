@@ -1,0 +1,747 @@
+{
+ "_comment": "Answers of MISP 3.0 servers to MispQL requests, recorded live and scrubbed (UUIDs, emails, organisation names). `request` is what was sent; `body` is the answer as JSON",
+ "describe_events": {
+  "about": "GET /events/queryDescribe, site admin key",
+  "request": {
+   "method": "GET",
+   "path": "/events/queryDescribe",
+   "body": null
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+   "tables": {
+    "events": {
+     "endpoint": "/events/restSearch",
+     "fields": {
+      "id": {
+       "type": "int",
+       "operators": [
+        "=",
+        "!=",
+        ">",
+        "<",
+        ">=",
+        "<=",
+        "IN",
+        "NOT IN"
+       ],
+       "level": [
+        "event"
+       ]
+      },
+      "event_id": {
+       "type": "int",
+       "operators": [
+        "=",
+        "!=",
+        ">",
+        "<",
+        ">=",
+        "<=",
+        "IN",
+        "NOT IN"
+       ],
+       "level": [
+        "event"
+       ]
+      },
+      "uuid": {
+       "type": "string",
+       "operators": [
+        "=",
+        "!=",
+        "IN",
+        "NOT IN"
+       ],
+       "level": [
+        "event"
+       ]
+      },
+      "distribution": {
+       "type": "int",
+       "operators": [
+        "=",
+        "!=",
+        ">",
+        "<",
+        ">=",
+        "<=",
+        "IN",
+        "NOT IN"
+       ],
+       "level": [
+        "event"
+       ]
+      },
+      "analysis": {
+       "type": "int",
+       "operators": [
+        "=",
+        "!=",
+        ">",
+        "<",
+        ">=",
+        "<=",
+        "IN",
+        "NOT IN"
+       ],
+       "level": [
+        "event"
+       ]
+      },
+      "threat_level_id": {
+       "type": "int",
+       "operators": [
+        "=",
+        "!=",
+        ">",
+        "<",
+        ">=",
+        "<=",
+        "IN",
+        "NOT IN"
+       ],
+       "level": [
+        "event"
+       ]
+      },
+      "org_id": {
+       "type": "int",
+       "operators": [
+        "=",
+        "!=",
+        ">",
+        "<",
+        ">=",
+        "<=",
+        "IN",
+        "NOT IN"
+       ],
+       "level": [
+        "event"
+       ]
+      },
+      "orgc_id": {
+       "type": "int",
+       "operators": [
+        "=",
+        "!=",
+        ">",
+        "<",
+        ">=",
+        "<=",
+        "IN",
+        "NOT IN"
+       ],
+       "level": [
+        "event"
+       ]
+      },
+      "org": {
+       "type": "string",
+       "operators": [
+        "=",
+        "!=",
+        "IN",
+        "NOT IN"
+       ],
+       "level": [
+        "event"
+       ]
+      },
+      "eventinfo": {
+       "type": "string",
+       "operators": [
+        "=",
+        "!=",
+        "IN",
+        "NOT IN",
+        "LIKE",
+        "NOT LIKE"
+       ],
+       "level": [
+        "event"
+       ]
+      },
+      "date": {
+       "type": "date",
+       "operators": [
+        "=",
+        "!=",
+        ">",
+        "<",
+        ">=",
+        "<=",
+        "IN",
+        "NOT IN"
+       ],
+       "level": [
+        "event"
+       ]
+      },
+      "timestamp": {
+       "type": "timestamp",
+       "operators": [
+        "=",
+        "!=",
+        ">",
+        "<",
+        ">=",
+        "<=",
+        "IN",
+        "NOT IN"
+       ],
+       "level": [
+        "event"
+       ]
+      },
+      "event_timestamp": {
+       "type": "timestamp",
+       "operators": [
+        "=",
+        "!=",
+        ">",
+        "<",
+        ">=",
+        "<=",
+        "IN",
+        "NOT IN"
+       ],
+       "level": [
+        "event"
+       ]
+      },
+      "publish_timestamp": {
+       "type": "timestamp",
+       "operators": [
+        "=",
+        "!=",
+        ">",
+        "<",
+        ">=",
+        "<=",
+        "IN",
+        "NOT IN"
+       ],
+       "level": [
+        "event"
+       ]
+      },
+      "published": {
+       "type": "bool",
+       "operators": [
+        "=",
+        "!="
+       ],
+       "level": [
+        "event"
+       ]
+      },
+      "tags": {
+       "type": "string",
+       "operators": [
+        "=",
+        "!=",
+        "IN",
+        "NOT IN",
+        "LIKE",
+        "NOT LIKE"
+       ],
+       "level": [
+        "event",
+        "attribute"
+       ]
+      },
+      "type": {
+       "type": "string",
+       "operators": [
+        "=",
+        "IN",
+        "LIKE"
+       ],
+       "level": [
+        "attribute"
+       ]
+      },
+      "category": {
+       "type": "string",
+       "operators": [
+        "=",
+        "IN",
+        "LIKE"
+       ],
+       "level": [
+        "attribute"
+       ]
+      },
+      "object_relation": {
+       "type": "string",
+       "operators": [
+        "=",
+        "IN",
+        "LIKE"
+       ],
+       "level": [
+        "attribute"
+       ]
+      },
+      "comment": {
+       "type": "string",
+       "operators": [
+        "=",
+        "IN",
+        "LIKE"
+       ],
+       "level": [
+        "attribute"
+       ]
+      },
+      "value": {
+       "type": "string",
+       "operators": [
+        "=",
+        "IN",
+        "LIKE"
+       ],
+       "level": [
+        "attribute"
+       ]
+      },
+      "to_ids": {
+       "type": "bool",
+       "operators": [
+        "="
+       ],
+       "level": [
+        "attribute"
+       ]
+      },
+      "object_name": {
+       "type": "string",
+       "operators": [
+        "=",
+        "IN",
+        "LIKE"
+       ],
+       "level": [
+        "object"
+       ]
+      },
+      "object_template_uuid": {
+       "type": "string",
+       "operators": [
+        "=",
+        "IN"
+       ],
+       "level": [
+        "object"
+       ]
+      }
+     },
+     "sortable": [
+      "id",
+      "info",
+      "analysis",
+      "threat_level_id",
+      "distribution",
+      "timestamp",
+      "publish_timestamp"
+     ]
+    }
+   },
+   "limits": {
+    "max_depth": 5,
+    "max_nodes": 50,
+    "max_list": 100,
+    "max_value_length": 1024
+   }
+  }
+ },
+ "rows_events": {
+  "about": "SELECT * FROM events WHERE id > 0 LIMIT 2",
+  "request": {
+   "method": "POST",
+   "path": "/events/restSearch",
+   "body": {
+    "returnFormat": "json",
+    "metadata": 1,
+    "limit": 2,
+    "page": 1,
+    "query": {
+     "id": {
+      ">": 0
+     }
+    }
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/json; charset=UTF-8",
+   "X-Result-Count": "1"
+  },
+  "body": {
+   "response": [
+    {
+     "Event": {
+      "id": "1",
+      "orgc_id": "1",
+      "org_id": "1",
+      "date": "2026-10-20",
+      "threat_level_id": "4",
+      "info": "smoke",
+      "published": true,
+      "uuid": "00000000-0000-4000-8000-000000000001",
+      "attribute_count": "1",
+      "analysis": "0",
+      "timestamp": "1792490914",
+      "distribution": "0",
+      "proposal_email_lock": false,
+      "locked": false,
+      "publish_timestamp": "1792490914",
+      "first_publication": "1792490914",
+      "sharing_group_id": "0",
+      "disable_correlation": false,
+      "extends_uuid": "",
+      "protected": null,
+      "event_creator_email": "admin@example.test",
+      "Org": {
+       "id": "1",
+       "name": "ORGNAME",
+       "uuid": "00000000-0000-4000-8000-000000000002",
+       "local": true
+      },
+      "Orgc": {
+       "id": "1",
+       "name": "ORGNAME",
+       "uuid": "00000000-0000-4000-8000-000000000002",
+       "local": true
+      },
+      "RelatedEvent": [],
+      "Galaxy": [],
+      "CryptographicKey": []
+     }
+    }
+   ]
+  }
+ },
+ "rows_attributes": {
+  "about": "SELECT * FROM attributes WHERE id > 0 LIMIT 2",
+  "request": {
+   "method": "POST",
+   "path": "/attributes/restSearch",
+   "body": {
+    "returnFormat": "json",
+    "limit": 2,
+    "page": 1,
+    "query": {
+     "id": {
+      ">": 0
+     }
+    }
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/json; charset=UTF-8",
+   "X-Result-Count": "1"
+  },
+  "body": {
+   "response": {
+    "Attribute": [
+     {
+      "id": "1",
+      "event_id": "1",
+      "object_id": "0",
+      "object_relation": null,
+      "category": "Network activity",
+      "type": "ip-dst",
+      "to_ids": true,
+      "uuid": "00000000-0000-4000-8000-000000000003",
+      "timestamp": "1792490914",
+      "created": "1792490914",
+      "distribution": "5",
+      "sharing_group_id": "0",
+      "comment": "",
+      "deleted": false,
+      "disable_correlation": false,
+      "first_seen": null,
+      "last_seen": null,
+      "value": "198.51.100.7",
+      "Event": {
+       "id": "1",
+       "info": "smoke",
+       "org_id": "1",
+       "orgc_id": "1",
+       "uuid": "00000000-0000-4000-8000-000000000001",
+       "user_id": "1",
+       "threat_level_id": "4",
+       "distribution": "0",
+       "analysis": "0",
+       "date": "2026-10-20",
+       "timestamp": "1792490914",
+       "publish_timestamp": "1792490914",
+       "Org": {
+        "id": "1",
+        "name": "ORGNAME",
+        "uuid": "00000000-0000-4000-8000-000000000002"
+       },
+       "Orgc": {
+        "id": "1",
+        "name": "ORGNAME",
+        "uuid": "00000000-0000-4000-8000-000000000002"
+       },
+       "ThreatLevel": ""
+      }
+     }
+    ]
+   }
+  }
+ },
+ "count_events": {
+  "about": "SELECT COUNT(*) FROM events WHERE id > 0 (X-Result-Count)",
+  "request": {
+   "method": "POST",
+   "path": "/events/restSearch",
+   "body": {
+    "returnFormat": "json",
+    "limit": 1,
+    "page": 1,
+    "metadata": 1,
+    "query": {
+     "id": {
+      ">": 0
+     }
+    }
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/json; charset=UTF-8",
+   "X-Result-Count": "1"
+  },
+  "body": {
+   "response": [
+    {
+     "Event": {
+      "id": "1",
+      "orgc_id": "1",
+      "org_id": "1",
+      "date": "2026-10-20",
+      "threat_level_id": "4",
+      "info": "smoke",
+      "published": true,
+      "uuid": "00000000-0000-4000-8000-000000000001",
+      "attribute_count": "1",
+      "analysis": "0",
+      "timestamp": "1792490914",
+      "distribution": "0",
+      "proposal_email_lock": false,
+      "locked": false,
+      "publish_timestamp": "1792490914",
+      "first_publication": "1792490914",
+      "sharing_group_id": "0",
+      "disable_correlation": false,
+      "extends_uuid": "",
+      "protected": null,
+      "event_creator_email": "admin@example.test",
+      "Org": {
+       "id": "1",
+       "name": "ORGNAME",
+       "uuid": "00000000-0000-4000-8000-000000000002",
+       "local": true
+      },
+      "Orgc": {
+       "id": "1",
+       "name": "ORGNAME",
+       "uuid": "00000000-0000-4000-8000-000000000002",
+       "local": true
+      },
+      "RelatedEvent": [],
+      "Galaxy": [],
+      "CryptographicKey": []
+     }
+    }
+   ]
+  }
+ },
+ "count_attributes": {
+  "about": "SELECT COUNT(*) FROM attributes WHERE id > 0 (body)",
+  "request": {
+   "method": "POST",
+   "path": "/attributes/restSearch",
+   "body": {
+    "returnFormat": "count",
+    "query": {
+     "id": {
+      ">": 0
+     }
+    }
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "text/plain; charset=UTF-8",
+   "X-Result-Count": "1"
+  },
+  "body": 1
+ },
+ "error_several": {
+  "about": "SELECT * FROM attributes WHERE bogus = 1 AND id = 'x' AND type LIKE 'a%b' AND NOT (value IN (1)) LIMIT 1",
+  "request": {
+   "method": "POST",
+   "path": "/attributes/restSearch",
+   "body": {
+    "returnFormat": "json",
+    "limit": 1,
+    "page": 1,
+    "query": {
+     "AND": [
+      {
+       "bogus": 1
+      },
+      {
+       "id": "x"
+      },
+      {
+       "type": {
+        "LIKE": "a%b"
+       }
+      },
+      {
+       "NOT": {
+        "value": {
+         "IN": [
+          1
+         ]
+        }
+       }
+      }
+     ]
+    }
+   }
+  },
+  "status": 400,
+  "headers": {
+   "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+   "name": "Invalid query",
+   "message": "4 errors",
+   "url": "/attributes/restSearch",
+   "errors": [
+    {
+     "path": "query.AND[0].<unknown>",
+     "code": "unknown_field",
+     "message": "unknown field"
+    },
+    {
+     "path": "query.AND[1].id",
+     "code": "bad_type",
+     "message": "this field expects an integer"
+    },
+    {
+     "path": "query.AND[2].type",
+     "code": "bad_type",
+     "message": "LIKE takes a leading and/or trailing %, nothing else"
+    },
+    {
+     "path": "query.AND[3].NOT.value",
+     "code": "bad_type",
+     "message": "this field expects a non-empty string"
+    }
+   ]
+  }
+ },
+ "error_objects_order": {
+  "about": "objects sent an order",
+  "request": {
+   "method": "POST",
+   "path": "/objects/restSearch",
+   "body": {
+    "returnFormat": "json",
+    "limit": 1,
+    "page": 1,
+    "order": "id",
+    "query": {
+     "id": {
+      ">": 0
+     }
+    }
+   }
+  },
+  "status": 400,
+  "headers": {
+   "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+   "name": "Invalid query",
+   "message": "1 error",
+   "url": "/objects/restSearch",
+   "errors": [
+    {
+     "path": "order[0]",
+     "code": "unknown_field",
+     "message": "unknown sort field"
+    }
+   ]
+  }
+ },
+ "search_no_permission": {
+  "about": "a COUNT with a key whose role lacks Complex query",
+  "request": {
+   "method": "POST",
+   "path": "/attributes/restSearch",
+   "body": {
+    "returnFormat": "count",
+    "query": {
+     "id": {
+      ">": 0
+     }
+    }
+   }
+  },
+  "status": 403,
+  "headers": {
+   "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+   "name": "You do not have the permission to use complex queries.",
+   "message": "You do not have the permission to use complex queries.",
+   "url": "/attributes/restSearch"
+  }
+ },
+ "search_not_implemented": {
+  "about": "tags restSearch on a MISP 3.0.0 without complex queries",
+  "request": {
+   "method": "POST",
+   "path": "/tags/restSearch",
+   "body": {
+    "returnFormat": "json",
+    "limit": 3,
+    "page": 1,
+    "query": {
+     "AND": [
+      {
+       "id": -1
+      },
+      {
+       "value": "mispql-probe-no-such-value"
+      }
+     ]
+    }
+   }
+  },
+  "status": 404,
+  "headers": {
+   "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+   "name": "RestSearch is not implemented (yet) for this scope.",
+   "message": "RestSearch is not implemented (yet) for this scope.",
+   "url": "/tags/restSearch"
+  }
+ }
+}

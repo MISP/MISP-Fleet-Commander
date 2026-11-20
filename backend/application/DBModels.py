@@ -370,7 +370,7 @@ class HealthAck(BaseModel):
 
 
 JOB_KINDS = ('plugin_action', 'plugin_quick_action', 'rest_query', 'baseline_remediation', 'server_management',
-             'edit_connection', 'organisation_copy', 'sharing_group_copy')
+             'edit_connection', 'organisation_copy', 'sharing_group_copy', 'mispql_query')
 JOB_STATUSES = ('queued', 'running', 'done', 'partial', 'failed', 'cancelled')
 # `pending` until the server's unit is over; the others are final
 JOB_RESULT_STATUSES = ('pending', 'ok', 'error', 'skipped', 'cancelled')

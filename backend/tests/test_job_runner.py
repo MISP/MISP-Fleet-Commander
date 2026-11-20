@@ -49,7 +49,7 @@ def fakeExecute(monkeypatch):
     behaviour = {}
     calls = []
 
-    def execute(kind, server, params):
+    def execute(kind, server, params, job_id=None):
         calls.append((kind, server.name, params))
         outcome = behaviour.get(server.name, UnitResult(True, http_status=200, summary="Done"))
         return outcome(server) if callable(outcome) else outcome
@@ -540,7 +540,7 @@ def test_a_failure_to_record_does_not_hide_the_outcome(db, fleet, monkeypatch):
     import application.models.jobs as jobModel
     from application.models.jobs import UnitResult
     user, theFleet, servers = fleet
-    monkeypatch.setattr(jobRunner, "execute", lambda kind, server, params: UnitResult(True, summary="Saved"))
+    monkeypatch.setattr(jobRunner, "execute", lambda kind, server, params, job_id=None: UnitResult(True, summary="Saved"))
 
     def broken(*a, **k):
         raise RuntimeError("database is locked")

@@ -68,7 +68,7 @@ def runUnit(app, kind: str, job_id: str, result_id: int, server_id: int, params:
         if server is None:
             unit = UnitResult(False, skipped=True, summary='The server was deleted')
         else:
-            unit = execute(kind, server, params)
+            unit = execute(kind, server, params, job_id=job_id)
         return result_id, unit, started, time.time()
 
 

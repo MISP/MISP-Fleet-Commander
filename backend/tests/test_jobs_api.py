@@ -248,7 +248,7 @@ def test_a_cancelled_queued_job_runs_nothing(db, client, auth_headers, owner, mo
     import application.models.jobRunner as jobRunner
     user, fleets, servers = owner
     ran = []
-    monkeypatch.setattr(jobRunner, "execute", lambda *a: ran.append(a))
+    monkeypatch.setattr(jobRunner, "execute", lambda *a, **k: ran.append(a))
     job = makeJob(user, servers[:3])
     post(client, auth_headers(user), f"/jobs/{job.id}/cancel")
     jobRunner.run(job.id)

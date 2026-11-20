@@ -69,11 +69,17 @@ def snapshotRole(server) -> Optional[dict]:
 
 def check(server) -> dict:
     """Asks the server now, never from a cache, and keeps its answer for the UI"""
-    response = mispRawRequest(server, mispql.SUPPORT_CHECK.method, mispql.SUPPORT_CHECK.path)
+    response = mispRawRequest(server, mispql.SUPPORT_CHECK.method, mispql.SUPPORT_CHECK.path,
+                              max_bytes=DESCRIBE_MAX_BYTES)
     if isinstance(response, dict):
         found = capability(UNREACHABLE, None, response.get('error') or 'No answer')
     else:
         found = classify(response.status_code, response.content, snapshotRole(server))
+    return remember(server, found)
+
+
+def remember(server, found: dict) -> dict:
+    """Keep a capability just learnt (here, or by a query run's own check) for the UI"""
     seconds = RETRY_SECONDS if found['state'] in (UNREACHABLE, UNKNOWN) else CACHE_SECONDS
     redisModel.redisClient.set(cacheKey(server.id), json.dumps(found), ex=seconds)
     return found
@@ -92,11 +98,51 @@ def get(server, refresh: bool = False) -> dict:
 
 
 def forget(server_id: int) -> None:
-    redisModel.redisClient.delete(cacheKey(server_id))
+    redisModel.redisClient.delete(cacheKey(server_id), *(describeKey(server_id, table) for table in mispql.TABLES))
 
 
 def cacheKey(server_id: int) -> str:
     return f'{redisModel.KEY_QUERY_CAPABILITY}:{server_id}'
+
+
+# A table's fields, as the server describes them, for completing statements. Kept as long as the capability, and
+# forgotten with it
+DESCRIBE_MAX_BYTES = 1024 * 1024
+
+
+def describeKey(server_id: int, table: str) -> str:
+    return f'{redisModel.KEY_QUERY_DESCRIBE}:{server_id}:{table}'
+
+
+def describe(server, table: str, refresh: bool = False) -> dict:
+    """`{"state": "supported", "fields", "limits"}` for a table of `mispql.TABLES`, or the capability state that
+    explains why the server did not describe it (`not_supported`, `no_permission`, …) with its `detail`"""
+    key = describeKey(server.id, table)
+    if not refresh:
+        cached = redisModel.redisClient.get(key)
+        if cached:
+            try:
+                return {**json.loads(cached), 'cached': True}
+            except (ValueError, TypeError):
+                pass
+    endpoint = mispql.TABLES[table].discovery
+    response = mispRawRequest(server, 'GET', endpoint, max_bytes=DESCRIBE_MAX_BYTES)
+    if isinstance(response, dict):
+        return capability(UNREACHABLE, None, response.get('error') or 'No answer')
+    found = classify(response.status_code, response.content, snapshotRole(server))
+    if found['state'] != SUPPORTED:
+        return found
+    exchange = mispql.Exchange(mispql.DescribePlan(table=table, endpoint=endpoint))
+    try:
+        exchange.receive(response.status_code, response.headers, response.content)
+    except mispql.ClientError as e:  # it lists tables, but not this one
+        return capability(UNKNOWN, response.status_code, str(e))
+    return rememberDescribe(server.id, table, {**found, **exchange.result})
+
+
+def rememberDescribe(server_id: int, table: str, found: dict) -> dict:
+    redisModel.redisClient.set(describeKey(server_id, table), json.dumps(found), ex=CACHE_SECONDS)
+    return found
 
 
 def capability(state: str, status: Optional[int], detail: str) -> dict:

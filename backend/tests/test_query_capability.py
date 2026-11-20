@@ -73,7 +73,7 @@ def misp(monkeypatch):
     import application.models.queryCapability as queryCapability
     state = {'answer': (200, body('supported')), 'requests': []}
 
-    def fakeRequest(server, method, url, data=None, timeout=None):
+    def fakeRequest(server, method, url, data=None, timeout=None, max_bytes=None):
         state['requests'].append((method, url, data))
         answer = state['answer']
         return answer if isinstance(answer, dict) else FakeResponse(*answer)

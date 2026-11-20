@@ -1,6 +1,9 @@
 import json
 import time
 from typing import Union
+
+import mispql
+
 from application import redisClient
 
 # Snapshots never expire: their freshness is judged by their `timestamp`
@@ -19,6 +22,11 @@ KEY_SERVER_SHARING_GROUPS = 'server-sgs'
 KEY_SERVER_ORG_DIGEST = 'server-org-digest'
 # Whether the server runs complex queries (models/queryCapability.py): forgotten on refresh and edit, expires
 KEY_QUERY_CAPABILITY = 'query-capability'
+# A table's fields as the server describes them, `<prefix>:<server id>:<table>`: forgotten with the capability
+KEY_QUERY_DESCRIBE = 'query-describe'
+# The rows a query run brought back, `<prefix>:<job id>:<server id>` (models/fleetQueries.py): never in the database,
+# they expire
+KEY_QUERY_ROWS = 'mispql-rows'
 KEY_FLEET_ORG_FINDINGS = 'fleet-org-findings'
 
 
@@ -67,6 +75,7 @@ def deleteServerData(server_uuid: str, server_id: Union[int, None] = None) -> No
         keys.append(f"{KEY_SYNC_ACTIVITY}:{server_id}")
         keys.append(f"{KEY_SERVER_BENCHMARKS}:{server_id}")
         keys.append(f"{KEY_QUERY_CAPABILITY}:{server_id}")
+        keys.extend(f"{KEY_QUERY_DESCRIBE}:{server_id}:{table}" for table in mispql.TABLES)
     redisClient.delete(*keys)
 
 

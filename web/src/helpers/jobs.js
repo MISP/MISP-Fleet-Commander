@@ -29,6 +29,7 @@ export const JOB_KIND_LABELS = {
     baseline_remediation: "Baseline remediation",
     organisation_copy: "Organisation copy",
     sharing_group_copy: "Sharing group copy",
+    mispql_query: "Query",
 }
 
 // The jobs list's status filter: groups of statuses, as the API takes them (comma-separated)

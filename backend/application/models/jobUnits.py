@@ -197,6 +197,11 @@ def baselineRemediationUnit(server: Server, params: dict) -> UnitResult:
     return remediationUnit(server, params)
 
 
+def mispqlQueryUnit(server: Server, params: dict, job_id: Optional[str] = None) -> UnitResult:
+    from application.models import fleetQueries
+    return fleetQueries.run(server, params, job_id)
+
+
 EXECUTORS: Dict[str, Callable[[Server, dict], UnitResult]] = {
     'plugin_action': pluginActionUnit,
     'plugin_quick_action': pluginQuickActionUnit,
@@ -206,14 +211,19 @@ EXECUTORS: Dict[str, Callable[[Server, dict], UnitResult]] = {
     'baseline_remediation': baselineRemediationUnit,
     'organisation_copy': organisationCopyUnit,
     'sharing_group_copy': sharingGroupCopyUnit,
+    'mispql_query': mispqlQueryUnit,
 }
+# Executors that keep data under their job's ID (a query's rows), and so are given it
+WITH_JOB_ID = ('mispql_query',)
 
 
-def execute(kind: str, server: Server, params: dict) -> UnitResult:
+def execute(kind: str, server: Server, params: dict, job_id: Optional[str] = None) -> UnitResult:
     executor = EXECUTORS.get(kind)
     if executor is None:
         return UnitResult(False, summary=f'Unknown job kind `{kind}`')
     try:
+        if kind in WITH_JOB_ID:
+            return executor(server, params or {}, job_id)
         return executor(server, params or {})
     except Exception as e:
         if application.flaskApp is not None:

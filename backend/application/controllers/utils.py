@@ -192,17 +192,23 @@ def mispPostRequest(server, url, data={}, rawResponse=False, nocache=True, timeo
     except Exception as e:
         return { "error": "Exception " + str(e) }
 
-def mispRawRequest(server, method, url, data=None, timeout=None):
+def mispRawRequest(server, method, url, data=None, timeout=None, max_bytes=None):
     """MISP's response to a request whatever its HTTP status, never from the cache; on a transport failure, the same
-    error dict as the other helpers. For callers that read MISP's refusals themselves (complex queries)"""
+    error dict as the other helpers. For callers that read MISP's refusals themselves (complex queries).
+    With `max_bytes`, the body is read up to that size: a larger one is dropped, giving
+    `{"error": …, "too_large": True}`"""
     headers = {
         "Authorization": server.authkey,
         "Accept": "application/json",
         "Content-Type": "application/json"
     }
     try:
-        return getRequestPSession().request(method, urljoin(server.url, url), json=data, headers=headers,
-                                            verify=(not getattr(server, 'skip_ssl', True)), timeout=mispTimeout(timeout))
+        response = getRequestPSession().request(method, urljoin(server.url, url), json=data, headers=headers,
+                                                verify=(not getattr(server, 'skip_ssl', True)),
+                                                timeout=mispTimeout(timeout), stream=max_bytes is not None)
+        if max_bytes is not None and not readCapped(response, max_bytes):
+            return {"error": f"The answer is larger than {sizeText(max_bytes)}", "too_large": True}
+        return response
     except requests.exceptions.SSLError:
         return { "error": "SSL Error" }
     except requests.exceptions.ConnectTimeout:
@@ -213,6 +219,38 @@ def mispRawRequest(server, method, url, data=None, timeout=None):
         return { "error": "Server unreachable" }
     except Exception as e:
         return { "error": "Exception " + str(e) }
+
+
+def readCapped(response, max_bytes) -> bool:
+    """Read a streamed response's body into it (`response.content`), unless it is larger than `max_bytes`: False then,
+    and the connection is closed without reading the rest. The size is that of the decoded body"""
+    declared = response.headers.get('Content-Length', '')
+    if declared.isdigit() and int(declared) > max_bytes and not response.headers.get('Content-Encoding'):
+        response.close()
+        return False
+    chunks, size = [], 0
+    try:
+        for chunk in response.iter_content(chunk_size=64 * 1024):
+            size += len(chunk)
+            if size > max_bytes:
+                response.close()
+                return False
+            chunks.append(chunk)
+    except requests.exceptions.ConnectionError as e:
+        # requests reports a read timeout in the middle of a body as a connection error
+        if 'timed out' in str(e).lower():
+            raise requests.exceptions.ReadTimeout(e) from e
+        raise
+    response._content = b''.join(chunks)
+    return True
+
+
+def sizeText(size: int) -> str:
+    if size >= 1024 * 1024:
+        return f'{size / (1024 * 1024):g} MB'
+    if size >= 1024:
+        return f'{size / 1024:g} kB'
+    return f'{size} bytes'
 
 
 def errorText(errors) -> str:
