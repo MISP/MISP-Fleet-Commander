@@ -67,6 +67,7 @@ class User(BaseModel):
     health_acks = db.relationship("HealthAck", uselist=True, cascade="all, delete-orphan")
     # Not delete-orphan: a fleet's baseline has no user, and would count as an orphan of this relationship
     saved_baselines = db.relationship("Baseline", uselist=True, back_populates="user", cascade="all")
+    saved_queries = db.relationship("SavedQuery", uselist=True, back_populates="user", cascade="all, delete-orphan")
 
     @classmethod
     def byAPIKey(cls, apikey):
@@ -225,6 +226,8 @@ def forgetDeletedServer(mapper, connection, server):
     connection.execute(HealthAck.__table__.delete().where(HealthAck.__table__.c.server_id == server.id))
     connection.execute(MetricSample.__table__.delete().where(MetricSample.__table__.c.server_id == server.id))
     connection.execute(MetricState.__table__.delete().where(MetricState.__table__.c.server_id == server.id))
+    connection.execute(SavedQueryResult.__table__.delete()
+                       .where(SavedQueryResult.__table__.c.server_id == server.id))
     connection.execute(JobResult.__table__.update().where(JobResult.__table__.c.server_id == server.id)
                        .values(server_id=None))
     from application.models.health import publishServerRemoved
@@ -587,6 +590,107 @@ class BaselineRule(BaseModel):
     baseline = db.relationship('Baseline', back_populates='rules')
 
 
+SAVED_QUERY_COMPARATORS = ('eq', 'ne', 'lt', 'lte', 'gt', 'gte')
+SAVED_QUERY_SEVERITIES = ('info', 'warning', 'critical')
+
+
+class SavedQuery(BaseModel):
+    """A MispQL statement kept by a user, with where it runs: a fleet (whatever servers it has when the query runs)
+    or a list of servers. It may run on a schedule and say what each server's answer should be (`comparator`,
+    `expected`): a server answering otherwise raises a health issue of `severity`. A saved query whose fleet was
+    deleted keeps no target, and does not run"""
+    __tablename__ = 'saved_queries'
+    __table_args__ = (UniqueConstraint('user_id', 'name', name='uq_saved_queries_user_id_name'),)
+
+    id = db.Column(db.Integer,
+                   primary_key=True)
+    user_id = db.Column(db.Integer,
+                        db.ForeignKey('users.id', ondelete='CASCADE'),
+                        nullable=False,
+                        index=True)
+    name = db.Column(db.String(120),
+                     nullable=False)
+    description = db.Column(db.String(500),
+                            nullable=False,
+                            default='',
+                            server_default='')
+    statement = db.Column(db.Text,
+                          nullable=False)
+    fleet_id = db.Column(db.Integer,
+                         db.ForeignKey('fleets.id', ondelete='SET NULL'),
+                         nullable=True,
+                         index=True)
+    server_ids = db.Column(db.JSON,
+                           nullable=True)
+    # Minutes between runs; None: run by hand only
+    schedule_minutes = db.Column(db.Integer,
+                                 nullable=True)
+    # What each server's count (or number of rows) should be; None: no expectation
+    comparator = db.Column(db.String(8),
+                           nullable=True)
+    expected = db.Column(db.BigInteger,
+                         nullable=True)
+    severity = db.Column(db.String(16),
+                         nullable=False,
+                         default='warning',
+                         server_default='warning')
+    created = db.Column(db.Integer,
+                        nullable=False)
+    updated = db.Column(db.Integer,
+                        nullable=False)
+    # When the last run started, scheduled or by hand, and its job (which job retention may have deleted since)
+    last_run_at = db.Column(db.Integer,
+                            nullable=True)
+    last_job_id = db.Column(db.CHAR(36),
+                            nullable=True)
+    # Why the last scheduled run could not start, e.g. no server left
+    last_error = db.Column(db.String(255),
+                           nullable=False,
+                           default='',
+                           server_default='')
+
+    user = db.relationship('User', back_populates='saved_queries')
+    results = db.relationship('SavedQueryResult', back_populates='saved_query', cascade='all, delete-orphan',
+                              order_by='SavedQueryResult.id')
+
+
+class SavedQueryResult(BaseModel):
+    """What one server answered to a saved query the last time it ran there: never its rows, only the outcome of the
+    run on that server (see models/fleetQueries.py) and the number it gave, a count or the rows returned"""
+    __tablename__ = 'saved_query_results'
+    __table_args__ = (UniqueConstraint('saved_query_id', 'server_id', name='uq_saved_query_results_query_server'),)
+
+    id = db.Column(db.Integer,
+                   primary_key=True)
+    saved_query_id = db.Column(db.Integer,
+                               db.ForeignKey('saved_queries.id', ondelete='CASCADE'),
+                               nullable=False,
+                               index=True)
+    server_id = db.Column(db.Integer,
+                          db.ForeignKey('servers.id', ondelete='CASCADE'),
+                          nullable=False,
+                          index=True)
+    job_id = db.Column(db.CHAR(36),
+                       nullable=True)
+    outcome = db.Column(db.String(32),
+                        nullable=False)
+    value = db.Column(db.BigInteger,
+                      nullable=True)
+    # More rows on the server than the LIMIT let through
+    more = db.Column(db.Boolean,
+                     nullable=False,
+                     default=False,
+                     server_default='0')
+    message = db.Column(db.String(500),
+                        nullable=False,
+                        default='',
+                        server_default='')
+    checked_at = db.Column(db.Integer,
+                           nullable=False)
+
+    saved_query = db.relationship('SavedQuery', back_populates='results')
+
+
 METRIC_TIERS = ('raw', 'hour', 'day')
 
 
@@ -663,3 +767,10 @@ def detachDeletedUserJobs(mapper, connection, user):
 @event.listens_for(Fleet, 'after_delete')
 def detachDeletedFleetJobs(mapper, connection, fleet):
     connection.execute(Job.__table__.update().where(Job.__table__.c.fleet_id == fleet.id).values(fleet_id=None))
+
+
+@event.listens_for(Fleet, 'after_delete')
+def detachDeletedFleetQueries(mapper, connection, fleet):
+    """Saved queries aimed at the fleet are the user's work: they stay, without target"""
+    connection.execute(SavedQuery.__table__.update().where(SavedQuery.__table__.c.fleet_id == fleet.id)
+                       .values(fleet_id=None))

@@ -16,7 +16,7 @@ from application import redisModel
 
 SEVERITIES = ("critical", "warning", "info")
 SEVERITY_RANK = {severity: rank for rank, severity in enumerate(SEVERITIES)}
-CATEGORIES = ("availability", "version", "workers", "sync", "services", "config", "freshness", "users")
+CATEGORIES = ("availability", "version", "workers", "sync", "services", "config", "freshness", "users", "queries")
 
 DEFAULT_WORKER_WARNING_THRESHOLD = 10
 DEFAULT_WORKER_DANGER_THRESHOLD = 100
@@ -92,6 +92,8 @@ class Context:
     baseline_rules: dict = field(default_factory=dict)
     # Organisations that do not line up in each fleet, read on first use (see `organisations.findingsFor`)
     organisation_findings: dict = field(default_factory=dict)
+    # Saved queries watched on each owner's servers, read on first use (see `queries.checksFor`)
+    saved_queries: dict = field(default_factory=dict)
 
     @classmethod
     def for_user(cls, user, now: Optional[int] = None, latest_release: Optional[str] = None) -> "Context":
@@ -296,4 +298,5 @@ def ensure_rules_loaded():
         import application.health.rules  # noqa: F401  (registers the built-in rules)
         import application.health.drift  # noqa: F401  (baseline drift)
         import application.health.organisations  # noqa: F401  (organisations across a fleet)
+        import application.health.queries  # noqa: F401  (saved queries)
         _rulesLoaded = True

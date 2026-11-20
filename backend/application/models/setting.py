@@ -211,6 +211,16 @@ setting_configuration = {
         "disabled": False,
         "error": False,
     },
+    "query_schedule_enabled": {
+        "name": "Scheduled Saved Queries",
+        "description": "Run saved queries on their schedule. When off, they only run by hand, and the issues their last runs raised stay until they run again.",
+        "panel": "Queries",
+        "scope": "Saved Queries",
+        "type": "checkbox",
+        "default": True,
+        "disabled": False,
+        "error": False,
+    },
 }
 
 

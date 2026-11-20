@@ -115,8 +115,22 @@ def run(job_id: str, emitter=None, max_concurrency: Optional[int] = None) -> Opt
     # Cancelled only if a server was left out: a cancel arriving once every server had started changes nothing
     jobModel.finish(job, cancelled=any(row.status == 'cancelled' for row in job.results))
     clearCancel(job.id)
+    afterRun(job, params)
     safeEmit(onDone, job)
     return job
+
+
+def afterRun(job: Job, params: dict) -> None:
+    """What follows a job's end besides its results: a run of a saved query keeps each server's outcome with the
+    saved query. Never raises: the job itself is over and recorded"""
+    if job.kind != 'mispql_query' or params.get('saved_query_id') is None:
+        return
+    try:
+        from application.models import savedQueries
+        savedQueries.afterRun(job)
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception(f'Job {job.id}: could not keep the outcomes of its saved query')
 
 
 def runInline(user: User, kind: str, server: Server, params: dict, title: str = '', emitter=None) -> UnitResult:

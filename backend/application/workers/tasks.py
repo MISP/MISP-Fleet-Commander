@@ -299,6 +299,15 @@ def collectMetrics():
     return len(metricModel.collectAndAnnounce(servers, config["interval"], config["max_concurrency"], socketioEmitter))
 
 
+@huey_app.periodic_task(crontab(minute="*"))
+@skipIfRunning("saved-queries-lock")
+def runSavedQueries():
+    """Start the saved queries whose schedule says they are due, each as a query job of its owner. Runs every minute
+    so that new schedules start at once; the setting `query_schedule_enabled` stops them all"""
+    from application.models import savedQueries
+    return len(savedQueries.runDue())
+
+
 @huey_app.periodic_task(crontab(minute="7"))
 @skipIfRunning("metrics-rollup-lock")
 def rollupMetrics():

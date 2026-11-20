@@ -15,7 +15,7 @@ from mispql.lexer import KEYWORDS
 import application.models.jobs as jobModel
 import application.models.userJobs as userJobs
 from application.DBModels import Job, Server, db
-from application.models import fleetQueries, queryCapability
+from application.models import fleetQueries, queryCapability, savedQueries
 from application.models import fleets as fleetModel
 from application.models.userJobs import JobError
 
@@ -55,7 +55,8 @@ def check(statement) -> dict:
 
 def language() -> dict:
     """What the editor highlights and completes, as mispql reads it: its keywords, each table's default columns,
-    column aliases and sort names, the FORMATs read here, and the most rows a server may return"""
+    column aliases and sort names, the FORMATs read here, and the most rows a server may return. Also what a saved
+    query may hold (schedules, comparators, severities)"""
     return {
         'keywords': sorted(KEYWORDS),
         'formats': list(RENDERINGS),
@@ -66,6 +67,7 @@ def language() -> dict:
             'sortable': list(table.sortable),
         } for name, table in mispql.TABLES.items()],
         'max_limit': fleetQueries.maxLimit(),
+        'saved': savedQueries.options(),
     }
 
 

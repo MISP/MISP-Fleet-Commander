@@ -5,6 +5,7 @@ from application.controllers.jobs import TRUE_VALUES, errorResponse, intArg, jso
 import application.models.jobs as jobModel
 import application.models.userJobs as userJobs
 import application.models.userQueries as userQueries
+from application.models import savedQueries
 
 BPqueries = Blueprint('queries', __name__)
 
@@ -106,3 +107,74 @@ def rows(user, job_id):
                                         server_id=intArg('server_id')))
     except userJobs.JobError as e:
         return errorResponse(e)
+
+# Saved queries
+
+def savedQueryRefused(error: userJobs.JobError):
+    body = {'message': error.message}
+    if getattr(error, 'field', None):
+        body['field'] = error.field
+    if getattr(error, 'errors', None):
+        body['errors'] = error.errors
+    return jsonify(body), error.status
+
+
+@BPqueries.route('/queries/saved', methods=['GET'])
+@token_required
+def savedIndex(user):
+    """The user's saved queries, each with how its servers last answered (`overview`: met, unmet, unchecked…)"""
+    return jsonify({'saved': savedQueries.listForUser(user)})
+
+
+@BPqueries.route('/queries/saved', methods=['POST'])
+@token_required
+def savedCreate(user):
+    """Save a statement: `{name, description?, statement, fleet_id | server_ids, schedule_minutes?, expectation?:
+    {comparator, value}, severity?}`. 400 with `field`, or the statement's mistakes in `errors`"""
+    try:
+        saved = savedQueries.create(user, jsonBody())
+        return jsonify(savedQueries.serialize(saved, withServers=True)), 201
+    except userJobs.JobError as e:
+        return savedQueryRefused(e)
+
+
+@BPqueries.route('/queries/saved/<int:saved_id>', methods=['GET'])
+@token_required
+def savedView(user, saved_id):
+    """A saved query, with each of its servers' last answer and state"""
+    try:
+        return jsonify(savedQueries.serialize(savedQueries.ownedSaved(user, saved_id), withServers=True))
+    except userJobs.JobError as e:
+        return savedQueryRefused(e)
+
+
+@BPqueries.route('/queries/saved/<int:saved_id>', methods=['PUT'])
+@token_required
+def savedUpdate(user, saved_id):
+    """Change any field given at creation. A new statement forgets the answers kept for the old one"""
+    try:
+        saved = savedQueries.update(user, saved_id, jsonBody())
+        return jsonify(savedQueries.serialize(saved, withServers=True))
+    except userJobs.JobError as e:
+        return savedQueryRefused(e)
+
+
+@BPqueries.route('/queries/saved/<int:saved_id>', methods=['DELETE'])
+@token_required
+def savedDelete(user, saved_id):
+    try:
+        savedQueries.delete(user, saved_id)
+        return jsonify({'deleted': saved_id})
+    except userJobs.JobError as e:
+        return savedQueryRefused(e)
+
+
+@BPqueries.route('/queries/saved/<int:saved_id>/run', methods=['POST'])
+@token_required
+def savedRun(user, saved_id):
+    """Run a saved query now, as a query job: 202 with the job. 409 while it is already running"""
+    try:
+        job = savedQueries.runNow(user, saved_id)
+        return jsonify({'job_id': job.id, 'job': jobModel.serializeJob(job, withResults=True)}), 202
+    except userJobs.JobError as e:
+        return savedQueryRefused(e)
