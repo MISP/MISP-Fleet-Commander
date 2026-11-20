@@ -418,6 +418,24 @@ def test_check_endpoint(client, auth_headers, fleet):
     assert body['ok'] is False and body['errors'][0]['start'] == len('SELECT * FROM')
 
 
+def test_language_endpoint_is_what_mispql_reads(client, auth_headers, fleet, caps):
+    import mispql
+    user, _, _ = fleet
+    caps['query_max_limit'] = 250
+    response = client.get('/queries/language', headers=auth_headers(user))
+    body = response.get_json()
+    assert response.status_code == 200
+    assert {'SELECT', 'WHERE', 'COUNT', 'FORMAT'} <= set(body['keywords'])
+    assert body['formats'] == ['table', 'flat']
+    tables = {table['name']: table for table in body['tables']}
+    assert [table['name'] for table in body['tables']] == list(mispql.TABLES)
+    events = tables['events']
+    assert events['columns'][:2] == ['id', 'date'] and events['aliases']['org'] == 'Orgc.name'
+    assert 'eventinfo' in events['sortable'] and tables['objects']['sortable'] == []
+    assert body['max_limit'] == 250
+    assert client.get('/queries/language').status_code == 401
+
+
 def test_a_statement_with_mistakes_creates_no_job(db, client, auth_headers, fleet, queued):
     from application.DBModels import Job
     user, _, servers = fleet

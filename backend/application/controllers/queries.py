@@ -38,6 +38,13 @@ def check(user):
         return errorResponse(e)
 
 
+@BPqueries.route('/queries/language', methods=['GET'])
+@token_required
+def language(user):
+    """Keywords, tables (default columns, aliases, sort names), FORMATs and the LIMIT cap, for the editor"""
+    return jsonify(userQueries.language())
+
+
 @BPqueries.route('/queries', methods=['POST'])
 @token_required
 def create(user):

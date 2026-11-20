@@ -9,6 +9,8 @@ from typing import List, Optional
 
 import mispql
 from flask import current_app
+from mispql.compiler import RENDERINGS
+from mispql.lexer import KEYWORDS
 
 import application.models.jobs as jobModel
 import application.models.userJobs as userJobs
@@ -49,6 +51,22 @@ def serversFor(user, server_ids=None, fleet_id=None) -> List[Server]:
 
 def check(statement) -> dict:
     return fleetQueries.describeStatement(statement)
+
+
+def language() -> dict:
+    """What the editor highlights and completes, as mispql reads it: its keywords, each table's default columns,
+    column aliases and sort names, the FORMATs read here, and the most rows a server may return"""
+    return {
+        'keywords': sorted(KEYWORDS),
+        'formats': list(RENDERINGS),
+        'tables': [{  # a list, in mispql's order: JSON objects lose theirs
+            'name': name,
+            'columns': list(table.columns),
+            'aliases': dict(table.aliases),
+            'sortable': list(table.sortable),
+        } for name, table in mispql.TABLES.items()],
+        'max_limit': fleetQueries.maxLimit(),
+    }
 
 
 def notes(prepared: fleetQueries.Prepared) -> List[str]:
