@@ -228,6 +228,8 @@ def forgetDeletedServer(mapper, connection, server):
     connection.execute(MetricState.__table__.delete().where(MetricState.__table__.c.server_id == server.id))
     connection.execute(SavedQueryResult.__table__.delete()
                        .where(SavedQueryResult.__table__.c.server_id == server.id))
+    connection.execute(SavedQuerySample.__table__.delete()
+                       .where(SavedQuerySample.__table__.c.server_id == server.id))
     connection.execute(JobResult.__table__.update().where(JobResult.__table__.c.server_id == server.id)
                        .values(server_id=None))
     from application.models.health import publishServerRemoved
@@ -691,6 +693,51 @@ class SavedQueryResult(BaseModel):
     saved_query = db.relationship('SavedQuery', back_populates='results')
 
 
+SAVED_QUERY_SAMPLE_TIERS = ('raw', 'day')
+
+
+class SavedQuerySample(BaseModel):
+    """The history of a saved query on a server: the numbers it answered over time, never its rows. A `raw` row is
+    one answer, timed when the server gave it. A `day` row sums up the answers of the UTC day starting at `ts`: the
+    last one (`value`), the lowest and highest, how many there were (`samples`). `more` marks a SELECT that found more
+    rows than its LIMIT let through (on a day row: at least once that day)"""
+    __tablename__ = 'saved_query_samples'
+    __table_args__ = (UniqueConstraint('saved_query_id', 'server_id', 'tier', 'ts',
+                                       name='uq_saved_query_samples_query_server_tier_ts'),
+                      db.Index('ix_saved_query_samples_tier_ts', 'tier', 'ts'))
+
+    id = db.Column(db.Integer,
+                   primary_key=True)
+    saved_query_id = db.Column(db.Integer,
+                               db.ForeignKey('saved_queries.id', ondelete='CASCADE'),
+                               nullable=False)
+    server_id = db.Column(db.Integer,
+                          db.ForeignKey('servers.id', ondelete='CASCADE'),
+                          nullable=False)
+    tier = db.Column(db.String(8),
+                     nullable=False)
+    ts = db.Column(db.Integer,
+                   nullable=False)
+    value = db.Column(db.BigInteger,
+                      nullable=False)
+    low = db.Column(db.BigInteger,
+                    nullable=True)
+    high = db.Column(db.BigInteger,
+                     nullable=True)
+    samples = db.Column(db.Integer,
+                        nullable=False,
+                        default=1,
+                        server_default='1')
+    more = db.Column(db.Boolean,
+                     nullable=False,
+                     default=False,
+                     server_default='0')
+
+    def __repr__(self):
+        return f"<SavedQuerySample>(saved_query_id={self.saved_query_id!r}, server_id={self.server_id!r}, " \
+               f"tier={self.tier!r}, ts={self.ts!r})"
+
+
 METRIC_TIERS = ('raw', 'hour', 'day')
 
 
@@ -767,6 +814,13 @@ def detachDeletedUserJobs(mapper, connection, user):
 @event.listens_for(Fleet, 'after_delete')
 def detachDeletedFleetJobs(mapper, connection, fleet):
     connection.execute(Job.__table__.update().where(Job.__table__.c.fleet_id == fleet.id).values(fleet_id=None))
+
+
+@event.listens_for(SavedQuery, 'after_delete')
+def forgetDeletedQueryHistory(mapper, connection, saved):
+    """In bulk: a saved query run every 15 minutes holds thousands of rows"""
+    connection.execute(SavedQuerySample.__table__.delete()
+                       .where(SavedQuerySample.__table__.c.saved_query_id == saved.id))
 
 
 @event.listens_for(Fleet, 'after_delete')

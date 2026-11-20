@@ -257,8 +257,9 @@ Every series has the `server`, `server_id` and `fleet` labels.
 - `misp_logins_total` and `misp_failed_logins_total`: counters of the logins seen in the MISP logs.
 - `misp_up`: 1 when the last collection read something. `misp_last_sample_timestamp_seconds`: when the latest sample was taken. `misp_info{version="…"}`: the MISP version.
 - `mfc_monitoring_enabled`: 0 when monitoring is disabled in the settings. Servers then have no series.
+- Saved queries that run on a schedule add the labels `saved_query`, `saved_query_id` and `kind` (`count` or `select`), per server they run on: `mfc_saved_query_value` is the last number the server answered (a count, or the rows a SELECT returned, at most its LIMIT), `mfc_saved_query_expectation_met` is 1 or 0 when the saved query expects something, `mfc_saved_query_up` is 0 when the last run gave no number there (no complex queries, query errors, timeout…), and `mfc_saved_query_last_run_timestamp_seconds` says when it answered. Statements are never exposed. `mfc_saved_query_schedule_enabled` is 0 when scheduled runs are off in the settings (`Queries` tab); saved queries then have no series.
 
-For example, `time() - misp_last_sample_timestamp_seconds > 3600` catches a server that hasn't been collected for an hour.
+For example, `time() - misp_last_sample_timestamp_seconds > 3600` catches a server that hasn't been collected for an hour, and `mfc_saved_query_expectation_met == 0` a server whose answer to a saved query is not as expected.
 
 ## 📬 Feedback & Contributions
 

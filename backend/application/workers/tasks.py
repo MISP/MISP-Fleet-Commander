@@ -308,6 +308,14 @@ def runSavedQueries():
     return len(savedQueries.runDue())
 
 
+@huey_app.periodic_task(crontab(minute="37"))
+@skipIfRunning("saved-query-history-lock")
+def trimSavedQueryHistory():
+    """The history of saved queries is kept for the configured number of days, per tier"""
+    from application.models import savedQueryHistory
+    return savedQueryHistory.trim()
+
+
 @huey_app.periodic_task(crontab(minute="7"))
 @skipIfRunning("metrics-rollup-lock")
 def rollupMetrics():

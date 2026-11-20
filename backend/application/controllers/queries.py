@@ -151,7 +151,8 @@ def savedView(user, saved_id):
 @BPqueries.route('/queries/saved/<int:saved_id>', methods=['PUT'])
 @token_required
 def savedUpdate(user, saved_id):
-    """Change any field given at creation. A new statement forgets the answers kept for the old one"""
+    """Change any field given at creation. A new statement forgets the answers and the history kept for the old
+    one"""
     try:
         saved = savedQueries.update(user, saved_id, jsonBody())
         return jsonify(savedQueries.serialize(saved, withServers=True))
@@ -176,5 +177,17 @@ def savedRun(user, saved_id):
     try:
         job = savedQueries.runNow(user, saved_id)
         return jsonify({'job_id': job.id, 'job': jobModel.serializeJob(job, withResults=True)}), 202
+    except userJobs.JobError as e:
+        return savedQueryRefused(e)
+
+
+@BPqueries.route('/queries/saved/<int:saved_id>/history', methods=['GET'])
+@token_required
+def savedHistory(user, saved_id):
+    """The numbers each of the saved query's servers answered over `range` (24h, 7d, 30d, 90d, 1y; 7d by default):
+    every answer up to 7 days, per hour for 30 days, per day beyond, with the expectation to draw them against.
+    400 for a DESCRIBE or SHOW TABLES, which answer no number"""
+    try:
+        return jsonify(savedQueries.historyFor(user, saved_id, request.args.get('range')))
     except userJobs.JobError as e:
         return savedQueryRefused(e)

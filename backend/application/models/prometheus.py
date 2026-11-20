@@ -11,13 +11,16 @@ the last collection read anything. Logins are counters, from the running totals 
 
 Names follow the catalogue keys, adapted to Prometheus conventions: percentages are ratios from 0 to 1
 (`memory_used_pct` → `misp_memory_used_ratio`) and the worker queues are one metric with a `queue` label.
+
+Scheduled saved queries add the last number each of their servers answered (`mfc_saved_query_*`), from what their
+last runs kept, while scheduled runs are on. Their statements are never exposed: they may hold indicators.
 """
 import math
 from dataclasses import dataclass
 from typing import Optional
 
 from application import redisModel
-from application.DBModels import db, Fleet, MetricState, Server
+from application.DBModels import db, Fleet, MetricState, SavedQuery, SavedQueryResult, Server
 import application.models.metricCatalogue as catalogue
 import application.models.metricSeries as metricSeries
 import application.models.metrics as metricModel
@@ -159,4 +162,63 @@ def exposition(user) -> str:
                 continue
             out.add(name, COUNTER, help, labels[server.id], getattr(state, field) or 0)
 
+    addSavedQueries(out, user)
     return out.render()
+
+
+def savedQueryAnswers(user) -> list:
+    """(saved query, its kind, server, the server's fleet name, the kept answer) of the user's scheduled saved
+    queries, on the servers each runs on now, that answered at least once there"""
+    from application.models import savedQueries
+    scheduled = (SavedQuery.query.filter(SavedQuery.user_id == user.id, SavedQuery.schedule_minutes.isnot(None))
+                 .order_by(SavedQuery.id).all())
+    if not scheduled:
+        return []
+    servers = {server.id: (server, fleet.name if fleet is not None else '')
+               for server, fleet in db.session.query(Server, Fleet).outerjoin(Fleet, Server.fleet_id == Fleet.id)
+               .filter(Server.user_id == user.id)}
+    kept = {}
+    for result in SavedQueryResult.query.filter(SavedQueryResult.saved_query_id.in_([saved.id for saved in scheduled])):
+        kept[(result.saved_query_id, result.server_id)] = result
+    answers = []
+    for saved in scheduled:
+        if saved.fleet_id is not None:
+            targets = sorted(serverId for serverId, (server, _) in servers.items() if server.fleet_id == saved.fleet_id)
+        else:
+            targets = [serverId for serverId in (saved.server_ids or []) if serverId in servers]
+        kind = None
+        for serverId in targets:
+            result = kept.get((saved.id, serverId))
+            if result is None:
+                continue
+            if kind is None:
+                kind = savedQueries.statementKind(saved.statement) or 'unknown'
+            server, fleetName = servers[serverId]
+            answers.append((saved, kind, server, fleetName, result))
+    return answers
+
+
+def addSavedQueries(out: Exposition, user) -> None:
+    from application.models import savedQueries
+    from application.models import setting as settingModel
+    enabled = bool(settingModel.getRefreshValue('query_schedule_enabled'))
+    out.add('mfc_saved_query_schedule_enabled', GAUGE, 'Whether MISP Fleet Commander runs saved queries on their '
+            'schedule', (), int(enabled))
+    if not enabled:
+        return
+    for saved, kind, server, fleetName, result in savedQueryAnswers(user):
+        labels = (('saved_query', saved.name), ('saved_query_id', saved.id), ('kind', kind),
+                  ('server', server.name), ('server_id', server.id), ('fleet', fleetName))
+        measured = result.outcome in savedQueries.MEASURED and result.value is not None
+        out.add('mfc_saved_query_up', GAUGE, 'Whether the last run of the saved query on the server gave a number',
+                labels, int(measured))
+        out.add('mfc_saved_query_last_run_timestamp_seconds', GAUGE, 'When the server last answered the saved query',
+                labels, result.checked_at)
+        if not measured:
+            continue
+        out.add('mfc_saved_query_value', GAUGE, 'What the server last answered the saved query: its count, or the '
+                'rows a SELECT returned (at most its LIMIT)', labels, result.value)
+        if saved.comparator is not None:
+            out.add('mfc_saved_query_expectation_met', GAUGE, 'Whether the last answer of the server meets the '
+                    'expectation of the saved query', labels,
+                    int(savedQueries.compare(saved.comparator, result.value, saved.expected)))

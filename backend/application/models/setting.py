@@ -221,6 +221,30 @@ setting_configuration = {
         "disabled": False,
         "error": False,
     },
+    "query_history_raw_days": {
+        "name": "Run History",
+        "description": "How long (days) every number a saved query answered is kept, per server. They draw its charts up to 30 days. About 6 kB per saved query, server and day when it runs every 15 minutes. A shorter period applies within the hour.",
+        "panel": "Queries",
+        "scope": "History",
+        "type": "number",
+        "default": 30,
+        "min": 7,
+        "max": 365,
+        "disabled": False,
+        "error": False,
+    },
+    "query_history_day_days": {
+        "name": "Daily History",
+        "description": "How long (days) the daily figures of saved queries are kept: last, lowest and highest answer of each day. They draw the 90-day and 1-year charts. 0 keeps them as long as the saved query; otherwise at least 365. About 70 bytes per saved query, server and day.",
+        "panel": "Queries",
+        "scope": "History",
+        "type": "number",
+        "default": 0,
+        "min": 0,
+        "max": 3650,
+        "disabled": False,
+        "error": False,
+    },
 }
 
 
@@ -264,10 +288,18 @@ def _checkMetricRetention(setting_name: str, days: int):
             raise SettingError(f"The value must be 0 or at least the hourly retention ({hour} days)")
 
 
+def _checkQueryHistory(setting_name: str, days: int):
+    """Daily figures draw the 1-year charts: kept at least a year, unless kept for good. The run history is at most
+    a year, so they never go before it"""
+    if days and days < DAY_RETENTION_MIN_DAYS:
+        raise SettingError(f"The value must be 0 (keep them as long as the saved query) or at least {DAY_RETENTION_MIN_DAYS}")
+
+
 CROSS_CHECKS = {
     "monitoring_raw_retention_days": _checkMetricRetention,
     "monitoring_hour_retention_days": _checkMetricRetention,
     "monitoring_day_retention_days": _checkMetricRetention,
+    "query_history_day_days": _checkQueryHistory,
 }
 
 

@@ -203,7 +203,9 @@ def test_nothing_from_servers_while_monitoring_is_off(client, auth_headers, flee
     import application.models.metrics as metricModel
     monkeypatch.setattr(metricModel, "monitoringSettings", lambda: dict(ENABLED, enabled=False))
     answer = client.get("/metrics", headers=auth_headers(fleets["alice"]))
-    assert parse(answer.get_data(as_text=True)) == {("mfc_monitoring_enabled", frozenset()): 0}
+    # Saved queries run whether monitoring is on or not
+    assert parse(answer.get_data(as_text=True)) == {("mfc_monitoring_enabled", frozenset()): 0,
+                                                    ("mfc_saved_query_schedule_enabled", frozenset()): 1}
 
 
 def test_formatting():

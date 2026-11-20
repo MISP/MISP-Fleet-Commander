@@ -7,7 +7,8 @@ outcome is kept here (`SavedQueryResult`: the outcome, the count or number of ro
 
 Whether a server's answer meets the expectation is decided when it is read, with the expectation as it is then.
 Health (health/queries.py) raises an issue on each server whose last answer does not meet the expectation of a
-scheduled saved query, or that could not be checked there.
+scheduled saved query, or that could not be checked there. Every number a server answers is also kept over time
+(models/savedQueryHistory.py), for the charts of the saved query.
 """
 import time
 from typing import Any, Dict, List, Optional
@@ -20,6 +21,7 @@ import application.models.jobs as jobModel
 import application.models.userJobs as userJobs
 from application.models import fleetQueries
 from application.models import fleets as fleetModel
+from application.models import savedQueryHistory
 from application.models import setting as settingModel
 from application.models.userJobs import JobError
 
@@ -188,8 +190,8 @@ def create(user, body: dict) -> SavedQuery:
 
 
 def update(user, savedId, body: dict) -> SavedQuery:
-    """Any field of `create`. A new statement drops the results kept for the old one; a new target drops those of
-    servers no longer in it. A schedule or an expectation that does not suit the statement is refused. A scheduled
+    """Any field of `create`. A new statement drops the results and the history kept for the old one; a new target
+    drops the results of servers no longer in it, and keeps their history (not shown while they are out of it). A schedule or an expectation that does not suit the statement is refused. A scheduled
     saved query whose statement, servers or schedule change runs at the scheduler's next turn"""
     saved = ownedSaved(user, savedId)
     before = (saved.statement, saved.fleet_id, saved.server_ids, saved.schedule_minutes)
@@ -213,6 +215,7 @@ def update(user, savedId, body: dict) -> SavedQuery:
     if statement != saved.statement:
         saved.statement = statement
         saved.results = []
+        savedQueryHistory.drop(saved.id)
     else:
         kept = {server.id for server in targetServers(saved)}
         saved.results = [result for result in saved.results if result.server_id in kept]
@@ -235,6 +238,15 @@ def statementKind(statement: str) -> Optional[str]:
         return fleetQueries.prepare(statement, max_limit=10 ** 9).kind
     except fleetQueries.StatementError:
         return None
+
+
+def statementLimit(statement: str) -> Optional[int]:
+    """The rows a run of this SELECT asks of each server now: its LIMIT, or the setting's when it has none"""
+    try:
+        prepared = fleetQueries.prepare(statement, max_limit=10 ** 9)
+    except fleetQueries.StatementError:
+        return None
+    return fleetQueries.maxLimit() if prepared.limit_added else prepared.limit
 
 
 def statementError(statement: str) -> Optional[dict]:
@@ -386,6 +398,8 @@ def recordRun(job: Job) -> List[Server]:
         result.more = bool(summary.get('more')) if outcome == 'rows' else False
         result.message = (unit.summary or '')[:500]
         result.checked_at = checkedAt
+        if result.value is not None:
+            savedQueryHistory.record(saved.id, unit.server_id, checkedAt, result.value, result.more)
         touched.append(unit.server_id)
     db.session.commit()
     if not touched:
@@ -444,6 +458,32 @@ def foundText(result: dict) -> str:
         return 'found none'
     noun = 'row' if value == 1 else 'rows'
     return f'found {value} {noun} or more' if result.get('more') else f'found {value} {noun}'
+
+
+# History
+
+def historyFor(user, savedId, rangeName: Optional[str], now: Optional[int] = None) -> dict:
+    """What `GET /queries/saved/<id>/history` answers: each current server's numbers over the range, and the
+    expectation they are drawn against"""
+    saved = ownedSaved(user, savedId)
+    try:
+        rangeName = savedQueryHistory.parseRange(rangeName)
+    except savedQueryHistory.HistoryRequestError as e:
+        raise SavedQueryError(str(e), field='range')
+    kind = statementKind(saved.statement)
+    if kind not in CHECKED_KINDS:
+        raise SavedQueryError('Only a SELECT or a COUNT answers a number to keep over time')
+    history = savedQueryHistory.series(saved.id, targetServers(saved), saved.schedule_minutes, rangeName, now)
+    history.update({
+        'saved_query_id': saved.id,
+        'kind': kind,
+        'schedule_minutes': saved.schedule_minutes,
+        'expectation': ({'comparator': saved.comparator, 'value': saved.expected}
+                        if saved.comparator is not None else None),
+        'expectation_text': expectationText(kind, saved.comparator, saved.expected),
+        'limit': statementLimit(saved.statement) if kind == 'select' else None,
+    })
+    return history
 
 
 # Health
