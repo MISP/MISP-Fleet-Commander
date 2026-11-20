@@ -93,6 +93,10 @@ export default {
     savedRun(saved_id) {
         return refusable("post", `/queries/saved/${encodeURIComponent(saved_id)}/run`)
     },
+    // What each server answered over a range (24h, 7d, 30d, 90d, 1y), with the expectation to draw it against
+    savedHistory(saved_id, range) {
+        return get(`/queries/saved/${encodeURIComponent(saved_id)}/history`, { range })
+    },
     // The user's latest runs
     recent(limit = 10) {
         return get("/jobs", { kind: "mispql_query", limit })

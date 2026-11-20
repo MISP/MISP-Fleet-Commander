@@ -152,6 +152,13 @@
                 </div>
             </section>
 
+            <SavedQueryHistory
+                v-if="hasHistory"
+                :saved-id="saved.id"
+                :severity="saved.severity"
+                :states="servers"
+            ></SavedQueryHistory>
+
             <SaveQueryModal
                 modal-id="sv-edit"
                 mode="update"
@@ -169,20 +176,22 @@
 import moment from "moment"
 import Layout from "@/components/layout/Layout.vue"
 import SaveQueryModal from "@/components/query/SaveQueryModal.vue"
+import SavedQueryHistory from "@/components/query/SavedQueryHistory.vue"
 import api from "@/api/queries"
 import { jobStatusMeta } from "@/helpers/jobs"
 import { SEVERITY_META } from "@/views/attention/healthLabels"
 import {
-    STATE_ORDER, answerText, overviewParts, runStartedText, scheduleLabel, stateMeta, targetText,
+    CHECKED_KINDS, STATE_ORDER, answerText, overviewParts, runStartedText, scheduleLabel, stateMeta, targetText,
 } from "@/helpers/savedQueries"
 
 const POLL_INTERVAL = 3000
 const RELOAD_DELAY = 400
 
-// One saved query: what it runs, where, when, what it expects, and what each of its servers last answered
+// One saved query: what it runs, where, when, what it expects, what each of its servers last answered, and how
+// their answers moved over time
 export default {
     name: "SavedQueryView",
-    components: { Layout, SaveQueryModal },
+    components: { Layout, SaveQueryModal, SavedQueryHistory },
     props: {
         saved_id: { type: Number, required: true },
     },
@@ -199,6 +208,10 @@ export default {
     computed: {
         running() {
             return Boolean(this.saved && this.saved.running)
+        },
+        // A SELECT or a COUNT answers a number, kept over time
+        hasHistory() {
+            return CHECKED_KINDS.includes(this.saved.kind)
         },
         targetNote() {
             const saved = this.saved

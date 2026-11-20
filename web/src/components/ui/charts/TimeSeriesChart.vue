@@ -3,6 +3,7 @@
         <figcaption class="chart-head">
             <span class="chart-title">{{ title }}</span>
             <span v-if="subtitle" class="chart-subtitle">{{ subtitle }}</span>
+            <slot name="badge"></slot>
             <button
                 type="button"
                 class="chart-table-toggle"
@@ -54,6 +55,25 @@
                         class="tick-label"
                         :text-anchor="tick.anchor"
                     >{{ tick.label }}</text>
+                </g>
+
+                <g v-if="thresholdMark" class="threshold" aria-hidden="true">
+                    <rect
+                        v-if="thresholdMark.zone"
+                        :x="margin.left"
+                        :y="thresholdMark.zone.y"
+                        :width="Math.max(0, width - margin.left - margin.right)"
+                        :height="thresholdMark.zone.height"
+                        :class="['threshold-zone', `tone-${threshold.tone || 'warning'}`]"
+                    />
+                    <line :x1="margin.left" :x2="width - margin.right" :y1="thresholdMark.y" :y2="thresholdMark.y" class="threshold-line" />
+                    <text
+                        v-if="threshold.label"
+                        :x="width - margin.right - 2"
+                        :y="thresholdMark.labelY"
+                        text-anchor="end"
+                        class="threshold-label"
+                    >{{ threshold.label }}</text>
                 </g>
 
                 <rect
@@ -117,7 +137,7 @@
                     </svg>
                     <strong class="tooltip-value">{{ row.value }}</strong>
                     <span class="tooltip-label">{{ row.label }}</span>
-                    <span v-if="row.peak" class="tooltip-peak">max {{ row.peak }}</span>
+                    <span v-if="row.peak" class="tooltip-peak">{{ row.spread }}</span>
                 </div>
             </div>
 
@@ -131,6 +151,7 @@
                     <tr>
                         <th scope="col">Time</th>
                         <th v-for="item in series" :key="item.key" scope="col" class="num">{{ item.label }}</th>
+                        <th v-for="item in seriesWithLows" :key="`${item.key}-low`" scope="col" class="num">{{ item.label }} (min)</th>
                         <th v-for="item in seriesWithPeaks" :key="`${item.key}-peak`" scope="col" class="num">{{ item.label }} (max)</th>
                     </tr>
                 </thead>
@@ -140,7 +161,7 @@
                         <td v-for="cell in row.cells" :key="cell.key" class="num">{{ cell.value }}</td>
                     </tr>
                     <tr v-if="tableRows.length === 0">
-                        <td :colspan="1 + series.length + seriesWithPeaks.length" class="chart-table-empty">No sample over this range</td>
+                        <td :colspan="1 + series.length + seriesWithLows.length + seriesWithPeaks.length" class="chart-table-empty">No sample over this range</td>
                     </tr>
                 </tbody>
             </table>
@@ -179,8 +200,9 @@ export default {
     props: {
         title: { type: String, required: true },
         subtitle: { type: String, default: "" },
-        // [{key, label, points: [[ts, value]], peaks?: [[ts, value]], band?: false, color?}]. `band: false` keeps the
-        // peaks out of the drawing (tooltip and table only), when several bands would pile up
+        // [{key, label, points: [[ts, value]], peaks?: [[ts, value]], lows?: [[ts, value]], band?: false, color?}].
+        // The band runs from each point (or its low, when given) to its peak. `band: false` keeps it out of the
+        // drawing (tooltip and table only), when several bands would pile up
         series: { type: Array, required: true },
         // `line`, or `bars` (stacked in the order of `series`)
         mode: { type: String, default: "line" },
@@ -194,7 +216,14 @@ export default {
         // false: the value axis hugs the data instead of starting at zero
         zero: { type: Boolean, default: true },
         yMax: { type: Number, default: null },
+        // [min, max] the value axis spans, whatever the data: charts that share one axis get the same
+        yDomain: { type: Array, default: null },
         height: { type: Number, default: 168 },
+        // A level the values are held to: `{value, label?, description?, side?, tone?}`. Drawn as a dashed line, with
+        // `label` beside it (charts sharing a legend leave it out and give `description` to screen readers); `side`
+        // (`above` or `below`) tints the part of the plot where values miss it, in the health tone `tone` (warning by
+        // default)
+        threshold: { type: Object, default: null },
     },
     data() {
         return {
@@ -209,12 +238,21 @@ export default {
                 color: item.color || SERIES_COLORS[index % SERIES_COLORS.length],
                 points: item.points || [],
                 peaks: item.peaks || [],
+                lows: item.lows || [],
                 byTs: new Map((item.points || []).map(([ts, value]) => [ts, value])),
                 peakByTs: new Map((item.peaks || []).map(([ts, value]) => [ts, value])),
+                lowByTs: new Map((item.lows || []).map(([ts, value]) => [ts, value])),
             }))
         },
         seriesWithPeaks() {
             return this.coloured.filter((item) => item.peaks.length > 0)
+        },
+        seriesWithLows() {
+            return this.coloured.filter((item) => item.lows.length > 0)
+        },
+        thresholdValue() {
+            const value = this.threshold ? this.threshold.value : null
+            return typeof value === "number" && Number.isFinite(value) ? value : null
         },
         isEmpty() {
             return this.coloured.every((item) => item.points.length === 0)
@@ -243,7 +281,11 @@ export default {
                 this.coloured.forEach((item) => {
                     item.points.forEach(([, value]) => visit(value))
                     item.peaks.forEach(([, value]) => visit(value))
+                    item.lows.forEach(([, value]) => visit(value))
                 })
+            }
+            if (this.thresholdValue !== null) {
+                visit(this.thresholdValue)
             }
             if (min === Infinity) {
                 return [0, 1]
@@ -255,7 +297,9 @@ export default {
         },
         yScale() {
             let [min, max] = this.extent
-            if (this.zero || this.mode === "bars") {
+            if (this.yDomain) {
+                [min, max] = this.yDomain
+            } else if (this.zero || this.mode === "bars") {
                 min = Math.min(0, min)
             } else {
                 const pad = (max - min) * 0.15 || Math.abs(max) * 0.05 || 1
@@ -286,8 +330,12 @@ export default {
         },
         yTickValuesForMargin() {
             // The margin depends on the labels, the scale on the margin: estimate the labels from the domain alone
-            const [min, max] = this.extent
             const factor = this.bytes ? this.bytes.factor : 1
+            if (this.yDomain) {
+                const ticks = scaleLinear().domain([this.yDomain[0] / factor, this.yDomain[1] / factor]).nice(4).ticks(4)
+                return axisTicks(ticks, this.unit).map((value) => value * factor)
+            }
+            const [min, max] = this.extent
             const top = this.yMax !== null ? Math.max(max, this.yMax) : max
             const ticks = scaleLinear().domain([Math.min(0, min) / factor, top / factor]).nice(4).ticks(4)
             return axisTicks(ticks, this.unit).map((value) => value * factor)
@@ -382,7 +430,7 @@ export default {
                 }
                 const withPeaks = item.points
                     .filter(([ts]) => item.peakByTs.has(ts))
-                    .map(([ts, value]) => [ts, value, item.peakByTs.get(ts)])
+                    .map(([ts, value]) => [ts, item.lowByTs.has(ts) ? item.lowByTs.get(ts) : value, item.peakByTs.get(ts)])
                 segments(withPeaks, this.gapLimit).forEach((segment, index) => {
                     if (segment.length > 1) {
                         result.push({ key: `${item.key}-${index}`, color: item.color, d: draw(segment) })
@@ -398,6 +446,21 @@ export default {
                     const [ts, value] = item.points[item.points.length - 1]
                     return { key: item.key, color: item.color, x: this.xScale(new Date(ts * 1000)), y: this.yScale(value) }
                 })
+        },
+        thresholdMark() {
+            if (this.thresholdValue === null || this.width <= 0) {
+                return null
+            }
+            const y = Math.round(this.yScale(this.thresholdValue)) + 0.5
+            let zone = null
+            if (this.threshold.side === "above" && y > this.margin.top) {
+                zone = { y: this.margin.top, height: y - this.margin.top }
+            } else if (this.threshold.side === "below" && y < this.plotBottom) {
+                zone = { y, height: this.plotBottom - y }
+            }
+            // The label sits above the line, or under it when the line runs along the top
+            const labelY = y - this.margin.top > 14 ? y - 4 : y + 12
+            return { y, zone, labelY }
         },
         bars() {
             const result = []
@@ -458,6 +521,10 @@ export default {
                     color: item.color,
                     value: item.byTs.has(ts) ? formatValue(item.byTs.get(ts), this.unit) : "no sample",
                     peak: item.peakByTs.has(ts) ? formatValue(item.peakByTs.get(ts), this.unit) : null,
+                    spread: !item.peakByTs.has(ts) ? null
+                        : item.lowByTs.has(ts)
+                            ? `min ${formatValue(item.lowByTs.get(ts), this.unit)} · max ${formatValue(item.peakByTs.get(ts), this.unit)}`
+                            : `max ${formatValue(item.peakByTs.get(ts), this.unit)}`,
                 })),
                 dots: this.coloured
                     .filter((item) => item.byTs.has(ts))
@@ -482,7 +549,9 @@ export default {
             const latest = this.coloured
                 .filter((item) => item.points.length > 0)
                 .map((item) => `${item.label} ${formatValue(item.points[item.points.length - 1][1], this.unit)}`)
-            return `${this.title}. Latest: ${latest.join(", ")}. Use the arrow keys to read the values`
+            const said = this.threshold && (this.threshold.description || this.threshold.label)
+            const level = this.thresholdValue !== null && said ? ` ${said}.` : ""
+            return `${this.title}. Latest: ${latest.join(", ")}.${level} Use the arrow keys to read the values`
         },
         tableRows() {
             if (!this.showTable) {
@@ -496,6 +565,10 @@ export default {
                     ...this.coloured.map((item) => ({
                         key: item.key,
                         value: item.byTs.has(ts) ? formatValue(item.byTs.get(ts), this.unit) : "–",
+                    })),
+                    ...this.seriesWithLows.map((item) => ({
+                        key: `${item.key}-low`,
+                        value: item.lowByTs.has(ts) ? formatValue(item.lowByTs.get(ts), this.unit) : "–",
                     })),
                     ...this.seriesWithPeaks.map((item) => ({
                         key: `${item.key}-peak`,
@@ -683,6 +756,38 @@ export default {
 
 .peak-band {
     opacity: 0.13;
+}
+
+.threshold-zone {
+    fill: var(--health-warning);
+    opacity: 0.08;
+}
+
+.threshold-zone.tone-critical {
+    fill: var(--health-critical);
+    opacity: 0.06;
+}
+
+.threshold-zone.tone-info {
+    fill: var(--health-info);
+    opacity: 0.07;
+}
+
+.threshold-line {
+    stroke: #52514e;
+    stroke-width: 1;
+    stroke-dasharray: 4 3;
+    shape-rendering: crispEdges;
+}
+
+.threshold-label {
+    fill: #52514e;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    paint-order: stroke;
+    stroke: #fff;
+    stroke-width: 3px;
+    stroke-linejoin: round;
 }
 
 .series-dot {

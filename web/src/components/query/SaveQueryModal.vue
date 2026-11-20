@@ -46,6 +46,10 @@
                 <div class="sq-what-item">
                     <span class="sq-label">Statement</span>
                     <pre class="sq-statement">{{ statementShown }}</pre>
+                    <p v-if="statementChanged" class="sq-statement-change">
+                        <i class="fas fa-rotate-left" aria-hidden="true"></i>
+                        A new statement asks another question: its servers' last answers and its history start again.
+                    </p>
                     <ul v-if="statementErrors.length" class="sq-statement-errors">
                         <li v-for="(error, index) in statementErrors" :key="index">
                             <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
@@ -216,6 +220,10 @@ export default {
         statementShown() {
             return this.statement !== null ? this.statement : (this.saved && this.saved.statement) || ""
         },
+        // Saving changes with another statement drops what was kept for the old one
+        statementChanged() {
+            return this.mode === "update" && Boolean(this.saved) && this.statement !== null && this.statement !== this.saved.statement
+        },
         checkable() {
             return CHECKED_KINDS.includes(this.kind)
         },
@@ -384,6 +392,15 @@ export default {
     color: #3c4452;
     white-space: pre-wrap;
     word-break: break-word;
+}
+
+.sq-statement-change {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    margin: 0.4rem 0 0;
+    font-size: 0.82rem;
+    color: var(--health-warning-ink);
 }
 
 .sq-statement-errors {
