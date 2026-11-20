@@ -44,6 +44,14 @@
                 </div>
                 <div class="job-actions">
                     <b-button
+                        v-if="job.kind === 'mispql_query'"
+                        size="sm"
+                        variant="outline-primary"
+                        :to="{ name: 'query', params: { job_id: job.id } }"
+                    >
+                        <i class="fas fa-magnifying-glass mr-1" aria-hidden="true"></i>Open in Query
+                    </b-button>
+                    <b-button
                         v-if="!final"
                         size="sm"
                         variant="outline-danger"

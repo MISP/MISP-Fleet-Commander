@@ -66,6 +66,11 @@ export default {
                     scope: "strategicView",
                 },
                 {
+                    name: "Query",
+                    to: { name: "query" },
+                    scope: "query",
+                },
+                {
                     name: "Jobs",
                     to: { name: "jobs" },
                     scope: "jobs",

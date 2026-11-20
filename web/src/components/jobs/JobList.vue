@@ -802,7 +802,7 @@ export default {
 }
 
 .col-status { width: 132px; }
-.col-servers { width: 210px; }
+.col-servers { width: 240px; }
 .col-when { width: 150px; }
 .col-duration { width: 96px; }
 
@@ -869,8 +869,9 @@ export default {
     margin: 0 0.3rem;
 }
 
+/* "2 OK · 1 failed · 1 not run" may not fit beside the bar: it wraps rather than run into the next column */
 .cell-servers {
-    white-space: nowrap;
+    white-space: normal;
 }
 
 .job-mini-bar {

@@ -20,6 +20,10 @@
         :class="['fas', 'fa-satellite-dish']"
     ></i>
     <i
+        v-else-if="scope === 'query'"
+        :class="['fas', 'fa-magnifying-glass']"
+    ></i>
+    <i
         v-else-if="scope === 'jobs'"
         :class="['fas', 'fa-list-check']"
     ></i>
@@ -47,7 +51,7 @@ export default {
             type: String,
             required: true,
             validator: function (value) {
-                return ["", "home", "attention", "servers", "connections", "strategicView", "jobs", "baselines", "users"].indexOf(value) !== -1
+                return ["", "home", "attention", "servers", "connections", "strategicView", "query", "jobs", "baselines", "users"].indexOf(value) !== -1
             }
         },
         forceBlack: {

@@ -4,8 +4,8 @@
         <header class="jobs-header">
             <h1 class="jobs-title">Jobs</h1>
             <p class="jobs-lede">
-                Every change sent to MISP servers from here, with who started it, its parameters and its result on
-                each server. Jobs are kept {{ retentionLabel }}.
+                Every change and query sent to MISP servers from here, with who started it, its parameters and its
+                result on each server. Jobs are kept {{ retentionLabel }}.
             </p>
         </header>
         <JobList global></JobList>

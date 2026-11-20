@@ -17,6 +17,14 @@
                     :title="`${baselineDriftCount} drift issue${baselineDriftCount === 1 ? '' : 's'}`"
                 >{{ baselineDriftCount }}</span>
             </router-link>
+            <router-link
+                v-if="selectedFleet"
+                :to="{ name: 'query', query: { fleet: String(selectedFleet.id) } }"
+                class="fleet-tab fleet-query-link"
+                title="Run a MispQL statement on this fleet's servers"
+            >
+                <i class="fas fa-magnifying-glass mr-1" aria-hidden="true"></i>Query<span class="fleet-query-more">this fleet</span>
+            </router-link>
         </nav>
 
         <div v-if="activeTab === 'jobs'" class="fleet-jobs">
@@ -122,6 +130,15 @@
                                     icon="sync-alt"
                                 ></iconButton>
                             </b-dropdown-item-button>
+                            <b-dropdown-item
+                                :to="{ name: 'query', query: { servers: selectedServerIDs.join(',') } }"
+                            >
+                                <iconButton
+                                    text="Query"
+                                    title="Run a MispQL statement on the selected servers"
+                                    icon="magnifying-glass"
+                                ></iconButton>
+                            </b-dropdown-item>
                             <b-dropdown-item-button
                                 @click="openBatchAPISelectedModal"
                             >
@@ -1213,6 +1230,21 @@ export default {
     border-bottom-color: var(--var-color-lapislazuli);
 }
 
+/* Not a tab: it opens the Query page, so it stands apart at the end of the bar */
+.fleet-query-link {
+    margin-left: auto;
+    color: var(--var-color-lapislazuli);
+}
+
+.fleet-query-link:hover {
+    color: var(--var-color-yankeesblue);
+}
+
+/* A flex item: a leading space in its text would be dropped */
+.fleet-query-more {
+    margin-left: 0.28em;
+}
+
 .fleet-tab:focus-visible {
     outline: 2px solid var(--var-color-lapislazuli);
     outline-offset: -2px;
@@ -1224,7 +1256,8 @@ export default {
         padding: 0.4rem 0.6rem;
     }
 
-    .fleet-tab > .fas {
+    .fleet-tab > .fas,
+    .fleet-query-more {
         display: none;
     }
 }

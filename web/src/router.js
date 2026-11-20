@@ -185,6 +185,21 @@ let router =  new Router({
             ]
         },
         {
+            // A statement to run on many servers (`?fleet=<id>` or `?servers=1,2` chooses them), or a run's answers
+            path: "/query/:job_id([0-9a-f-]{36})?",
+            name: "query",
+            component: () => import("./views/query/QueryPage.vue"),
+            props: (route) => ({ job_id: route.params.job_id || null }),
+            meta: {
+                requiresFleet: false,
+                breadcrumbs: {
+                    text: "Query",
+                    to: { name: "query" },
+                    icon: "magnifying-glass"
+                }
+            }
+        },
+        {
             path: "/baselines",
             name: "baselines",
             component: () => import("./views/baselines/BaselineLibrary.vue"),
