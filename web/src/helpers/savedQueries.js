@@ -21,6 +21,12 @@ export function stateMeta(state, severity) {
     return Object.assign({}, meta, { tone: meta.tone || SEVERITY_TONES[severity] || "warning" })
 }
 
+// A saved query's servers, worst state first then by name, each with its state's words and tone in `meta`
+export function serversWorstFirst(servers, severity) {
+    return (servers || []).map(entry => Object.assign({ meta: stateMeta(entry.state, severity) }, entry))
+        .sort((a, b) => (STATE_ORDER.indexOf(a.state) - STATE_ORDER.indexOf(b.state)) || a.server_name.localeCompare(b.server_name))
+}
+
 // The states of a saved query's servers worth showing, worst first: `[{ state, count, text, tone, icon }]`
 export function overviewParts(overview, severity) {
     return STATE_ORDER

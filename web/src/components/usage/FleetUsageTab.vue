@@ -144,6 +144,8 @@
                 </p>
             </section>
 
+            <FleetQueryWidgets :fleet-id="fleetId" :range-key="rangeKey" :range-phrase="rangePhrase"></FleetQueryWidgets>
+
             <section class="usage-section" aria-labelledby="fleet-usage-servers-title">
                 <header class="section-head">
                     <h3 id="fleet-usage-servers-title" class="section-title">Servers</h3>
@@ -168,6 +170,7 @@ import TimeSeriesChart from "@/components/ui/charts/TimeSeriesChart.vue"
 import HourHeatmap from "@/components/ui/charts/HourHeatmap.vue"
 import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
 import FleetUsageServers from "@/components/usage/FleetUsageServers.vue"
+import FleetQueryWidgets from "@/components/usage/FleetQueryWidgets.vue"
 
 const HEATMAP_DAYS = 14
 // Servers named in a notice before "and N more"
@@ -192,7 +195,7 @@ const TILES = [
 export default {
     name: "FleetUsageTab",
     components: {
-        MetricTile, RangePicker, TimeSeriesChart, HourHeatmap, timeSinceRefresh, FleetUsageServers,
+        MetricTile, RangePicker, TimeSeriesChart, HourHeatmap, timeSinceRefresh, FleetUsageServers, FleetQueryWidgets,
     },
     props: {
         fleetId: {

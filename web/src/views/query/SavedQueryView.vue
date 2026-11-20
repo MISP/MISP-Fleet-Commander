@@ -181,7 +181,7 @@ import api from "@/api/queries"
 import { jobStatusMeta } from "@/helpers/jobs"
 import { SEVERITY_META } from "@/views/attention/healthLabels"
 import {
-    CHECKED_KINDS, STATE_ORDER, answerText, overviewParts, runStartedText, scheduleLabel, stateMeta, targetText,
+    CHECKED_KINDS, answerText, overviewParts, runStartedText, scheduleLabel, serversWorstFirst, targetText,
 } from "@/helpers/savedQueries"
 
 const POLL_INTERVAL = 3000
@@ -252,8 +252,7 @@ export default {
         },
         // Worst first, then by name
         servers() {
-            return this.saved.servers.map(entry => Object.assign({ meta: stateMeta(entry.state, this.saved.severity) }, entry))
-                .sort((a, b) => (STATE_ORDER.indexOf(a.state) - STATE_ORDER.indexOf(b.state)) || a.server_name.localeCompare(b.server_name))
+            return serversWorstFirst(this.saved.servers, this.saved.severity)
         },
     },
     watch: {

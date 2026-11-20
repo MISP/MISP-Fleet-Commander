@@ -1250,10 +1250,15 @@ export default {
     outline-offset: -2px;
 }
 
-/* Four tabs fit a phone once their icons go */
+/* Four tabs and the Query link fit a phone once their icons go; a drift count may still push the link to a line
+   of its own */
 @media (max-width: 480px) {
+    .fleet-tabs {
+        flex-wrap: wrap;
+    }
+
     .fleet-tab {
-        padding: 0.4rem 0.6rem;
+        padding: 0.4rem 0.5rem;
     }
 
     .fleet-tab > .fas,
