@@ -32,6 +32,8 @@ const init_state = () => {
 
 // Full snapshot requests in flight, by server
 const fullInfoRequests = {}
+// The server list request on its way, `{ fleetId, promise }`, or null (see `fetchServers`)
+let indexRequest = null
 
 const state = init_state()
 
@@ -76,21 +78,41 @@ const actions = {
             resolve()
         })
     },
-    fetchServers({ commit }, payload) {
-        return new Promise((resolve, reject) => {
-            if (getters.serverCount == 0 || (payload !== undefined && payload.force)) {
-                commit('setFetchingServersInProgress', true)
-                api.index(servers => {
+    /**
+     * The selected fleet's servers. `force`: fetched again even when loaded. A request already on its way for the same
+     * fleet is shared (opening a fleet's page, the router and the page both ask for the list), except with `fresh`:
+     * after a change, a request sent before it may not hold it. Only the latest request's answer is kept
+     */
+    fetchServers({ commit, getters, rootState }, payload = {}) {
+        const selectedFleetId = () => (rootState.fleets.selected ? rootState.fleets.selected.id : null)
+        const fleetId = selectedFleetId()
+        if (indexRequest !== null && indexRequest.fleetId === fleetId && !payload.fresh) {
+            return indexRequest.promise
+        }
+        if (!payload.force && !payload.fresh && getters.serverCount > 0) {
+            return Promise.resolve("Server already loaded")
+        }
+        commit("setFetchingServersInProgress", true)
+        const request = { fleetId }
+        request.promise = new Promise((resolve, reject) => {
+            api.index(
+                (servers) => {
+                    // Another fleet chosen since, or a later request on its way: theirs is the list to show
+                    if (indexRequest === request && selectedFleetId() === fleetId) {
                         commit("setServers", servers)
-                        resolve()
-                    },
-                    (error) => { reject(error) }
-                )
-                commit('setFetchingServersInProgress', false)
-            } else {
-                resolve("Server already loaded")
+                    }
+                    resolve()
+                },
+                (error) => { reject(error) }
+            )
+        }).finally(() => {
+            if (indexRequest === request) {
+                indexRequest = null
+                commit("setFetchingServersInProgress", false)
             }
         })
+        indexRequest = request
+        return request.promise
     },
     getUsers({ commit }, server_id) {
         return new Promise((resolve, reject) => {
@@ -181,7 +203,7 @@ const actions = {
             api.add(
                 payload,
                 (response) => {
-                    dispatch("fetchServers", {force: true})
+                    dispatch("fetchServers", {force: true, fresh: true})
                     .then(() => {
                         resolve(response)
                     })
@@ -195,7 +217,7 @@ const actions = {
             api.edit(
                 payload,
                 (response) => {
-                    dispatch("fetchServers", {force: true})
+                    dispatch("fetchServers", {force: true, fresh: true})
                     .then(() => {
                         resolve(response)
                     })
@@ -209,7 +231,7 @@ const actions = {
             api.delete(
                 payload,
                 (response) => {
-                    dispatch("fetchServers", {force: true})
+                    dispatch("fetchServers", {force: true, fresh: true})
                     .then(() => {
                         resolve(response)
                     })

@@ -637,6 +637,13 @@ export default {
                 this.syncWithStore()
                 this.constructNetwork()
             })
+            .finally(() => {
+                // A server refreshed later may know other servers: its links are fetched again then. Not before: the
+                // first server list fills them as well, and the links were just fetched
+                this.$watch("remote_connections", () => {
+                    this.refreshConnections()
+                }, { deep: true })
+            })
     },
     destroyed() {
         clearTimeout(this.linkTest.timer)
@@ -674,12 +681,6 @@ export default {
                 this.linkTest.waiting = false
                 clearTimeout(this.linkTest.timer)
             }
-        },
-        remote_connections: {
-            handler: function() {
-                this.refreshConnections()
-            },
-            deep: true,
         },
     },
 }

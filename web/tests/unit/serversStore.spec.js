@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import api from "@/api/servers"
 import servers from "@/store/modules/servers"
 
-vi.mock("@/api/servers", () => ({ default: { queryInfo: vi.fn() } }))
+vi.mock("@/api/servers", () => ({ default: { queryInfo: vi.fn(), index: vi.fn() } }))
 
 const FINAL_SETTINGS = [
     { setting: "MISP.uuid", value: "c0ffee" },
@@ -99,5 +99,94 @@ describe("servers store: light snapshots in lists, full ones for the server page
         expect(state.full_info[2]).toBe(null)
         await run("fetchFullInfo", state, { server_id: 2 })
         expect(api.queryInfo).toHaveBeenCalledTimes(1)
+    })
+})
+
+describe("servers store: the server list", () => {
+    let state, rootState, answers
+
+    // fetchServers with the module's getters and mutations, the selected fleet in `rootState`
+    const fetchServers = (payload) => servers.actions.fetchServers({
+        commit: (type, data) => servers.mutations[type](state, data),
+        getters: { serverCount: servers.getters.serverCount(state) },
+        rootState,
+    }, payload)
+    const names = () => Object.values(state.servers).map((server) => server.name)
+
+    beforeEach(() => {
+        state = newState()
+        rootState = { fleets: { selected: { id: 1 } } }
+        answers = []
+        api.index.mockReset()
+        // Each request waits until the test answers it
+        api.index.mockImplementation((cb, errorCb) => answers.push({ cb, errorCb }))
+    })
+
+    it("shares the request on its way for the same fleet, forced or not, and says it is fetching meanwhile", async () => {
+        const first = fetchServers({ force: true })
+        expect(fetchServers({ force: true })).toBe(first)
+        expect(fetchServers()).toBe(first)
+        expect(api.index).toHaveBeenCalledTimes(1)
+        expect(state.fetching_servers_in_progress).toBe(true)
+        answers[0].cb([{ id: 3, name: "misp-a" }])
+        await first
+        expect(names()).toEqual(["misp-a"])
+        expect(state.fetching_servers_in_progress).toBe(false)
+    })
+
+    it("fetches a list that is not loaded yet, and only asks again when forced", async () => {
+        const first = fetchServers()
+        answers[0].cb([{ id: 3, name: "misp-a" }])
+        await first
+        await expect(fetchServers()).resolves.toBe("Server already loaded")
+        expect(api.index).toHaveBeenCalledTimes(1)
+        const forced = fetchServers({ force: true })
+        expect(api.index).toHaveBeenCalledTimes(2)
+        answers[1].cb([{ id: 3, name: "misp-a" }, { id: 4, name: "misp-b" }])
+        await forced
+        expect(names()).toEqual(["misp-a", "misp-b"])
+    })
+
+    it("asks again after a change, and keeps the latest answer whatever the order they come back in", async () => {
+        const before = fetchServers({ force: true })
+        const after = fetchServers({ force: true, fresh: true })
+        expect(after).not.toBe(before)
+        expect(api.index).toHaveBeenCalledTimes(2)
+        answers[1].cb([{ id: 3, name: "misp-a" }, { id: 4, name: "added" }])
+        await after
+        answers[0].cb([{ id: 3, name: "misp-a" }])
+        await before
+        expect(names()).toEqual(["misp-a", "added"])
+        expect(state.fetching_servers_in_progress).toBe(false)
+    })
+
+    it("does not share a request for another fleet, nor keep a list once another fleet is chosen", async () => {
+        const fleetOne = fetchServers({ force: true })
+        rootState.fleets.selected = { id: 2 }
+        const fleetTwo = fetchServers({ force: true })
+        expect(api.index).toHaveBeenCalledTimes(2)
+        answers[0].cb([{ id: 3, name: "of fleet 1" }])
+        await fleetOne
+        expect(names()).toEqual([])
+        answers[1].cb([{ id: 7, name: "of fleet 2" }])
+        await fleetTwo
+        expect(names()).toEqual(["of fleet 2"])
+
+        const late = fetchServers({ force: true })
+        rootState.fleets.selected = { id: 1 }
+        answers[2].cb([{ id: 8, name: "late" }])
+        await late
+        expect(names()).toEqual(["of fleet 2"])
+    })
+
+    it("passes a failure on, and asks again on the next call", async () => {
+        const failing = fetchServers({ force: true })
+        answers[0].errorCb("Unreachable")
+        await expect(failing).rejects.toBe("Unreachable")
+        expect(state.fetching_servers_in_progress).toBe(false)
+        const again = fetchServers({ force: true })
+        expect(api.index).toHaveBeenCalledTimes(2)
+        answers[1].cb([])
+        await again
     })
 })
