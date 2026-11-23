@@ -1,7 +1,7 @@
 <template>
     <div id="app">
         <component :is="layout">
-            <router-view :layout.sync="layout"/>
+            <router-view @update:layout="checkLayout"/>
         </component>
 
         <TheLoginModal
@@ -22,6 +22,7 @@ import LayoutLogin from "@/components/layout/LayoutLogin.vue"
 import TheLoginModal from '@/views/login/TheLoginModal.vue';
 import TheSettingsModal from '@/views/settings/TheSettingsModal.vue';
 import JobNotifier from '@/components/jobs/JobNotifier.vue';
+import { layoutOf } from "@/helpers/layouts"
 
 export default {
     name: "App",
@@ -33,12 +34,11 @@ export default {
         TheSettingsModal,
         JobNotifier,
     },
-    data () {
-        return {
-            layout: "div" // fallback value if the layout is not set in the view
-        }
-    },
     computed: {
+        // From the route (`meta.layout`), known before the page is created: see helpers/layouts.js
+        layout() {
+            return layoutOf(this.$route)
+        },
         isUserAuthed() {
             return this.$store.getters["auth/isAuthenticated"]
         },
@@ -61,6 +61,15 @@ export default {
                 }
             },
             immediate: true,
+        },
+    },
+    methods: {
+        // A page still says which layout it is drawn in (<Layout name="…">): the route decides, this only catches a
+        // route left without the `meta.layout` its page asks for
+        checkLayout(name) {
+            if (process.env.NODE_ENV !== "production" && name !== this.layout) {
+                console.warn(`The page asks for ${name} but its route gives ${this.layout}: set meta.layout on the route`)
+            }
         },
     },
     sockets: {

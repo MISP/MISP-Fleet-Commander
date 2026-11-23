@@ -58,15 +58,19 @@ let router =  new Router({
             path: "/",
             redirect: { name: "home" }
         },
+        // A page's layout is chosen by its route (`meta.layout`, LayoutDefault when no record of it sets one), so that
+        // App draws it before the page is created (helpers/layouts.js)
         {
             path: "/login",
             name: "login",
             component: TheLogin,
+            meta: { layout: "LayoutLogin" },
         },
         {
             path: "/change-password",
             name: "change-password",
             component: TheLogin,
+            meta: { layout: "LayoutLogin" },
         },
         {
             path: "/home",
@@ -283,6 +287,7 @@ let router =  new Router({
             path: "/strategicView",
             component: () => import("./components/layout/layoutWrapperStretch.vue"),
             meta: {
+                layout: "LayoutStretch",
                 requiresFleet: true,
                 breadcrumbs: {
                     text: "Fleet",
