@@ -97,6 +97,8 @@ To update the application:
 bash update.sh
 ```
 
+It pulls the code, fetches MispQL, installs the Python dependencies, migrates the database and builds the web app again (which needs Node.js and npm, as `build_web.sh` does). Then restart the web server and the workers (the `flask` and `workers` windows of the `screen` session) so that they run the new code.
+
 > [!WARNING]
 > **Upgrading from a version that stored keys in clear.** The update encrypts the MISP authkeys of your servers and hashes the users' API keys in the database (see [Encryption key](#-encryption-key)). Copies of the database taken before the update are not changed: backups, snapshots and copies of the database file (`backend/database/database.db`, or `./run/database.db` with Docker) still hold those keys in clear. Delete them, or keep them as carefully as the keys themselves. If such a copy may have been exposed, rotate the authkeys on the MISP instances and generate new API keys for the users.
 
