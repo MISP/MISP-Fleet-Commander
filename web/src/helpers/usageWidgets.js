@@ -1,7 +1,7 @@
 // Widgets of a fleet's Usage tab: saved queries followed there, drawn as the fleet total or server by server. Pure
 // functions: no Vue, no store
 
-import { changeOver, formatChangePct, formatDelta, formatValue } from "@/helpers/metrics"
+import { agoText, changeOver, formatChangePct, formatDelta, formatValue } from "@/helpers/metrics"
 import { overviewParts } from "@/helpers/savedQueries"
 
 // Charts shown at once in an "Each server" widget, before "Show all"
@@ -113,6 +113,37 @@ export function totalNote(history) {
         text += ` A SELECT counts the rows it returned, at most ${limit} each: a total holding one at its LIMIT may stand for more.`
     }
     return text
+}
+
+/**
+ * The old answers the latest total still holds: servers whose last run gave no number, their last answer carried
+ * forward (`history.total.carried`, ages from the answer's time). `{ text, title }`, or null when every number in it
+ * is current: "Includes Refused org test's last answer (471), 12 days old"
+ */
+export function carriedText(history) {
+    const total = history && history.total
+    const carried = (total && total.carried) || []
+    if (carried.length === 0) {
+        return null
+    }
+    const number = (value, more) => `${formatValue(value, "count", { exact: true })}${more ? " or more" : ""}`
+    const age = (ts) => `${agoText(Math.max(0, total.to - ts))} old`
+    if (carried.length === 1) {
+        const [entry] = carried
+        return {
+            text: `Includes ${entry.server_name}'s last answer (${number(entry.value, entry.more)}), ${age(entry.ts)}`,
+            title: "Its last run gave no number: the total keeps its last answer until it answers again.",
+        }
+    }
+    const sum = carried.reduce((acc, entry) => acc + entry.value, 0)
+    const oldest = Math.min(...carried.map((entry) => entry.ts))
+    const lines = carried.map((entry) => `${entry.server_name}: ${number(entry.value, entry.more)}, ${age(entry.ts)}`)
+    return {
+        text: `Includes ${carried.length} servers' last answers (${number(sum, carried.some((entry) => entry.more))}), `
+            + `the oldest ${age(oldest)}`,
+        title: ["Their last run gave no number: the total keeps each one's last answer until it answers again.", ...lines]
+            .join("\n"),
+    }
 }
 
 /** Servers the latest total leaves out because they never answered: "2 of 3 servers answered so far", or "" */

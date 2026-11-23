@@ -201,6 +201,51 @@ def test_a_total_holding_a_capped_select_says_so(db, fleet, api):
     assert total['capped'] == [hour - HOUR, hour]
 
 
+def keepResult(saved, server, outcome, value=None, checkedAt=None):
+    from application import db
+    from application.DBModels import SavedQueryResult
+    db.session.add(SavedQueryResult(saved_query_id=saved.id, server_id=server.id, outcome=outcome, value=value,
+                                    checked_at=checkedAt or int(time.time())))
+    db.session.commit()
+
+
+def test_a_total_names_the_old_answers_it_still_holds(db, fleet, api):
+    from application.DBModels import SavedQueryResult, SavedQuerySample, Server
+    user, fleetRow, servers = fleet
+    b, a, c = servers
+    d = Server(name='misp-d', url='https://misp-d.test/', user_id=user.id, fleet_id=fleetRow.id)
+    d.authkey = 'key-misp-d'
+    db.session.add(d)
+    db.session.commit()
+    saved = save(user, fleet_id=fleetRow.id, schedule_minutes=60)
+    widget = api(user, 'post', f'/fleets/{fleetRow.id}/widgets', {'saved_query_id': saved.id}).json
+    now = int(time.time())
+    history = f"/fleets/{fleetRow.id}/widgets/{widget['id']}/history"
+    record(saved, a, now - 600, 12)
+    keepResult(saved, a, 'count', 12, now - 600)
+    record(saved, b, now - 3 * DAY, 5)
+    record(saved, b, now - 3 * DAY + 60, 7)       # Its last answer
+    keepResult(saved, b, 'unreachable')
+    record(saved, c, now - 20 * DAY, 40)
+    SavedQuerySample.query.filter_by(saved_query_id=saved.id, server_id=c.id, tier='raw').delete()
+    db.session.commit()                           # Its raw rows trimmed: only its day is left
+    keepResult(saved, c, 'timeout')
+    keepResult(saved, d, 'unreachable')           # Never answered: not in the total
+
+    total = api(user, 'get', history).json['total']
+    day = (now - 20 * DAY) - (now - 20 * DAY) % DAY
+    assert total['carried'] == [
+        {'server_id': c.id, 'server_name': 'misp-c', 'ts': day, 'value': 40, 'more': False},
+        {'server_id': b.id, 'server_name': 'misp-b', 'ts': now - 3 * DAY + 60, 'value': 7, 'more': False},
+    ]
+    assert total['points'][-1][1] == 12 + 7 + 40
+    assert api(user, 'get', f'{history}?range=1y').json['total']['carried'] == total['carried']
+
+    SavedQueryResult.query.filter_by(saved_query_id=saved.id, server_id=b.id).update({'outcome': 'count', 'value': 7})
+    db.session.commit()                           # It answered again: its number is current
+    assert [entry['server_name'] for entry in api(user, 'get', history).json['total']['carried']] == ['misp-c']
+
+
 def test_a_widget_left_without_a_number_says_why(db, fleet, api):
     from application.models import savedQueries
     user, fleetRow, servers = fleet

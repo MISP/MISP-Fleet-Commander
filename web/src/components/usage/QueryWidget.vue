@@ -91,6 +91,10 @@
                     </span>
                 </div>
                 <p v-if="reporting" class="qw-reporting">{{ reporting }}</p>
+                <p v-if="carried" class="qw-carried" :title="carried.title">
+                    <i class="fas fa-history" aria-hidden="true"></i>
+                    <span>{{ carried.text }}<span class="sr-only">. {{ carried.title }}</span></span>
+                </p>
             </div>
             <div class="qw-chart">
                 <TimeSeriesChart
@@ -137,8 +141,8 @@ import { formatValue } from "@/helpers/metrics"
 import { hasPoints, pointNote, thresholdOf } from "@/helpers/queryHistory"
 import { SEVERITY_TONES, serversWorstFirst } from "@/helpers/savedQueries"
 import {
-    changeText, DISPLAYS, problemText, reportingText, SHOWN_SERVERS, standingParts, totalNote, totalValueText, totalView,
-    widgetFacts,
+    carriedText, changeText, DISPLAYS, problemText, reportingText, SHOWN_SERVERS, standingParts, totalNote,
+    totalValueText, totalView, widgetFacts,
 } from "@/helpers/usageWidgets"
 
 // One saved query followed on a fleet's Usage tab: the fleet's servers' answers over the tab's range, summed or
@@ -236,6 +240,9 @@ export default {
         },
         reporting() {
             return reportingText(this.total)
+        },
+        carried() {
+            return carriedText(this.history)
         },
         // The axis hugs the total so that a count moving around 2,000 reads as moving; with a single value there is
         // nothing to hug, and it starts at 0
@@ -431,6 +438,24 @@ export default {
     margin: 0.15rem 0 0;
     color: var(--health-warning-ink);
     font-size: 0.78rem;
+}
+
+.qw-carried {
+    display: flex;
+    align-items: baseline;
+    gap: 0.35rem;
+    margin: 0.2rem 0 0;
+    color: #5b6470;
+    font-size: 0.78rem;
+    line-height: 1.35;
+    cursor: help;
+}
+
+/* The tone of the "could not run" chip it explains */
+.qw-carried .fa-history {
+    flex: none;
+    color: var(--health-info-ink);
+    font-size: 0.72rem;
 }
 
 .qw-chart {

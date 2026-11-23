@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
-    candidateWhere, changeText, movedIds, problemText, reportingText, scheduleWords, standingParts, totalNote,
+    candidateWhere, carriedText, changeText, movedIds, problemText, reportingText, scheduleWords, standingParts, totalNote,
     totalValueText, totalView, widgetFacts, widgetSpans,
 } from "@/helpers/usageWidgets"
 
@@ -88,6 +88,38 @@ describe("totalView", () => {
         expect(reportingText(view)).toBe("")
         expect(totalView({ kind: "count" })).toBe(null)
         expect(changeText({ abs: 0 })).toBe("No change")
+    })
+})
+
+describe("carriedText", () => {
+    const NOW = 2000000000
+    const withCarried = (carried) => ({ kind: "count", total: Object.assign({}, HISTORY.total, { to: NOW, carried }) })
+
+    it("names the one server whose old answer the total still holds", () => {
+        const text = carriedText(withCarried([
+            { server_id: 4, server_name: "Refused org test", ts: NOW - 12 * 86400, value: 471, more: false },
+        ]))
+        expect(text.text).toBe("Includes Refused org test's last answer (471), 12 days old")
+        expect(text.title).toMatch(/^Its last run gave no number/)
+    })
+
+    it("sums several, gives the oldest age, and lists each one in the title", () => {
+        const text = carriedText(withCarried([
+            { server_id: 4, server_name: "Refused org test", ts: NOW - 12 * 86400, value: 1471, more: false },
+            { server_id: 7, server_name: "Lab", ts: NOW - 3 * 3600, value: 100, more: true },
+        ]))
+        expect(text.text).toBe("Includes 2 servers' last answers (1,571 or more), the oldest 12 days old")
+        expect(text.title.split("\n")).toEqual([
+            "Their last run gave no number: the total keeps each one's last answer until it answers again.",
+            "Refused org test: 1,471, 12 days old",
+            "Lab: 100 or more, 3 h old",
+        ])
+    })
+
+    it("says nothing when every number in the total is current", () => {
+        expect(carriedText(withCarried([]))).toBe(null)
+        expect(carriedText(HISTORY)).toBe(null)
+        expect(carriedText(null)).toBe(null)
     })
 })
 

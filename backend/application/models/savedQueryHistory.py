@@ -213,6 +213,20 @@ def _lastBefore(savedId: int, serverId: int, before: int, source: str) -> Option
         .order_by(SavedQuerySample.ts.desc()).first()
 
 
+def lastAnswers(savedId: int, serverIds: List[int]) -> dict:
+    """{server_id: its last answer kept}: the last raw row, or once raw rows were trimmed, the last day row (its `ts`
+    the start of that day, its `value` that day's last answer). Servers without any answer kept are left out"""
+    found = {}
+    for serverId in serverIds:
+        base = SavedQuerySample.query.filter(SavedQuerySample.saved_query_id == savedId,
+                                             SavedQuerySample.server_id == serverId)
+        row = base.filter(SavedQuerySample.tier == 'raw').order_by(SavedQuerySample.ts.desc()).first() \
+            or base.filter(SavedQuerySample.tier == 'day').order_by(SavedQuerySample.ts.desc()).first()
+        if row is not None:
+            found[serverId] = row
+    return found
+
+
 def total(savedId: int, servers: list, rangeName: str, now: Optional[int] = None) -> dict:
     """The servers' answers summed, as a fleet's usage totals are: per hour up to 30 days (while raw rows cover them),
     per day beyond. In each bucket, each server's last answer, carried forward until its next one, its last answer

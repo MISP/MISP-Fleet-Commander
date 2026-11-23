@@ -189,4 +189,17 @@ def history(user, fleetId: int, widgetId: int, rangeName: Optional[str], now: Op
         raise WidgetError(e.message, e.status, field=getattr(e, 'field', None))
     answer['widget_id'] = widget.id
     answer['total'] = savedQueryHistory.total(saved.id, servers, answer['range'], now=answer['to'])
+    answer['total']['carried'] = carriedAnswers(saved, servers)
     return answer
+
+
+def carriedAnswers(saved: SavedQuery, servers: List[Server]) -> List[dict]:
+    """The servers whose last run gave no number (unreachable, a query error…) while an earlier answer of theirs is
+    still in the total, as the total carries each server's last answer forward: oldest first"""
+    silent = [entry['server_id'] for entry in savedQueries.serverStates(saved, servers)
+              if entry['state'] == savedQueries.UNCHECKED]
+    names = {server.id: server.name for server in servers}
+    carried = [{'server_id': serverId, 'server_name': names[serverId], 'ts': row.ts, 'value': row.value,
+                'more': bool(row.more)}
+               for serverId, row in savedQueryHistory.lastAnswers(saved.id, silent).items()]
+    return sorted(carried, key=lambda entry: (entry['ts'], entry['server_name']))
