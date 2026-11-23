@@ -97,7 +97,7 @@ const actions = {
                 fleet => {
                     dispatch("selectFleet", { data: fleet, redirect: false}).then(() => {
                         resolve()
-                    })
+                    }).catch(reject)
                 },
                 (error) => { reject(error) }
             )

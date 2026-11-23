@@ -60,6 +60,7 @@ import { mapState, mapGetters } from "vuex"
 import store from "@/store/index"
 import Layout from "@/components/layout/Layout.vue"
 import { websocketMixin } from "@/helpers/websocketMixin"
+import { sameServer, selectServerFleet } from "@/helpers/serverRoute"
 import ServerViewProfile from "@/views/servers/elements/serverView/serverProfile.vue"
 import ServerNotifications from "@/views/servers/elements/serverView/serverNotifications.vue"
 import ServerQuickActions from "@/views/servers/elements/serverView/serverQuickActions.vue"
@@ -132,16 +133,28 @@ export default {
         this.$store.dispatch("plugins/getPlugins", {use_cache: true})
     },
     beforeRouteEnter(to, from, next) {
-        if (store.getters["fleets/selectedFleet"] === null) {
-            store.dispatch("fleets/selectFleetFromServerId", to.params.server_id).then(() => {
-                store.dispatch("servers/fetchServers", {force: true})
-                next()
-            }).catch(() => {
-                next("/home")
-            })
-        } else {
+        selectServerFleet(store, to.params.server_id).then(() => {
             next()
+        }).catch(() => {
+            next("/home")
+        })
+    },
+    // From one server page to another (the navbar search, a link on the page): the same component, so its server
+    // may be in another fleet, and its status and plugin values are the previous server's
+    beforeRouteUpdate(to, from, next) {
+        if (sameServer(to, from)) {
+            next()
+            return
         }
+        selectServerFleet(store, to.params.server_id).then(() => {
+            next()
+            this.$nextTick(() => {
+                this.wsStatusRefresh()
+                this.refreshPluginViewValues()
+            })
+        }).catch(() => {
+            next("/home")
+        })
     },
 }
 </script>
