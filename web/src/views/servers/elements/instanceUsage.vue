@@ -500,7 +500,8 @@ export default {
                 })
                 .catch((error) => {
                     if (request === this.requestCount) {
-                        this.requestError = (error.response && error.response.data && error.response.data.message) || error.message
+                        // The client rejects with the server's message alone when it gave one
+                        this.requestError = typeof error === "string" ? error : (error && error.message) || "Unknown error"
                     }
                 })
                 .finally(() => {
