@@ -6,9 +6,10 @@
     color: var(--var-color-yankeesblue);
 }
 
+/* Pickers and texts of different heights: their texts share one baseline */
 .usage-bar {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     flex-wrap: wrap;
     gap: 0.5rem 1rem;
     margin-bottom: 0.75rem;
@@ -17,6 +18,16 @@
 .usage-meta {
     color: #6c757d;
     font-size: 0.8125rem;
+}
+
+/* The time since the last sample comes middle-aligned and spaced for table cells: here it sits on the line like its
+   words */
+.usage-meta >>> .align-middle {
+    vertical-align: baseline !important;
+}
+
+.usage-meta >>> .text-nowrap.mr-1 {
+    margin-right: 0 !important;
 }
 
 .usage-updating {
