@@ -51,7 +51,7 @@
             </div>
         </header>
 
-        <ul v-if="standing.length" class="qw-standing" aria-label="How this fleet's servers last answered">
+        <ul v-if="standing.length" class="qw-standing" :aria-label="serverId === null ? 'How this fleet\'s servers last answered' : 'How the server last answered'">
             <li v-for="part in standing" :key="part.state" :class="['qw-chip', `job-tone-${part.tone}`]">
                 <i :class="['fas', part.icon]" aria-hidden="true"></i>{{ part.text }}
             </li>
@@ -62,7 +62,7 @@
             <span>
                 {{ problem }}
                 <router-link v-if="saved" :to="savedLink">Open the saved query</router-link>
-                <template v-if="saved"> to change it, or remove this widget.</template>
+                <template v-if="saved">{{ serverId === null ? " to change it, or remove this widget." : " to change that." }}</template>
             </span>
         </div>
 
@@ -146,12 +146,15 @@ import {
 } from "@/helpers/usageWidgets"
 
 // One saved query followed on a fleet's Usage tab: the fleet's servers' answers over the tab's range, summed or
-// server by server
+// server by server, or only one server's when the tab is limited to it
 export default {
     name: "QueryWidget",
     components: { QueryHistoryGrid, ThresholdLegend, TimeSeriesChart },
     props: {
         fleetId: { type: Number, required: true },
+        // The server the tab is limited to, or null for all of them
+        serverId: { type: Number, default: null },
+        serverName: { type: String, default: "" },
         // As `GET /fleets/<id>/widgets` gives it
         widget: { type: Object, required: true },
         rangeKey: { type: String, required: true },
@@ -197,16 +200,19 @@ export default {
             if (!this.saved) {
                 return "Its saved query was deleted."
             }
-            return problemText(this.widget.problem)
+            return problemText(this.widget.problem, this.serverId === null ? "" : this.serverName)
         },
         anyPoint() {
             return hasPoints(this.history)
         },
         emptyText() {
             const answered = (this.widget.servers || []).some((entry) => entry.result)
-            return answered
+            if (!answered) {
+                return "No history yet: each run of the saved query adds a point."
+            }
+            return this.serverId === null
                 ? `No server of this fleet answered with a number ${this.rangePhrase}: pick a longer range, or see each server's last answer on the saved query's page.`
-                : "No history yet: each run of the saved query adds a point."
+                : `${this.serverName} did not answer with a number ${this.rangePhrase}: pick a longer range, or see its last answer on the saved query's page.`
         },
         threshold() {
             if (!this.history) {
@@ -226,7 +232,8 @@ export default {
         },
         latestTitle() {
             const latest = this.total && this.total.latest
-            return latest ? `Latest total: ${formatValue(latest.value, "count", { exact: true })}` : null
+            const label = this.serverId === null ? "Latest total" : "Latest answer"
+            return latest ? `${label}: ${formatValue(latest.value, "count", { exact: true })}` : null
         },
         deltaText() {
             return changeText(this.total && this.total.change)
@@ -251,19 +258,29 @@ export default {
             return values.size < 2
         },
         totalTitle() {
-            return this.history && this.history.kind === "select" ? "Rows on the fleet" : "Fleet total"
+            const select = this.history && this.history.kind === "select"
+            if (this.serverId !== null) {
+                return select ? "Rows on the server" : "The server's answer"
+            }
+            return select ? "Rows on the fleet" : "Fleet total"
         },
         totalSubtitle() {
             const servers = this.total ? this.total.servers : 0
             const per = this.history && this.history.total.tier === "day" ? "per day" : "per hour"
+            if (this.serverId !== null) {
+                return `its last answer ${per}`
+            }
             return `${servers} server${servers === 1 ? "" : "s"} summed, ${per}`
         },
         totalNote() {
-            return totalNote(this.history)
+            return totalNote(this.history, { single: this.serverId !== null })
         },
     },
     watch: {
         rangeKey() {
+            this.load()
+        },
+        serverId() {
             this.load()
         },
         refreshKey() {
@@ -287,19 +304,21 @@ export default {
             if (this.problem) {
                 return Promise.resolve()
             }
-            const asked = { widget: this.widget.id, range: this.rangeKey }
+            const asked = { widget: this.widget.id, range: this.rangeKey, server: this.serverId }
+            const current = () => asked.widget === this.widget.id && asked.range === this.rangeKey
+                && asked.server === this.serverId
             this.loading = true
-            return api.history(this.fleetId, this.widget.id, this.rangeKey).then((history) => {
-                if (asked.widget === this.widget.id && asked.range === this.rangeKey) {
+            return api.history(this.fleetId, this.widget.id, this.rangeKey, this.serverId).then((history) => {
+                if (current()) {
                     this.history = history
                     this.error = null
                 }
             }).catch((error) => {
-                if (asked.widget === this.widget.id && asked.range === this.rangeKey) {
+                if (current()) {
                     this.error = String(error)
                 }
             }).finally(() => {
-                if (asked.widget === this.widget.id && asked.range === this.rangeKey) {
+                if (current()) {
                     this.loading = false
                 }
             })

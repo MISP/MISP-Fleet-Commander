@@ -758,6 +758,10 @@ export default {
             } else {
                 query.tab = name
             }
+            // The server the Usage tab is limited to
+            if (name !== "usage") {
+                delete query.server
+            }
             return query
         },
         setCheckOnServers(checked) {

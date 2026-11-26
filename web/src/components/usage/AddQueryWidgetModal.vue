@@ -100,6 +100,8 @@ export default {
     props: {
         modalId: { type: String, required: true },
         fleetId: { type: Number, required: true },
+        // The server the tab is limited to: the added widget comes back drawn for it
+        serverId: { type: Number, default: null },
     },
     data() {
         return {
@@ -143,7 +145,7 @@ export default {
             }
             this.saving = true
             this.message = ""
-            api.add(this.fleetId, this.chosen, this.display).then((answer) => {
+            api.add(this.fleetId, this.chosen, this.display, this.serverId).then((answer) => {
                 if (!answer.ok) {
                     this.message = answer.message
                     return

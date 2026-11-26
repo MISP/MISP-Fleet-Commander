@@ -35,6 +35,20 @@ def parseRequest(rangeName: Optional[str], metrics: Optional[str]) -> tuple:
     return rangeName, FLEET_TIERS[rangeName], keys
 
 
+def parseServer(fleet, value: Optional[str]) -> Optional[int]:
+    """The ID of the one server of the fleet the answer is limited to, or None for all of them. Raises
+    metricSeries.SeriesRequestError with a message for the user"""
+    if value is None or value == '':
+        return None
+    try:
+        serverId = int(value)
+    except ValueError:
+        raise metricSeries.SeriesRequestError('The server must be given by its ID')
+    if not any(server.id == serverId for server in fleet.servers):
+        raise metricSeries.SeriesRequestError('This server is not in the fleet')
+    return serverId
+
+
 # Stored values are JSON numbers; `type()` rather than isinstance keeps booleans out, and is quicker over the tens of
 # thousands of buckets of a big fleet
 NUMBERS = (int, float)
@@ -161,13 +175,16 @@ def serverFigures(buckets: list, keys: list) -> dict:
     }
 
 
-def fleetSeries(fleet, rangeName: str, tier: str, keys: list, settings: dict, now: Optional[int] = None) -> dict:
-    """The answer of `GET /fleets/metrics/<id>`; `settings` holds `enabled` and `interval` (seconds)"""
+def fleetSeries(fleet, rangeName: str, tier: str, keys: list, settings: dict, now: Optional[int] = None,
+                serverId: Optional[int] = None) -> dict:
+    """The answer of `GET /fleets/metrics/<id>`; `settings` holds `enabled` and `interval` (seconds). With `serverId`,
+    everything but `fleet_servers` and `state.servers` is about that server of the fleet alone"""
     now = int(time.time()) if now is None else now
     start = now - metricSeries.RANGES[rangeName]
     size = metricSeries.BUCKET_SIZES[tier]
     first = start - start % size
-    servers = sorted(fleet.servers, key=lambda server: (server.name or '').lower())
+    fleetServers = sorted(fleet.servers, key=lambda server: (server.name or '').lower())
+    servers = [server for server in fleetServers if serverId is None or server.id == serverId]
     serverIds = [server.id for server in servers]
     lines, newestPending = timelines(serverIds, tier, first, keys)
     totals, reporting = sums(lines, keys)
@@ -196,6 +213,7 @@ def fleetSeries(fleet, rangeName: str, tier: str, keys: list, settings: dict, no
         })
     return {
         'fleet_id': fleet.id,
+        'server_id': serverId,
         'range': rangeName,
         'tier': tier,
         'from': start,
@@ -206,11 +224,13 @@ def fleetSeries(fleet, rangeName: str, tier: str, keys: list, settings: dict, no
         'reporting': reporting,
         'latest_ts': max((sample.ts for sample in latest.values()), default=None),
         'servers': perServer,
+        # What the answer can be limited to
+        'fleet_servers': [{'id': server.id, 'name': server.name} for server in fleetServers],
         'state': {
             'enabled': bool(settings['enabled']),
             'fleet_monitored': bool(fleet.is_monitored),
             'interval_s': settings['interval'],
-            'servers': len(servers),
+            'servers': len(fleetServers),
         },
         'metrics': {key: {'label': catalogue.METRICS[key].label, 'group': catalogue.METRICS[key].group,
                           'kind': catalogue.METRICS[key].kind, 'unit': catalogue.METRICS[key].unit,

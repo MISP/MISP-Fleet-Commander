@@ -93,15 +93,18 @@ def getFromServerId(user, server_id):
 @token_required
 def fleetMetrics(user, fleet_id):
     """Usage metrics of the fleet over `range` (24h, 7d, 30d, 90d, 1y): its servers' figures summed per hour or day,
-    and each server's own figures, optionally only for the `metrics` given (comma-separated keys)"""
+    and each server's own figures, optionally only for the `metrics` given (comma-separated keys) and only for the
+    fleet's server `server_id`"""
     fleet = fleetModel.getForUser(user, fleet_id)
     if fleet is None:
         abort(404)
     try:
         rangeName, tier, keys = fleetMetricsModel.parseRequest(request.args.get('range'), request.args.get('metrics'))
+        serverId = fleetMetricsModel.parseServer(fleet, request.args.get('server_id'))
     except metricSeriesModel.SeriesRequestError as e:
         return jsonify({'message': str(e)}), 400
-    answer = fleetMetricsModel.fleetSeries(fleet, rangeName, tier, keys, metricModel.monitoringSettings())
+    answer = fleetMetricsModel.fleetSeries(fleet, rangeName, tier, keys, metricModel.monitoringSettings(),
+                                           serverId=serverId)
     answer['state']['collector'] = metricModel.collectorState()
     return jsonify(answer)
 
@@ -121,7 +124,7 @@ def widgetIndex(user, fleet_id):
     """The saved queries followed on the fleet's Usage tab, in order, each with how the fleet's servers last
     answered it"""
     try:
-        return jsonify(usageWidgets.listFor(user, fleet_id))
+        return jsonify(usageWidgets.listFor(user, fleet_id, request.args.get('server_id')))
     except usageWidgets.JobError as e:
         return widgetRefused(e)
 
@@ -142,7 +145,7 @@ def widgetAdd(user, fleet_id):
     """Follow a saved query on the fleet's Usage tab: `{saved_query_id, display: total | servers}`. 400 with
     `field`, 409 when it is already there"""
     try:
-        return jsonify(usageWidgets.add(user, fleet_id, jsonBody())), 201
+        return jsonify(usageWidgets.add(user, fleet_id, jsonBody(), request.args.get('server_id'))), 201
     except usageWidgets.JobError as e:
         return widgetRefused(e)
 
@@ -162,7 +165,7 @@ def widgetOrder(user, fleet_id):
 def widgetUpdate(user, fleet_id, widget_id):
     """`{display: total | servers}`"""
     try:
-        return jsonify(usageWidgets.update(user, fleet_id, widget_id, jsonBody()))
+        return jsonify(usageWidgets.update(user, fleet_id, widget_id, jsonBody(), request.args.get('server_id')))
     except usageWidgets.JobError as e:
         return widgetRefused(e)
 
@@ -183,6 +186,7 @@ def widgetHistory(user, fleet_id, widget_id):
     """What the fleet's servers answered to the widget's saved query over `range` (as `/queries/saved/<id>/history`
     does), and `total`, their answers summed per hour or per day"""
     try:
-        return jsonify(usageWidgets.history(user, fleet_id, widget_id, request.args.get('range')))
+        return jsonify(usageWidgets.history(user, fleet_id, widget_id, request.args.get('range'),
+                                            serverId=request.args.get('server_id')))
     except usageWidgets.JobError as e:
         return widgetRefused(e)

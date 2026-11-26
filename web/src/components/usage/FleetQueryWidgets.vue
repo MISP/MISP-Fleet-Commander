@@ -2,7 +2,7 @@
     <section class="usage-section fqw" aria-labelledby="fleet-usage-queries-title">
         <header class="section-head">
             <h3 id="fleet-usage-queries-title" class="section-title">Saved queries</h3>
-            <span class="section-note">what this fleet's servers answer to your saved queries · {{ rangePhrase }}</span>
+            <span class="section-note">{{ serverId === null ? "what this fleet's servers answer" : `what ${serverName} answers` }} to your saved queries · {{ rangePhrase }}</span>
             <b-button
                 v-if="widgets.length > 0"
                 size="sm"
@@ -50,6 +50,8 @@
                 v-for="(widget, index) in widgets"
                 :key="widget.id"
                 :fleet-id="fleetId"
+                :server-id="serverId"
+                :server-name="serverName"
                 :widget="widget"
                 :range-key="rangeKey"
                 :range-phrase="rangePhrase"
@@ -64,7 +66,7 @@
             ></QueryWidget>
         </transition-group>
 
-        <AddQueryWidgetModal :modal-id="modalId" :fleet-id="fleetId" @added="onAdded"></AddQueryWidgetModal>
+        <AddQueryWidgetModal :modal-id="modalId" :fleet-id="fleetId" :server-id="serverId" @added="onAdded"></AddQueryWidgetModal>
     </section>
 </template>
 
@@ -77,12 +79,16 @@ import { movedIds, widgetSpans } from "@/helpers/usageWidgets"
 // After a query run ends, the time its answers take to be kept before the widgets read them again
 const RELOAD_DELAY = 800
 
-// The saved queries followed on a fleet's Usage tab, in their owner's order
+// The saved queries followed on a fleet's Usage tab, in their owner's order; drawn for one server of the fleet when
+// the tab is limited to it
 export default {
     name: "FleetQueryWidgets",
     components: { AddQueryWidgetModal, QueryWidget },
     props: {
         fleetId: { type: Number, required: true },
+        // The server the tab is limited to, or null for all of them
+        serverId: { type: Number, default: null },
+        serverName: { type: String, default: "" },
         rangeKey: { type: String, required: true },
         rangePhrase: { type: String, default: "" },
     },
@@ -111,6 +117,10 @@ export default {
             this.loaded = false
             this.load()
         },
+        serverId() {
+            // The servers' last answers and problems, for that server alone; each widget reloads its points
+            this.load()
+        },
     },
     created() {
         this.load()
@@ -125,20 +135,21 @@ export default {
     methods: {
         load() {
             const fleetId = this.fleetId
+            const serverId = this.serverId
             this.loading = true
-            return api.list(fleetId).then((answer) => {
-                if (fleetId === this.fleetId) {
+            return api.list(fleetId, serverId).then((answer) => {
+                if (fleetId === this.fleetId && serverId === this.serverId) {
                     this.widgets = answer.widgets || []
                     this.max = answer.max || this.max
                     this.loaded = true
                     this.message = ""
                 }
             }).catch((error) => {
-                if (fleetId === this.fleetId) {
+                if (fleetId === this.fleetId && serverId === this.serverId) {
                     this.message = `Could not load the saved queries followed here: ${error}`
                 }
             }).finally(() => {
-                if (fleetId === this.fleetId) {
+                if (fleetId === this.fleetId && serverId === this.serverId) {
                     this.loading = false
                 }
             })
@@ -186,7 +197,7 @@ export default {
             }
             // Both displays come from the history the widget holds: switch at once
             this.replace(Object.assign({}, widget, { display }))
-            this.withBusy(widget, () => api.setDisplay(this.fleetId, widget.id, display)).then((answer) => {
+            this.withBusy(widget, () => api.setDisplay(this.fleetId, widget.id, display, this.serverId)).then((answer) => {
                 if (answer) {
                     this.replace(answer)
                 }

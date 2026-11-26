@@ -98,18 +98,25 @@ export function changeText(change) {
     return `${formatDelta(change.abs, "count")}${pct ? ` (${pct})` : ""}`
 }
 
-/** What one point of a fleet total stands for */
-export function totalNote(history) {
+/** What one point of a fleet total stands for; `single`: the total of the one server the tab is limited to */
+export function totalNote(history, { single = false } = {}) {
     const total = history && history.total
     if (!total) {
         return ""
     }
     const bucket = total.tier === "day" ? "a day" : "an hour"
     const unit = total.tier === "day" ? "day" : "hour"
+    const limit = history.kind === "select" && history.limit ? formatValue(history.limit, "count", { exact: true }) : null
+    if (single) {
+        let text = `Each point is ${bucket}: the server's last answer that ${unit}, or its previous one when it gave none.`
+        if (limit) {
+            text += ` A SELECT counts the rows it returned, at most ${limit}: a point at its LIMIT may stand for more.`
+        }
+        return text
+    }
     let text = `Each point is ${bucket}: each server's last answer, summed. A server without an answer that ${unit} `
         + "counts with its previous one."
-    if (history.kind === "select" && history.limit) {
-        const limit = formatValue(history.limit, "count", { exact: true })
+    if (limit) {
         text += ` A SELECT counts the rows it returned, at most ${limit} each: a total holding one at its LIMIT may stand for more.`
     }
     return text
@@ -189,10 +196,10 @@ export function movedIds(ids, id, delta) {
     return moved
 }
 
-/** Why a widget has nothing to draw, in words */
-export function problemText(problem) {
+/** Why a widget has nothing to draw, in words; `serverName`: the one server the tab is limited to */
+export function problemText(problem, serverName = "") {
     return {
         no_number: "Its statement no longer answers a number (only a SELECT or a COUNT does).",
-        no_server: "It runs on none of this fleet's servers now.",
+        no_server: serverName ? `It does not run on ${serverName} now.` : "It runs on none of this fleet's servers now.",
     }[problem] || ""
 }

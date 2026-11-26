@@ -203,5 +203,54 @@ def test_empty_fleet_and_monitoring_off(db, make_user):
     answer = series(empty, "1y", BASE, keys=["events"], settings=dict(SETTINGS, enabled=False))
     assert answer["totals"] == {"events": []} and answer["reporting"] == [] and answer["servers"] == []
     assert answer["state"] == {"enabled": False, "fleet_monitored": False, "interval_s": 600, "servers": 0}
+    assert answer["fleet_servers"] == [] and answer["server_id"] is None
     db.session.delete(empty)
     db.session.commit()
+
+
+def test_limited_to_one_server(db, fleet, client, auth_headers):
+    """`server_id`: the sums, servers and latest sample of that server alone; the picker still gets every server"""
+    alice, bob, theFleet, servers = fleet
+    a, b = servers["a"], servers["b"]
+    h = [BASE + 5 * DAY + n * HOUR for n in range(2)]
+    add(db, a, "hour", h[0], {"events": 10, "logins": 2})
+    add(db, b, "hour", h[0], {"events": 100, "logins": 3})
+    add(db, b, "hour", h[1], {"events": 101, "logins": 1})
+    from application.models import fleetMetrics
+    _, tier, _ = fleetMetrics.parseRequest("7d", None)
+    answer = fleetMetrics.fleetSeries(theFleet, "7d", tier, ["events", "logins"], SETTINGS, now=h[1] + HOUR,
+                                      serverId=b.id)
+    assert answer["server_id"] == b.id
+    assert answer["totals"] == {"events": [[h[0], 100], [h[1], 101]], "logins": [[h[0], 3], [h[1], 1]]}
+    assert answer["reporting"] == [[h[0], 1], [h[1], 1]]
+    assert [server["name"] for server in answer["servers"]] == ["b-misp"]
+    assert answer["servers"][0]["sums"] == {"logins": 4}
+    assert answer["fleet_servers"] == [{"id": servers[name].id, "name": f"{name}-misp"} for name in ("a", "b", "c")]
+    assert answer["state"]["servers"] == 3
+    unfiltered = fleetMetrics.fleetSeries(theFleet, "7d", tier, ["events"], SETTINGS, now=h[1] + HOUR)
+    assert unfiltered["server_id"] is None and unfiltered["totals"]["events"] == [[h[0], 110], [h[1], 111]]
+
+    url = f"/fleets/metrics/{theFleet.id}?range=7d&metrics=events"
+    response = client.get(f"{url}&server_id={a.id}", headers=auth_headers(alice))
+    assert response.status_code == 200 and [server["id"] for server in response.json["servers"]] == [a.id]
+    assert len(response.json["fleet_servers"]) == 3
+    # Empty: the whole fleet
+    assert len(client.get(f"{url}&server_id=", headers=auth_headers(alice)).json["servers"]) == 3
+    # A server of another fleet, an unknown one, or no ID at all
+    from application.DBModels import Fleet, Server
+    other = Fleet(name="other-fleet", description="", user_id=alice.id, timestamp=1)
+    db.session.add(other)
+    db.session.commit()
+    stranger = Server(name="z-misp", url="https://z.test", authkey="k" * 40, fleet_id=other.id, user_id=alice.id)
+    db.session.add(stranger)
+    db.session.commit()
+    try:
+        for value, message in ((stranger.id, "not in the fleet"), ("a", "by its ID"), (999999, "not in the fleet")):
+            response = client.get(f"{url}&server_id={value}", headers=auth_headers(alice))
+            assert response.status_code == 400 and message in response.json["message"]
+        # Bob sees no fleet at all, filtered or not
+        assert client.get(f"{url}&server_id={a.id}", headers=auth_headers(bob)).status_code == 404
+    finally:
+        db.session.delete(db.session.get(Server, stranger.id))
+        db.session.delete(db.session.get(Fleet, other.id))
+        db.session.commit()

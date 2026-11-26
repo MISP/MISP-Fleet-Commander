@@ -289,3 +289,22 @@ describe("fleet", () => {
         expect(names(metrics.sortRows(rows, "name", true))).toEqual(["d", "c", "B", "a"])
     })
 })
+
+describe("fleet Usage tab", () => {
+    it("says how many servers report", () => {
+        expect(metrics.reportingText({ reporting: 3, total: 3 })).toBe("All 3 servers reporting")
+        expect(metrics.reportingText({ reporting: 2, total: 3 })).toBe("2 of 3 servers reporting")
+        expect(metrics.reportingText({ reporting: 1, total: 1 })).toBe("The server is reporting")
+        expect(metrics.reportingText({ reporting: 0, total: 1 })).toBe("The server is not reporting")
+    })
+
+    it("reads the server it is limited to from the page's address", () => {
+        expect(metrics.usageServerOf({ tab: "usage", server: "12" })).toBe(12)
+        expect(metrics.usageServerOf({ tab: "usage" })).toBe(null)
+        expect(metrics.usageServerOf({ server: "" })).toBe(null)
+        expect(metrics.usageServerOf({ server: "0" })).toBe(null)
+        expect(metrics.usageServerOf({ server: "12abc" })).toBe(null)
+        expect(metrics.usageServerOf({ server: ["12", "13"] })).toBe(null)
+        expect(metrics.usageServerOf(undefined)).toBe(null)
+    })
+})

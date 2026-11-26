@@ -1,7 +1,10 @@
 <template>
     <div class="usage fleet-usage">
         <div class="usage-bar">
-            <RangePicker :value="rangeKey" @input="setRange"></RangePicker>
+            <div class="usage-pickers">
+                <RangePicker :value="rangeKey" @input="setRange"></RangePicker>
+                <ServerPicker v-if="pickableServers.length > 1 || serverId !== null" :value="serverId" :servers="pickableServers" @input="setServer"></ServerPicker>
+            </div>
             <span v-if="data && collection.total > 0 && monitored" :class="['usage-meta', 'reporting', { 'is-short': collection.reporting < collection.total }]">
                 <i class="fas fa-server" aria-hidden="true"></i>
                 {{ reportingText }}
@@ -41,8 +44,9 @@
         <div v-if="requestError" class="usage-notice is-critical" role="alert">
             <i class="fas fa-fw fa-exclamation-triangle" aria-hidden="true"></i>
             <div class="notice-text">
-                <strong>Could not load the fleet's usage.</strong> {{ requestError }}
+                <strong>Could not load {{ serverId === null ? "the fleet's usage" : "this server's usage" }}.</strong> {{ requestError }}
                 <button type="button" class="btn btn-link notice-action" @click="load()">Try again</button>
+                <button v-if="serverId !== null" type="button" class="btn btn-link notice-action" @click="setServer(null)">Show all servers</button>
             </div>
         </div>
 
@@ -65,13 +69,13 @@
             <template v-if="hasHistory">
                 <section class="usage-section" aria-labelledby="fleet-usage-totals-title">
                     <header class="section-head">
-                        <h3 id="fleet-usage-totals-title" class="section-title">Fleet totals</h3>
-                        <span class="section-note">summed over the servers · change {{ periodPhrase }}</span>
+                        <h3 id="fleet-usage-totals-title" class="section-title">{{ serverId === null ? "Fleet totals" : "Server totals" }}</h3>
+                        <span class="section-note">{{ scopePhrase }} · change {{ periodPhrase }}</span>
                     </header>
                     <div class="tile-grid">
                         <MetricTile v-for="tile in tiles" :key="tile.key" v-bind="tile"></MetricTile>
                     </div>
-                    <p class="section-footnote">
+                    <p v-if="serverId === null" class="section-footnote">
                         <i class="fas fa-info-circle" aria-hidden="true"></i>
                         Content synchronised between servers counts once on each server that holds it.
                     </p>
@@ -80,7 +84,7 @@
                 <section class="usage-section" aria-labelledby="fleet-usage-activity-title">
                     <header class="section-head">
                         <h3 id="fleet-usage-activity-title" class="section-title">Activity</h3>
-                        <span class="section-note">all servers together</span>
+                        <span class="section-note">{{ serverId === null ? "all servers together" : `${pickedName} only` }}</span>
                     </header>
                     <div class="chart-grid activity-grid">
                         <div class="chart-card">
@@ -140,16 +144,24 @@
             <section v-else class="usage-section">
                 <p class="section-empty">
                     <i class="fas fa-chart-line" aria-hidden="true"></i>
-                    Fleet totals and charts appear here once samples have been collected from its servers.
+                    {{ serverId === null
+                        ? "Fleet totals and charts appear here once samples have been collected from its servers."
+                        : `Totals and charts appear here once samples have been collected from ${pickedName}.` }}
                 </p>
             </section>
 
-            <FleetQueryWidgets :fleet-id="fleetId" :range-key="rangeKey" :range-phrase="rangePhrase"></FleetQueryWidgets>
+            <FleetQueryWidgets
+                :fleet-id="fleetId"
+                :server-id="serverId"
+                :server-name="pickedName"
+                :range-key="rangeKey"
+                :range-phrase="rangePhrase"
+            ></FleetQueryWidgets>
 
             <section class="usage-section" aria-labelledby="fleet-usage-servers-title">
                 <header class="section-head">
-                    <h3 id="fleet-usage-servers-title" class="section-title">Servers</h3>
-                    <span class="section-note">latest sample of each server · logins and changes {{ rangePhrase }}</span>
+                    <h3 id="fleet-usage-servers-title" class="section-title">{{ serverId === null ? "Servers" : "Server" }}</h3>
+                    <span class="section-note">{{ serverId === null ? "latest sample of each server" : "latest sample" }} · logins and changes {{ rangePhrase }}</span>
                 </header>
                 <FleetUsageServers :rows="serverRows" :range-phrase="rangePhrase"></FleetUsageServers>
             </section>
@@ -162,10 +174,11 @@ import { mapGetters, mapState } from "vuex"
 import api from "@/api/metrics"
 import {
     changePhrase, DEFAULT_RANGE, fleetCollection, fleetServerRows, HOUR, lastValue, loginBars, QUEUE_KEYS, rangeOf,
-    ratio, stalledNotice, sumSeries,
+    ratio, reportingText, stalledNotice, sumSeries, usageServerOf,
 } from "@/helpers/metrics"
 import MetricTile from "@/components/ui/charts/MetricTile.vue"
 import RangePicker from "@/components/ui/charts/RangePicker.vue"
+import ServerPicker from "@/components/usage/ServerPicker.vue"
 import TimeSeriesChart from "@/components/ui/charts/TimeSeriesChart.vue"
 import HourHeatmap from "@/components/ui/charts/HourHeatmap.vue"
 import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
@@ -195,7 +208,8 @@ const TILES = [
 export default {
     name: "FleetUsageTab",
     components: {
-        MetricTile, RangePicker, TimeSeriesChart, HourHeatmap, timeSinceRefresh, FleetUsageServers, FleetQueryWidgets,
+        MetricTile, RangePicker, ServerPicker, TimeSeriesChart, HourHeatmap, timeSinceRefresh, FleetUsageServers,
+        FleetQueryWidgets,
     },
     props: {
         fleetId: {
@@ -214,6 +228,7 @@ export default {
             heatmapPoints: [],
             heatmapNow: null,
             requestCount: 0,
+            heatmapRequestCount: 0,
         }
     },
     computed: {
@@ -225,6 +240,21 @@ export default {
         }),
         range() {
             return rangeOf(this.rangeKey)
+        },
+        // The one server of the fleet the whole tab is limited to (`?server=<id>`), or null for all of them
+        serverId() {
+            return usageServerOf(this.$route.query)
+        },
+        pickableServers() {
+            return (this.data && this.data.fleet_servers) || []
+        },
+        pickedName() {
+            const server = this.pickableServers.find((item) => item.id === this.serverId)
+            return server ? server.name : "this server"
+        },
+        // What the figures cover
+        scopePhrase() {
+            return this.serverId === null ? "summed over the servers" : `${this.pickedName} only`
         },
         fleetMonitoredTimestamp() {
             const fleet = Object.values(this.fleets || {}).find((item) => item.id === this.fleetId)
@@ -243,11 +273,7 @@ export default {
             return fleetCollection(this.data ? this.data.servers : [])
         },
         reportingText() {
-            const { reporting, total } = this.collection
-            if (reporting === total) {
-                return total === 1 ? "The server is reporting" : `All ${total} servers reporting`
-            }
-            return `${reporting} of ${total} servers reporting`
+            return reportingText(this.collection)
         },
         intervalMinutes() {
             const interval = this.data && this.data.state && this.data.state.interval_s
@@ -376,6 +402,9 @@ export default {
             this.data = null
             this.reload()
         },
+        serverId() {
+            this.reload()
+        },
         fleetMonitoredTimestamp(current, previous) {
             // A collection tick went through the fleet: show its samples, without dimming the tab
             if (previous && current && current !== previous) {
@@ -393,19 +422,27 @@ export default {
         },
         load({ quiet = false } = {}) {
             const request = this.requestCount + 1
+            const serverId = this.serverId
             this.requestCount = request
             this.loading = !quiet || this.loading
             this.requestError = ""
-            return api.fleetSeries(this.fleetId, { range: this.rangeKey, metrics: TAB_METRICS })
+            return api.fleetSeries(this.fleetId, { range: this.rangeKey, metrics: TAB_METRICS, serverId })
                 .then((data) => {
                     if (request === this.requestCount) {
                         this.data = data
                     }
                 })
                 .catch((error) => {
-                    if (request === this.requestCount) {
-                        this.requestError = (error.response && error.response.data && error.response.data.message) || error.message
+                    if (request !== this.requestCount) {
+                        return
                     }
+                    if (serverId !== null && error && error.status === 400) {
+                        // A link to a server that is not, or no longer, in this fleet: show the whole fleet
+                        this.setServer(null)
+                        return
+                    }
+                    // The client rejects with the server's message alone when it gave one
+                    this.requestError = typeof error === "string" ? error : (error && error.message) || "Unknown error"
                 })
                 .finally(() => {
                     if (request === this.requestCount) {
@@ -415,13 +452,19 @@ export default {
         },
         loadHeatmap() {
             // Last 14 days of the fleet's hourly logins, whatever the range (the 30-day hourly sums, cut by the heatmap)
-            return api.fleetSeries(this.fleetId, { range: "30d", metrics: ["logins"] })
+            const request = this.heatmapRequestCount + 1
+            this.heatmapRequestCount = request
+            return api.fleetSeries(this.fleetId, { range: "30d", metrics: ["logins"], serverId: this.serverId })
                 .then((data) => {
-                    this.heatmapPoints = data.totals.logins || []
-                    this.heatmapNow = data.to
+                    if (request === this.heatmapRequestCount) {
+                        this.heatmapPoints = data.totals.logins || []
+                        this.heatmapNow = data.to
+                    }
                 })
                 .catch(() => {
-                    this.heatmapPoints = []
+                    if (request === this.heatmapRequestCount) {
+                        this.heatmapPoints = []
+                    }
                 })
         },
         setRange(key) {
@@ -429,6 +472,17 @@ export default {
                 this.rangeKey = key
                 this.load()
             }
+        },
+        setServer(serverId) {
+            // Kept in the page's address, so that a reload or a shared link shows the same server; the tab reloads
+            // when the route changes
+            const query = Object.assign({}, this.$route.query)
+            if (serverId === null) {
+                delete query.server
+            } else {
+                query.server = String(serverId)
+            }
+            this.$router.replace({ query }).catch(() => {})
         },
         lineSeries(key, label) {
             return [{ key, label, points: this.totals[key] || [], band: false }]
@@ -467,6 +521,13 @@ export default {
 .fleet-usage {
     padding-left: 0;
     padding-right: 0;
+}
+
+.usage-pickers {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    max-width: 100%;
 }
 
 .reporting .fa-server {

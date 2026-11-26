@@ -450,6 +450,20 @@ export function fleetCollection(servers) {
     return result
 }
 
+/** "All 3 servers reporting", "2 of 3 servers reporting"; for one server, whether it is */
+export function reportingText({ reporting, total }) {
+    if (total === 1) {
+        return reporting === 1 ? "The server is reporting" : "The server is not reporting"
+    }
+    return reporting === total ? `All ${total} servers reporting` : `${reporting} of ${total} servers reporting`
+}
+
+/** The server a fleet's Usage tab is limited to, from its page's `?server=<id>`; null for all of them */
+export function usageServerOf(query) {
+    const text = query && query.server
+    return typeof text === "string" && /^[1-9]\d*$/.test(text) ? Number.parseInt(text, 10) : null
+}
+
 /** One row per server of a fleet answer, with the figures its comparison table shows. Values are null when unknown */
 export function fleetServerRows(servers) {
     return (servers || []).map((server) => {

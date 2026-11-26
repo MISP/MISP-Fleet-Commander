@@ -1,15 +1,16 @@
 """Widgets of a fleet's Usage tab: the saved queries its owner follows there, each drawn as the fleet total or server
 by server, in the order they chose.
 
-A widget draws only the fleet's servers among those its saved query runs on now. It stays when its saved query
-changes so that nothing is left to draw (a statement that answers no number, no server of the fleet in its target):
-it then says why. It goes with its fleet or its saved query (listeners in DBModels).
+A widget draws only the fleet's servers among those its saved query runs on now, or only one of them when the tab is
+limited to that server (`server_id`). It stays when its saved query changes so that nothing is left to draw (a
+statement that answers no number, no server of the fleet in its target): it then says why. It goes with its fleet or
+its saved query (listeners in DBModels).
 """
 import time
 from typing import List, Optional
 
 from application.DBModels import Fleet, SavedQuery, Server, USAGE_WIDGET_DISPLAYS, UsageWidget, db
-from application.models import savedQueries, savedQueryHistory
+from application.models import fleetMetrics, metricSeries, savedQueries, savedQueryHistory
 import application.models.fleets as fleetModel
 from application.models.userJobs import JobError
 
@@ -46,9 +47,19 @@ def ownedWidget(fleet: Fleet, widgetId) -> UsageWidget:
     return widget
 
 
-def fleetServers(saved: SavedQuery, fleet: Fleet) -> List[Server]:
-    """The fleet's servers among those the saved query runs on now, in the saved query's order"""
-    return [server for server in savedQueries.targetServers(saved) if server.fleet_id == fleet.id]
+def pickedServer(fleet: Fleet, value) -> Optional[int]:
+    """The ID of the one server of the fleet the tab is limited to (`server_id`), or None for all of them"""
+    try:
+        return fleetMetrics.parseServer(fleet, None if value is None else str(value))
+    except metricSeries.SeriesRequestError as e:
+        raise WidgetError(str(e), field='server_id')
+
+
+def fleetServers(saved: SavedQuery, fleet: Fleet, serverId: Optional[int] = None) -> List[Server]:
+    """The fleet's servers among those the saved query runs on now, in the saved query's order; only `serverId` if
+    given"""
+    return [server for server in savedQueries.targetServers(saved)
+            if server.fleet_id == fleet.id and (serverId is None or server.id == serverId)]
 
 
 def checkedDisplay(value) -> str:
@@ -59,14 +70,14 @@ def checkedDisplay(value) -> str:
 
 # Reading
 
-def serialize(widget: UsageWidget, fleet: Fleet) -> dict:
+def serialize(widget: UsageWidget, fleet: Fleet, serverId: Optional[int] = None) -> dict:
     saved = db.session.get(SavedQuery, widget.saved_query_id) if widget.saved_query_id else None
     data = {'id': widget.id, 'kind': widget.kind, 'display': widget.display, 'position': widget.position,
             'saved_query': None, 'servers': [], 'problem': None}
     if saved is None:
         return data
     kind = savedQueries.statementKind(saved.statement)
-    servers = fleetServers(saved, fleet)
+    servers = fleetServers(saved, fleet, serverId)
     data['saved_query'] = {
         'id': saved.id,
         'name': saved.name,
@@ -86,9 +97,11 @@ def serialize(widget: UsageWidget, fleet: Fleet) -> dict:
     return data
 
 
-def listFor(user, fleetId: int) -> dict:
+def listFor(user, fleetId: int, serverId=None) -> dict:
+    """The fleet's widgets; with `serverId`, as drawn for that server of the fleet alone"""
     fleet = ownedFleet(user, fleetId)
-    return {'widgets': [serialize(widget, fleet) for widget in fleetWidgets(fleet)], 'max': MAX_WIDGETS}
+    serverId = pickedServer(fleet, serverId)
+    return {'widgets': [serialize(widget, fleet, serverId) for widget in fleetWidgets(fleet)], 'max': MAX_WIDGETS}
 
 
 def candidates(user, fleetId: int) -> dict:
@@ -121,8 +134,10 @@ def candidates(user, fleetId: int) -> dict:
 
 # Changing
 
-def add(user, fleetId: int, body: dict) -> dict:
+def add(user, fleetId: int, body: dict, serverId=None) -> dict:
+    """`serverId`: the server the tab is limited to, for the answer"""
     fleet = ownedFleet(user, fleetId)
+    serverId = pickedServer(fleet, serverId)
     savedId = body.get('saved_query_id')
     try:
         saved = savedQueries.ownedSaved(user, savedId)
@@ -143,16 +158,18 @@ def add(user, fleetId: int, body: dict) -> dict:
                          created=int(time.time()))
     db.session.add(widget)
     db.session.commit()
-    return serialize(widget, fleet)
+    return serialize(widget, fleet, serverId)
 
 
-def update(user, fleetId: int, widgetId: int, body: dict) -> dict:
+def update(user, fleetId: int, widgetId: int, body: dict, serverId=None) -> dict:
+    """`serverId`: the server the tab is limited to, for the answer"""
     fleet = ownedFleet(user, fleetId)
+    serverId = pickedServer(fleet, serverId)
     widget = ownedWidget(fleet, widgetId)
     if 'display' in body:
         widget.display = checkedDisplay(body['display'])
     db.session.commit()
-    return serialize(widget, fleet)
+    return serialize(widget, fleet, serverId)
 
 
 def reorder(user, fleetId: int, body: dict) -> dict:
@@ -175,14 +192,17 @@ def remove(user, fleetId: int, widgetId: int) -> None:
     db.session.commit()
 
 
-def history(user, fleetId: int, widgetId: int, rangeName: Optional[str], now: Optional[int] = None) -> dict:
-    """The saved query's history on the fleet's servers, and their total: both displays from one answer"""
+def history(user, fleetId: int, widgetId: int, rangeName: Optional[str], now: Optional[int] = None,
+            serverId=None) -> dict:
+    """The saved query's history on the fleet's servers (or only `serverId`), and their total: both displays from one
+    answer"""
     fleet = ownedFleet(user, fleetId)
+    serverId = pickedServer(fleet, serverId)
     widget = ownedWidget(fleet, widgetId)
     saved = db.session.get(SavedQuery, widget.saved_query_id) if widget.saved_query_id else None
     if saved is None:
         raise WidgetError('Its saved query was deleted', 404)
-    servers = fleetServers(saved, fleet)
+    servers = fleetServers(saved, fleet, serverId)
     try:
         answer = savedQueries.historyFor(user, saved.id, rangeName, now, servers=servers)
     except savedQueries.SavedQueryError as e:

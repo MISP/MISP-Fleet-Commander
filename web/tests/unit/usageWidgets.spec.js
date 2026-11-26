@@ -133,6 +133,15 @@ describe("totalNote", () => {
             + " A SELECT counts the rows it returned, at most 1,000 each: a total holding one at its LIMIT may stand for more.")
         expect(totalNote(null)).toBe("")
     })
+
+    it("speaks of the one server the tab is limited to", () => {
+        expect(totalNote(HISTORY, { single: true })).toBe(
+            "Each point is an hour: the server's last answer that hour, or its previous one when it gave none.")
+        const daily = { kind: "select", limit: 1000, total: { tier: "day" } }
+        expect(totalNote(daily, { single: true })).toBe(
+            "Each point is a day: the server's last answer that day, or its previous one when it gave none."
+            + " A SELECT counts the rows it returned, at most 1,000: a point at its LIMIT may stand for more.")
+    })
 })
 
 describe("movedIds", () => {
@@ -150,5 +159,10 @@ describe("problemText", () => {
         expect(problemText("no_server")).toBe("It runs on none of this fleet's servers now.")
         expect(problemText("no_number")).toMatch(/no longer answers a number/)
         expect(problemText(null)).toBe("")
+    })
+
+    it("names the server the tab is limited to", () => {
+        expect(problemText("no_server", "misp-a")).toBe("It does not run on misp-a now.")
+        expect(problemText("no_number", "misp-a")).toMatch(/no longer answers a number/)
     })
 })

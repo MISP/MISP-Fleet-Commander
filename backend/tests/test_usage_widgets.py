@@ -246,6 +246,43 @@ def test_a_total_names_the_old_answers_it_still_holds(db, fleet, api):
     assert [entry['server_name'] for entry in api(user, 'get', history).json['total']['carried']] == ['misp-c']
 
 
+def test_widgets_follow_the_server_the_tab_is_limited_to(db, fleet, api):
+    """`server_id`: each widget drawn for that server of the fleet alone, in the list, its history and the answers to
+    changes; a saved query that does not run there says so"""
+    user, fleetRow, servers = fleet
+    elsewhere, outside = otherFleet(db, user)
+    b, a, c = servers
+    onTwo = save(user, server_ids=[b.id, a.id], schedule_minutes=60)
+    base = f"/fleets/{fleetRow.id}/widgets"
+    widget = api(user, 'post', f"{base}?server_id={c.id}", {'saved_query_id': onTwo.id}).json
+    assert (widget['problem'], widget['servers']) == ('no_server', [])
+    now = int(time.time())
+    hour = now - now % HOUR
+    record(onTwo, a, hour - 2 * HOUR + 5, 12)
+    record(onTwo, b, hour - HOUR + 5, 7)
+
+    [shown] = api(user, 'get', f"{base}?server_id={b.id}").json['widgets']
+    assert shown['problem'] is None and [entry['server_id'] for entry in shown['servers']] == [b.id]
+    assert shown['saved_query']['server_count'] == 2
+    [whole] = api(user, 'get', base).json['widgets']
+    assert [entry['server_id'] for entry in whole['servers']] == [b.id, a.id]
+
+    history = api(user, 'get', f"{base}/{widget['id']}/history?range=24h&server_id={b.id}").json
+    assert [entry['server_id'] for entry in history['servers']] == [b.id]
+    assert history['total']['servers'] == 1 and history['total']['points'][-2:] == [[hour - HOUR, 7], [hour, 7]]
+    both = api(user, 'get', f"{base}/{widget['id']}/history?range=24h").json['total']
+    assert both['servers'] == 2 and both['points'][-1] == [hour, 19]
+
+    switched = api(user, 'put', f"{base}/{widget['id']}?server_id={a.id}", {'display': 'servers'}).json
+    assert switched['display'] == 'servers' and [entry['server_id'] for entry in switched['servers']] == [a.id]
+
+    # Only a server of this fleet
+    for path in (base, f"{base}/{widget['id']}/history"):
+        refused = api(user, 'get', f"{path}?server_id={outside[0].id}")
+        assert refused.status_code == 400 and refused.json['field'] == 'server_id'
+    assert api(user, 'get', f"{base}?server_id=nope").json['field'] == 'server_id'
+
+
 def test_a_widget_left_without_a_number_says_why(db, fleet, api):
     from application.models import savedQueries
     user, fleetRow, servers = fleet
