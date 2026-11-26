@@ -19,7 +19,7 @@
             <div class="notice-text">
                 <strong>{{ notice.title }}</strong>
                 <span v-if="notice.text"> {{ notice.text }}</span>
-                <button v-if="notice.action === 'settings'" type="button" class="btn btn-link notice-action" @click="$bvModal.show('modal-settings')">
+                <button v-if="notice.action === 'settings'" type="button" class="btn btn-link notice-action" @click="openMonitoringSetting">
                     Open the settings
                 </button>
                 <router-link v-else-if="notice.action === 'fleet'" :to="{ name: 'home' }" class="notice-action">
@@ -217,6 +217,7 @@
 <script>
 import { mapGetters, mapState } from "vuex"
 import api from "@/api/metrics"
+import { OPEN_SETTINGS_EVENT } from "@/views/settings/settingsModel"
 import {
     changePhrase, collectionStatus, DEFAULT_RANGE, HOUR, loginBars, rangeOf, ratio, snapshotValues, stalledNotice,
 } from "@/helpers/metrics"
@@ -483,6 +484,9 @@ export default {
         this.reload()
     },
     methods: {
+        openMonitoringSetting() {
+            this.$root.$emit(OPEN_SETTINGS_EVENT, { focus: "monitoring_enabled" })
+        },
         reload(options = {}) {
             this.load(options)
             this.loadHeatmap()

@@ -12,19 +12,6 @@ const getters = {
     getSettings: state => {
         return state.settings
     },
-    settingsByPanelAndScope: state => {
-        const settingsByPanelAndScope = {}
-        Object.entries(state.settings).forEach(([setting_id, setting]) => {
-            if (settingsByPanelAndScope[setting.panel] === undefined) {
-                settingsByPanelAndScope[setting.panel] = {}
-            }
-            if (settingsByPanelAndScope[setting.panel][setting.scope] === undefined) {
-                settingsByPanelAndScope[setting.panel][setting.scope] = {}
-            }
-            settingsByPanelAndScope[setting.panel][setting.scope][setting_id] = setting
-        })
-        return settingsByPanelAndScope
-    },
     settingValues() {
         const settingValues = {}
         Object.entries(state.settings).forEach(([setting_id, setting]) => {
