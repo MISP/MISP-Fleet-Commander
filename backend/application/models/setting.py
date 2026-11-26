@@ -139,6 +139,18 @@ setting_configuration = {
         "disabled": False,
         "error": False,
     },
+    "health_slow_latency_ms": {
+        "name": "Slow Answer Threshold",
+        "description": "How long (milliseconds) a server's connection test may take before the server gets a \"Slow to answer\" warning. Connection tests give up after 30 seconds.",
+        "panel": "Health",
+        "scope": "Thresholds",
+        "type": "number",
+        "default": 2000,
+        "min": 100,
+        "max": 30000,
+        "disabled": False,
+        "error": False,
+    },
     "misp_request_timeout": {
         "name": "MISP Request Timeout",
         "description": "How long (seconds) MFC waits for a MISP server to answer a request before giving up on it. Connecting is given 5 seconds. Connection tests and link tests keep their own, shorter, limits.",

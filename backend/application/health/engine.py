@@ -22,6 +22,8 @@ DEFAULT_WORKER_WARNING_THRESHOLD = 10
 DEFAULT_WORKER_DANGER_THRESHOLD = 100
 DEFAULT_CONNECTION_TEST_INTERVAL = 5 * 60
 DEFAULT_FULL_REFRESH_INTERVAL = 30 * 60
+# Seconds a connection test may take before the server is slow to answer
+DEFAULT_SLOW_LATENCY = 2
 
 
 @dataclass
@@ -88,6 +90,7 @@ class Context:
     latest_release: Optional[str] = None
     connection_test_interval: int = DEFAULT_CONNECTION_TEST_INTERVAL
     full_refresh_interval: int = DEFAULT_FULL_REFRESH_INTERVAL
+    slow_latency: float = DEFAULT_SLOW_LATENCY
     # Baseline rules per fleet, read from the database on first use (see `drift.rulesFor`)
     baseline_rules: dict = field(default_factory=dict)
     # Organisations that do not line up in each fleet, read on first use (see `organisations.findingsFor`)
@@ -110,11 +113,14 @@ class Context:
             except (TypeError, ValueError):
                 return default
 
-        def instanceMinutes(name, default):
+        def instanceNumber(name, default, scale):
             try:
-                return int(settingModel.getRefreshValue(name)) * 60
+                return int(settingModel.getRefreshValue(name)) * scale
             except (TypeError, ValueError, AttributeError):
                 return default
+
+        def instanceMinutes(name, default):
+            return instanceNumber(name, default, 60)
 
         return cls(
             now=int(time.time()) if now is None else now,
@@ -123,6 +129,7 @@ class Context:
             latest_release=latest_release if latest_release is not None else lookupLatestRelease(),
             connection_test_interval=instanceMinutes("health_connection_test_interval", DEFAULT_CONNECTION_TEST_INTERVAL),
             full_refresh_interval=instanceMinutes("health_full_refresh_interval", DEFAULT_FULL_REFRESH_INTERVAL),
+            slow_latency=instanceNumber("health_slow_latency_ms", DEFAULT_SLOW_LATENCY, 0.001),
         )
 
 

@@ -198,6 +198,15 @@ def test_slow(latency, expected):
     assert [i.rule for i in issues if i.rule == "slow"] == expected
 
 
+def test_slow_from_the_threshold_set():
+    assert [i for i in evaluate(status=okStatus(_latency=3.2), slow_latency=5) if i.rule == "slow"] == []
+    [issue] = [i for i in evaluate(status=okStatus(_latency=0.6), slow_latency=0.5) if i.rule == "slow"]
+    assert issue.detail == "The connection test took 0.6s (slow from 0.5s)."
+    assert issue.evidence == {"latency": 0.6, "threshold": 0.5}
+    [issue] = [i for i in evaluate(status=okStatus(_latency=2.04)) if i.rule == "slow"]
+    assert issue.detail == "The connection test took 2.0s (slow from 2s)."
+
+
 # --- Freshness --------------------------------------------------------------------------------------------------------
 
 def test_never_refreshed_or_tested():
@@ -444,10 +453,27 @@ def test_context_for_user(db, make_user):
 
     assert (context.now, context.worker_warning_threshold, context.worker_danger_threshold) == (123, 25, 100)
     assert (context.connection_test_interval, context.full_refresh_interval) == (300, 1800)
+    assert context.slow_latency == 2
     assert context.latest_release == "v2.5.51"
     for setting in UserSettings.query.filter_by(user_id=user.id).all():
         db.session.delete(setting)
     db.session.commit()
+
+
+def test_context_reads_the_slow_threshold(monkeypatch):
+    import application.models.setting as settingModel
+    from application.health import Context
+    values = {"health_slow_latency_ms": 750}
+    original = settingModel.getRefreshValue
+    monkeypatch.setattr(settingModel, "getRefreshValue", lambda name: values[name] if name in values else original(name))
+    assert Context.for_user(None, now=1, latest_release="v2.5.51").slow_latency == 0.75
+    values["health_slow_latency_ms"] = "not a number"
+    assert Context.for_user(None, now=1, latest_release="v2.5.51").slow_latency == 2
+    # Saving checks it: whole milliseconds, from 100 ms up to the connection test's own 30 s limit
+    assert settingModel.validate("health_slow_latency_ms", "5000") == 5000
+    for value in (50, 31000, 1.5):
+        with pytest.raises(settingModel.SettingError):
+            settingModel.validate("health_slow_latency_ms", value)
 
 
 def test_deleting_a_server_forgets_its_first_seen(db, make_user):

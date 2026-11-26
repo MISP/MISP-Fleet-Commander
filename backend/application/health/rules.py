@@ -11,7 +11,6 @@ from application.health.engine import Finding, rule, section_error
 from application.health.links import classify_link, latest_release_for
 from application.health.versions import format_version, how_far_behind, parse_version
 
-SLOW_LATENCY_SECONDS = 2
 # Queues shown in the fleet table, in its order. The `update` queue has no backlog thresholds there
 WORKER_QUEUES = ("cache", "default", "prio", "update", "email")
 QUEUES_WITHOUT_BACKLOG = ("update",)
@@ -61,6 +60,11 @@ def humanDuration(seconds: int) -> str:
     return f"{round(seconds / 86400)} days"
 
 
+def formatSeconds(seconds: float) -> str:
+    """2 → '2s', 1.5 → '1.5s', 0.25 → '0.25s'"""
+    return f"{round(seconds, 3):g}s"
+
+
 def isAuthFailure(status) -> bool:
     return isinstance(status, dict) and status.get("_status_code") in (401, 403)
 
@@ -97,9 +101,10 @@ def slow(state, ctx):
     if status is None or not status.get("version") or status.get("error") is not None:
         return
     latency = status.get("_latency")
-    if isinstance(latency, (int, float)) and latency >= SLOW_LATENCY_SECONDS:
-        yield Finding("warning", "Slow to answer", f"The connection test took {latency:.1f}s.",
-                      evidence={"latency": round(latency, 3)}, action=TEST_CONNECTION)
+    if isinstance(latency, (int, float)) and latency >= ctx.slow_latency:
+        yield Finding("warning", "Slow to answer",
+                      f"The connection test took {latency:.1f}s (slow from {formatSeconds(ctx.slow_latency)}).",
+                      evidence={"latency": round(latency, 3), "threshold": ctx.slow_latency}, action=TEST_CONNECTION)
 
 
 # --- Freshness ------------------------------------------------------------------------------------------------------
