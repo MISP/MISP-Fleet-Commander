@@ -10,6 +10,13 @@ current_path = Path(__file__).resolve().parent
 setting_path = current_path / "../../config.json"
 setting_path = setting_path.resolve()
 settings = {}
+
+# Shortest daily retention when it is not 0 (kept as long as the server): the 1-year charts are drawn from days
+DAY_RETENTION_MIN_DAYS = 365
+
+# Besides what validate() reads, a setting may tell the settings page how to show it: `unit` of a number,
+# `depends_on` the switch without which it has no effect, `zero_text` what 0 means when 0 is special, and
+# `min_nonzero` the lowest value other than 0. The page lists them in the order they are defined here
 setting_configuration = {
     "fleet_watching_enabled": {
         "name": "Fleet Watching Enabled",
@@ -27,6 +34,8 @@ setting_configuration = {
         "panel": "Scheduler",
         "scope": "Fleet Watcher",
         "type": "number",
+        "unit": "minutes",
+        "depends_on": "fleet_watching_enabled",
         "default": 1,
         "min": 1,
         "disabled": True,
@@ -51,6 +60,8 @@ setting_configuration = {
         "panel": "Scheduler",
         "scope": "Monitoring System",
         "type": "number",
+        "unit": "minutes",
+        "depends_on": "monitoring_enabled",
         "default": 10,
         "min": 1,
         "max": 1440,
@@ -63,6 +74,7 @@ setting_configuration = {
         "panel": "Scheduler",
         "scope": "Monitoring System",
         "type": "number",
+        "unit": "days",
         "default": 14,
         "min": 2,
         "max": 90,
@@ -75,6 +87,7 @@ setting_configuration = {
         "panel": "Scheduler",
         "scope": "Monitoring System",
         "type": "number",
+        "unit": "days",
         "default": 90,
         "min": 30,
         "max": 730,
@@ -87,6 +100,9 @@ setting_configuration = {
         "panel": "Scheduler",
         "scope": "Monitoring System",
         "type": "number",
+        "unit": "days",
+        "min_nonzero": DAY_RETENTION_MIN_DAYS,
+        "zero_text": "Kept as long as their server",
         "default": 0,
         "min": 0,
         "max": 3650,
@@ -109,6 +125,8 @@ setting_configuration = {
         "panel": "Scheduler",
         "scope": "Background Refresh",
         "type": "number",
+        "unit": "minutes",
+        "depends_on": "health_background_refresh_enabled",
         "default": 5,
         "min": 1,
         "max": 1440,
@@ -121,6 +139,8 @@ setting_configuration = {
         "panel": "Scheduler",
         "scope": "Background Refresh",
         "type": "number",
+        "unit": "minutes",
+        "depends_on": "health_background_refresh_enabled",
         "default": 30,
         "min": 5,
         "max": 1440,
@@ -133,6 +153,8 @@ setting_configuration = {
         "panel": "Scheduler",
         "scope": "Background Refresh",
         "type": "number",
+        "unit": "servers",
+        "depends_on": "health_background_refresh_enabled",
         "default": 10,
         "min": 1,
         "max": 100,
@@ -145,6 +167,7 @@ setting_configuration = {
         "panel": "Health",
         "scope": "Thresholds",
         "type": "number",
+        "unit": "ms",
         "default": 2000,
         "min": 100,
         "max": 30000,
@@ -157,6 +180,7 @@ setting_configuration = {
         "panel": "Scheduler",
         "scope": "MISP Requests",
         "type": "number",
+        "unit": "seconds",
         "default": 60,
         "min": 5,
         "max": 600,
@@ -169,6 +193,7 @@ setting_configuration = {
         "panel": "Jobs",
         "scope": "Execution",
         "type": "number",
+        "unit": "servers",
         "default": 5,
         "min": 1,
         "max": 50,
@@ -181,6 +206,7 @@ setting_configuration = {
         "panel": "Jobs",
         "scope": "History",
         "type": "number",
+        "unit": "days",
         "default": 90,
         "min": 1,
         "max": 3650,
@@ -193,6 +219,7 @@ setting_configuration = {
         "panel": "Queries",
         "scope": "Limits",
         "type": "number",
+        "unit": "rows",
         "default": 1000,
         "min": 1,
         "max": 10000,
@@ -205,6 +232,7 @@ setting_configuration = {
         "panel": "Queries",
         "scope": "Limits",
         "type": "number",
+        "unit": "MB",
         "default": 20,
         "min": 1,
         "max": 500,
@@ -217,6 +245,7 @@ setting_configuration = {
         "panel": "Queries",
         "scope": "Results",
         "type": "number",
+        "unit": "minutes",
         "default": 60,
         "min": 5,
         "max": 1440,
@@ -239,6 +268,7 @@ setting_configuration = {
         "panel": "Queries",
         "scope": "History",
         "type": "number",
+        "unit": "days",
         "default": 30,
         "min": 7,
         "max": 365,
@@ -251,6 +281,9 @@ setting_configuration = {
         "panel": "Queries",
         "scope": "History",
         "type": "number",
+        "unit": "days",
+        "min_nonzero": DAY_RETENTION_MIN_DAYS,
+        "zero_text": "Kept as long as the saved query",
         "default": 0,
         "min": 0,
         "max": 3650,
@@ -262,10 +295,6 @@ setting_configuration = {
 
 class SettingError(ValueError):
     pass
-
-
-# Shortest daily retention when it is not 0 (kept as long as the server): the 1-year charts are drawn from days
-DAY_RETENTION_MIN_DAYS = 365
 
 
 def intValue(setting_name: str) -> int:
@@ -355,7 +384,9 @@ def loadSetting():
         print(f'Setting file {setting_path} not found. Using default settings.')
     settings = dict(setting_configuration)
 
-    for setting_name, setting_config in settings.items():
+    for position, (setting_name, setting_config) in enumerate(settings.items()):
+        # JSON answers are sorted by key: the position keeps the order of the definitions
+        setting_config['position'] = position
         if setting_name in setting_values:
             settings[setting_name]['value'] = setting_values[setting_name]
         else:
