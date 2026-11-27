@@ -163,6 +163,64 @@ def test_api_activity_formats():
         parseApiActivity({"data": [{"title": "something", "html": "no number"}]})
 
 
+def test_own_account(answers):
+    """`/users/view/me`: the account behind Fleet Commander's key, and how MISP counts the key's requests"""
+    from application.models.metricCatalogue import OwnAccount, UnreadableAnswer, parseOwnAccount
+    key = "AbCd" + "x" * 32 + "WxYz"
+    assert parseOwnAccount(answers["own_account"], key) == OwnAccount(16, "admin@misp.test", "AbCdWxYz")
+    assert parseOwnAccount({"User": {"id": "bad", "email": " Admin@MISP.test "}}, f" {key}\n") == \
+        OwnAccount(None, "admin@misp.test", "AbCdWxYz")
+    assert parseOwnAccount({"User": {"id": 3, "email": "a@b.c"}}, "short").key == ""
+    for broken in ({"User": {"id": "16"}}, {"name": "Forbidden"}, [], None):
+        with pytest.raises(UnreadableAnswer):
+            parseOwnAccount(broken, key)
+
+
+def own():
+    from application.models.metricCatalogue import OwnAccount
+    return OwnAccount(16, "admin@misp.test", "AbCdWxYz")
+
+
+def test_api_activity_leaves_fleet_commanders_own_requests_out(answers):
+    """MISP 2.5 and 3: the rows of its account (by email, any case), and its key when MISP does not know whose it is"""
+    from application.models.metricCatalogue import parseApiActivity
+    widget = answers["api_activity_widget"]
+    assert parseApiActivity(widget, own()) == {"api_requests_24h": 1998}  # Not among the keys
+    widget["data"][0]["value"] = "10 keys · 3698 requests · 7 unknown"
+    widget["data"] += [{"type": "user", "name": "Admin@MISP.test", "meta": "key AbCd · ORGNAME · admin", "badge": 1500},
+                       {"type": "user", "glyph": "warn", "name": "AbCdWxYz", "meta": "Unknown key", "badge": "200"}]
+    assert parseApiActivity(widget, own()) == {"api_requests_24h": 1998}
+    assert parseApiActivity(widget) == {"api_requests_24h": 3698}
+    # Translated header: the other keys' badges
+    widget["data"][0]["value"] = "10 clés · 3698 requêtes"
+    assert parseApiActivity(widget, own()) == {"api_requests_24h": 1998}
+    # Only Fleet Commander's key was used
+    alone = {"data": [{"type": "header", "value": "1 key · 40 requests"},
+                      {"type": "user", "name": "admin@misp.test", "badge": 40}]}
+    assert parseApiActivity(alone, own()) == {"api_requests_24h": 0}
+
+
+def test_api_activity_leaves_fleet_commanders_own_requests_out_on_misp_2_4():
+    """MISP 2.4 links each known key to its owner and shows the key; an unknown key is only shown"""
+    from application.models.metricCatalogue import parseApiActivity
+    legacy = {"data": [
+        {"html_title": '<a href="https://misp.test/auth_keys/view/3">ab01ab01</a>',
+         "html": '120 (<a href="https://misp.test/admin/users/view/2">a@misp.test</a>)'},
+        {"html_title": '<a href="https://misp.test/auth_keys/view/9">ef01ef01</a>',
+         "html": '900 (<a href="https://misp.test/admin/users/view/16">admin@misp.test</a>)'},
+        {"html_title": '<a href="https://misp.test/auth_keys/view/8">cd01cd01</a>',
+         "html": '30 (<a href="https://misp.test/admin/users/view/160">x@misp.test</a>)'},
+        {"title": "AbCdWxYz", "html": '7 (<span class="red">Unknown key</span>)'},
+        {"title": "zzzzzzzz", "html": '3 (<span class="red">Unknown key</span>)'},
+    ]}
+    assert parseApiActivity(legacy) == {"api_requests_24h": 1060}
+    assert parseApiActivity(legacy, own()) == {"api_requests_24h": 153}
+    # Its key known to MISP, under another account than the one it reported (legacy key bookkeeping)
+    other = {"data": [{"html_title": '<a href="https://misp.test/auth_keys/view/9">AbCdWxYz</a>',
+                       "html": '40 (<a href="https://misp.test/admin/users/view/5">y@misp.test</a>)'}]}
+    assert parseApiActivity(other, own()) == {"api_requests_24h": 0}
+
+
 def test_login_log_entries(answers):
     """Web logins and failed web logins; a rejected API key (`auth_fail`, 267020) is not a login"""
     from application.models.metricCatalogue import LoginEntry, parseLoginLogs, parseLogCreated
@@ -176,3 +234,13 @@ def test_login_log_entries(answers):
     mixed = {"data": [{"id": 5, "action": "login", "created": "bad date"}, {"Log": {"id": "x", "action": "login"}},
                       {"Log": {"id": "6", "action": "edit"}}, "junk"]}
     assert parseLoginLogs(mixed) == [LoginEntry(5, "logins", None)]
+
+
+def test_logins_of_fleet_commanders_own_account(answers):
+    """Its logins are left out, by user id or email; failed attempts on it are kept"""
+    from application.models.metricCatalogue import OwnAccount, parseLoginLogs
+    owner = OwnAccount(2, "other@misp.test", "AbCdWxYz")
+    assert [entry.id for entry in parseLoginLogs(answers["logs"], owner)] == [267013, 267021]
+    byEmail = {"data": [{"Log": {"id": "7", "action": "login", "user_id": "", "email": "Other@MISP.test"}},
+                        {"Log": {"id": "8", "action": "login", "user_id": "3", "email": "else@misp.test"}}]}
+    assert [entry.id for entry in parseLoginLogs(byEmail, owner)] == [8]

@@ -10,6 +10,9 @@ Parsers take the answer of a request helper (`mispGetRequest` / `mispPostRequest
 read. They raise `UnreadableAnswer` when the answer has none of them. Nothing that identifies a person (the API key
 owner's email in the system widget, the keys and emails of the API activity widget, the users of the log entries)
 is ever returned.
+
+What Fleet Commander does on a server is not usage: the API requests and the logins of its own account (the owner of
+its API key, `OwnAccount`) are left out. That account is read on each collection and kept nowhere.
 """
 import json
 import re
@@ -50,7 +53,8 @@ CATALOGUE = (
     Metric('pending_registrations', COMMUNITY, TOTAL, 'count', 'registrations', 'Pending registrations'),
     Metric('logins', ACTIVITY, DELTA, 'count', 'logins', 'Logins'),
     Metric('failed_logins', ACTIVITY, DELTA, 'count', 'logins', 'Failed logins'),
-    Metric('api_requests_24h', ACTIVITY, GAUGE, 'count', 'api_activity', 'API requests (last 24 hours)'),
+    Metric('api_requests_24h', ACTIVITY, GAUGE, 'count', 'api_activity',
+           "API requests (last 24 hours, Fleet Commander's own left out)"),
     Metric('load_1', SYSTEM, GAUGE, 'load', 'system', 'Load (1 min)'),
     Metric('load_5', SYSTEM, GAUGE, 'load', 'system', 'Load (5 min)'),
     Metric('load_15', SYSTEM, GAUGE, 'load', 'system', 'Load (15 min)'),
@@ -245,37 +249,85 @@ def parseAdminWidget(answer) -> dict:
     return values
 
 
+@dataclass(frozen=True)
+class OwnAccount:
+    """The MISP account Fleet Commander's API key belongs to on a server. `email` is casefolded; `key` is how MISP
+    counts the requests of a key: its first and last 4 characters"""
+    user_id: Optional[int]
+    email: str
+    key: str
+
+
+def keyFingerprint(authkey) -> str:
+    key = str(authkey or '').strip()
+    return key[:4] + key[-4:] if len(key) >= 8 else ''
+
+
+def parseOwnAccount(answer, authkey) -> OwnAccount:
+    """`GET /users/view/me`: `{User: {id: "16", email: …}, Role: …}`"""
+    user = answer.get('User') if isinstance(answer, dict) else None
+    email = str(user.get('email') or '').strip() if isinstance(user, dict) else ''
+    if not email:
+        raise UnreadableAnswer('No user in the answer')
+    try:
+        userId = int(_number(user.get('id')))
+    except (TypeError, ValueError):
+        userId = None
+    return OwnAccount(userId, email.casefold(), keyFingerprint(authkey))
+
+
 REQUESTS_RE = re.compile(r'(\d+)\s+requests?\b')
 LEADING_NUMBER_RE = re.compile(r'^\s*(\d+)')
+USER_LINK_RE = re.compile(r'/admin/users/view/(\d+)\b')
 
 
-def parseApiActivity(answer) -> dict:
+def _isOwnKeyRow(row: dict, own: Optional[OwnAccount]) -> bool:
+    """Whether a row of the API activity widget is a key of Fleet Commander's own account. MISP 2.5 and 3 name a key
+    by its owner's email, or by the key itself when MISP cannot tell its owner (an "unknown key", as legacy keys
+    are). MISP 2.4 links a key to its owner (`/admin/users/view/<id>` in `html`) and shows the key in `html_title`,
+    or in `title` when it is unknown"""
+    if own is None:
+        return False
+    if 'type' in row:
+        name = str(row.get('name') or '').strip()
+        return name.casefold() == own.email or (bool(own.key) and name == own.key)
+    owner = USER_LINK_RE.search(str(row.get('html') or ''))
+    if owner is not None and own.user_id is not None and int(owner[1]) == own.user_id:
+        return True
+    return bool(own.key) and (str(row.get('title') or '').strip() == own.key
+                              or f'>{own.key}<' in str(row.get('html_title') or ''))
+
+
+def _badge(row: dict) -> int:
+    try:
+        return int(_number(row.get('badge')))
+    except (TypeError, ValueError):
+        return 0
+
+
+def parseApiActivity(answer, own: Optional[OwnAccount] = None) -> dict:
     """`APIActivityWidget` over one day. MISP 2.5 and 3: a `header` row (`"8 keys · 1998 requests · 6 unknown"`, or
     `"No API activity in this period."`) then one `user` row per key, its requests in `badge`. The header's total is
     used when it can be read (it is translated), else the badges are summed. Older MISPs: rows whose `html` starts
-    with the key's request count"""
+    with the key's request count. The requests of Fleet Commander's own account (`own`) are left out"""
     rows = _rows(answer)
     typed = [row for row in rows if 'type' in row]
     if typed:
+        keys = [row for row in typed if row.get('type') == 'user']
+        ownRequests = sum(_badge(row) for row in keys if _isOwnKeyRow(row, own))
         for row in typed:
             if row.get('type') == 'header':
                 match = REQUESTS_RE.search(str(row.get('value') or ''))
                 if match:
-                    return {'api_requests_24h': int(match[1])}
-        total = 0
-        for row in typed:
-            if row.get('type') == 'user':
-                try:
-                    total += int(_number(row.get('badge')))
-                except (TypeError, ValueError):
-                    continue
-        return {'api_requests_24h': total}
+                    return {'api_requests_24h': max(int(match[1]) - ownRequests, 0)}
+        return {'api_requests_24h': sum(_badge(row) for row in keys) - ownRequests}
     total, read = 0, False
     for row in rows:
         match = LEADING_NUMBER_RE.match(str(row.get('html') or row.get('value') or ''))
         if match:
-            total += int(match[1])
             read = True
+            if not _isOwnKeyRow(row, own):
+                total += int(match[1])
     if rows and not read:
         raise UnreadableAnswer('No request count in the API activity widget')
     return {'api_requests_24h': total}
@@ -286,12 +338,15 @@ WIDGET_URL = '/dashboards/renderWidget/0/exportjson:1'
 
 @dataclass(frozen=True)
 class Source:
+    """`own_account`: the parser also takes Fleet Commander's own account (`parse(answer, own)`), to leave out what
+    it did"""
     name: str
     label: str
     method: str
     url: str
-    parse: Callable[[object], dict]
+    parse: Callable[..., dict]
     payload: Optional[dict] = None
+    own_account: bool = False
 
 
 # Requested in this order. Statistics come first: a server that does not answer them gets no other request. When
@@ -305,8 +360,9 @@ SOURCES = (
     Source('admin', 'Admin widget', 'POST', WIDGET_URL, parseAdminWidget,
            {'config': '{}', 'widget': 'MispAdminResourceWidget'}),
     Source('api_activity', 'API activity widget', 'POST', WIDGET_URL, parseApiActivity,
-           {'config': json.dumps({'days': 1}), 'widget': 'APIActivityWidget'}),
+           {'config': json.dumps({'days': 1}), 'widget': 'APIActivityWidget'}, own_account=True),
 )
+OWN_ACCOUNT_URL = '/users/view/me'
 
 # Web logins. `login_fail` is a failed one (wrong password or OTP, unknown account). `auth_fail` is not counted: it
 # is an API request with a wrong, expired or disabled key, not a login
@@ -329,13 +385,25 @@ def parseLogCreated(created) -> Optional[int]:
         return None
 
 
-def parseLoginLogs(answer) -> list:
+def _isOwnLogin(log: dict, own: Optional[OwnAccount]) -> bool:
+    """A web login with Fleet Commander's own account. Failed attempts on it are not: they may well be an attack"""
+    if own is None or log.get('action') != 'login':
+        return False
+    try:
+        if own.user_id is not None and int(_number(log.get('user_id'))) == own.user_id:
+            return True
+    except (TypeError, ValueError):
+        pass
+    return str(log.get('email') or '').strip().casefold() == own.email
+
+
+def parseLoginLogs(answer, own: Optional[OwnAccount] = None) -> list:
     """`POST /admin/logs/index` → the login and failed-login entries, as LoginEntry. Entries come as `{Log: {…}}`
-    (or bare), ids as strings; anything else is skipped"""
+    (or bare), ids as strings; anything else is skipped, as are the logins of Fleet Commander's own account (`own`)"""
     entries = []
     for row in _rows(answer):
         log = row.get('Log', row)
-        if not isinstance(log, dict) or log.get('action') not in LOGIN_ACTIONS:
+        if not isinstance(log, dict) or log.get('action') not in LOGIN_ACTIONS or _isOwnLogin(log, own):
             continue
         try:
             logId = int(_number(log.get('id')))

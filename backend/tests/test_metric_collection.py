@@ -12,7 +12,7 @@ HOUR = 3600
 WIDGETS = {"MispSystemResourceWidget": "system_widget", "MispAdminResourceWidget": "admin_widget",
            "APIActivityWidget": "api_activity_widget"}
 GETS = {"/users/statistics": "statistics", "/users/registrations": "registrations",
-        "/servers/serverSettings/diagnostics/light:1": "diagnostics"}
+        "/servers/serverSettings/diagnostics/light:1": "diagnostics", "/users/view/me": "own_account"}
 
 
 @pytest.fixture(autouse=True)
@@ -81,7 +81,57 @@ def test_every_source_is_read(monkeypatch):
     assert values["api_requests_24h"] == 1998
     assert values["redis_memory_bytes"] == 42894624  # From the diagnostics, exact, rather than the widget's MB
     assert result["logins"]["counts"] == {"logins": 0, "failed_logins": 0}
-    assert [call[0] for call in misp.calls] == ["GET", "GET", "GET", "POST", "POST", "POST", "LOGS"]
+    # Fleet Commander's own account once the server answered, the logs last
+    assert misp.calls[:-1] == [("GET", "/users/statistics"), ("GET", "/users/view/me"),
+                               ("GET", "/users/registrations"), ("GET", "/servers/serverSettings/diagnostics/light:1"),
+                               ("POST", "MispSystemResourceWidget"), ("POST", "MispAdminResourceWidget"),
+                               ("POST", "APIActivityWidget")]
+    assert misp.calls[-1][0] == "LOGS"
+
+
+def ownActivity(answers, badge=1500):
+    """The fixture's API activity, plus Fleet Commander's own key (its account is `admin@misp.test`, user 16)"""
+    widget = copy.deepcopy(answers["api_activity_widget"])
+    widget["data"][0]["value"] = f"9 keys · {1998 + badge} requests · 6 unknown"
+    widget["data"].insert(1, {"type": "user", "name": "admin@misp.test", "meta": "key kkkk · ORGNAME · admin",
+                              "badge": badge, "drilldown": "/auth_keys/view/9"})
+    return widget
+
+
+def test_fleet_commanders_own_requests_are_left_out(monkeypatch):
+    from application.models.metrics import fetchServerMetrics
+    FakeMisp({"api_activity_widget": ownActivity(FIXTURE)}).install(monkeypatch)
+    result = fetchServerMetrics(target(), backfilledState(read_at=int(time.time()) - 600), 600)
+    assert result["errors"] == [] and result["values"]["api_requests_24h"] == 1998
+
+
+def test_without_its_own_account_the_api_requests_are_not_stored(monkeypatch):
+    """A figure counting Fleet Commander's requests this once would be a spike: none rather than a wrong one. The
+    other sources and the logins are read as usual"""
+    from application.models.metrics import fetchServerMetrics
+    now = int(time.time())
+    for answer, why in (({"error": "Request timed out"}, "Request timed out"),
+                        ({"name": "Forbidden", "_status_code": 403}, "HTTP 403: Forbidden"),
+                        ({"_status_code": 200}, "No user in the answer")):
+        misp = FakeMisp({"own_account": answer, "api_activity_widget": ownActivity(FIXTURE)},
+                        logs=lambda created: {"data": [logRow(5, "login", now - 60)]}).install(monkeypatch)
+        result = fetchServerMetrics(target(), backfilledState(read_at=now - 600), 600, now)
+        assert "api_requests_24h" not in result["values"] and result["values"]["events"] == 4291
+        assert result["errors"] == ["API activity widget: Fleet Commander's own requests could not be told apart, "
+                                    f"its account could not be read ({why})"]
+        assert result["logins"]["counts"] == {"logins": 1, "failed_logins": 0}
+        assert misp.calls.count(("GET", "/users/view/me")) == 1
+
+
+def test_the_own_account_is_read_once_the_server_answers(monkeypatch):
+    """Statistics refused but the server answers: the account is read after the next source"""
+    from application.models.metrics import fetchServerMetrics
+    misp = FakeMisp({"statistics": {"name": "Forbidden", "_status_code": 403},
+                     "api_activity_widget": ownActivity(FIXTURE)}).install(monkeypatch)
+    result = fetchServerMetrics(target(), backfilledState(read_at=int(time.time()) - 600), 600)
+    assert misp.calls[:3] == [("GET", "/users/statistics"), ("GET", "/users/registrations"),
+                              ("GET", "/users/view/me")]
+    assert result["values"]["api_requests_24h"] == 1998
 
 
 def test_a_failing_source_leaves_its_keys_out(monkeypatch):
@@ -127,6 +177,30 @@ def test_logins_above_the_cursor_are_counted(monkeypatch):
     result = readLogins(target(), backfilledState(cursor=100, read_at=now - 600), 600, now)
     assert result == {"counts": {"logins": 2, "failed_logins": 1}, "cursor": 103, "error": None}
     assert misp.calls == [("LOGS", "20m")]  # 10 minutes since the last read, plus the margin
+
+
+def test_logins_of_fleet_commanders_own_account_are_not_counted(monkeypatch):
+    """Someone signing in with the service account: not usage. Failed attempts on it still count, in the backfill
+    too"""
+    from application.models.metricCatalogue import OwnAccount
+    from application.models.metrics import LoginState, readLogins
+    now = int(time.time())
+    own = OwnAccount(16, "admin@misp.test", "kkkkkkkk")
+
+    def ownRow(logId, action, ts):
+        row = logRow(logId, action, ts)
+        row["Log"].update({"user_id": "16", "email": "admin@misp.test", "title": "User (16): admin@misp.test"})
+        return row
+    entries = [logRow(101, "login", now - 50), ownRow(102, "login", now - 40), ownRow(103, "login_fail", now - 30),
+               ownRow(104, "login", now - 20)]
+    FakeMisp(logs=lambda created: {"data": entries}).install(monkeypatch)
+    result = readLogins(target(), backfilledState(cursor=100, read_at=now - 600), 600, now, own)
+    assert result["counts"] == {"logins": 1, "failed_logins": 1} and result["cursor"] == 103
+    backfill = readLogins(target(), LoginState(), 600, now, own)
+    assert backfill["counts"] == {"logins": 1, "failed_logins": 1}
+    # Without its account, every login counts
+    assert readLogins(target(), backfilledState(cursor=100, read_at=now - 600), 600, now)["counts"] == \
+        {"logins": 3, "failed_logins": 1}
 
 
 def test_login_window(monkeypatch):

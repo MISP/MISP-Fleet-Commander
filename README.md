@@ -218,7 +218,7 @@ MISP Fleet Commander keeps a history of the usage of the servers in monitored fl
 What is collected, every 10 minutes by default:
 - **Content**: events, attributes, objects, event reports, analyst data, correlations and proposals.
 - **Community**: users (and how many have a PGP key), organisations, contributing organisations and pending registrations.
-- **Activity**: logins and failed logins, counted from the MISP logs, and API requests over the last 24 hours. No email, organisation or IP address is stored.
+- **Activity**: logins and failed logins, counted from the MISP logs, and API requests over the last 24 hours. What MISP Fleet Commander does itself is left out: the API requests of the account its API key belongs to, and that account's logins (failed attempts on it still count). No email, organisation or IP address is stored.
 - **System**: load, memory and disk usage, and the size of MISP's database.
 - **MISP internals**: Redis memory and the jobs waiting in each worker queue.
 

@@ -7,6 +7,9 @@ written by the caller's thread, which owns the database session.
 Logins are counted, never stored: each collection reads the login and failed-login entries of MISP's log since the
 previous read and counts those above the last log id counted (the cursor). The first collection of a server reads
 the past 90 days instead (fewer when MISP's 5000-entry limit is hit) and stores them as hourly counts.
+
+Once a server answers, the collection asks it which account Fleet Commander's API key belongs to: that account's API
+requests and logins are Fleet Commander's own, not usage, and are left out.
 """
 import time
 from collections import defaultdict
@@ -117,6 +120,18 @@ def request(target: Target, source: catalogue.Source):
     return mispGetRequest(target, source.url, nocache=True)
 
 
+def readOwnAccount(target: Target) -> tuple:
+    """(OwnAccount, None), or (None, why it could not be read)"""
+    answer = mispGetRequest(target, catalogue.OWN_ACCOUNT_URL, nocache=True)
+    error = answerError(answer)
+    if error is not None:
+        return None, error
+    try:
+        return catalogue.parseOwnAccount(answer, target.authkey), None
+    except catalogue.UnreadableAnswer as e:
+        return None, str(e)
+
+
 def requestLogs(target: Target, created: str):
     return mispPostRequest(target, LOG_URL, {
         'model': 'User',
@@ -144,24 +159,27 @@ def loginWindowMinutes(state: LoginState, interval_seconds: int, now: int) -> in
     return int(min(minutes, LOGIN_WINDOW_MAX_MINUTES))
 
 
-def readLogEntries(target: Target, created: str) -> tuple:
-    """(entries, full, error): `full` when MISP returned as many entries as it may (some are then missing)"""
+def readLogEntries(target: Target, created: str, own: Optional[catalogue.OwnAccount] = None) -> tuple:
+    """(entries, full, error): `full` when MISP returned as many entries as it may (some are then missing). The
+    logins of Fleet Commander's own account (`own`) are left out"""
     answer = requestLogs(target, created)
     if answerError(answer) is not None:
         return None, False, f'Logins: {readableLogError(answer if isinstance(answer, dict) else {})}'
     try:
-        entries = catalogue.parseLoginLogs(answer)
+        entries = catalogue.parseLoginLogs(answer, own)
     except catalogue.UnreadableAnswer as e:
         return None, False, f'Logins: {e}'
     return entries, len(answer['data']) >= LOG_LIMIT, None
 
 
-def readLogins(target: Target, state: LoginState, interval_seconds: int, now: int) -> dict:
+def readLogins(target: Target, state: LoginState, interval_seconds: int, now: int,
+               own: Optional[catalogue.OwnAccount] = None) -> dict:
     """{counts, cursor, hours, backfilled, error}: `counts` (None when the log could not be read) go into the raw
-    sample, `hours` (backfill only) into hour rows"""
+    sample, `hours` (backfill only) into hour rows. The logins of Fleet Commander's own account (`own`, when it could
+    be read) are not counted"""
     if not state.backfilled:
-        return backfillLogins(target, now)
-    entries, full, error = readLogEntries(target, f'{loginWindowMinutes(state, interval_seconds, now)}m')
+        return backfillLogins(target, now, own)
+    entries, full, error = readLogEntries(target, f'{loginWindowMinutes(state, interval_seconds, now)}m', own)
     if error is not None:
         return {'counts': None, 'error': error}
     counts, cursor = countLogins(entries, state.cursor)
@@ -171,14 +189,14 @@ def readLogins(target: Target, state: LoginState, interval_seconds: int, now: in
     return result
 
 
-def backfillLogins(target: Target, now: int) -> dict:
+def backfillLogins(target: Target, now: int, own: Optional[catalogue.OwnAccount] = None) -> dict:
     """First read of a server's logins: the past 90 days (30, 14 or 7 when there are more than 5000 entries). Hours
     that are over become hour rows, those without any login too; the current hour's entries are counted in the first
     raw sample, which the hour roll-up will sum up with the next ones. Tried once (`backfilled`), even when it
     fails"""
     entries, full, days = None, False, None
     for days in BACKFILL_DAYS:
-        entries, full, error = readLogEntries(target, f'{days}d')
+        entries, full, error = readLogEntries(target, f'{days}d', own)
         if error is not None:
             return {'counts': None, 'backfilled': True, 'error': error}
         if not full:
@@ -205,9 +223,13 @@ def backfillLogins(target: Target, now: int) -> dict:
 
 def fetchServerMetrics(target: Target, logins: LoginState, interval_seconds: int, now: Optional[int] = None) -> dict:
     """Read every source of one server. Runs outside the database session: MISP requests and parsing only.
-    {values, errors, logins}. A server that does not answer the first request is not asked anything else"""
+    {values, errors, logins}. A server that does not answer the first request is not asked anything else.
+
+    Fleet Commander's own account is read once the server answers. A source that leaves its activity out gives
+    nothing when that account could not be read: its figure would count Fleet Commander's requests this once"""
     now = int(time.time()) if now is None else now
     values, errors, answered = {}, [], False
+    own, ownError = None, None
     for index, source in enumerate(catalogue.SOURCES):
         answer = request(target, source)
         error = answerError(answer)
@@ -216,16 +238,23 @@ def fetchServerMetrics(target: Target, logins: LoginState, interval_seconds: int
             if index == 0 and isUnanswered(answer):
                 return {'values': values, 'errors': errors, 'logins': None}
             continue
-        answered = True
+        if not answered:
+            answered = True
+            own, ownError = readOwnAccount(target)
+        if source.own_account and own is None:
+            errors.append(f"{source.label}: Fleet Commander's own requests could not be told apart, its account "
+                          f"could not be read ({ownError})")
+            continue
         try:
-            for key, value in source.parse(answer).items():
+            parsed = source.parse(answer, own) if source.own_account else source.parse(answer)
+            for key, value in parsed.items():
                 values.setdefault(key, value)
         except catalogue.UnreadableAnswer as e:
             errors.append(f'{source.label}: {e}')
     return {
         'values': values,
         'errors': errors,
-        'logins': readLogins(target, logins, interval_seconds, now) if answered else None,
+        'logins': readLogins(target, logins, interval_seconds, now, own) if answered else None,
     }
 
 

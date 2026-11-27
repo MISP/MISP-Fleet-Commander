@@ -328,5 +328,27 @@
   ],
   "_latency": 0.4,
   "_status_code": 200
+ },
+ "own_account": {
+  "User": {
+   "id": "16",
+   "org_id": "1",
+   "email": "admin@misp.test",
+   "role_id": "1",
+   "disabled": false,
+   "last_api_access": "1764247200"
+  },
+  "Role": {
+   "id": "1",
+   "name": "admin",
+   "perm_site_admin": true
+  },
+  "Organisation": {
+   "id": "1",
+   "name": "ORGNAME",
+   "uuid": "00000000-0000-4000-8000-000000000001"
+  },
+  "_latency": 0.05,
+  "_status_code": 200
  }
 }
