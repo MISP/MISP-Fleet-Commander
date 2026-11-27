@@ -350,5 +350,67 @@
   },
   "_latency": 0.05,
   "_status_code": 200
- }
+ },
+ "roles": [
+  {
+   "Role": {
+    "id": "1",
+    "name": "admin",
+    "perm_add": true,
+    "perm_sync": true,
+    "perm_admin": true,
+    "perm_site_admin": true
+   }
+  },
+  {
+   "Role": {
+    "id": "2",
+    "name": "Org Admin",
+    "perm_add": true,
+    "perm_sync": false,
+    "perm_admin": true,
+    "perm_site_admin": false
+   }
+  },
+  {
+   "Role": {
+    "id": "3",
+    "name": "User",
+    "perm_add": true,
+    "perm_sync": false,
+    "perm_admin": false,
+    "perm_site_admin": false
+   }
+  },
+  {
+   "Role": {
+    "id": "4",
+    "name": "Publisher",
+    "perm_add": true,
+    "perm_sync": false,
+    "perm_admin": false,
+    "perm_site_admin": false
+   }
+  },
+  {
+   "Role": {
+    "id": "5",
+    "name": "Sync user",
+    "perm_add": true,
+    "perm_sync": true,
+    "perm_admin": false,
+    "perm_site_admin": false
+   }
+  },
+  {
+   "Role": {
+    "id": "6",
+    "name": "Read Only",
+    "perm_add": true,
+    "perm_sync": false,
+    "perm_admin": false,
+    "perm_site_admin": false
+   }
+  }
+ ]
 }

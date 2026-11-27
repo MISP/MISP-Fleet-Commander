@@ -221,6 +221,59 @@ def test_api_activity_leaves_fleet_commanders_own_requests_out_on_misp_2_4():
     assert parseApiActivity(other, own()) == {"api_requests_24h": 0}
 
 
+def test_sync_roles(answers):
+    """Allowed to sync and not an admin: the admin role may sync too, but its users are people and their tools"""
+    from application.models.metricCatalogue import UnreadableAnswer, parseSyncRoles
+    assert parseSyncRoles(answers["roles"]) == frozenset({"sync user"})
+    custom = [{"Role": {"name": " Partner Sync ", "perm_sync": "1", "perm_admin": "0", "perm_site_admin": False}},
+              {"Role": {"name": "Org sync admin", "perm_sync": True, "perm_admin": True}},
+              {"name": "Bare", "perm_sync": 1}, {"Role": {"name": "", "perm_sync": True}}, "junk"]
+    assert parseSyncRoles(custom) == frozenset({"partner sync", "bare"})
+    assert parseSyncRoles({"data": custom}) == frozenset({"partner sync", "bare"})
+    for broken in ([], [{"Role": {"name": ""}}], {"name": "Forbidden"}, None):
+        with pytest.raises(UnreadableAnswer):
+            parseSyncRoles(broken)
+
+
+def test_api_activity_split_by_who_made_the_requests(answers):
+    """Sync users, keys MISP does not know the owner of, everyone else; Fleet Commander's own key in none"""
+    from application.models.metricCatalogue import needsRoles, parseApiActivity
+    widget = answers["api_activity_widget"]
+    widget["data"][0]["value"] = "11 keys · 3828 requests · 6 unknown"
+    widget["data"] += [
+        {"type": "user", "name": "admin@misp.test", "meta": "key AbCd · ORGNAME · admin", "badge": 1500,
+         "drilldown": "/auth_keys/view/9"},
+        {"type": "user", "name": "sync@partner.test", "meta": "key ef01 · PARTNER · Sync user", "badge": 300,
+         "drilldown": "/auth_keys/view/10"},
+        {"type": "user", "name": "orgless@misp.test", "meta": "key ef02 · sync USER", "badge": "30",
+         "drilldown": "/auth_keys/view/11"},
+    ]
+    syncRoles = frozenset({"sync user"})
+    assert needsRoles(widget, own())
+    assert parseApiActivity(widget, own(), syncRoles) == {
+        "api_requests_24h": 2328, "api_requests_users_24h": 1777, "api_requests_sync_24h": 330,
+        "api_requests_unknown_24h": 221}
+    # Without the roles, the total only
+    assert parseApiActivity(widget, own()) == {"api_requests_24h": 2328}
+    # Translated header: the badges
+    widget["data"][0]["value"] = "11 clés · 3828 requêtes"
+    assert parseApiActivity(widget, own(), syncRoles)["api_requests_24h"] == 2328
+    # Nothing to sort by role: unknown keys and Fleet Commander's own only
+    unknownOnly = {"data": [{"type": "header", "value": "No API activity in this period."}]}
+    assert not needsRoles(unknownOnly, own())
+    assert parseApiActivity(unknownOnly, own(), frozenset()) == {
+        "api_requests_24h": 0, "api_requests_users_24h": 0, "api_requests_sync_24h": 0, "api_requests_unknown_24h": 0}
+
+
+def test_api_activity_of_misp_2_4_is_not_split():
+    """Its widget does not say the keys' roles"""
+    from application.models.metricCatalogue import needsRoles, parseApiActivity
+    legacy = {"data": [{"html_title": '<a href="/auth_keys/view/3">ab01ab01</a>',
+                        "html": '120 (<a href="/admin/users/view/2">sync@misp.test</a>)'}]}
+    assert not needsRoles(legacy, own())
+    assert parseApiActivity(legacy, own(), frozenset({"sync user"})) == {"api_requests_24h": 120}
+
+
 def test_login_log_entries(answers):
     """Web logins and failed web logins; a rejected API key (`auth_fail`, 267020) is not a login"""
     from application.models.metricCatalogue import LoginEntry, parseLoginLogs, parseLogCreated

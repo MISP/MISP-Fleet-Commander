@@ -218,7 +218,7 @@ MISP Fleet Commander keeps a history of the usage of the servers in monitored fl
 What is collected, every 10 minutes by default:
 - **Content**: events, attributes, objects, event reports, analyst data, correlations and proposals.
 - **Community**: users (and how many have a PGP key), organisations, contributing organisations and pending registrations.
-- **Activity**: logins and failed logins, counted from the MISP logs, and API requests over the last 24 hours. What MISP Fleet Commander does itself is left out: the API requests of the account its API key belongs to, and that account's logins (failed attempts on it still count). No email, organisation or IP address is stored.
+- **Activity**: logins and failed logins, counted from the MISP logs, and API requests over the last 24 hours. What MISP Fleet Commander does itself is left out: the API requests of the account its API key belongs to, and that account's logins (failed attempts on it still count). From MISP 2.5 on, the API requests are also split by who made them: sync users (other MISP servers syncing, through a role allowed to sync that isn't an admin role), keys MISP can't tell the owner of (deleted keys, legacy keys), and users and their tools. No email, organisation or IP address is stored.
 - **System**: load, memory and disk usage, and the size of MISP's database.
 - **MISP internals**: Redis memory and the jobs waiting in each worker queue.
 
@@ -255,7 +255,7 @@ scrape_configs:
 ```
 
 Every series has the `server`, `server_id` and `fleet` labels.
-- One gauge per collected metric, from the latest sample: `misp_events`, `misp_attributes`, `misp_users`, `misp_load_1`, `misp_memory_used_ratio`, `misp_db_size_bytes`, `misp_queue_jobs{queue="default"}`, … A metric that could not be read at the last collection is left out.
+- One gauge per collected metric, from the latest sample: `misp_events`, `misp_attributes`, `misp_users`, `misp_load_1`, `misp_memory_used_ratio`, `misp_db_size_bytes`, `misp_queue_jobs{queue="default"}`, `misp_api_requests_24h` and its parts `misp_api_requests_users_24h`, `misp_api_requests_sync_24h` and `misp_api_requests_unknown_24h`, … A metric that could not be read at the last collection is left out.
 - `misp_logins_total` and `misp_failed_logins_total`: counters of the logins seen in the MISP logs.
 - `misp_up`: 1 when the last collection read something. `misp_last_sample_timestamp_seconds`: when the latest sample was taken. `misp_info{version="…"}`: the MISP version.
 - `mfc_monitoring_enabled`: 0 when monitoring is disabled in the settings. Servers then have no series.

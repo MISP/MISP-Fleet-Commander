@@ -55,6 +55,14 @@ CATALOGUE = (
     Metric('failed_logins', ACTIVITY, DELTA, 'count', 'logins', 'Failed logins'),
     Metric('api_requests_24h', ACTIVITY, GAUGE, 'count', 'api_activity',
            "API requests (last 24 hours, Fleet Commander's own left out)"),
+    # The same requests by who made them: sync users (other MISP servers), keys MISP cannot tell the owner of, and
+    # everyone else. Only from MISP 2.5 on, whose widget names each key's role
+    Metric('api_requests_users_24h', ACTIVITY, GAUGE, 'count', 'api_activity',
+           'API requests by users and tools (last 24 hours)'),
+    Metric('api_requests_sync_24h', ACTIVITY, GAUGE, 'count', 'api_activity',
+           'API requests by sync users (last 24 hours)'),
+    Metric('api_requests_unknown_24h', ACTIVITY, GAUGE, 'count', 'api_activity',
+           'API requests with unknown keys (last 24 hours)'),
     Metric('load_1', SYSTEM, GAUGE, 'load', 'system', 'Load (1 min)'),
     Metric('load_5', SYSTEM, GAUGE, 'load', 'system', 'Load (5 min)'),
     Metric('load_15', SYSTEM, GAUGE, 'load', 'system', 'Load (15 min)'),
@@ -78,7 +86,8 @@ METRICS = {metric.key: metric for metric in CATALOGUE}
 FLEET_SUMMED = frozenset((
     'events', 'attributes', 'objects', 'event_reports', 'analyst_data', 'correlations', 'proposals',
     'users', 'users_pgp', 'pending_registrations',
-    'logins', 'failed_logins', 'api_requests_24h',
+    'logins', 'failed_logins', 'api_requests_24h', 'api_requests_users_24h', 'api_requests_sync_24h',
+    'api_requests_unknown_24h',
     'db_size_bytes', 'queue_cache', 'queue_default', 'queue_email', 'queue_prio', 'queue_update',
 ))
 
@@ -305,22 +314,67 @@ def _badge(row: dict) -> int:
         return 0
 
 
-def parseApiActivity(answer, own: Optional[OwnAccount] = None) -> dict:
+def _flag(value) -> bool:
+    return value is True or str(value).strip().lower() in ('1', 'true')
+
+
+def parseSyncRoles(answer) -> frozenset:
+    """`GET /roles/index` → the names (casefolded) of the roles made for syncing: allowed to sync, not admins. The
+    admin role may sync too, but its users are people and their tools"""
+    rows = answer.get('data') if isinstance(answer, dict) else answer
+    if not isinstance(rows, list):
+        raise UnreadableAnswer('Unexpected answer')
+    roles = [row.get('Role', row) for row in rows if isinstance(row, dict)]
+    roles = [role for role in roles if isinstance(role, dict) and str(role.get('name') or '').strip()]
+    if not roles:
+        raise UnreadableAnswer('No role in the answer')
+    return frozenset(str(role['name']).strip().casefold() for role in roles
+                     if _flag(role.get('perm_sync')) and not _flag(role.get('perm_admin'))
+                     and not _flag(role.get('perm_site_admin')))
+
+
+def _keyKind(row: dict, syncRoles: frozenset) -> str:
+    """`unknown`, `sync` or `users`. MISP links every key it knows to its page (`drilldown`) and ends its `meta` with
+    the key owner's role (`key ab01 · ORGNAME · Sync user`, empty parts left out)"""
+    if not row.get('drilldown'):
+        return 'unknown'
+    role = str(row.get('meta') or '').split(' · ')[-1].strip().casefold()
+    return 'sync' if role in syncRoles else 'users'
+
+
+def needsRoles(answer, own: Optional[OwnAccount]) -> bool:
+    """Whether the API activity widget lists a key whose owner's role decides how its requests are counted: a known
+    key other than Fleet Commander's own, on MISP 2.5 and 3"""
+    return any(row.get('type') == 'user' and row.get('drilldown') and not _isOwnKeyRow(row, own)
+               for row in _rows(answer))
+
+
+def parseApiActivity(answer, own: Optional[OwnAccount] = None, syncRoles: Optional[frozenset] = None) -> dict:
     """`APIActivityWidget` over one day. MISP 2.5 and 3: a `header` row (`"8 keys · 1998 requests · 6 unknown"`, or
     `"No API activity in this period."`) then one `user` row per key, its requests in `badge`. The header's total is
     used when it can be read (it is translated), else the badges are summed. Older MISPs: rows whose `html` starts
-    with the key's request count. The requests of Fleet Commander's own account (`own`) are left out"""
+    with the key's request count. The requests of Fleet Commander's own account (`own`) are left out.
+
+    With the names of the sync roles (`syncRoles`), MISP 2.5 and 3's requests are also split by who made them: sync
+    users, keys MISP does not know the owner of, and everyone else (`api_requests_{sync,unknown,users}_24h`)"""
     rows = _rows(answer)
     typed = [row for row in rows if 'type' in row]
     if typed:
-        keys = [row for row in typed if row.get('type') == 'user']
-        ownRequests = sum(_badge(row) for row in keys if _isOwnKeyRow(row, own))
+        keys = [row for row in typed if row.get('type') == 'user' and not _isOwnKeyRow(row, own)]
+        ownRequests = sum(_badge(row) for row in typed if row.get('type') == 'user') - sum(map(_badge, keys))
+        values = {'api_requests_24h': sum(_badge(row) for row in keys)}
         for row in typed:
             if row.get('type') == 'header':
                 match = REQUESTS_RE.search(str(row.get('value') or ''))
                 if match:
-                    return {'api_requests_24h': max(int(match[1]) - ownRequests, 0)}
-        return {'api_requests_24h': sum(_badge(row) for row in keys) - ownRequests}
+                    values['api_requests_24h'] = max(int(match[1]) - ownRequests, 0)
+                    break
+        if syncRoles is not None:
+            parts = {'users': 0, 'sync': 0, 'unknown': 0}
+            for row in keys:
+                parts[_keyKind(row, syncRoles)] += _badge(row)
+            values.update({f'api_requests_{kind}_24h': count for kind, count in parts.items()})
+        return values
     total, read = 0, False
     for row in rows:
         match = LEADING_NUMBER_RE.match(str(row.get('html') or row.get('value') or ''))
@@ -338,15 +392,15 @@ WIDGET_URL = '/dashboards/renderWidget/0/exportjson:1'
 
 @dataclass(frozen=True)
 class Source:
-    """`own_account`: the parser also takes Fleet Commander's own account (`parse(answer, own)`), to leave out what
-    it did"""
+    """`per_key`: the answer counts requests per API key. The parser also takes Fleet Commander's own account, whose
+    requests it leaves out, and the names of the sync roles, to split the rest (`parse(answer, own, syncRoles)`)"""
     name: str
     label: str
     method: str
     url: str
     parse: Callable[..., dict]
     payload: Optional[dict] = None
-    own_account: bool = False
+    per_key: bool = False
 
 
 # Requested in this order. Statistics come first: a server that does not answer them gets no other request. When
@@ -360,9 +414,10 @@ SOURCES = (
     Source('admin', 'Admin widget', 'POST', WIDGET_URL, parseAdminWidget,
            {'config': '{}', 'widget': 'MispAdminResourceWidget'}),
     Source('api_activity', 'API activity widget', 'POST', WIDGET_URL, parseApiActivity,
-           {'config': json.dumps({'days': 1}), 'widget': 'APIActivityWidget'}, own_account=True),
+           {'config': json.dumps({'days': 1}), 'widget': 'APIActivityWidget'}, per_key=True),
 )
 OWN_ACCOUNT_URL = '/users/view/me'
+ROLES_URL = '/roles/index'
 
 # Web logins. `login_fail` is a failed one (wrong password or OTP, unknown account). `auth_fail` is not counted: it
 # is an API request with a wrong, expired or disabled key, not a login

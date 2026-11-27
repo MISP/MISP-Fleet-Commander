@@ -132,6 +132,18 @@ def readOwnAccount(target: Target) -> tuple:
         return None, str(e)
 
 
+def readSyncRoles(target: Target) -> tuple:
+    """(names of the sync roles, None), or (None, why they could not be read)"""
+    answer = mispGetRequest(target, catalogue.ROLES_URL, nocache=True)
+    error = answerError(answer)
+    if error is not None:
+        return None, error
+    try:
+        return catalogue.parseSyncRoles(answer), None
+    except catalogue.UnreadableAnswer as e:
+        return None, str(e)
+
+
 def requestLogs(target: Target, created: str):
     return mispPostRequest(target, LOG_URL, {
         'model': 'User',
@@ -226,7 +238,9 @@ def fetchServerMetrics(target: Target, logins: LoginState, interval_seconds: int
     {values, errors, logins}. A server that does not answer the first request is not asked anything else.
 
     Fleet Commander's own account is read once the server answers. A source that leaves its activity out gives
-    nothing when that account could not be read: its figure would count Fleet Commander's requests this once"""
+    nothing when that account could not be read: its figure would count Fleet Commander's requests this once. The
+    roles are read only when that source lists a key whose owner's role sorts its requests; when they cannot be, the
+    total is kept but not split"""
     now = int(time.time()) if now is None else now
     values, errors, answered = {}, [], False
     own, ownError = None, None
@@ -241,12 +255,21 @@ def fetchServerMetrics(target: Target, logins: LoginState, interval_seconds: int
         if not answered:
             answered = True
             own, ownError = readOwnAccount(target)
-        if source.own_account and own is None:
+        if source.per_key and own is None:
             errors.append(f"{source.label}: Fleet Commander's own requests could not be told apart, its account "
                           f"could not be read ({ownError})")
             continue
         try:
-            parsed = source.parse(answer, own) if source.own_account else source.parse(answer)
+            if source.per_key:
+                syncRoles = frozenset()
+                if catalogue.needsRoles(answer, own):
+                    syncRoles, rolesError = readSyncRoles(target)
+                    if syncRoles is None:
+                        errors.append(f'{source.label}: sync requests could not be told apart, the roles could not '
+                                      f'be read ({rolesError})')
+                parsed = source.parse(answer, own, syncRoles)
+            else:
+                parsed = source.parse(answer)
             for key, value in parsed.items():
                 values.setdefault(key, value)
         except catalogue.UnreadableAnswer as e:

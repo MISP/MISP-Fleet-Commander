@@ -12,7 +12,8 @@ HOUR = 3600
 WIDGETS = {"MispSystemResourceWidget": "system_widget", "MispAdminResourceWidget": "admin_widget",
            "APIActivityWidget": "api_activity_widget"}
 GETS = {"/users/statistics": "statistics", "/users/registrations": "registrations",
-        "/servers/serverSettings/diagnostics/light:1": "diagnostics", "/users/view/me": "own_account"}
+        "/servers/serverSettings/diagnostics/light:1": "diagnostics", "/users/view/me": "own_account",
+        "/roles/index": "roles"}
 
 
 @pytest.fixture(autouse=True)
@@ -79,13 +80,16 @@ def test_every_source_is_read(monkeypatch):
     assert values["events"] == 4291 and values["pending_registrations"] == 1 and values["queue_default"] == 0
     assert values["load_5"] == 4.869140625 and values["db_size_bytes"] == int(round(8893.8 * 1024 ** 2))
     assert values["api_requests_24h"] == 1998
+    # Two admins' keys, six keys MISP does not know
+    assert (values["api_requests_users_24h"], values["api_requests_sync_24h"], values["api_requests_unknown_24h"]) \
+        == (1777, 0, 221)
     assert values["redis_memory_bytes"] == 42894624  # From the diagnostics, exact, rather than the widget's MB
     assert result["logins"]["counts"] == {"logins": 0, "failed_logins": 0}
-    # Fleet Commander's own account once the server answered, the logs last
+    # Fleet Commander's own account once the server answered, the roles for the API activity, the logs last
     assert misp.calls[:-1] == [("GET", "/users/statistics"), ("GET", "/users/view/me"),
                                ("GET", "/users/registrations"), ("GET", "/servers/serverSettings/diagnostics/light:1"),
                                ("POST", "MispSystemResourceWidget"), ("POST", "MispAdminResourceWidget"),
-                               ("POST", "APIActivityWidget")]
+                               ("POST", "APIActivityWidget"), ("GET", "/roles/index")]
     assert misp.calls[-1][0] == "LOGS"
 
 
@@ -121,6 +125,51 @@ def test_without_its_own_account_the_api_requests_are_not_stored(monkeypatch):
                                     f"its account could not be read ({why})"]
         assert result["logins"]["counts"] == {"logins": 1, "failed_logins": 0}
         assert misp.calls.count(("GET", "/users/view/me")) == 1
+
+
+def test_api_requests_by_who_made_them(monkeypatch):
+    """Sync users' keys (a role allowed to sync, not admin), unknown keys, everyone else. Fleet Commander's own key
+    is in none of them"""
+    from application.models.metrics import fetchServerMetrics
+    widget = ownActivity(FIXTURE)
+    widget["data"][0]["value"] = "10 keys · 3798 requests · 6 unknown"
+    widget["data"].append({"type": "user", "name": "sync@partner.test", "meta": "key ef01 · PARTNER · Sync user",
+                           "badge": 300, "drilldown": "/auth_keys/view/10"})
+    FakeMisp({"api_activity_widget": widget}).install(monkeypatch)
+    values = fetchServerMetrics(target(), backfilledState(read_at=int(time.time()) - 600), 600)["values"]
+    assert values["api_requests_24h"] == 2298
+    assert (values["api_requests_users_24h"], values["api_requests_sync_24h"], values["api_requests_unknown_24h"]) \
+        == (1777, 300, 221)
+
+
+def test_roles_are_read_only_when_a_key_needs_them(monkeypatch):
+    """Only unknown keys and Fleet Commander's own: nothing to sort by role"""
+    from application.models.metrics import fetchServerMetrics
+    unknownOnly = {"data": [{"type": "header", "value": "2 keys · 60 requests · 1 unknown"},
+                            {"type": "user", "name": "admin@misp.test", "meta": "key kkkk · ORGNAME · admin",
+                             "badge": 50, "drilldown": "/auth_keys/view/9"},
+                            {"type": "user", "glyph": "warn", "name": "zzzzzzzz", "meta": "Unknown key", "badge": 10}],
+                   "_status_code": 200}
+    misp = FakeMisp({"api_activity_widget": unknownOnly}).install(monkeypatch)
+    result = fetchServerMetrics(target(), backfilledState(read_at=int(time.time()) - 600), 600)
+    assert ("GET", "/roles/index") not in misp.calls and result["errors"] == []
+    values = result["values"]
+    assert (values["api_requests_24h"], values["api_requests_users_24h"], values["api_requests_sync_24h"],
+            values["api_requests_unknown_24h"]) == (10, 0, 0, 10)
+
+
+def test_without_the_roles_the_api_requests_are_not_split(monkeypatch):
+    """The total is kept; users would otherwise count the sync users"""
+    from application.models.metrics import fetchServerMetrics
+    for answer, why in (({"name": "Forbidden", "_status_code": 403}, "HTTP 403: Forbidden"),
+                        ({"_status_code": 200}, "Unexpected answer"), ([], "No role in the answer")):
+        FakeMisp({"roles": answer}).install(monkeypatch)
+        result = fetchServerMetrics(target(), backfilledState(read_at=int(time.time()) - 600), 600)
+        values = result["values"]
+        assert values["api_requests_24h"] == 1998 and "api_requests_users_24h" not in values
+        assert "api_requests_sync_24h" not in values and "api_requests_unknown_24h" not in values
+        assert result["errors"] == ["API activity widget: sync requests could not be told apart, the roles could not "
+                                    f"be read ({why})"]
 
 
 def test_the_own_account_is_read_once_the_server_answers(monkeypatch):
