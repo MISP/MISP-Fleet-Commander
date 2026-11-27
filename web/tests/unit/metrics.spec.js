@@ -100,6 +100,53 @@ describe("formats", () => {
                 "hourly average"])
     })
 
+    it("draws the API requests by who made them when the range holds the split", () => {
+        const { apiRequestsSeries } = metrics
+        const total = [[100, 50], [200, 60]]
+        const split = {
+            api_requests_24h: total,
+            api_requests_users_24h: [[200, 40]],
+            api_requests_sync_24h: [[200, 20]],
+            api_requests_unknown_24h: [[200, 0]],
+        }
+        const peaks = { api_requests_24h: [[200, 70]] }
+        const drawn = apiRequestsSeries((key) => split[key], (key) => peaks[key] || [])
+        // Unknown keys made no request: left out
+        expect(drawn.map((item) => [item.key, item.label])).toEqual([
+            ["api_requests_24h", "All"], ["api_requests_users_24h", "Users and tools"],
+            ["api_requests_sync_24h", "Sync"],
+        ])
+        expect(drawn.every((item) => item.band === false && item.color)).toBe(true)
+        expect(drawn[0].points).toEqual(total)
+        expect(drawn[0].peaks).toEqual([[200, 70]])
+        expect(new Set(drawn.map((item) => item.color)).size).toBe(3)
+        split.api_requests_unknown_24h = [[200, 3]]
+        expect(apiRequestsSeries((key) => split[key]).map((item) => item.label))
+            .toEqual(["All", "Users and tools", "Sync", "Unknown keys"])
+    })
+
+    it("names the servers whose API requests are not split", () => {
+        const { fleetServerRows, unsplitApiServers } = metrics
+        const rows = fleetServerRows([
+            { id: 1, name: "split", latest: { ts: 1, values: { api_requests_24h: 30, api_requests_users_24h: 0 } } },
+            { id: 2, name: "misp-2.4", latest: { ts: 1, values: { api_requests_24h: 12 } } },
+            { id: 3, name: "no sample", latest: null },
+        ])
+        expect(rows.map((row) => row.apiRequestsSplit)).toEqual([true, false, false])
+        // A server without any API requests figure is not in the chart at all
+        expect(unsplitApiServers(rows)).toEqual(["misp-2.4"])
+        expect(unsplitApiServers(undefined)).toEqual([])
+    })
+
+    it("draws the API requests total alone without the split", () => {
+        const { apiRequestsSeries } = metrics
+        const total = [[100, 50]]
+        const drawn = apiRequestsSeries((key) => (key === "api_requests_24h" ? total : null), () => [[100, 55]])
+        expect(drawn).toEqual([{ key: "api_requests_24h", label: "Requests", points: total, peaks: [[100, 55]] }])
+        expect(apiRequestsSeries(() => undefined)).toEqual(
+            [{ key: "api_requests_24h", label: "Requests", points: [], peaks: [] }])
+    })
+
     it("names buckets by their size", () => {
         const { formatBucket } = metrics
         const ts = MIDNIGHT + 14 * HOUR + 20 * 60

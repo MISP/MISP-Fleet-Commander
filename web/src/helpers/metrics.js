@@ -1,6 +1,7 @@
 // Shaping the stored usage metrics of a server or a fleet for the Usage tabs: ranges, value formats, series cut at
 // gaps, login buckets, the hour × day heatmap, where the collection stands and the fleet's per-server rows. Pure
 // functions: no Vue, no store, no d3
+import { INK, SERIES_COLORS } from "@/components/ui/charts/chartTheme"
 
 export const HOUR = 3600
 export const DAY = 24 * HOUR
@@ -186,6 +187,36 @@ export function changePhrase(range, from, firstTs) {
         return `since ${formatShortDate(firstTs)}`
     }
     return `over ${range.phrase}`
+}
+
+// The API requests by who made them (MISP 2.5 on), in the chart's colours. Unknown keys only when they made any
+const API_REQUEST_PARTS = [
+    { key: "api_requests_users_24h", label: "Users and tools" },
+    { key: "api_requests_sync_24h", label: "Sync" },
+    { key: "api_requests_unknown_24h", label: "Unknown keys", onlyWhenAny: true },
+]
+
+/** The API requests chart's series: the total alone, or, when the range holds the split, the total in grey behind
+ * users and tools, sync and unknown keys (samples taken before the split, or from MISP 2.4, have the total only).
+ * `pointsOf(key)` and `peaksOf(key)` give a metric's points and peaks */
+export function apiRequestsSeries(pointsOf, peaksOf = () => []) {
+    const total = { key: "api_requests_24h", points: pointsOf("api_requests_24h") || [], peaks: peaksOf("api_requests_24h") }
+    const parts = API_REQUEST_PARTS
+        .map((part, index) => ({ ...part, color: SERIES_COLORS[index], points: pointsOf(part.key) || [] }))
+        .filter((part) => part.points.length > 0 && (!part.onlyWhenAny || part.points.some(([, value]) => value > 0)))
+    if (parts.length === 0) {
+        return [{ ...total, label: "Requests" }]
+    }
+    return [
+        { ...total, label: "All", color: INK.muted, band: false },
+        ...parts.map(({ key, label, color, points }) => ({ key, label, color, points, peaks: peaksOf(key), band: false })),
+    ]
+}
+
+/** The names of the servers (`fleetServerRows`) whose latest API requests are not split by who made them: the fleet
+ * chart counts them in All only */
+export function unsplitApiServers(rows) {
+    return (rows || []).filter((row) => row.apiRequests !== null && !row.apiRequestsSplit).map((row) => row.name)
 }
 
 /** What the API requests chart counts: Fleet Commander's own requests are not usage, the collector leaves them out.
@@ -489,6 +520,7 @@ export function fleetServerRows(servers) {
             logins: server.since === null || server.since === undefined ? null : toNumber(sums.logins) || 0,
             failedLogins: toNumber(sums.failed_logins) || 0,
             apiRequests: value("api_requests_24h"),
+            apiRequestsSplit: value("api_requests_users_24h") !== null,
             load: value("load_1"),
             loadPeak: toNumber(peaks.load_1),
             memory: value("memory_used_pct"),

@@ -115,13 +115,21 @@
                             <TimeSeriesChart
                                 title="API requests"
                                 :subtitle="apiSubtitle"
-                                :series="lineSeries('api_requests_24h', 'Requests')"
+                                :series="apiSeries"
                                 :from="data.from"
                                 :to="data.to"
                                 :interval="data.interval_s"
                                 :partial-since="data.partial_since"
                                 :height="150"
                             ></TimeSeriesChart>
+                            <p
+                                v-if="apiUnsplit.length > 0"
+                                class="section-footnote"
+                                title="MISP 2.4 doesn't say who made its requests. A server is also counted in All only when it has no sample since the split, or when its roles could not be read"
+                            >
+                                <i class="fas fa-info-circle" aria-hidden="true"></i>
+                                Counted in All only, not split: {{ apiUnsplit.join(", ") }}
+                            </p>
                         </div>
                         <div class="chart-card">
                             <TimeSeriesChart
@@ -174,8 +182,9 @@ import { mapGetters, mapState } from "vuex"
 import api from "@/api/metrics"
 import { OPEN_SETTINGS_EVENT } from "@/views/settings/settingsModel"
 import {
-    apiRequestsSubtitle, changePhrase, DEFAULT_RANGE, fleetCollection, fleetServerRows, HOUR, lastValue, loginBars,
-    QUEUE_KEYS, rangeOf, ratio, reportingText, stalledNotice, sumSeries, usageServerOf,
+    apiRequestsSeries, apiRequestsSubtitle, changePhrase, DEFAULT_RANGE, fleetCollection, fleetServerRows, HOUR,
+    lastValue, loginBars, QUEUE_KEYS, rangeOf, ratio, reportingText, stalledNotice, sumSeries, unsplitApiServers,
+    usageServerOf,
 } from "@/helpers/metrics"
 import MetricTile from "@/components/ui/charts/MetricTile.vue"
 import RangePicker from "@/components/ui/charts/RangePicker.vue"
@@ -192,8 +201,9 @@ const NAMED_SERVERS = 3
 
 // What the tab draws: fleet sums, and the servers table's figures (load, memory and disk are not summed)
 const TAB_METRICS = [
-    "events", "attributes", "users", "users_pgp", "db_size_bytes", "api_requests_24h", ...QUEUE_KEYS, "logins",
-    "failed_logins", "load_1", "memory_used_pct", "disk_used_pct",
+    "events", "attributes", "users", "users_pgp", "db_size_bytes", "api_requests_24h", "api_requests_users_24h",
+    "api_requests_sync_24h", "api_requests_unknown_24h", ...QUEUE_KEYS, "logins", "failed_logins", "load_1",
+    "memory_used_pct", "disk_used_pct",
 ]
 
 const TILES = [
@@ -293,6 +303,13 @@ export default {
         },
         apiSubtitle() {
             return apiRequestsSubtitle(this.tierPhrase)
+        },
+        apiSeries() {
+            return apiRequestsSeries((key) => this.totals[key])
+        },
+        apiUnsplit() {
+            // Said only when the chart is split: otherwise every server is in its one line
+            return this.apiSeries.length > 1 ? unsplitApiServers(this.serverRows) : []
         },
         jobsSeries() {
             return sumSeries(QUEUE_KEYS.map((key) => this.totals[key]))

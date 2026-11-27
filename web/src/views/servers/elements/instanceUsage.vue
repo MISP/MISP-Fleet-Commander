@@ -219,8 +219,8 @@ import { mapGetters, mapState } from "vuex"
 import api from "@/api/metrics"
 import { OPEN_SETTINGS_EVENT } from "@/views/settings/settingsModel"
 import {
-    apiRequestsSubtitle, changePhrase, collectionStatus, DEFAULT_RANGE, HOUR, loginBars, rangeOf, ratio,
-    snapshotValues, stalledNotice,
+    apiRequestsSeries, apiRequestsSubtitle, changePhrase, collectionStatus, DEFAULT_RANGE, HOUR, loginBars, rangeOf,
+    ratio, snapshotValues, stalledNotice,
 } from "@/helpers/metrics"
 import MetricTile from "@/components/ui/charts/MetricTile.vue"
 import RangePicker from "@/components/ui/charts/RangePicker.vue"
@@ -373,7 +373,7 @@ export default {
             }))
         },
         apiSeries() {
-            return this.lineSeries([{ key: "api_requests_24h", label: "Requests" }])
+            return apiRequestsSeries((key) => this.series(key), (key) => this.peaksOf(key))
         },
         loadSeries() {
             // The 5 and 15 minute loads smooth the 1 minute one: a band each would pile up into a grey mass
