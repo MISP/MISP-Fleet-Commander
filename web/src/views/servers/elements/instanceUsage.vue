@@ -103,7 +103,7 @@
                         <div class="chart-card activity-api">
                             <TimeSeriesChart
                                 title="API requests"
-                                :subtitle="`over the previous 24 hours, ${tierPhrase}`"
+                                :subtitle="apiSubtitle"
                                 :series="apiSeries"
                                 :from="data.from"
                                 :to="data.to"
@@ -219,7 +219,8 @@ import { mapGetters, mapState } from "vuex"
 import api from "@/api/metrics"
 import { OPEN_SETTINGS_EVENT } from "@/views/settings/settingsModel"
 import {
-    changePhrase, collectionStatus, DEFAULT_RANGE, HOUR, loginBars, rangeOf, ratio, snapshotValues, stalledNotice,
+    apiRequestsSubtitle, changePhrase, collectionStatus, DEFAULT_RANGE, HOUR, loginBars, rangeOf, ratio,
+    snapshotValues, stalledNotice,
 } from "@/helpers/metrics"
 import MetricTile from "@/components/ui/charts/MetricTile.vue"
 import RangePicker from "@/components/ui/charts/RangePicker.vue"
@@ -331,6 +332,9 @@ export default {
         tierPhrase() {
             const tier = this.data && this.data.tier
             return { raw: "every sample", hour: "hourly average", day: "daily average" }[tier] || ""
+        },
+        apiSubtitle() {
+            return apiRequestsSubtitle(this.tierPhrase)
         },
         bandNote() {
             const tier = this.data && this.data.tier

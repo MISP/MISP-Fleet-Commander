@@ -79,7 +79,7 @@ import timeSinceRefresh from "@/components/ui/elements/timeSinceRefresh.vue"
 const COLUMNS = [
     { key: "name", label: "Server", title: "Sort by name" },
     { key: "logins", label: "Logins", title: "Logins over the range, failed ones below" },
-    { key: "apiRequests", label: "API requests", sub: "24 h", title: "API requests over the 24 hours before the latest sample" },
+    { key: "apiRequests", label: "API requests", sub: "24 h", title: "API requests over the 24 hours before the latest sample, Fleet Commander's own left out" },
     { key: "load", label: "Load", sub: "1 min", title: "1-minute load average at the latest sample, highest average of the range below" },
     { key: "memory", label: "Memory", title: "Memory used" },
     { key: "disk", label: "Disk", title: "Disk used" },

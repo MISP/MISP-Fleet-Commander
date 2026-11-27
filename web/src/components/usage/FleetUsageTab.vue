@@ -114,7 +114,7 @@
                         <div class="chart-card">
                             <TimeSeriesChart
                                 title="API requests"
-                                :subtitle="`over the previous 24 hours, ${tierPhrase}`"
+                                :subtitle="apiSubtitle"
                                 :series="lineSeries('api_requests_24h', 'Requests')"
                                 :from="data.from"
                                 :to="data.to"
@@ -174,8 +174,8 @@ import { mapGetters, mapState } from "vuex"
 import api from "@/api/metrics"
 import { OPEN_SETTINGS_EVENT } from "@/views/settings/settingsModel"
 import {
-    changePhrase, DEFAULT_RANGE, fleetCollection, fleetServerRows, HOUR, lastValue, loginBars, QUEUE_KEYS, rangeOf,
-    ratio, reportingText, stalledNotice, sumSeries, usageServerOf,
+    apiRequestsSubtitle, changePhrase, DEFAULT_RANGE, fleetCollection, fleetServerRows, HOUR, lastValue, loginBars,
+    QUEUE_KEYS, rangeOf, ratio, reportingText, stalledNotice, sumSeries, usageServerOf,
 } from "@/helpers/metrics"
 import MetricTile from "@/components/ui/charts/MetricTile.vue"
 import RangePicker from "@/components/ui/charts/RangePicker.vue"
@@ -290,6 +290,9 @@ export default {
         },
         tierPhrase() {
             return { hour: "hourly average", day: "daily average" }[this.data && this.data.tier] || ""
+        },
+        apiSubtitle() {
+            return apiRequestsSubtitle(this.tierPhrase)
         },
         jobsSeries() {
             return sumSeries(QUEUE_KEYS.map((key) => this.totals[key]))

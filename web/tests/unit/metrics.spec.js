@@ -88,6 +88,18 @@ describe("formats", () => {
         expect(rangeOf("nope").key).toBe("7d")
     })
 
+    it("says that the API requests leave Fleet Commander's own out", () => {
+        const { apiRequestsSubtitle } = metrics
+        const spaced = (text) => text.replace(/ /g, " ")
+        expect(spaced(apiRequestsSubtitle("hourly average")))
+            .toBe("over the previous 24 hours, Fleet Commander's own left out, hourly average")
+        expect(spaced(apiRequestsSubtitle(""))).toBe("over the previous 24 hours, Fleet Commander's own left out")
+        // A line breaks only between the phrases
+        expect(apiRequestsSubtitle("hourly average").split(" ")).toEqual(
+            ["over the previous 24 hours,", "Fleet Commander's own left out,",
+                "hourly average"])
+    })
+
     it("names buckets by their size", () => {
         const { formatBucket } = metrics
         const ts = MIDNIGHT + 14 * HOUR + 20 * 60

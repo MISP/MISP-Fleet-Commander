@@ -188,6 +188,13 @@ export function changePhrase(range, from, firstTs) {
     return `over ${range.phrase}`
 }
 
+/** What the API requests chart counts: Fleet Commander's own requests are not usage, the collector leaves them out.
+ * A narrow card wraps it between its phrases, not inside one */
+export function apiRequestsSubtitle(tierPhrase) {
+    return ["over the previous 24 hours", "Fleet Commander's own left out", tierPhrase].filter(Boolean)
+        .map((phrase) => phrase.replace(/ /g, " ")).join(", ")
+}
+
 /** When a point was taken, for its bucket size: a sample `Tue 18 Nov, 14:20`, an hour `Tue 18 Nov, 14:00–15:00`,
  * a day `Tue 18 Nov` (days are UTC days, like the day roll-up) */
 export function formatBucket(ts, size) {
