@@ -17,13 +17,22 @@
         </figcaption>
 
         <ul v-if="series.length > 1" class="chart-legend">
-            <li v-for="item in legend" :key="item.key" class="legend-item">
-                <svg class="legend-key" width="14" height="10" aria-hidden="true">
-                    <rect v-if="mode === 'bars'" x="2" y="1" width="10" height="8" rx="2" :fill="item.color" />
-                    <line v-else x1="1" y1="5" x2="13" y2="5" :stroke="item.color" stroke-width="2" stroke-linecap="round" />
-                </svg>
-                <span class="legend-label">{{ item.label }}</span>
-                <span v-if="item.value !== null" class="legend-value">{{ item.value }}</span>
+            <li v-for="item in legend" :key="item.key">
+                <button
+                    type="button"
+                    :class="['legend-item', { 'is-hidden': item.hidden }]"
+                    :aria-pressed="item.hidden ? 'false' : 'true'"
+                    :aria-disabled="item.last ? 'true' : null"
+                    :title="item.last ? 'The last series shown stays' : `${item.hidden ? 'Show' : 'Hide'} ${item.label}`"
+                    @click="toggleSeries(item.key)"
+                >
+                    <svg class="legend-key" width="14" height="10" aria-hidden="true">
+                        <rect v-if="mode === 'bars'" x="2" y="1" width="10" height="8" rx="2" :fill="item.color" />
+                        <line v-else x1="1" y1="5" x2="13" y2="5" :stroke="item.color" stroke-width="2" stroke-linecap="round" />
+                    </svg>
+                    <span class="legend-label">{{ item.label }}</span>
+                    <span v-if="item.value !== null" class="legend-value">{{ item.value }}</span>
+                </button>
             </li>
         </ul>
 
@@ -160,6 +169,7 @@
                     </tr>
                 </thead>
                 <tbody>
+                    <!-- Every series, hidden ones too: the table is the chart's values in full -->
                     <tr v-for="row in tableRows" :key="row.ts">
                         <th scope="row">{{ row.label }}</th>
                         <td v-for="cell in row.cells" :key="cell.key" class="num">{{ cell.value }}</td>
@@ -189,6 +199,13 @@ const TICK_GAP = 56
 const RADIUS = 4
 
 /** A bar with a rounded data end (its top) and a square base */
+/** The times of a list of series, sorted, each once */
+function stampsOf(seriesList) {
+    const all = new Set()
+    seriesList.forEach((item) => item.points.forEach(([ts]) => all.add(ts)))
+    return [...all].sort((a, b) => a - b)
+}
+
 function barPath(x, y, width, height, rounded) {
     const r = rounded ? Math.min(RADIUS, width / 2, height) : 0
     if (r <= 0) {
@@ -233,6 +250,9 @@ export default {
         return {
             activeTs: null,
             showTable: false,
+            // Keys of the series hidden from the legend. Kept when the series change (another range): a key that is
+            // gone is ignored, and back hidden if it comes back
+            hidden: [],
         }
     },
     computed: {
@@ -248,6 +268,15 @@ export default {
                 lowByTs: new Map((item.lows || []).map(([ts, value]) => [ts, value])),
             }))
         },
+        // What is drawn: the series not hidden from the legend. Every one when there is no legend (a single series)
+        // or when the series changed so that none would be left
+        shown() {
+            if (this.series.length <= 1) {
+                return this.coloured
+            }
+            const shown = this.coloured.filter((item) => !this.hidden.includes(item.key))
+            return shown.length > 0 ? shown : this.coloured
+        },
         seriesWithPeaks() {
             return this.coloured.filter((item) => item.peaks.length > 0)
         },
@@ -261,14 +290,16 @@ export default {
         isEmpty() {
             return this.coloured.every((item) => item.points.length === 0)
         },
+        // The times of the series drawn (pointer, keyboard, bars), and of every series (the table)
         stamps() {
-            const all = new Set()
-            this.coloured.forEach((item) => item.points.forEach(([ts]) => all.add(ts)))
-            return [...all].sort((a, b) => a - b)
+            return stampsOf(this.shown)
+        },
+        allStamps() {
+            return stampsOf(this.coloured)
         },
         stacks() {
             // Bars: the stacked total of each bucket
-            return this.stamps.map((ts) => this.coloured.reduce((total, item) => total + Math.max(0, item.byTs.get(ts) || 0), 0))
+            return this.stamps.map((ts) => this.shown.reduce((total, item) => total + Math.max(0, item.byTs.get(ts) || 0), 0))
         },
         extent() {
             let min = Infinity
@@ -282,7 +313,7 @@ export default {
             if (this.mode === "bars") {
                 this.stacks.forEach(visit)
             } else {
-                this.coloured.forEach((item) => {
+                this.shown.forEach((item) => {
                     item.points.forEach(([, value]) => visit(value))
                     item.peaks.forEach(([, value]) => visit(value))
                     item.lows.forEach(([, value]) => visit(value))
@@ -414,7 +445,7 @@ export default {
         lines() {
             const draw = line().x((point) => this.xScale(new Date(point[0] * 1000))).y((point) => this.yScale(point[1]))
             const paths = []
-            this.coloured.forEach((item) => {
+            this.shown.forEach((item) => {
                 segments(item.points, this.gapLimit).forEach((segment, index) => {
                     if (segment.length > 1) {
                         paths.push({ key: `${item.key}-${index}`, color: item.color, d: draw(segment) })
@@ -427,7 +458,7 @@ export default {
         // would be a speck
         loneDots() {
             const dots = []
-            this.coloured.forEach((item) => {
+            this.shown.forEach((item) => {
                 segments(item.points, this.gapLimit).forEach((segment, index) => {
                     if (segment.length === 1) {
                         const [ts, value] = segment[0]
@@ -443,7 +474,7 @@ export default {
                 .y0((point) => this.yScale(point[1]))
                 .y1((point) => this.yScale(point[2]))
             const result = []
-            this.coloured.forEach((item) => {
+            this.shown.forEach((item) => {
                 if (item.peaks.length === 0 || item.band === false) {
                     return
                 }
@@ -459,7 +490,7 @@ export default {
             return result
         },
         endDots() {
-            return this.coloured
+            return this.shown
                 .filter((item) => item.points.length > 0)
                 .map((item) => {
                     const [ts, value] = item.points[item.points.length - 1]
@@ -492,7 +523,7 @@ export default {
                 const width = Math.max(1, Math.min(BAR_MAX, slot - gap))
                 const x = x0 + (slot - width) / 2
                 const partial = this.partialSince !== null && ts >= this.partialSince
-                const parts = this.coloured
+                const parts = this.shown
                     .map((item) => ({ item, value: item.byTs.get(ts) || 0 }))
                     .filter((part) => part.value > 0)
                 let top = base
@@ -534,7 +565,7 @@ export default {
                 bandWidth: Math.max(1, x1 - x0),
                 label: formatBucket(ts, this.mode === "bars" || this.interval >= 3600 ? this.interval : 0),
                 partial: this.partialSince !== null && ts >= this.partialSince,
-                rows: this.coloured.map((item) => ({
+                rows: this.shown.map((item) => ({
                     key: item.key,
                     label: item.label,
                     color: item.color,
@@ -545,19 +576,24 @@ export default {
                             ? `min ${formatValue(item.lowByTs.get(ts), this.unit)} · max ${formatValue(item.peakByTs.get(ts), this.unit)}`
                             : `max ${formatValue(item.peakByTs.get(ts), this.unit)}`,
                 })),
-                dots: this.coloured
+                dots: this.shown
                     .filter((item) => item.byTs.has(ts))
                     .map((item) => ({ key: item.key, color: item.color, y: this.yScale(item.byTs.get(ts)) })),
             }
         },
         legend() {
+            const shownKeys = new Set(this.shown.map((item) => item.key))
             return this.coloured.map((item) => {
                 const last = item.points[item.points.length - 1]
+                const hidden = !shownKeys.has(item.key)
                 return {
                     key: item.key,
                     label: item.label,
                     color: item.color,
                     value: this.mode === "bars" || !last ? null : formatValue(last[1], this.unit),
+                    hidden,
+                    // The only series still drawn: hiding it would leave an empty chart
+                    last: !hidden && shownKeys.size === 1,
                 }
             })
         },
@@ -565,7 +601,7 @@ export default {
             if (this.isEmpty) {
                 return `${this.title}: no sample over this range`
             }
-            const latest = this.coloured
+            const latest = this.shown
                 .filter((item) => item.points.length > 0)
                 .map((item) => `${item.label} ${formatValue(item.points[item.points.length - 1][1], this.unit)}`)
             const said = this.threshold && (this.threshold.description || this.threshold.label)
@@ -577,7 +613,7 @@ export default {
                 return []
             }
             const size = this.mode === "bars" || this.interval >= 3600 ? this.interval : 0
-            return [...this.stamps].reverse().map((ts) => ({
+            return [...this.allStamps].reverse().map((ts) => ({
                 ts,
                 label: formatBucket(ts, size),
                 cells: [
@@ -598,6 +634,17 @@ export default {
         },
     },
     methods: {
+        toggleSeries(key) {
+            if (this.hidden.includes(key)) {
+                this.hidden = this.hidden.filter((hiddenKey) => hiddenKey !== key)
+            } else if (this.shown.some((item) => item.key === key) && this.shown.length > 1) {
+                this.hidden = [...this.hidden, key]
+            }
+            // The pointer's time may only exist in the series just hidden
+            if (this.activeTs !== null && !this.stamps.includes(this.activeTs)) {
+                this.activeTs = null
+            }
+        },
         nearestStamp(time) {
             const stamps = this.stamps
             if (stamps.length === 0) {
@@ -718,17 +765,60 @@ export default {
     color: #52514e;
 }
 
+/* Each entry shows or hides its series */
 .legend-item {
     display: inline-flex;
     align-items: center;
     gap: 0.3rem;
+    margin: 0 -0.25rem;
+    padding: 0.05rem 0.25rem;
+    border: 0;
+    border-radius: 4px;
+    background: none;
+    color: inherit;
+    font: inherit;
     white-space: nowrap;
+    cursor: pointer;
+}
+
+.legend-item:hover {
+    background: #eef3f9;
+}
+
+.legend-item:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(41, 120, 160, 0.35);
+}
+
+.legend-item[aria-disabled="true"] {
+    cursor: default;
+}
+
+.legend-item[aria-disabled="true"]:hover {
+    background: none;
+}
+
+.legend-item.is-hidden {
+    color: #8a929c;
+}
+
+.legend-item.is-hidden .legend-key {
+    opacity: 0.35;
+}
+
+.legend-item.is-hidden .legend-label {
+    text-decoration: line-through;
 }
 
 .legend-value {
     color: #212d40;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
+}
+
+.legend-item.is-hidden .legend-value {
+    color: inherit;
+    font-weight: 400;
 }
 
 .chart-plot {
